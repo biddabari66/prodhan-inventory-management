@@ -5,23 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { format } from 'date-fns';
-import { CalendarIcon, X } from 'lucide-react';
+import { CalendarIcon, X, Check, ChevronsUpDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-// Simple multi-select component built into this form to avoid external dependencies
-const SimpleMultiSelect = ({ options = [], selected = [], onChange, placeholder = "Select employees..." }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  // Ensure we have safe arrays
+// Enhanced Multi-Select with Search
+const SearchableMultiSelect = ({ options = [], selected = [], onChange, placeholder = "Select employees..." }) => {
+  const [open, setOpen] = useState(false);
+
   const safeOptions = Array.isArray(options) ? options : [];
   const safeSelected = Array.isArray(selected) ? selected : [];
-  
+
   const toggleOption = (value) => {
     const isSelected = safeSelected.includes(value);
     if (isSelected) {
@@ -30,68 +29,88 @@ const SimpleMultiSelect = ({ options = [], selected = [], onChange, placeholder 
       onChange([...safeSelected, value]);
     }
   };
-  
+
   const removeOption = (value) => {
     onChange(safeSelected.filter(item => item !== value));
   };
-  
-  const getSelectedNames = () => {
+
+  const getSelectedLabels = () => {
     return safeOptions
       .filter(opt => safeSelected.includes(opt.value))
       .map(opt => opt.label);
   };
-  
+
   return (
-    <div className="relative">
-      <div 
-        className="min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {safeSelected.length === 0 ? (
-          <span className="text-muted-foreground">{placeholder}</span>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {getSelectedNames().map((name, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                {name}
-                <X 
-                  className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const optionValue = safeOptions.find(opt => opt.label === name)?.value;
-                    if (optionValue) removeOption(optionValue);
-                  }}
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between min-h-[44px] h-auto"
+          >
+            {safeSelected.length === 0 ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Search className="w-4 h-4" />
+                <span>{placeholder}</span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1 py-1">
+                {getSelectedLabels().slice(0, 3).map((label, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {label.split(' - ')[0]}
+                  </Badge>
+                ))}
+                {safeSelected.length > 3 && (
+                  <Badge variant="secondary" className="text-xs">
+                    +{safeSelected.length - 3} more
+                  </Badge>
+                )}
+              </div>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search employees by name or designation..." />
+            <CommandEmpty>No employee found.</CommandEmpty>
+            <CommandGroup className="max-h-[300px] overflow-y-auto">
+              {safeOptions.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={`${option.label} ${option.searchTerms || ''}`}
+                  onSelect={() => toggleOption(option.value)}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      safeSelected.includes(option.value) ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{option.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {safeSelected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {safeOptions
+            .filter(opt => safeSelected.includes(opt.value))
+            .map((option) => (
+              <Badge key={option.value} variant="secondary" className="text-xs flex items-center gap-1">
+                {option.label.split(' - ')[0]}
+                <X
+                  className="h-3 w-3 cursor-pointer hover:text-destructive"
+                  onClick={() => removeOption(option.value)}
                 />
               </Badge>
             ))}
-          </div>
-        )}
-      </div>
-      
-      {isOpen && (
-        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-auto">
-          <CardContent className="p-0">
-            {safeOptions.length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground">No employees available</div>
-            ) : (
-              safeOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className="flex items-center space-x-2 p-2 hover:bg-accent cursor-pointer"
-                  onClick={() => toggleOption(option.value)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={safeSelected.includes(option.value)}
-                    onChange={() => {}} // Controlled by onClick
-                    className="h-4 w-4"
-                  />
-                  <span className="text-sm">{option.label}</span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );
@@ -134,7 +153,7 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
     }
   }, [task]);
 
-  // Convert employees array to options format safely
+  // Enhanced employee options with better search terms
   const employeeOptions = useMemo(() => {
     try {
       const safeEmployees = Array.isArray(employees) ? employees : [];
@@ -142,7 +161,8 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
         .filter(emp => emp && emp.id && emp.full_name) // Filter out invalid employees
         .map(emp => ({
           value: emp.id,
-          label: `${emp.full_name}${emp.designation ? ` - ${emp.designation}` : ''}`
+          label: `${emp.full_name}${emp.designation ? ` - ${emp.designation}` : ''}`,
+          searchTerms: `${emp.employee_id || ''} ${emp.department || ''} ${emp.email || ''}` // New search terms
         }));
     } catch (error) {
       console.error('Error converting employees to options:', error);
@@ -152,11 +172,11 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.title?.trim()) {
       newErrors.title = 'Task title is required';
     }
-    
+
     if (!Array.isArray(formData.assigned_to) || formData.assigned_to.length === 0) {
       newErrors.assigned_to = 'At least one employee must be assigned';
     }
@@ -164,36 +184,36 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
     if (!formData.priority || formData.priority.trim() === '') {
       newErrors.priority = 'Priority is required';
     }
-    
+
     if (!formData.task_type || formData.task_type.trim() === '') {
       newErrors.task_type = 'Task type is required';
     }
-    
+
     if (!formData.deadline) {
       newErrors.deadline = 'Deadline is required';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error('Please fix the form errors');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const submitData = {
         ...formData,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
         deadline: formData.deadline ? formData.deadline.toISOString() : null
       };
-      
+
       if (typeof onSubmit === 'function') {
         await onSubmit(submitData);
       } else {
@@ -218,7 +238,7 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
       ...prev,
       [field]: value
     }));
-    
+
     // Clear error when user starts typing/selecting
     if (errors[field]) {
       setErrors(prev => ({
@@ -256,16 +276,21 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
           />
         </div>
 
-        {/* Assign To Employees */}
+        {/* Enhanced Searchable Multi-Select for Employees */}
         <div className="space-y-2">
-          <Label htmlFor="assigned_to">Assign To *</Label>
-          <SimpleMultiSelect
+          <Label htmlFor="assigned_to">
+            Assign To * ({employeeOptions.length} employees available)
+          </Label>
+          <SearchableMultiSelect
             options={employeeOptions}
             selected={formData.assigned_to}
             onChange={(value) => handleInputChange('assigned_to', value)}
-            placeholder="Select employees to assign this task..."
+            placeholder="Search and select employees..."
           />
           {errors.assigned_to && <p className="text-sm text-red-500">{errors.assigned_to}</p>}
+          <p className="text-xs text-muted-foreground">
+            Type to search by name, designation, employee ID, or department
+          </p>
         </div>
 
         {/* Priority and Task Type */}
@@ -362,16 +387,16 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
 
       {/* Form Actions */}
       <div className="flex justify-end space-x-2 pt-4">
-        <Button 
-          type="button" 
-          variant="outline" 
+        <Button
+          type="button"
+          variant="outline"
           onClick={handleCancel}
           disabled={isSubmitting}
         >
           Cancel
         </Button>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           disabled={isSubmitting}
           className="bg-blue-600 hover:bg-blue-700"
         >

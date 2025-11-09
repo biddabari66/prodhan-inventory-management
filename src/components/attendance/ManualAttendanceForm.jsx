@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,8 +17,14 @@ import {
   AlertTriangle, 
   Shield,
   Clock,
-  FileText
+  FileText,
+  Check, 
+  ChevronsUpDown, 
+  Search 
 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 export default function ManualAttendanceForm({ currentUser, onSuccess }) {
   const [employees, setEmployees] = useState([]);
@@ -31,6 +38,7 @@ export default function ManualAttendanceForm({ currentUser, onSuccess }) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [open, setOpen] = useState(false); // State for Popover open/close
 
   // Check if current user has permission for manual entries
   const hasManualEntryPermission = () => {
@@ -161,6 +169,8 @@ export default function ManualAttendanceForm({ currentUser, onSuccess }) {
     );
   }
 
+  const selectedEmployee = employees.find(emp => emp.id === formData.employee_id);
+
   return (
     <Card className="premium-card">
       <CardHeader>
@@ -183,24 +193,78 @@ export default function ManualAttendanceForm({ currentUser, onSuccess }) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Employee Selection */}
-            <div>
-              <Label htmlFor="employee_id">Employee *</Label>
-              <Select 
-                value={formData.employee_id} 
-                onValueChange={(value) => setFormData({...formData, employee_id: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map(employee => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.full_name} ({employee.employee_id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Enhanced Searchable Employee Selection */}
+            <div className="space-y-2">
+              <Label>Employee * ({employees.length} available)</Label>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {formData.employee_id ? (
+                      <div className="flex items-center gap-2 truncate">
+                        <UserCheck className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                        <span className="truncate">{selectedEmployee?.full_name}</span>
+                        {selectedEmployee?.employee_id && (
+                          <span className="text-xs text-muted-foreground">({selectedEmployee.employee_id})</span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Search className="w-4 h-4" />
+                        <span>Search employee by name or ID...</span>
+                      </div>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search by name, employee ID, or department..." />
+                    <CommandEmpty>No employee found.</CommandEmpty>
+                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                      {employees.map((employee) => (
+                        <CommandItem
+                          key={employee.id}
+                          value={`${employee.full_name} ${employee.employee_id || ''} ${employee.department || ''} ${employee.designation || ''}`}
+                          onSelect={() => {
+                            setFormData({...formData, employee_id: employee.id});
+                            setOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.employee_id === employee.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">{employee.full_name}</span>
+                              {employee.employee_id && (
+                                <span className="text-xs text-muted-foreground">({employee.employee_id})</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              {employee.department && (
+                                <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded text-[10px] font-medium">
+                                  {employee.department}
+                                </span>
+                              )}
+                              {employee.designation && (
+                                <span className="truncate">{employee.designation}</span>
+                              )}
+                            </div>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Date */}
