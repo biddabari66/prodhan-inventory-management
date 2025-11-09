@@ -37,7 +37,11 @@ import {
   BookOpen,
   Users,
   DollarSign,
-  Calendar
+  Calendar,
+  CheckSquare,
+  XCircle,
+  Archive,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { processCoursesWithAI } from '@/functions/processCoursesWithAI';
@@ -52,11 +56,14 @@ export default function CoursesPage() {
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   
-  // CRITICAL FIX: Add state for view/edit dialogs
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+
+  // 🆕 Bulk selection state
+  const [selectedCourseIds, setSelectedCourseIds] = useState([]);
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -121,13 +128,11 @@ export default function CoursesPage() {
     }
   };
 
-  // CRITICAL FIX: Add view handler
   const handleViewDetails = (course) => {
     setSelectedCourse(course);
     setIsViewDialogOpen(true);
   };
 
-  // CRITICAL FIX: Add edit handler
   const handleEdit = (course) => {
     setSelectedCourse(course);
     setEditFormData({
@@ -144,7 +149,6 @@ export default function CoursesPage() {
     setIsEditDialogOpen(true);
   };
 
-  // CRITICAL FIX: Add save edit handler
   const handleSaveEdit = async () => {
     if (!selectedCourse) return;
 
@@ -160,7 +164,6 @@ export default function CoursesPage() {
     }
   };
 
-  // CRITICAL FIX: Add delete handler
   const handleDelete = async (course) => {
     if (!window.confirm(`Are you sure you want to delete "${course.course_name}"?`)) {
       return;
@@ -173,6 +176,96 @@ export default function CoursesPage() {
     } catch (error) {
       console.error('Error deleting course:', error);
       toast.error('Failed to delete course');
+    }
+  };
+
+  // 🆕 Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedCourseIds.length === filteredCourses.length) {
+      setSelectedCourseIds([]);
+    } else {
+      setSelectedCourseIds(filteredCourses.map(c => c.id));
+    }
+  };
+
+  const handleSelectCourse = (courseId) => {
+    setSelectedCourseIds(prev => {
+      if (prev.includes(courseId)) {
+        return prev.filter(id => id !== courseId);
+      } else {
+        return [...prev, courseId];
+      }
+    });
+  };
+
+  // 🆕 Bulk action handlers
+  const handleBulkStatusChange = async (newStatus) => {
+    if (selectedCourseIds.length === 0) {
+      toast.error('Please select courses first');
+      return;
+    }
+
+    if (!window.confirm(`Change status to "${newStatus}" for ${selectedCourseIds.length} courses?`)) {
+      return;
+    }
+
+    setIsBulkActionLoading(true);
+    const successToast = toast.loading(`Updating ${selectedCourseIds.length} courses...`);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const courseId of selectedCourseIds) {
+        try {
+          await Course.update(courseId, { status: newStatus });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to update course ${courseId}:`, error);
+          failCount++;
+        }
+      }
+
+      if (failCount === 0) {
+        toast.success(`✅ ${successCount} courses updated successfully!`, { id: successToast });
+      } else {
+        toast.warning(`⚠️ ${successCount} succeeded, ${failCount} failed`, { id: successToast });
+      }
+
+      setSelectedCourseIds([]);
+      await loadData();
+    } catch (error) {
+      toast.error('Bulk update failed', { id: successToast });
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCourseIds.length === 0) {
+      toast.error('Please select courses first');
+      return;
+    }
+
+    if (!window.confirm(`⚠️ Are you sure you want to delete ${selectedCourseIds.length} courses? This cannot be undone.`)) {
+      return;
+    }
+
+    setIsBulkActionLoading(true);
+    const deletingToast = toast.loading(`Deleting ${selectedCourseIds.length} courses...`);
+
+    try {
+      for (const courseId of selectedCourseIds) {
+        await Course.delete(courseId);
+      }
+
+      toast.success(`✅ ${selectedCourseIds.length} courses deleted successfully!`, { id: deletingToast });
+      setSelectedCourseIds([]);
+      await loadData();
+    } catch (error) {
+      toast.error('Bulk delete failed', { id: deletingToast });
+    } finally {
+      setIsBulkActionLoading(false);
     }
   };
 
@@ -293,6 +386,74 @@ export default function CoursesPage() {
         </Card>
       </div>
 
+      {/* 🆕 Bulk Actions Bar */}
+      {selectedCourseIds.length > 0 && (
+        <Card className="bg-violet-50 border-violet-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-violet-600">
+                  {selectedCourseIds.length} course{selectedCourseIds.length > 1 ? 's' : ''} selected
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedCourseIds([])}
+                  disabled={isBulkActionLoading}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleBulkStatusChange('Active')}
+                  disabled={isBulkActionLoading}
+                  className="text-green-600 hover:bg-green-50"
+                >
+                  {isBulkActionLoading ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <CheckSquare className="w-4 h-4 mr-1" />
+                  )}
+                  Activate All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleBulkStatusChange('Completed')}
+                  disabled={isBulkActionLoading}
+                  className="text-blue-600 hover:bg-blue-50"
+                >
+                  <Archive className="w-4 h-4 mr-1" />
+                  Mark Completed
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleBulkStatusChange('Cancelled')}
+                  disabled={isBulkActionLoading}
+                  className="text-orange-600 hover:bg-orange-50"
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Cancel All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  onClick={handleBulkDelete}
+                  disabled={isBulkActionLoading}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Course Data Management */}
       <Card className="premium-card">
         <CardHeader>
@@ -316,7 +477,18 @@ export default function CoursesPage() {
       {/* Course List */}
       <Card className="premium-card">
         <CardHeader>
-          <CardTitle>Course List</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Course List</CardTitle>
+            {filteredCourses.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSelectAll}
+              >
+                {selectedCourseIds.length === filteredCourses.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -334,6 +506,14 @@ export default function CoursesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedCourseIds.length === filteredCourses.length && filteredCourses.length > 0}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </TableHead>
                     <TableHead>Course Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
@@ -344,7 +524,15 @@ export default function CoursesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredCourses.map((course) => (
-                    <TableRow key={course.id}>
+                    <TableRow key={course.id} className={selectedCourseIds.includes(course.id) ? 'bg-violet-50' : ''}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedCourseIds.includes(course.id)}
+                          onChange={() => handleSelectCourse(course.id)}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         {course.course_name}
                       </TableCell>
@@ -403,7 +591,7 @@ export default function CoursesPage() {
         </CardContent>
       </Card>
 
-      {/* CRITICAL FIX: View Details Dialog */}
+      {/* View Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -460,7 +648,7 @@ export default function CoursesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* CRITICAL FIX: Edit Dialog */}
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

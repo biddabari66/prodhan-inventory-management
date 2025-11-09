@@ -1,3 +1,4 @@
+
 import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
 
 /**
@@ -422,6 +423,228 @@ Deno.serve(async (req) => {
               <p style="font-size: 15px; color: #555;">
                 Please update the expense details and resubmit.
               </p>
+
+              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                <p style="color: #7C3AED; font-weight: bold; margin: 0;">🐝 Biddabari ERP</p>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      // ===== COURSE-RELATED EMAILS =====
+      case 'course_enrollment_confirmation':
+        subject = `🎓 Course Enrollment Confirmed: ${context.course_name}`;
+        body = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); color: white; padding: 25px; border-radius: 10px 10px 0 0;">
+              <h2 style="margin: 0; font-size: 24px;">🎓 Enrollment Confirmed!</h2>
+            </div>
+            
+            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="font-size: 16px; color: #333;">Hello <strong>${context.student_name}</strong>,</p>
+              
+              <p style="font-size: 15px; color: #555; line-height: 1.6;">
+                Congratulations! Your enrollment has been confirmed. Welcome to our learning community! 🎉
+              </p>
+
+              <div style="background: #ecfeff; border-left: 4px solid #06B6D4; padding: 20px; margin: 20px 0; border-radius: 6px;">
+                <h3 style="margin: 0 0 15px 0; color: #0e7490;">Course Details</h3>
+                <p style="margin: 8px 0;"><strong>Course:</strong> ${context.course_name}</p>
+                <p style="margin: 8px 0;"><strong>Batch:</strong> ${context.batch_name || 'To be announced'}</p>
+                <p style="margin: 8px 0;"><strong>Start Date:</strong> ${context.start_date ? new Date(context.start_date).toLocaleDateString() : 'TBA'}</p>
+                <p style="margin: 8px 0;"><strong>Mode:</strong> ${context.mode || 'Online'}</p>
+                <p style="margin: 8px 0;"><strong>Admission Fee:</strong> ৳${context.admission_fee?.toLocaleString()}</p>
+              </div>
+
+              <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                  📚 <strong>Next Steps:</strong> You will receive class schedule and login credentials via SMS/WhatsApp within 24 hours.
+                </p>
+              </div>
+
+              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                <p style="color: #7C3AED; font-weight: bold; margin: 0;">🐝 Biddabari Education</p>
+                <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">Excellence in Learning</p>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'course_status_changed':
+        subject = `📢 Course Update: ${context.course_name}`;
+        body = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); color: white; padding: 25px; border-radius: 10px 10px 0 0;">
+              <h2 style="margin: 0;">📢 Course Status Update</h2>
+            </div>
+            
+            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="font-size: 16px; color: #333;">Hello,</p>
+              
+              <p style="font-size: 15px; color: #555;">
+                Important update regarding a course you're enrolled in:
+              </p>
+
+              <div style="background: #faf5ff; border-left: 4px solid #8B5CF6; padding: 20px; margin: 20px 0; border-radius: 6px;">
+                <h3 style="margin: 0 0 15px 0; color: #6b21a8;">Course Information</h3>
+                <p style="margin: 8px 0;"><strong>Course:</strong> ${context.course_name}</p>
+                <p style="margin: 8px 0;"><strong>Previous Status:</strong> <span style="text-decoration: line-through; color: #9ca3af;">${context.old_status}</span></p>
+                <p style="margin: 8px 0;"><strong>New Status:</strong> <span style="background: #8B5CF6; color: white; padding: 4px 12px; border-radius: 6px; font-weight: bold;">${context.new_status}</span></p>
+              </div>
+
+              ${context.status_reason ? `
+                <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                  <p style="margin: 0; color: #1e40af;">
+                    <strong>Note:</strong> ${context.status_reason}
+                  </p>
+                </div>
+              ` : ''}
+
+              <p style="font-size: 15px; color: #555;">
+                For any questions, please contact your course coordinator.
+              </p>
+
+              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                <p style="color: #7C3AED; font-weight: bold; margin: 0;">🐝 Biddabari ERP</p>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'admission_confirmation':
+        subject = `🎉 Admission Confirmed: ${context.course_name}`;
+        body = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+              <h1 style="margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
+              <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.95;">Your Admission is Confirmed</p>
+            </div>
+            
+            <div style="background: white; padding: 35px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+              <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+                Dear <strong>${context.student_name}</strong>,
+              </p>
+              
+              <p style="font-size: 15px; color: #555; line-height: 1.7;">
+                Welcome to Biddabari! We are excited to have you join us. Your admission has been successfully processed.
+              </p>
+
+              <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10B981; padding: 25px; margin: 25px 0; border-radius: 12px;">
+                <h3 style="margin: 0 0 20px 0; color: #065f46; font-size: 20px;">📋 Admission Details</h3>
+                <div style="display: grid; gap: 12px;">
+                  <p style="margin: 0; color: #064e3b;"><strong>Course:</strong> ${context.course_name}</p>
+                  <p style="margin: 0; color: #064e3b;"><strong>Course Type:</strong> ${context.course_type || 'Standard'}</p>
+                  <p style="margin: 0; color: #064e3b;"><strong>Package:</strong> ${context.package_type || 'Basic'}</p>
+                  <p style="margin: 0; color: #064e3b;"><strong>Admission Date:</strong> ${context.admission_date ? new Date(context.admission_date).toLocaleDateString() : new Date().toLocaleDateString()}</p>
+                  <p style="margin: 0; color: #064e3b;"><strong>Admission Fee:</strong> <span style="font-size: 22px; font-weight: bold; color: #10B981;">৳${context.admission_fee?.toLocaleString()}</span></p>
+                  <p style="margin: 0; color: #064e3b;"><strong>Payment Status:</strong> ${context.payment_status === 'paid' ? '✅ Paid' : context.payment_status === 'partial' ? '⏳ Partial' : '⏰ Pending'}</p>
+                </div>
+              </div>
+
+              ${context.assigned_employee ? `
+                <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                  <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                    👤 <strong>Your Admission Counselor:</strong> ${context.assigned_employee}
+                  </p>
+                </div>
+              ` : ''}
+
+              <div style="background: #fef3c7; padding: 20px; border-radius: 10px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                  <strong>📱 What's Next?</strong><br/>
+                  • You will receive your student ID and login credentials within 24 hours<br/>
+                  • Class schedule will be shared via SMS/WhatsApp<br/>
+                  • Study materials will be available in your student portal<br/>
+                  • For support, contact: support@biddabari.com
+                </p>
+              </div>
+
+              <div style="text-align: center; margin-top: 35px;">
+                <a href="${Deno.env.get('BASE_URL') || 'https://app.base44.com'}" 
+                   style="display: inline-block; background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                  Access Student Portal
+                </a>
+              </div>
+
+              <div style="text-align: center; margin-top: 40px; padding-top: 25px; border-top: 2px solid #e5e7eb;">
+                <p style="color: #7C3AED; font-weight: bold; font-size: 18px; margin: 0;">
+                  🐝 Biddabari Education
+                </p>
+                <p style="color: #9ca3af; font-size: 13px; margin: 5px 0;">
+                  Excellence in Education | Bangladesh's Leading Coaching Platform
+                </p>
+                <p style="color: #d1d5db; font-size: 11px; margin: 10px 0 0 0;">
+                  © ${new Date().getFullYear()} Biddabari Group. All rights reserved.
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'payment_reminder':
+        subject = `⏰ Payment Reminder: ${context.course_name || 'Your Course'}`;
+        body = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 25px; border-radius: 10px 10px 0 0;">
+              <h2 style="margin: 0;">⏰ Payment Reminder</h2>
+            </div>
+            
+            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="font-size: 16px; color: #333;">Hello <strong>${context.student_name}</strong>,</p>
+              
+              <p style="font-size: 15px; color: #555;">
+                This is a friendly reminder about your pending payment for:
+              </p>
+
+              <div style="background: #fffbeb; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 6px;">
+                <h3 style="margin: 0 0 15px 0; color: #92400e;">Payment Details</h3>
+                <p style="margin: 8px 0;"><strong>Course:</strong> ${context.course_name}</p>
+                <p style="margin: 8px 0;"><strong>Total Amount:</strong> ৳${context.total_amount?.toLocaleString()}</p>
+                <p style="margin: 8px 0;"><strong>Paid:</strong> ৳${context.paid_amount?.toLocaleString() || 0}</p>
+                <p style="margin: 8px 0; font-size: 18px;"><strong>Due Amount:</strong> <span style="color: #DC2626; font-size: 20px;">৳${((context.total_amount || 0) - (context.paid_amount || 0)).toLocaleString()}</span></p>
+              </div>
+
+              <div style="text-align: center; margin-top: 25px;">
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                  Please complete your payment at your earliest convenience.
+                </p>
+              </div>
+
+              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                <p style="color: #7C3AED; font-weight: bold; margin: 0;">🐝 Biddabari ERP</p>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'attendance_marked':
+        subject = `✅ Attendance Recorded for ${context.date}`;
+        body = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 25px; border-radius: 10px 10px 0 0;">
+              <h2 style="margin: 0;">✅ Attendance Confirmation</h2>
+            </div>
+            
+            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="font-size: 16px; color: #333;">Hello <strong>${context.employee_name}</strong>,</p>
+              
+              <p style="font-size: 15px; color: #555;">
+                Your attendance has been successfully recorded.
+              </p>
+
+              <div style="background: #f0fdf4; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 6px;">
+                <h3 style="margin: 0 0 15px 0; color: #065f46;">Today's Attendance</h3>
+                <p style="margin: 8px 0;"><strong>Date:</strong> ${context.date}</p>
+                <p style="margin: 8px 0;"><strong>Check-In:</strong> ${context.check_in_time}</p>
+                ${context.check_out_time ? `<p style="margin: 8px 0;"><strong>Check-Out:</strong> ${context.check_out_time}</p>` : ''}
+                ${context.working_hours ? `<p style="margin: 8px 0;"><strong>Working Hours:</strong> ${context.working_hours} hrs</p>` : ''}
+                <p style="margin: 8px 0;"><strong>Status:</strong> <span style="background: #10B981; color: white; padding: 4px 12px; border-radius: 6px; font-weight: bold;">${context.status?.toUpperCase()}</span></p>
+              </div>
 
               <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
                 <p style="color: #7C3AED; font-weight: bold; margin: 0;">🐝 Biddabari ERP</p>
