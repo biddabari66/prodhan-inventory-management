@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AlertConfiguration } from '@/entities/AlertConfiguration';
 import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -217,6 +218,34 @@ function AlertsConfigurationContent() {
     is_active: true,
   }));
 
+  // Helper function to reset form
+  const resetForm = useCallback(() => {
+    setFormData({
+      name: '',
+      description: '',
+      module: '',
+      entity_type: '',
+      metric_field: '',
+      condition: '',
+      threshold_value: '',
+      notification_method: 'in_app',
+      recipients: [],
+      is_active: true,
+    });
+    setEditingAlert(null);
+  }, []);
+
+  // Helper function to reload alerts
+  const refreshAlerts = useCallback(async () => {
+    try {
+      const alertsResponse = await AlertConfiguration.list('-created_date');
+      setAlerts(Array.isArray(alertsResponse) ? alertsResponse : []);
+    } catch (error) {
+      console.error('Error reloading alerts:', error);
+      toast.error('Failed to reload alerts.');
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     
@@ -235,6 +264,7 @@ function AlertsConfigurationContent() {
           alertsList = Array.isArray(alertsResponse) ? alertsResponse : [];
         } catch (error) {
           console.warn('Failed to load alerts:', error);
+          toast.error('Failed to load alerts configurations.');
         }
 
         try {
@@ -242,12 +272,14 @@ function AlertsConfigurationContent() {
           usersList = Array.isArray(usersResponse) ? usersResponse : [];
         } catch (error) {
           console.warn('Failed to load users:', error);
+          toast.error('Failed to load user list for recipients.');
         }
 
         try {
           currentUserData = await User.me();
         } catch (error) {
           console.warn('Failed to load current user:', error);
+          // Not critical, can be silent or a different toast
         }
 
         if (mounted) {
@@ -262,6 +294,7 @@ function AlertsConfigurationContent() {
           setAlerts([]);
           setAllUsers([]);
           setCurrentUser(null);
+          toast.error('An unexpected error occurred while loading data.');
         }
       } finally {
         if (mounted) {
@@ -275,7 +308,7 @@ function AlertsConfigurationContent() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, []); // refreshAlerts is stable via useCallback, so no need to add to deps if not explicitly used here.
 
   const handleFormChange = React.useCallback((key, value) => {
     try {
@@ -309,6 +342,19 @@ function AlertsConfigurationContent() {
         }
       }
 
+      // Validate threshold_value based on metric field type
+      const currentModuleConfig = MODULE_CONFIG[formData.module];
+      const currentEntityConfig = currentModuleConfig?.entities[formData.entity_type];
+      const currentMetricField = currentEntityConfig?.fields.find(f => f.value === formData.metric_field);
+
+      if (currentMetricField && currentMetricField.type === 'number') {
+        const threshold = parseFloat(formData.threshold_value);
+        if (isNaN(threshold)) {
+          toast.error('Threshold value must be a valid number.');
+          return false;
+        }
+      }
+
       const recipients = Array.isArray(formData.recipients) ? formData.recipients : [];
       if (recipients.length === 0) {
         toast.error('At least one recipient must be selected');
@@ -336,7 +382,7 @@ function AlertsConfigurationContent() {
         entity_type: formData.entity_type || '',
         metric_field: formData.metric_field || '',
         condition: formData.condition || '',
-        threshold_value: formData.threshold_value || '',
+        threshold_value: parseFloat(formData.threshold_value || '0'), // Ensure number for saving
         notification_method: formData.notification_method || 'in_app',
         recipients: Array.isArray(formData.recipients) ? formData.recipients : [],
         is_active: Boolean(formData.is_active),
@@ -350,35 +396,46 @@ function AlertsConfigurationContent() {
         toast.success('Alert created successfully!');
       }
       
-      // Reset form and reload data
-      setFormData({
-        name: '',
-        description: '',
-        module: '',
-        entity_type: '',
-        metric_field: '',
-        condition: '',
-        threshold_value: '',
-        notification_method: 'in_app',
-        recipients: [],
-        is_active: true,
-      });
-      setEditingAlert(null);
+      resetForm(); 
       setIsFormOpen(false);
-      
-      // Reload alerts
-      try {
-        const alertsResponse = await AlertConfiguration.list('-created_date');
-        setAlerts(Array.isArray(alertsResponse) ? alertsResponse : []);
-      } catch (error) {
-        console.error('Error reloading alerts:', error);
-      }
+      await refreshAlerts(); 
       
     } catch (error) {
       console.error('Error saving alert:', error);
       toast.error('Failed to save alert: ' + (error?.message || 'Please try again.'));
     }
-  }, [formData, editingAlert, validateForm]);
+  }, [formData, editingAlert, validateForm, resetForm, refreshAlerts]);
+
+  const handleEdit = React.useCallback((alert) => {
+    setFormData({
+      name: alert.name || '',
+      description: alert.description || '',
+      module: alert.module || '',
+      entity_type: alert.entity_type || '',
+      metric_field: alert.metric_field || '',
+      condition: alert.condition || '',
+      threshold_value: String(alert.threshold_value), // Convert to string for number input
+      notification_method: alert.notification_method || 'in_app',
+      recipients: Array.isArray(alert.recipients) ? alert.recipients.map(String) : [], // Ensure recipients are strings
+      is_active: Boolean(alert.is_active),
+    });
+    setEditingAlert(alert);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDelete = React.useCallback(async (alertId) => {
+    toast.promise(AlertConfiguration.delete(alertId), {
+      loading: 'Deleting alert...',
+      success: () => {
+        refreshAlerts(); // Reload alerts on successful deletion
+        return 'Alert deleted successfully!';
+      },
+      error: (err) => {
+        console.error('Failed to delete alert:', err);
+        return 'Failed to delete alert: ' + (err?.message || 'Please try again.');
+      },
+    });
+  }, [refreshAlerts]);
 
   // Safe recipient options calculation
   const recipientOptions = useMemo(() => {
@@ -471,7 +528,12 @@ function AlertsConfigurationContent() {
             <h1 className="text-4xl font-bold font-display text-gradient">System Alerts Configuration</h1>
             <p className="text-lg text-muted-foreground mt-1">Create intelligent alerts to monitor key business metrics.</p>
           </div>
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <Dialog open={isFormOpen} onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) {
+              resetForm(); // Reset form when dialog closes without saving
+            }
+          }}>
             <DialogTrigger asChild>
               <Button className="btn-primary">
                 <Plus className="w-4 h-4 mr-2" />
@@ -687,7 +749,7 @@ function AlertsConfigurationContent() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </CardContent>
         </Card>
 
         <Card className="premium-card">
@@ -704,7 +766,7 @@ function AlertsConfigurationContent() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Create your first alert to start monitoring key business metrics.
                 </p>
-                <Button onClick={() => setIsFormOpen(true)} className="btn-primary">
+                <Button onClick={() => { setIsFormOpen(true); resetForm(); }} className="btn-primary">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Alert
                 </Button>
@@ -753,10 +815,10 @@ function AlertsConfigurationContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" title="Edit">
+                          <Button variant="ghost" size="sm" title="Edit" onClick={() => handleEdit(alert)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" title="Delete">
+                          <Button variant="ghost" size="sm" title="Delete" onClick={() => handleDelete(alert.id)}>
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
