@@ -6,10 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { generateAndSendEmail } from '@/functions/generateAndSendEmail';
 import { toast } from 'sonner';
-import { Mail, Send, Users, Loader2, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { Mail, Send, Users, Loader2, CheckCircle2, AlertTriangle, Info, Check, ChevronsUpDown, Search } from 'lucide-react';
 import { withPermission } from '../components/common/PermissionGuard';
+import { cn } from '@/lib/utils';
 
 function SendEmailPage() {
   const [recipients, setRecipients] = useState([]);
@@ -20,6 +23,7 @@ function SendEmailPage() {
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSentEmail, setLastSentEmail] = useState(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     loadEmployees();
@@ -178,6 +182,8 @@ function SendEmailPage() {
     );
   }
 
+  const selectedEmployee = recipients.find(r => r.id === selectedRecipient);
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       {/* Header */}
@@ -245,33 +251,85 @@ function SendEmailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Recipient Selection */}
+          {/* Enhanced Searchable Recipient Selection */}
           <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient *</Label>
-            <Select value={selectedRecipient} onValueChange={setSelectedRecipient}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select an employee..." />
-              </SelectTrigger>
-              <SelectContent>
-                {recipients.map(employee => (
-                  <SelectItem key={employee.id} value={employee.id}>
+            <Label>Recipient * ({recipients.length} employees)</Label>
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-full justify-between"
+                >
+                  {selectedRecipient ? (
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      {employee.full_name} {employee.email ? `(${employee.email})` : '(No email)'}
+                      <Users className="w-4 h-4 text-violet-600" />
+                      <span className="truncate">{selectedEmployee?.full_name}</span>
+                      {selectedEmployee?.email && (
+                        <span className="text-xs text-muted-foreground truncate">({selectedEmployee.email})</span>
+                      )}
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedRecipient && (() => {
-              const selected = recipients.find(r => r.id === selectedRecipient);
-              return selected && !selected.email ? (
-                <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-2 rounded">
-                  <AlertTriangle className="w-4 h-4" />
-                  This employee does not have an email address
-                </div>
-              ) : null;
-            })()}
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Search className="w-4 h-4" />
+                      <span>Search and select an employee...</span>
+                    </div>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search by name, email, or department..." />
+                  <CommandEmpty>No employee found.</CommandEmpty>
+                  <CommandGroup className="max-h-[300px] overflow-y-auto">
+                    {recipients.map((employee) => (
+                      <CommandItem
+                        key={employee.id}
+                        value={`${employee.full_name} ${employee.email || ''} ${employee.department || ''} ${employee.designation || ''}`}
+                        onSelect={() => {
+                          setSelectedRecipient(employee.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedRecipient === employee.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{employee.full_name}</span>
+                            {!employee.email && (
+                              <AlertTriangle className="w-3 h-3 text-orange-500 flex-shrink-0" title="No email" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            {employee.email && <span className="truncate">{employee.email}</span>}
+                            {employee.department && (
+                              <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded text-[10px] font-medium">
+                                {employee.department}
+                              </span>
+                            )}
+                            {employee.designation && (
+                              <span className="truncate">{employee.designation}</span>
+                            )}
+                          </div>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedRecipient && selectedEmployee && !selectedEmployee.email && (
+              <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-2 rounded">
+                <AlertTriangle className="w-4 h-4" />
+                This employee does not have an email address
+              </div>
+            )}
           </div>
 
           {/* Email Type */}
