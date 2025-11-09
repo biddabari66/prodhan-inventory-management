@@ -1,0 +1,383 @@
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+// Simple multi-select component built into this form to avoid external dependencies
+const SimpleMultiSelect = ({ options = [], selected = [], onChange, placeholder = "Select employees..." }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Ensure we have safe arrays
+  const safeOptions = Array.isArray(options) ? options : [];
+  const safeSelected = Array.isArray(selected) ? selected : [];
+  
+  const toggleOption = (value) => {
+    const isSelected = safeSelected.includes(value);
+    if (isSelected) {
+      onChange(safeSelected.filter(item => item !== value));
+    } else {
+      onChange([...safeSelected, value]);
+    }
+  };
+  
+  const removeOption = (value) => {
+    onChange(safeSelected.filter(item => item !== value));
+  };
+  
+  const getSelectedNames = () => {
+    return safeOptions
+      .filter(opt => safeSelected.includes(opt.value))
+      .map(opt => opt.label);
+  };
+  
+  return (
+    <div className="relative">
+      <div 
+        className="min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {safeSelected.length === 0 ? (
+          <span className="text-muted-foreground">{placeholder}</span>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {getSelectedNames().map((name, index) => (
+              <Badge key={index} variant="secondary" className="text-xs">
+                {name}
+                <X 
+                  className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const optionValue = safeOptions.find(opt => opt.label === name)?.value;
+                    if (optionValue) removeOption(optionValue);
+                  }}
+                />
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {isOpen && (
+        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-auto">
+          <CardContent className="p-0">
+            {safeOptions.length === 0 ? (
+              <div className="p-3 text-sm text-muted-foreground">No employees available</div>
+            ) : (
+              safeOptions.map((option) => (
+                <div
+                  key={option.value}
+                  className="flex items-center space-x-2 p-2 hover:bg-accent cursor-pointer"
+                  onClick={() => toggleOption(option.value)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={safeSelected.includes(option.value)}
+                    onChange={() => {}} // Controlled by onClick
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default function TaskForm({ task = null, employees = [], onSubmit, onCancel }) {
+  // Initialize form data with safe defaults
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    assigned_to: [],
+    priority: 'medium',
+    task_type: 'operational',
+    deadline: null,
+    estimated_hours: '',
+    success_criteria: ''
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Safely populate form when task prop changes
+  useEffect(() => {
+    if (task) {
+      try {
+        setFormData({
+          title: task.title || '',
+          description: task.description || '',
+          assigned_to: Array.isArray(task.assigned_to) ? task.assigned_to : [],
+          priority: task.priority || 'medium',
+          task_type: task.task_type || 'operational',
+          deadline: task.deadline ? new Date(task.deadline) : null,
+          estimated_hours: task.estimated_hours ? task.estimated_hours.toString() : '',
+          success_criteria: task.success_criteria || ''
+        });
+      } catch (error) {
+        console.error('Error populating task form:', error);
+        toast.error('Error loading task data');
+      }
+    }
+  }, [task]);
+
+  // Convert employees array to options format safely
+  const employeeOptions = useMemo(() => {
+    try {
+      const safeEmployees = Array.isArray(employees) ? employees : [];
+      return safeEmployees
+        .filter(emp => emp && emp.id && emp.full_name) // Filter out invalid employees
+        .map(emp => ({
+          value: emp.id,
+          label: `${emp.full_name}${emp.designation ? ` - ${emp.designation}` : ''}`
+        }));
+    } catch (error) {
+      console.error('Error converting employees to options:', error);
+      return [];
+    }
+  }, [employees]);
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.title?.trim()) {
+      newErrors.title = 'Task title is required';
+    }
+    
+    if (!Array.isArray(formData.assigned_to) || formData.assigned_to.length === 0) {
+      newErrors.assigned_to = 'At least one employee must be assigned';
+    }
+
+    if (!formData.priority || formData.priority.trim() === '') {
+      newErrors.priority = 'Priority is required';
+    }
+    
+    if (!formData.task_type || formData.task_type.trim() === '') {
+      newErrors.task_type = 'Task type is required';
+    }
+    
+    if (!formData.deadline) {
+      newErrors.deadline = 'Deadline is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fix the form errors');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const submitData = {
+        ...formData,
+        estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
+        deadline: formData.deadline ? formData.deadline.toISOString() : null
+      };
+      
+      if (typeof onSubmit === 'function') {
+        await onSubmit(submitData);
+      } else {
+        throw new Error('onSubmit is not a function');
+      }
+    } catch (error) {
+      console.error('Error submitting task:', error);
+      toast.error('Failed to save task: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (typeof onCancel === 'function') {
+      onCancel();
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error when user starts typing/selecting
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: undefined
+      }));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 gap-4">
+        {/* Task Title */}
+        <div className="space-y-2">
+          <Label htmlFor="title">Task Title *</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="Enter task title"
+            className={errors.title ? 'border-red-500' : ''}
+          />
+          {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+        </div>
+
+        {/* Task Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            placeholder="Enter task description"
+            rows={3}
+          />
+        </div>
+
+        {/* Assign To Employees */}
+        <div className="space-y-2">
+          <Label htmlFor="assigned_to">Assign To *</Label>
+          <SimpleMultiSelect
+            options={employeeOptions}
+            selected={formData.assigned_to}
+            onChange={(value) => handleInputChange('assigned_to', value)}
+            placeholder="Select employees to assign this task..."
+          />
+          {errors.assigned_to && <p className="text-sm text-red-500">{errors.assigned_to}</p>}
+        </div>
+
+        {/* Priority and Task Type */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="priority">Priority *</Label>
+            <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.priority && <p className="text-sm text-red-500">{errors.priority}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task_type">Task Type *</Label>
+            <Select value={formData.task_type} onValueChange={(value) => handleInputChange('task_type', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select task type..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="operational">Operational</SelectItem>
+                <SelectItem value="project">Project</SelectItem>
+                <SelectItem value="recurring">Recurring</SelectItem>
+                <SelectItem value="training">Training</SelectItem>
+                <SelectItem value="pip">Performance Improvement</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.task_type && <p className="text-sm text-red-500">{errors.task_type}</p>}
+          </div>
+        </div>
+
+        {/* Deadline */}
+        <div className="space-y-2">
+          <Label htmlFor="deadline">Deadline *</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !formData.deadline && "text-muted-foreground",
+                  errors.deadline && "border-red-500"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formData.deadline ? format(formData.deadline, 'PPP') : 'Pick a deadline'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={formData.deadline}
+                onSelect={(date) => handleInputChange('deadline', date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          {errors.deadline && <p className="text-sm text-red-500">{errors.deadline}</p>}
+        </div>
+
+        {/* Estimated Hours */}
+        <div className="space-y-2">
+          <Label htmlFor="estimated_hours">Estimated Hours</Label>
+          <Input
+            id="estimated_hours"
+            type="number"
+            step="0.5"
+            min="0"
+            value={formData.estimated_hours}
+            onChange={(e) => handleInputChange('estimated_hours', e.target.value)}
+            placeholder="Enter estimated hours"
+          />
+        </div>
+
+        {/* Success Criteria */}
+        <div className="space-y-2">
+          <Label htmlFor="success_criteria">Success Criteria</Label>
+          <Textarea
+            id="success_criteria"
+            value={formData.success_criteria}
+            onChange={(e) => handleInputChange('success_criteria', e.target.value)}
+            placeholder="Define what success looks like for this task"
+            rows={2}
+          />
+        </div>
+      </div>
+
+      {/* Form Actions */}
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleCancel}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {isSubmitting ? 'Saving...' : (task ? 'Update Task' : 'Create Task')}
+        </Button>
+      </div>
+    </form>
+  );
+}
