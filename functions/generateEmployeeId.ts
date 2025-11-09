@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.5.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
 
 Deno.serve(async (req) => {
     try {
@@ -8,10 +8,7 @@ Deno.serve(async (req) => {
         // 1. Authenticate the user making the request
         const isAuthenticated = await base44.auth.isAuthenticated();
         if (!isAuthenticated) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-                status: 401,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // 2. Get the current user
@@ -19,28 +16,19 @@ Deno.serve(async (req) => {
         try {
             user = await base44.auth.me();
             if (!user) {
-                return new Response(JSON.stringify({ error: 'User not found' }), { 
-                    status: 401,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                return Response.json({ error: 'User not found' }, { status: 401 });
             }
         } catch (e) {
             console.error('Authentication failed:', e);
-            return new Response(JSON.stringify({ error: 'Authentication failed' }), { 
-                status: 401,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return Response.json({ error: 'Authentication failed' }, { status: 401 });
         }
 
         // 3. If the user already has an Employee ID, return it
         if (user.employee_id) {
-            return new Response(JSON.stringify({ 
+            return Response.json({ 
                 message: 'Employee ID already exists.',
                 employee_id: user.employee_id 
-            }), { 
-                status: 200, 
-                headers: { 'Content-Type': 'application/json' } 
-            });
+            }, { status: 200 });
         }
 
         // 4. Generate a new unique Employee ID using service role
@@ -92,13 +80,10 @@ Deno.serve(async (req) => {
                 console.log(`Successfully assigned Employee ID ${newEmployeeId} to user ${user.id}`);
 
                 // 6. Return success response
-                return new Response(JSON.stringify({ 
+                return Response.json({ 
                     employee_id: newEmployeeId,
                     message: 'Employee ID generated and assigned successfully'
-                }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' },
-                });
+                }, { status: 200 });
 
             } catch (updateError) {
                 attempts++;
@@ -128,12 +113,9 @@ Deno.serve(async (req) => {
     } catch (error) {
         console.error("Error in generateEmployeeId function:", error);
         
-        return new Response(JSON.stringify({ 
+        return Response.json({ 
             error: 'Failed to generate Employee ID', 
             details: error.message 
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        }, { status: 500 });
     }
 });
