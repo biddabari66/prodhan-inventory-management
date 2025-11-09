@@ -55,7 +55,6 @@ import MyAttendance from './pages/MyAttendance';
 import AttendanceMy from './pages/AttendanceMy';
 import SendEmail from './pages/SendEmail';
 import SubmittedReports from './pages/SubmittedReports';
-import layout from './pages/layout';
 import ProductAnalytics from './pages/ProductAnalytics';
 import Layout from './Layout.jsx';
 
@@ -118,7 +117,6 @@ export const PAGES = {
     "AttendanceMy": AttendanceMy,
     "SendEmail": SendEmail,
     "SubmittedReports": SubmittedReports,
-    "layout": layout,
     "ProductAnalytics": ProductAnalytics,
 }
 
