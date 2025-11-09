@@ -81,7 +81,7 @@ import ErrorBoundary from "../components/common/ErrorBoundary";
 import Chatbot from "@/components/common/Chatbot";
 import SessionProvider from '../components/common/EnhancedSessionManager';
 import UniversalSearch from '../components/common/UniversalSearch';
-import { generateEmployeeId } from '../functions/generateEmployeeId';
+import { base44 } from '@/api/base44Client';
 import FastLoadingProvider from '../components/common/FastLoadingProvider';
 import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
 
@@ -410,14 +410,14 @@ export default function Layout({ children, currentPageName }) {
         try {
           console.log("Employee ID missing, attempting to generate...");
           toast.info("Your Employee ID is being generated...");
-          const { data: newIdData } = await generateEmployeeId({});
+          const response = await base44.functions.invoke('generateEmployeeId', {});
 
-          if (newIdData && newIdData.employee_id) {
-            toast.success(`Your new Employee ID has been generated: ${newIdData.employee_id}`);
+          if (response.data && response.data.employee_id) {
+            toast.success(`Your new Employee ID has been generated: ${response.data.employee_id}`);
             user = await User.me();
             console.log('🔄 User data refreshed after Employee ID generation');
           } else {
-            console.warn("Employee ID generation returned unexpected response:", newIdData);
+            console.warn("Employee ID generation returned unexpected response:", response.data);
             toast.warning("Employee ID generation completed but please refresh to see updates.");
           }
         } catch (genError) {
