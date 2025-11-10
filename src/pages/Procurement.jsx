@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,8 +38,7 @@ import { jsPDF } from 'jspdf';
 
 import { withPermission } from '../components/common/PermissionGuard';
 import { handleOrderStatusChange } from '@/functions/handleOrderStatusChange';
-import { CacheManager } from '../components/common/PerformanceOptimizer';
-
+import { useCachedQuery } from '../components/common/CachedQuery';
 
 // Order Import Dialog Component
 const OrderImportDialog = ({ isOpen, onClose, onImportComplete, customers, inventory }) => {
@@ -1109,96 +1108,14 @@ function ProcurementPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]); // For bulk actions
 
-  // OPTIMIZED: Fast data loading with cache
-  const [currentUser, setCurrentUser] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [inventory, setInventory] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
-  const loadAllData = async () => {
-    setIsLoading(true);
-    try {
-      // Try cache first
-      const cachedUser = CacheManager.get('current_user');
-      const cachedOrders = CacheManager.get('orders_list');
-      const cachedCustomers = CacheManager.get('customers_list');
-      const cachedInventory = CacheManager.get('inventory_list');
-      const cachedUsers = CacheManager.get('users_list');
-
-      if (cachedUser && cachedOrders && cachedCustomers && cachedInventory && cachedUsers) {
-        console.log('⚡ All data from cache (instant)');
-        setCurrentUser(cachedUser);
-        setOrders(cachedOrders);
-        setCustomers(cachedCustomers);
-        setInventory(cachedInventory);
-        setUsers(cachedUsers);
-        setIsLoading(false);
-
-        // Background refresh
-        setTimeout(async () => {
-          try {
-            const [freshUser, freshOrders, freshCustomers, freshInventory, freshUsers] = await Promise.all([
-              User.me(),
-              Order.list('-order_date', 500),
-              Customer.list(),
-              Inventory.list(),
-              User.list()
-            ]);
-            setCurrentUser(freshUser);
-            setOrders(freshOrders);
-            setCustomers(freshCustomers);
-            setInventory(freshInventory);
-            setUsers(freshUsers);
-            
-            CacheManager.set('current_user', freshUser, 2 * 60 * 1000);
-            CacheManager.set('orders_list', freshOrders, 2 * 60 * 1000);
-            CacheManager.set('customers_list', freshCustomers, 3 * 60 * 1000);
-            CacheManager.set('inventory_list', freshInventory, 2 * 60 * 1000);
-            CacheManager.set('users_list', freshUsers, 5 * 60 * 1000);
-            console.log('🔄 Background data refreshed');
-          } catch (e) {
-            console.warn('Background refresh failed:', e);
-          }
-        }, 100);
-      } else {
-        // Fresh fetch
-        const [user, ordersData, customersData, inventoryData, usersData] = await Promise.all([
-          User.me(),
-          Order.list('-order_date', 500),
-          Customer.list(),
-          Inventory.list(),
-          User.list()
-        ]);
-
-        setCurrentUser(user);
-        setOrders(ordersData);
-        setCustomers(customersData);
-        setInventory(inventoryData);
-        setUsers(usersData);
-
-        // Cache all data
-        CacheManager.set('current_user', user, 2 * 60 * 1000);
-        CacheManager.set('orders_list', ordersData, 2 * 60 * 1000);
-        CacheManager.set('customers_list', customersData, 3 * 60 * 1000);
-        CacheManager.set('inventory_list', inventoryData, 2 * 60 * 1000);
-        CacheManager.set('users_list', usersData, 5 * 60 * 1000);
-        console.log('✅ Initial data fetched and cached');
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Fetch current user with caching
+  const { data: currentUser } = useCachedQuery(
+    ['currentUser'],
+    () => User.me(),
+    { cacheTTL: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 }
+  );
 
   // CRITICAL: Department-based access control
   const canViewAllDepartments = useMemo(() => {
@@ -1226,6 +1143,35 @@ function ProcurementPage() {
   const isAdmin = useMemo(() => {
     return ['admin', 'manager'].includes(currentUser?.job_role?.toLowerCase());
   }, [currentUser]);
+
+
+  // Fetch orders with caching
+  const { data: orders = [], isLoading: ordersLoading } = useCachedQuery(
+    ['orders'],
+    () => Order.list('-order_date', 500),
+    { cacheTTL: 2 * 60 * 1000, staleTime: 1 * 60 * 1000 }
+  );
+
+  // Fetch customers with caching
+  const { data: customers = [] } = useCachedQuery(
+    ['customers'],
+    () => Customer.list(),
+    { cacheTTL: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 }
+  );
+
+  // Fetch inventory with caching
+  const { data: inventory = [] } = useCachedQuery(
+    ['inventory'],
+    () => Inventory.list(),
+    { cacheTTL: 3 * 60 * 1000, staleTime: 2 * 60 * 1000 }
+  );
+
+  // Fetch users with caching
+  const { data: users = [] } = useCachedQuery(
+    ['users'],
+    () => User.list(),
+    { cacheTTL: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 }
+  );
 
   // Create order mutation with automatic inventory movement recording
   const createOrderMutation = useMutation({
@@ -1308,7 +1254,9 @@ function ProcurementPage() {
       return order;
     },
     onSuccess: () => {
-      loadAllData(); // Refresh all data after successful creation
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['customers']);
+      queryClient.invalidateQueries(['inventory']);
       toast.success('✅ Order created with automatic inventory adjustments!');
       setIsOrderFormOpen(false);
       setEditingOrder(null);
@@ -1327,9 +1275,9 @@ function ProcurementPage() {
       // 🔄 CALCULATE AND RECORD INVENTORY CHANGES WITH MOVEMENTS
       for (const updatedItem of data.order_items) {
         const originalItem = originalOrder.order_items.find(item => item.inventory_id === updatedItem.inventory_id);
-        const invItem = inventory.find(i => i.id === updatedItem.inventory_id); // Use current inventory state
-        
-        if (invItem) {
+        const inventoryItem = inventory.find(i => i.id === updatedItem.inventory_id);
+
+        if (inventoryItem) {
           let quantityDifference = 0;
           let movementNote = '';
 
@@ -1342,9 +1290,9 @@ function ProcurementPage() {
           }
 
           if (quantityDifference !== 0) {
-            const newStock = invItem.current_stock - quantityDifference;
+            const newStock = inventoryItem.current_stock - quantityDifference;
 
-            await Inventory.update(invItem.id, {
+            await Inventory.update(inventoryItem.id, {
               current_stock: newStock
             });
 
@@ -1375,11 +1323,11 @@ function ProcurementPage() {
       for (const originalItem of originalOrder.order_items) {
         const updatedItem = data.order_items.find(item => item.inventory_id === originalItem.inventory_id);
         if (!updatedItem) {
-          const invItem = inventory.find(i => i.id === originalItem.inventory_id); // Use current inventory state
-          if (invItem) {
-            const newStock = invItem.current_stock + originalItem.quantity;
+          const inventoryItem = inventory.find(i => i.id === originalItem.inventory_id);
+          if (inventoryItem) {
+            const newStock = inventoryItem.current_stock + originalItem.quantity;
 
-            await Inventory.update(invItem.id, {
+            await Inventory.update(inventoryItem.id, {
               current_stock: newStock
             });
 
@@ -1407,7 +1355,7 @@ function ProcurementPage() {
       }
 
       if (originalOrder.customer_id && originalOrder.total_amount !== data.total_amount) {
-        const customer = customers.find(c => c.id === originalOrder.customer_id); // Use current customers state
+        const customer = await Customer.get(originalOrder.customer_id);
         if (customer) {
           await Customer.update(originalOrder.customer_id, {
             total_spent: (customer.total_spent || 0) - originalOrder.total_amount + data.total_amount
@@ -1435,7 +1383,9 @@ function ProcurementPage() {
       return updatedOrder;
     },
     onSuccess: () => {
-      loadAllData(); // Refresh all data after successful update
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['customers']);
+      queryClient.invalidateQueries(['inventory']);
       toast.success('✅ Order updated with inventory movements recorded!');
       setIsOrderFormOpen(false);
       setEditingOrder(null);
@@ -1484,7 +1434,7 @@ function ProcurementPage() {
       return updatedOrder;
     },
     onSuccess: () => {
-      loadAllData(); // Refresh orders state
+      queryClient.invalidateQueries(['orders']);
       toast.success('Order status updated!');
     },
     onError: (error) => {
@@ -1528,7 +1478,7 @@ function ProcurementPage() {
       return response.data;
     },
     onSuccess: (data) => {
-      loadAllData(); // Refresh orders state
+      queryClient.invalidateQueries(['orders']);
       toast.success(`Order shipped! Tracking: ${data.data.tracking_code}`);
     },
     onError: (error) => {
@@ -1567,7 +1517,7 @@ function ProcurementPage() {
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
       
-      loadAllData(); // Refresh orders state
+      queryClient.invalidateQueries(['orders']);
       setSelectedOrderIds([]);
       
       if (failCount === 0) {
@@ -1586,7 +1536,7 @@ function ProcurementPage() {
       }
     },
     onSuccess: () => {
-      loadAllData(); // Refresh orders state
+      queryClient.invalidateQueries(['orders']);
       setSelectedOrderIds([]);
       toast.success('Selected orders deleted successfully!');
     },
@@ -1844,13 +1794,11 @@ function ProcurementPage() {
     return <Badge className={className}>{label}</Badge>;
   };
 
-  if (isLoading) {
+  if (ordersLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 animate-pulse"></div>
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
+      <div className="p-6 space-y-6">
+        <CardSkeleton count={3} />
+        <TableSkeleton rows={10} columns={8} />
       </div>
     );
   }
@@ -2350,7 +2298,9 @@ function ProcurementPage() {
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
         onImportComplete={() => {
-          loadAllData(); // Refresh all data after successful import
+          queryClient.invalidateQueries(['orders']);
+          queryClient.invalidateQueries(['customers']);
+          queryClient.invalidateQueries(['inventory']);
           setIsImportDialogOpen(false);
         }}
         customers={customers} // Pass customers data to the import dialog
