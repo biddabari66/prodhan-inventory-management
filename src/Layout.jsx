@@ -82,8 +82,8 @@ import Chatbot from "@/components/common/Chatbot";
 import SessionProvider from '../components/common/EnhancedSessionManager';
 import UniversalSearch from '../components/common/UniversalSearch';
 import { base44 } from '@/api/base44Client';
-import FastLoadingProvider, { useFastLoading } from '../components/common/FastLoadingProvider';
-import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
+import FastLoadingProvider from '../components/common/FastLoadingProvider';
+import { registerServiceWorker, CacheManager } from '../components/common/PerformanceOptimizer';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -243,8 +243,6 @@ export default function Layout({ children, currentPageName }) {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const isAuthPage = location.pathname === '/';
 
-  const { cachedFetch, prefetch } = useFastLoading();
-
   // Set favicon dynamically
   useEffect(() => {
     let link = document.querySelector("link[rel~='icon']");
@@ -279,6 +277,7 @@ export default function Layout({ children, currentPageName }) {
       localStorage.removeItem('user_preferences');
       localStorage.removeItem('biddabari_theme');
       localStorage.removeItem('biddabari_language');
+      CacheManager.clearAll(); // Clear all caches on logout
 
       if (currentUser) {
         try {
@@ -341,18 +340,22 @@ export default function Layout({ children, currentPageName }) {
     localStorage.setItem('biddabari_language', lng);
   };
 
-  // OPTIMIZED: Aggressive permission caching
+  // OPTIMIZED: Fast permission loading with localStorage cache
   const loadUserPermissions = useCallback(async (userId, userRole) => {
     const cacheKey = `permissions_${userId}`;
     
-    try {
-      const permissions = await cachedFetch(
-        cacheKey,
-        () => UserPermission.filter({ user_id: userId }),
-        { ttl: 10 * 60 * 1000, priority: 10 } // 10 min cache, high priority
-      );
+    // Check cache first
+    const cached = CacheManager.get(cacheKey);
+    if (cached) {
+      console.log('⚡ Permissions from cache');
+      setUserPermissions(cached);
+      return;
+    }
 
+    try {
+      const permissions = await UserPermission.filter({ user_id: userId });
       const permissionsMap = {};
+
       permissions.forEach((p) => {
         permissionsMap[p.module] = {
           can_view: p.can_view,
@@ -389,30 +392,66 @@ export default function Layout({ children, currentPageName }) {
           manual_reporting: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }
         };
         setUserPermissions(adminPermissions);
+        CacheManager.set(cacheKey, adminPermissions, 10 * 60 * 1000); // Set cache here
       } else {
         setUserPermissions(permissionsMap);
+        CacheManager.set(cacheKey, permissionsMap, 10 * 60 * 1000); // Set cache here
       }
 
     } catch (e) {
       console.error("Error loading permissions:", e);
       setUserPermissions({ dashboard: { can_view: true } });
     }
-  }, [cachedFetch]);
+  }, []);
 
-  // OPTIMIZED: Ultra-fast user loading with aggressive caching
+  // ULTRA-OPTIMIZED: Instant user loading with cache
   const loadCurrentUser = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔄 Loading user data...');
+      console.log('🔄 Loading user...');
 
-      // Use cached user data
-      let user = await cachedFetch(
-        'current_user',
-        () => User.me(),
-        { ttl: 3 * 60 * 1000, priority: 100, force: false } // 3 min cache, highest priority
-      );
+      // Check cache first for instant load
+      const cachedUser = CacheManager.get('current_user');
+      if (cachedUser) {
+        console.log('⚡ User from cache (instant)');
+        setCurrentUser(cachedUser);
+        setIsLoading(false);
+        
+        // Load cached permissions or fetch if not available
+        const cachedPerms = CacheManager.get(`permissions_${cachedUser.id}`);
+        if (cachedPerms) {
+          setUserPermissions(cachedPerms);
+        } else {
+          // Fetch fresh permissions if user was cached but permissions weren't
+          await loadUserPermissions(cachedUser.id, cachedUser.job_role);
+        }
+
+        // Refresh in background to ensure data is up-to-date without blocking UI
+        setTimeout(async () => {
+          try {
+            const freshUser = await User.me();
+            if (freshUser && JSON.stringify(freshUser) !== JSON.stringify(cachedUser)) {
+                setCurrentUser(freshUser);
+                CacheManager.set('current_user', freshUser, 3 * 60 * 1000);
+                await loadUserPermissions(freshUser.id, freshUser.job_role); // Re-fetch permissions if user data changed
+            } else if (freshUser) {
+              // Even if user data didn't change, update cache expiry
+              CacheManager.set('current_user', freshUser, 3 * 60 * 1000);
+              // Ensure permissions are fresh or cached with latest expiry
+              await loadUserPermissions(freshUser.id, freshUser.job_role);
+            }
+          } catch (e) {
+            console.warn('Background user refresh failed:', e);
+          }
+        }, 100);
+        
+        return; // Important: exit early after serving cached data
+      }
+
+      // If no cached user, perform a fresh fetch
+      const user = await User.me();
 
       if (!user) {
         console.warn("No user found. Redirecting to login page.");
@@ -422,16 +461,22 @@ export default function Layout({ children, currentPageName }) {
 
       console.log('👤 User loaded:', user?.full_name);
 
-      // Generate Employee ID if needed (non-blocking, background)
+      // Cache user after fresh fetch
+      CacheManager.set('current_user', user, 3 * 60 * 1000);
+
+      // Generate Employee ID in background (non-blocking)
       if (user && !user.employee_id) {
-        // Run in background without blocking UI
         setTimeout(async () => {
           try {
             const response = await base44.functions.invoke('generateEmployeeId', {});
             if (response.data?.employee_id) {
               toast.success(`Employee ID generated: ${response.data.employee_id}`);
-              // Invalidate cache to reload user
-              cachedFetch('current_user', () => User.me(), { force: true });
+              CacheManager.clear('current_user'); // Invalidate old user cache
+              const updatedUser = await User.me(); // Fetch user with new employee ID
+              setCurrentUser(updatedUser);
+              CacheManager.set('current_user', updatedUser, 3 * 60 * 1000); // Cache updated user
+              // Re-evaluate permissions as user data changed
+              await loadUserPermissions(updatedUser.id, updatedUser.job_role);
             }
           } catch (genError) {
             console.warn('Background Employee ID generation failed:', genError);
@@ -440,14 +485,7 @@ export default function Layout({ children, currentPageName }) {
       }
 
       setCurrentUser(user);
-      await loadUserPermissions(user.id, user.job_role);
-
-      // 🚀 Prefetch common data in background
-      setTimeout(() => {
-        prefetch('leads_list', () => base44.entities.Lead.list('-created_date', 100), { ttl: 2 * 60 * 1000, priority: 5 });
-        prefetch('admissions_list', () => base44.entities.Admission.list('-created_date', 100), { ttl: 2 * 60 * 1000, priority: 5 });
-        prefetch('inventory_list', () => base44.entities.Inventory.list('-created_date', 200), { ttl: 3 * 60 * 1000, priority: 5 });
-      }, 500);
+      await loadUserPermissions(user.id, user.job_role); // Initial permission load for fresh user
 
     } catch (e) {
       console.error("❌ Error loading user:", e);
@@ -460,7 +498,7 @@ export default function Layout({ children, currentPageName }) {
     } finally {
       setIsLoading(false);
     }
-  }, [cachedFetch, loadUserPermissions, prefetch]);
+  }, [loadUserPermissions]);
 
   useEffect(() => {
     if (isAuthPage) {
@@ -509,7 +547,8 @@ export default function Layout({ children, currentPageName }) {
   }, [location.pathname]);
 
   const refreshUserData = async () => {
-    console.log('🔄 Refreshing user data (called from child component)...');
+    console.log('🔄 Refreshing user...');
+    CacheManager.clear('current_user');
     await loadCurrentUser();
   };
 
