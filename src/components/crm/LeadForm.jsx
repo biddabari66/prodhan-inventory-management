@@ -11,10 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableUserSelect } from '@/components/ui/searchable-user-select'; // Added import for SearchableUserSelect
 
-// Removed LEAD_SOURCES, COURSE_INTERESTS, LEAD_STATUSES as SelectItems are now hardcoded or fields changed to Input
-
-export default function LeadForm({ lead, users, onSubmit, onCancel }) { // Changed onSubmit to onSave, kept users prop
+export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // Added default empty array to users prop
   const [formData, setFormData] = useState({
     student_name: '',
     phone: '',
@@ -48,7 +47,7 @@ export default function LeadForm({ lead, users, onSubmit, onCancel }) { // Chang
   }, [formData, onSubmit]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-1">
+    <form onSubmit={handleSubmit} className="space-y-4"> {/* Changed className from space-y-6 p-1 to space-y-4 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="student_name">Student Name *</Label>
@@ -148,16 +147,6 @@ export default function LeadForm({ lead, users, onSubmit, onCancel }) { // Chang
             </SelectContent>
           </Select>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="assigned_to">Assigned To</Label>
-          <Select name="assigned_to" value={formData.assigned_to} onValueChange={(v) => handleSelectChange('assigned_to', v)}>
-            <SelectTrigger><SelectValue placeholder="Assign to an employee" /></SelectTrigger>
-            <SelectContent>
-              {users.map(user => <SelectItem key={user.id} value={user.id}>{user.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
         
         {/* New fields */}
         <div className="space-y-2">
@@ -211,6 +200,21 @@ export default function LeadForm({ lead, users, onSubmit, onCancel }) { // Chang
           <Input id="next_follow_up" name="next_follow_up" type="date" value={formData.next_follow_up} onChange={handleInputChange} />
         </div>
       </div>
+
+      {/* Updated Assign To field with SearchableUserSelect */}
+      <div>
+        <Label>Assign To (Optional)</Label>
+        <SearchableUserSelect
+          users={users.filter(u => u.department === 'admission')}
+          value={formData.assigned_to}
+          onChange={(value) => setFormData({...formData, assigned_to: value})}
+          placeholder="Search and select admission team member..."
+          allowClear={true}
+          showAvatar={true}
+          showBadge={true}
+        />
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" name="notes" value={formData.notes} onChange={handleInputChange} rows={4} />

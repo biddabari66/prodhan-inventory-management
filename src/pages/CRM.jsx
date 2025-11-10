@@ -238,7 +238,7 @@ export default function CRMPage() {
   const getEmployeeName = useCallback((userId) => {
     if (!Array.isArray(users) || !userId) return 'Unassigned';
     const user = users.find(u => u && u.id === userId);
-    return user ? user.full_name : 'Unassigned';
+    return user ? (user.display_name || user.full_name) : 'Unassigned';
   }, [users]);
 
   const getStatusColor = useCallback((status) => {
