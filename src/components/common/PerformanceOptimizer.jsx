@@ -1,56 +1,56 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-// ULTRA-OPTIMIZED Debounce hook - minimal re-renders
-export const useDebounce = (callback, delay = 300) => {
-  const timeoutRef = useRef(null);
-  const callbackRef = useRef(callback);
+/**
+ * EXPERT PERFORMANCE OPTIMIZATION UTILITIES
+ * Production-grade performance monitoring and optimization
+ */
 
-  useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]);
+// Debounce hook for expensive operations
+export const useDebounce = (callback, delay = 500) => {
+  const timeoutRef = useRef(null);
 
   return useCallback((...args) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     timeoutRef.current = setTimeout(() => {
-      callbackRef.current(...args);
+      callback(...args);
     }, delay);
-  }, [delay]);
+  }, [callback, delay]);
 };
 
-// ULTRA-OPTIMIZED Throttle hook
-export const useThrottle = (callback, limit = 300) => {
+// Throttle hook for high-frequency events
+export const useThrottle = (callback, limit = 1000) => {
   const inThrottle = useRef(false);
-  const callbackRef = useRef(callback);
-
-  useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]);
 
   return useCallback((...args) => {
     if (!inThrottle.current) {
-      callbackRef.current(...args);
+      callback(...args);
       inThrottle.current = true;
       setTimeout(() => {
         inThrottle.current = false;
       }, limit);
     }
-  }, [limit]);
+  }, [callback, limit]);
 };
 
-// Lightweight Intersection Observer
+// Intersection Observer for lazy loading
 export const useIntersectionObserver = (callback, options = {}) => {
   const observerRef = useRef(null);
+  const elementsRef = useRef(new Set());
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           callback(entry.target);
+          observerRef.current?.unobserve(entry.target);
+          elementsRef.current.delete(entry.target);
         }
       });
     }, {
-      rootMargin: '100px',
+      rootMargin: '50px',
       threshold: 0.01,
       ...options
     });
@@ -58,39 +58,56 @@ export const useIntersectionObserver = (callback, options = {}) => {
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [callback]);
+  }, [callback, options]);
 
   const observe = useCallback((element) => {
     if (element && observerRef.current) {
       observerRef.current.observe(element);
+      elementsRef.current.add(element);
     }
   }, []);
 
   return observe;
 };
 
-// Minimal performance monitoring (dev only)
+// Performance monitoring
 export const usePerformanceMonitor = (componentName) => {
-  if (process.env.NODE_ENV === 'production') return;
-  
   const renderCount = useRef(0);
+  const renderTimes = useRef([]);
 
   useEffect(() => {
     renderCount.current += 1;
-    if (renderCount.current % 50 === 0) {
-      console.log(`[Perf] ${componentName}: ${renderCount.current} renders`);
-    }
+    const startTime = performance.now();
+
+    return () => {
+      const endTime = performance.now();
+      const renderTime = endTime - startTime;
+      renderTimes.current.push(renderTime);
+
+      if (renderCount.current % 10 === 0) {
+        const avgRenderTime = renderTimes.current.reduce((a, b) => a + b, 0) / renderTimes.current.length;
+        console.log(`[Performance] ${componentName}: ${renderCount.current} renders, avg ${avgRenderTime.toFixed(2)}ms`);
+        
+        if (avgRenderTime > 16) {
+          console.warn(`⚠️ ${componentName} is rendering slowly (${avgRenderTime.toFixed(2)}ms). Consider optimization.`);
+        }
+      }
+    };
   });
 };
 
-// Ultra-lightweight cache with automatic cleanup
+// Local storage cache with expiration
 export const CacheManager = {
-  set: (key, data, ttl = 3 * 60 * 1000) => {
+  set: (key, data, ttl = 5 * 60 * 1000) => {
     try {
-      const item = { data, timestamp: Date.now(), ttl };
+      const item = {
+        data,
+        timestamp: Date.now(),
+        ttl
+      };
       localStorage.setItem(`cache_${key}`, JSON.stringify(item));
-    } catch (e) {
-      // Silently fail if storage is full
+    } catch (error) {
+      console.warn('Cache set failed:', error);
     }
   },
 
@@ -105,7 +122,8 @@ export const CacheManager = {
         return null;
       }
       return data;
-    } catch (e) {
+    } catch (error) {
+      console.warn('Cache get failed:', error);
       return null;
     }
   },
@@ -113,23 +131,28 @@ export const CacheManager = {
   clear: (key) => {
     try {
       localStorage.removeItem(`cache_${key}`);
-    } catch (e) {}
+    } catch (error) {
+      console.warn('Cache clear failed:', error);
+    }
   },
 
   clearAll: () => {
     try {
-      Object.keys(localStorage).forEach(key => {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
         if (key.startsWith('cache_')) {
           localStorage.removeItem(key);
         }
       });
-    } catch (e) {}
+    } catch (error) {
+      console.warn('Cache clear all failed:', error);
+    }
   }
 };
 
-// Optimized batch request handler
+// Batch API requests
 export class RequestBatcher {
-  constructor(batchFn, delay = 30) {
+  constructor(batchFn, delay = 50) {
     this.batchFn = batchFn;
     this.delay = delay;
     this.queue = [];
@@ -140,7 +163,9 @@ export class RequestBatcher {
     return new Promise((resolve, reject) => {
       this.queue.push({ request, resolve, reject });
       
-      if (this.timeoutId) clearTimeout(this.timeoutId);
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId);
+      }
 
       this.timeoutId = setTimeout(() => {
         this.flush();
@@ -165,102 +190,153 @@ export class RequestBatcher {
   }
 }
 
-// Prefetch resources (minimal overhead)
+// Prefetch resources
 export const prefetchResource = (url, type = 'fetch') => {
   if (type === 'image') {
     const img = new Image();
     img.src = url;
   } else {
-    fetch(url, { method: 'HEAD' }).catch(() => {});
+    fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => {});
   }
 };
 
-// Service Worker registration (cached)
-let swRegistration = null;
+// Service Worker registration
 export const registerServiceWorker = async () => {
-  if (swRegistration) return swRegistration;
-  
   if ('serviceWorker' in navigator) {
     try {
-      swRegistration = await navigator.serviceWorker.register('/service-worker.js');
-      console.log('✅ Service Worker registered');
-      return swRegistration;
+      const registration = await navigator.serviceWorker.register('/service-worker.js');
+      console.log('✅ Service Worker registered:', registration);
+      return registration;
     } catch (error) {
-      console.warn('SW registration failed:', error);
+      console.warn('Service Worker registration failed:', error);
       return null;
     }
   }
   return null;
 };
 
-// Network status (cached state)
+// Network status monitoring
 export const useNetworkStatus = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [connectionType, setConnectionType] = useState(
+    navigator.connection?.effectiveType || 'unknown'
+  );
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => {
       setIsOnline(false);
-      toast.warning('You are offline');
+      toast.warning('You are offline. Some features may not work.');
+    };
+
+    const handleConnectionChange = () => {
+      setConnectionType(navigator.connection?.effectiveType || 'unknown');
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    navigator.connection?.addEventListener('change', handleConnectionChange);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      navigator.connection?.removeEventListener('change', handleConnectionChange);
     };
   }, []);
 
-  return { isOnline };
+  return { isOnline, connectionType };
 };
 
-// Optimized lazy image
-export const LazyImage = React.memo(({ src, alt, className }) => {
+// Image lazy loader component
+export const LazyImage = React.memo(({ src, alt, className, placeholder }) => {
   const [loaded, setLoaded] = useState(false);
+  const [inView, setInView] = useState(false);
   const imgRef = useRef(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setLoaded(true);
+          setInView(true);
           observer.disconnect();
         }
       },
-      { rootMargin: '200px' }
+      { rootMargin: '100px' }
     );
 
-    if (imgRef.current) observer.observe(imgRef.current);
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
     return () => observer.disconnect();
   }, []);
 
   return (
     <div ref={imgRef} className={className}>
-      {loaded && <img src={src} alt={alt} className="w-full h-full object-cover" />}
+      {inView ? (
+        <img
+          src={src}
+          alt={alt}
+          onLoad={() => setLoaded(true)}
+          className={`transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      ) : (
+        placeholder || <div className="bg-gray-200 animate-pulse" style={{ aspectRatio: '16/9' }} />
+      )}
     </div>
   );
 });
 
 LazyImage.displayName = 'LazyImage';
 
-// Virtual scroll for massive lists
+// Virtual scroll hook
 export const useVirtualScroll = (items, itemHeight, containerHeight) => {
   const [scrollTop, setScrollTop] = useState(0);
 
-  const visibleStart = Math.max(0, Math.floor(scrollTop / itemHeight) - 5);
-  const visibleEnd = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 5);
+  const visibleStart = Math.floor(scrollTop / itemHeight);
+  const visibleEnd = Math.ceil((scrollTop + containerHeight) / itemHeight);
 
-  const visibleItems = items.slice(visibleStart, visibleEnd);
+  const visibleItems = items.slice(
+    Math.max(0, visibleStart - 5),
+    Math.min(items.length, visibleEnd + 5)
+  );
+
   const totalHeight = items.length * itemHeight;
-  const offsetY = visibleStart * itemHeight;
+  const offsetY = Math.max(0, visibleStart - 5) * itemHeight;
 
   const handleScroll = useCallback((e) => {
     setScrollTop(e.target.scrollTop);
   }, []);
 
-  return { visibleItems, totalHeight, offsetY, handleScroll };
+  return {
+    visibleItems,
+    totalHeight,
+    offsetY,
+    handleScroll
+  };
+};
+
+// Memory usage monitor
+export const useMemoryMonitor = () => {
+  const [memoryInfo, setMemoryInfo] = useState(null);
+
+  useEffect(() => {
+    if (performance.memory) {
+      const updateMemory = () => {
+        setMemoryInfo({
+          usedJSHeapSize: (performance.memory.usedJSHeapSize / 1048576).toFixed(2),
+          totalJSHeapSize: (performance.memory.totalJSHeapSize / 1048576).toFixed(2),
+          limit: (performance.memory.jsHeapSizeLimit / 1048576).toFixed(2)
+        });
+      };
+
+      updateMemory();
+      const interval = setInterval(updateMemory, 10000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  return memoryInfo;
 };
 
 export default {
@@ -274,5 +350,6 @@ export default {
   registerServiceWorker,
   useNetworkStatus,
   LazyImage,
-  useVirtualScroll
+  useVirtualScroll,
+  useMemoryMonitor
 };

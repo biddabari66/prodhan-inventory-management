@@ -82,7 +82,7 @@ import Chatbot from "@/components/common/Chatbot";
 import SessionProvider from '../components/common/EnhancedSessionManager';
 import UniversalSearch from '../components/common/UniversalSearch';
 import { base44 } from '@/api/base44Client';
-import FastLoadingProvider, { useFastLoading } from '../components/common/FastLoadingProvider';
+import FastLoadingProvider from '../components/common/FastLoadingProvider';
 import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
@@ -243,8 +243,6 @@ export default function Layout({ children, currentPageName }) {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const isAuthPage = location.pathname === '/';
 
-  const { cachedFetch, prefetch } = useFastLoading();
-
   // Set favicon dynamically
   useEffect(() => {
     let link = document.querySelector("link[rel~='icon']");
@@ -341,18 +339,11 @@ export default function Layout({ children, currentPageName }) {
     localStorage.setItem('biddabari_language', lng);
   };
 
-  // OPTIMIZED: Aggressive permission caching
   const loadUserPermissions = useCallback(async (userId, userRole) => {
-    const cacheKey = `permissions_${userId}`;
-    
     try {
-      const permissions = await cachedFetch(
-        cacheKey,
-        () => UserPermission.filter({ user_id: userId }),
-        { ttl: 10 * 60 * 1000, priority: 10 } // 10 min cache, high priority
-      );
-
+      const permissions = await UserPermission.filter({ user_id: userId });
       const permissionsMap = {};
+
       permissions.forEach((p) => {
         permissionsMap[p.module] = {
           can_view: p.can_view,
@@ -373,7 +364,7 @@ export default function Layout({ children, currentPageName }) {
           finance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           hr: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }, // Changed from procurement
           courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           settings: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
@@ -397,22 +388,15 @@ export default function Layout({ children, currentPageName }) {
       console.error("Error loading permissions:", e);
       setUserPermissions({ dashboard: { can_view: true } });
     }
-  }, [cachedFetch]);
+  }, []);
 
-  // OPTIMIZED: Ultra-fast user loading with aggressive caching
   const loadCurrentUser = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
     try {
-      console.log('🔄 Loading user data...');
+      console.log('🔄 Loading user data from server...');
 
-      // Use cached user data
-      let user = await cachedFetch(
-        'current_user',
-        () => User.me(),
-        { ttl: 3 * 60 * 1000, priority: 100, force: false } // 3 min cache, highest priority
-      );
+      let user = await User.me();
 
       if (!user) {
         console.warn("No user found. Redirecting to login page.");
@@ -420,38 +404,41 @@ export default function Layout({ children, currentPageName }) {
         return;
       }
 
-      console.log('👤 User loaded:', user?.full_name);
+      console.log('👤 User data loaded:', user?.full_name, user?.email);
 
-      // Generate Employee ID if needed (non-blocking, background)
       if (user && !user.employee_id) {
-        // Run in background without blocking UI
-        setTimeout(async () => {
-          try {
-            const response = await base44.functions.invoke('generateEmployeeId', {});
-            if (response.data?.employee_id) {
-              toast.success(`Employee ID generated: ${response.data.employee_id}`);
-              // Invalidate cache to reload user
-              cachedFetch('current_user', () => User.me(), { force: true });
-            }
-          } catch (genError) {
-            console.warn('Background Employee ID generation failed:', genError);
+        try {
+          console.log("Employee ID missing, attempting to generate...");
+          toast.info("Your Employee ID is being generated...");
+          const response = await base44.functions.invoke('generateEmployeeId', {});
+
+          if (response.data && response.data.employee_id) {
+            toast.success(`Your new Employee ID has been generated: ${response.data.employee_id}`);
+            user = await User.me();
+            console.log('🔄 User data refreshed after Employee ID generation');
+          } else {
+            console.warn("Employee ID generation returned unexpected response:", response.data);
+            toast.warning("Employee ID generation completed but please refresh to see updates.");
           }
-        }, 1000);
+        } catch (genError) {
+          console.error("Could not generate Employee ID:", genError);
+
+          if (genError.message && genError.message.includes('Unauthorized')) {
+            toast.error("Permission denied for Employee ID generation. Please contact support.");
+          } else {
+            toast.error("Could not automatically generate an Employee ID. Please contact support.");
+          }
+        }
       }
 
+      console.log('✅ Setting current user state');
       setCurrentUser(user);
-      await loadUserPermissions(user.id, user.job_role);
 
-      // 🚀 Prefetch common data in background
-      setTimeout(() => {
-        prefetch('leads_list', () => base44.entities.Lead.list('-created_date', 100), { ttl: 2 * 60 * 1000, priority: 5 });
-        prefetch('admissions_list', () => base44.entities.Admission.list('-created_date', 100), { ttl: 2 * 60 * 1000, priority: 5 });
-        prefetch('inventory_list', () => base44.entities.Inventory.list('-created_date', 200), { ttl: 3 * 60 * 1000, priority: 5 });
-      }, 500);
+      await loadUserPermissions(user.id, user.job_role);
 
     } catch (e) {
       console.error("❌ Error loading user:", e);
-      if (e?.status === 401 || e?.message?.includes('Unauthorized')) {
+      if (e && (e.status === 401 || e.message && (e.message.includes('Unauthorized') || e.message.includes('JWT') || e.message.includes('access token')))) {
         toast.error("Your session has expired or you are not logged in. Please log in again.");
         window.location.href = '/';
       } else {
@@ -460,7 +447,7 @@ export default function Layout({ children, currentPageName }) {
     } finally {
       setIsLoading(false);
     }
-  }, [cachedFetch, loadUserPermissions, prefetch]);
+  }, [loadUserPermissions, setCurrentUser, setIsLoading, setError]);
 
   useEffect(() => {
     if (isAuthPage) {
@@ -485,7 +472,7 @@ export default function Layout({ children, currentPageName }) {
     } else {
       loadCurrentUser();
     }
-  }, [isAuthPage, loadCurrentUser, setIsLoading, setCurrentUser, createPageUrl]);
+  }, [isAuthPage, loadCurrentUser, setIsLoading, setCurrentUser]);
 
   // Mobile-first sidebar behavior
   useEffect(() => {
@@ -697,7 +684,7 @@ export default function Layout({ children, currentPageName }) {
           return hasPermission(permissionKey);
         });
 
-        const newModule = { ...module, subItems: filteredSubItems };
+        module.subItems = filteredSubItems;
         return filteredSubItems.length > 0;
       }
 
@@ -724,9 +711,12 @@ export default function Layout({ children, currentPageName }) {
   if (isLoading) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 animate-pulse"></div>
-          <p className="text-sm text-muted-foreground">Loading...</p>
+        <div className="text-center space-y-4">
+          <img src={NEW_LOGO_URL} alt="Bee ERP Logo" className="h-16 w-16 mx-auto rounded-2xl opacity-80 animate-pulse" />
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-violet-600 dark:text-violet-400">Bee ERP</h1>
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
         </div>
       </div>
     );

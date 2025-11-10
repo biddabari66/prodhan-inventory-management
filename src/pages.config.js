@@ -121,7 +121,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Attendance",
+    mainPage: "Auth",
     Pages: PAGES,
     Layout: Layout,
 };

@@ -1,137 +1,51 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import React, { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { CacheManager } from './PerformanceOptimizer';
 
 /**
- * 🚀 ULTRA-OPTIMIZED CACHED QUERY HOOK
- * Combines React Query with localStorage and aggressive memory caching
+ * CACHED QUERY HOOK
+ * Wraps @tanstack/react-query with localStorage caching for instant loads
  */
 
-// In-memory cache for instant reads
-const memoryCache = new Map();
-const MEMORY_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
-
 export const useCachedQuery = (queryKey, queryFn, options = {}) => {
-  const {
-    cacheTTL = 5 * 60 * 1000, // 5 minutes default
-    staleTime = 3 * 60 * 1000, // 3 minutes default
-    useMemoryCache = true,
-    useLocalStorage = true,
-    ...reactQueryOptions
-  } = options;
+  const cacheKey = Array.isArray(queryKey) ? queryKey.join('_') : queryKey;
+  const cacheTTL = options.cacheTTL || 5 * 60 * 1000; // 5 minutes default
 
-  const queryClient = useQueryClient();
-  const cacheKey = `rq_cache_${JSON.stringify(queryKey)}`;
-  const memoryCacheKey = `mem_${JSON.stringify(queryKey)}`;
-
-  // Check memory cache first (ultra-fast)
-  const getMemoryCache = () => {
-    if (!useMemoryCache) return null;
-    
-    const cached = memoryCache.get(memoryCacheKey);
-    if (cached && Date.now() - cached.timestamp < MEMORY_CACHE_TTL) {
-      return cached.data;
-    }
-    return null;
-  };
-
-  // Check localStorage second (fast)
-  const getLocalStorageCache = () => {
-    if (!useLocalStorage) return null;
-    
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < cacheTTL) {
-          return data;
-        }
-        localStorage.removeItem(cacheKey);
-      }
-    } catch (error) {
-      console.warn('Cache read failed:', error);
-    }
-    return null;
-  };
+  // Get initial data from cache
+  const initialData = CacheManager.get(cacheKey);
 
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      // Try memory cache first
-      const memCached = getMemoryCache();
-      if (memCached) {
-        console.log(`⚡⚡ Memory cache hit: ${queryKey[0]}`);
-        return memCached;
+      const data = await queryFn();
+      // Cache successful responses
+      if (data) {
+        CacheManager.set(cacheKey, data, cacheTTL);
       }
-
-      // Try localStorage second
-      const lsCached = getLocalStorageCache();
-      if (lsCached) {
-        console.log(`⚡ LocalStorage cache hit: ${queryKey[0]}`);
-        // Also set in memory cache for next time
-        if (useMemoryCache) {
-          memoryCache.set(memoryCacheKey, { data: lsCached, timestamp: Date.now() });
-        }
-        return lsCached;
-      }
-
-      // Fetch fresh data
-      console.log(`📡 Fetching fresh: ${queryKey[0]}`);
-      const freshData = await queryFn();
-
-      // Cache in memory
-      if (useMemoryCache) {
-        memoryCache.set(memoryCacheKey, { data: freshData, timestamp: Date.now() });
-      }
-
-      // Cache in localStorage
-      if (useLocalStorage) {
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({
-            data: freshData,
-            timestamp: Date.now()
-          }));
-        } catch (error) {
-          console.warn('Cache write failed:', error);
-        }
-      }
-
-      return freshData;
+      return data;
     },
-    staleTime,
-    gcTime: cacheTTL,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    ...reactQueryOptions
+    initialData: initialData || undefined,
+    staleTime: cacheTTL / 2, // Data becomes stale at half the cache TTL
+    ...options
   });
 
   return query;
 };
 
-// Prefetch hook for background loading
-export const usePrefetchQuery = () => {
-  const queryClient = useQueryClient();
-
-  return (queryKey, queryFn, options = {}) => {
+/**
+ * PREFETCH QUERY
+ * Prefetch data in the background for instant page loads
+ */
+export const usePrefetchQuery = (queryClient, queryKey, queryFn) => {
+  const prefetch = useCallback(() => {
     queryClient.prefetchQuery({
       queryKey,
       queryFn,
-      staleTime: 5 * 60 * 1000,
-      ...options
+      staleTime: 5 * 60 * 1000
     });
-  };
+  }, [queryClient, queryKey, queryFn]);
+
+  return prefetch;
 };
 
-// Clear all caches
-export const clearAllCaches = () => {
-  // Clear memory cache
-  memoryCache.clear();
-  
-  // Clear localStorage caches
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith('rq_cache_') || key.startsWith('cache_')) {
-      localStorage.removeItem(key);
-    }
-  });
-  
-  console.log('🧹 All caches cleared');
-};
+export default useCachedQuery;
