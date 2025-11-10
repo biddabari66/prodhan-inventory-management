@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Course } from '@/entities/Course';
+import SearchableUserSelect from '@/components/ui/searchable-user-select'; // Assuming this path for SearchableUserSelect
 
-export default function AdmissionForm({ admission, employees, onSubmit, onCancel }) {
+export default function AdmissionForm({ admission, employees = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState(() => ({
     student_name: admission?.student_name || '',
     student_phone: admission?.student_phone || '',
@@ -20,7 +21,7 @@ export default function AdmissionForm({ admission, employees, onSubmit, onCancel
     payment_method: admission?.payment_method || 'cash',
     payment_status: admission?.payment_status || 'pending',
     admission_date: admission?.admission_date || new Date().toISOString().slice(0, 10),
-    assigned_employee: admission?.assigned_employee || '',
+    assigned_employee: admission?.assigned_employee || '', // This will hold employee ID initially, then employee name after resolution/selection
     referral_source: admission?.referral_source || 'website',
     student_address: admission?.student_address || '',
     guardian_name: admission?.guardian_name || '',
@@ -56,6 +57,19 @@ export default function AdmissionForm({ admission, employees, onSubmit, onCancel
     }
     fetchCourses();
   }, [admission]); // Re-run if admission prop changes, particularly for edit mode initialization
+
+  // Effect to resolve initial assigned_employee ID to name for display in SearchableUserSelect
+  useEffect(() => {
+    if (admission && admission.assigned_employee && employees.length > 0) {
+      const employee = employees.find(emp => emp.id === admission.assigned_employee);
+      if (employee) {
+        setFormData(prev => ({
+          ...prev,
+          assigned_employee: employee.display_name || employee.full_name
+        }));
+      }
+    }
+  }, [admission, employees]); // Depend on admission and employees for updates
 
   const handleCourseChange = (courseId) => {
     const selectedCourse = courses.find(c => c.id === courseId);
@@ -94,7 +108,7 @@ export default function AdmissionForm({ admission, employees, onSubmit, onCancel
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Student Information */}
         <Card>
@@ -267,20 +281,21 @@ export default function AdmissionForm({ admission, employees, onSubmit, onCancel
             </div>
             <div className="space-y-2">
               <Label>Assigned Employee</Label>
-              <Select value={formData.assigned_employee || ""} onValueChange={(value) => handleChange('assigned_employee', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees
-                    .filter(emp => emp && emp.id && emp.full_name) // Filter out invalid employees
-                    .map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.full_name} - {emp.department}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SearchableUserSelect
+                users={employees.filter(e => e.department === 'admission')}
+                value={formData.assigned_employee} // formData.assigned_employee now stores the name for display
+                onChange={(selectedEmployeeId) => { // The onChange event provides the ID of the selected user
+                  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
+                  setFormData(prev => ({
+                    ...prev,
+                    assigned_employee: selectedEmployee?.display_name || selectedEmployee?.full_name || ''
+                  }));
+                }}
+                placeholder="Search admission team member..."
+                allowClear={false}
+                showAvatar={true}
+                showBadge={true}
+              />
             </div>
             <div className="space-y-2">
               <Label>Referral Source</Label>
