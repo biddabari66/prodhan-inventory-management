@@ -221,6 +221,49 @@ export default function InventoryPage() {
         filterInventory();
     }, [inventory, selectedDepartment, searchQuery, currentUser]); // Added currentUser to dependencies
 
+    // 🔥 ENHANCED: Auto-email on low stock detection
+    useEffect(() => {
+        const checkLowStock = async () => {
+            if (!inventory || inventory.length === 0) return;
+
+            const lowStockItems = inventory.filter(item => 
+                item.current_stock <= (item.reorder_point || item.minimum_stock)
+            );
+
+            for (const item of lowStockItems) {
+                const alreadyNotified = localStorage.getItem(`low_stock_notified_${item.id}`);
+                
+                // Notify if never notified, or if last notification was more than 24 hours ago
+                if (!alreadyNotified || Date.now() - parseInt(alreadyNotified) > 24 * 60 * 60 * 1000) {
+                    try {
+                        // Assuming base44 is globally available or handled by the environment
+                        await base44.functions.invoke('triggerAutoEmails', {
+                            event_type: 'inventory_low_stock',
+                            event_data: {
+                                item_name: item.item_name,
+                                current_stock: item.current_stock,
+                                minimum_stock: item.minimum_stock,
+                                reorder_point: item.reorder_point, // Use reorder_point if available, else minimum_stock
+                                department: item.department,
+                                supplier_name: item.supplier_name,
+                                supplier_lead_time_days: item.supplier_lead_time_days,
+                                manager_emails: [] // Will be fetched by the function based on department/roles
+                            }
+                        });
+                        
+                        localStorage.setItem(`low_stock_notified_${item.id}`, Date.now().toString());
+                        console.log(`✅ Low stock alert sent for: ${item.item_name}`);
+                    } catch (error) {
+                        console.warn('⚠️ Auto-email failed for low stock:', error);
+                        // Optionally toast an error for the user if critical, but background tasks usually just log.
+                    }
+                }
+            }
+        };
+
+        checkLowStock();
+    }, [inventory]);
+
     const loadUserAndInventory = async () => {
         setIsLoading(true);
         try {

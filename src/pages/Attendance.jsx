@@ -28,6 +28,7 @@ import { AttendanceSetting } from '@/entities/AttendanceSetting';
 import { User } from '@/entities/User';
 import { markAttendance } from '@/functions/markAttendance';
 import { useDebounce, useThrottle, CacheManager, usePerformanceMonitor } from '../components/common/PerformanceOptimizer';
+import { useOptimisticActions } from '../components/common/OptimisticActions';
 
 // Lazy load heavy components for faster initial load
 const AttendanceAnalytics = React.lazy(() => import('../components/attendance/AttendanceAnalytics'));
@@ -205,6 +206,8 @@ export default function AttendancePage() {
   });
 
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  
+  const { optimisticAttendance } = useOptimisticActions();
 
   // Cached user loading with memoization
   const loadCurrentUserWithRetry = useCallback(async (retries = 3) => {
@@ -480,73 +483,82 @@ export default function AttendancePage() {
 
   const submitAttendance = useCallback(async (action) => {
     setIsSubmitting(true);
-    const toastId = toast.loading(`Processing ${action}...`);
 
     try {
-        toast.loading("Getting precise location...", { id: toastId });
         const location = await getVerifiedLocation();
 
-        toast.loading("Verifying with server...", { id: toastId });
-        
-        const payload = {
-            action: action,
+        const attendanceData = {
+            employee_id: currentUser.id,
+            date: today,
             latitude: location.latitude,
             longitude: location.longitude,
-            accuracy: location.accuracy,
+            accuracy: location.accuracy
         };
-        
-        const response = await markAttendance(payload);
 
-        if (response.data.success) {
-            toast.success(response.data.message, { id: toastId, duration: 5000 });
-            setTodayAttendance(response.data.data);
-            
-            // Clear cache to force fresh data on next load
-            CacheManager.clear(`attendance_${currentUser.id}_${today}`);
-            CacheManager.clear(`monthly_stats_${currentUser.id}_${format(new Date(), 'yyyy-MM')}`);
-            
-            if (response.data.data?.bangladesh_time) {
-                setTimeout(() => {
-                    toast.success(`🇧🇩 Bangladesh Time: ${response.data.data.bangladesh_time}`, {
-                        duration: 4000
-                    });
-                }, 1000);
-            }
-        } else {
-            let errorMessage = response.data.error || `Failed to ${action}`;
-            let errorIcon = '❌';
-            
-            switch (response.data.code) {
-                case 'LOCATION_OUT_OF_RANGE':
-                    errorIcon = '📍';
-                    break;
-                case 'GPS_ACCURACY_ERROR':
-                    errorIcon = '🛰️';
-                    break;
-                case 'ALREADY_CHECKED_IN':
-                    errorIcon = '⏰';
-                    break;
-                case 'NO_CHECK_IN_RECORD':
-                    errorIcon = '⏰';
-                    break;
-                case 'ALREADY_CHECKED_OUT':
-                    errorIcon = '✋';
-                    break;
-                case 'SYSTEM_NOT_CONFIGURED':
-                    errorIcon = '⚙️';
-                    break;
-            }
+        // 🚀 OPTIMISTIC UPDATE - Instant UI feedback
+        const result = await optimisticAttendance(
+            action,
+            attendanceData,
+            async () => {
+                const payload = {
+                    action: action,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    accuracy: location.accuracy,
+                };
+                
+                const response = await markAttendance(payload);
 
-            toast.error(`${errorIcon} ${errorMessage}`, { id: toastId, duration: 6000 });
+                if (response.data.success) {
+                    // Clear cache
+                    CacheManager.clear(`attendance_${currentUser.id}_${today}`);
+                    CacheManager.clear(`monthly_stats_${currentUser.id}_${format(new Date(), 'yyyy-MM')}`);
+                    
+                    // 🔥 TRIGGER AUTO-EMAIL for attendance
+                    try {
+                        // Assuming `base44` is globally available or imported from a context
+                        await (window.base44 || base44).functions.invoke('triggerAutoEmails', {
+                            event_type: action === 'check_in' ? 'attendance_checked_in' : 'attendance_checked_out',
+                            event_data: {
+                                employee_name: currentUser.full_name,
+                                employee_email: currentUser.email,
+                                date: today,
+                                check_in_time: response.data.data?.check_in_time,
+                                check_out_time: response.data.data?.check_out_time,
+                                working_hours: response.data.data?.working_hours,
+                                status: response.data.data?.status
+                            }
+                        });
+                    } catch (emailError) {
+                        console.warn('⚠️ Auto-email failed:', emailError);
+                    }
+                    
+                    if (response.data.data?.bangladesh_time) {
+                        setTimeout(() => {
+                            toast.success(`🇧🇩 Bangladesh Time: ${response.data.data.bangladesh_time}`, {
+                                duration: 4000
+                            });
+                        }, 1000);
+                    }
+                    
+                    return response.data.data;
+                } else {
+                    throw new Error(response.data.error || `Failed to ${action}`);
+                }
+            }
+        );
+
+        if (result.success) {
+            toast.success(`✅ ${action === 'check_in' ? 'Checked in' : 'Checked out'} successfully!`, { duration: 3000 });
         }
 
     } catch (error) {
         console.error(`💥 ${action} error:`, error);
-        toast.error(`🚨 ${error.message || `An error occurred during ${action}. Please try again.`}`, { id: toastId, duration: 6000 });
+        toast.error(`🚨 ${error.message || `An error occurred during ${action}.`}`, { duration: 6000 });
     } finally {
         setIsSubmitting(false);
     }
-  }, [getVerifiedLocation, currentUser, today]);
+  }, [getVerifiedLocation, currentUser, today, optimisticAttendance]);
 
   const initializeAttendancePage = useCallback(async () => {
     try {
