@@ -1,781 +1,860 @@
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { AlertConfiguration } from "@/entities/AlertConfiguration";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Bell, Plus, Edit, Trash2, Mail, Send, AlertTriangle, FileText, Package, DollarSign, Users, Calendar } from "lucide-react";
+import { toast } from "sonner";
+import { base44 } from '@/api/base44Client';
+import { withPermission } from '../components/common/PermissionGuard';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { AlertConfiguration } from '@/entities/AlertConfiguration';
-import { User } from '@/entities/User';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Edit, Bell, Filter, Settings, Search, AlertTriangle, CheckCircle, X, Check } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import ErrorBoundary from '../components/common/ErrorBoundary';
+/**
+ * 🔔 ENHANCED ALERTS CONFIGURATION PAGE
+ * - System alerts with thresholds
+ * - Automated email notifications
+ * - Department-specific reports
+ * - Low stock alerts
+ * - Role & department-based customization
+ */
 
-// Ultra-safe Multi-select component
-const MultiSelect = React.memo(({ options, value, onChange, placeholder = "Select items..." }) => {
-  const [open, setOpen] = useState(false);
+// Multi-Select Component
+function MultiSelect({ value = [], onChange, options = [] }) {
+  const [selected, setSelected] = useState(Array.isArray(value) ? value : []);
 
-  // Triple-safe value and options with fallbacks
-  const safeValue = React.useMemo(() => {
-    try {
-      if (value === null || value === undefined) return [];
-      if (Array.isArray(value)) return value;
-      if (typeof value === 'string') return value ? [value] : [];
-      return [];
-    } catch (error) {
-      console.error('Error processing value in MultiSelect:', error);
-      return [];
-    }
+  useEffect(() => {
+    setSelected(Array.isArray(value) ? value : []);
   }, [value]);
 
-  const safeOptions = React.useMemo(() => {
-    try {
-      if (!options) return [];
-      if (Array.isArray(options)) return options.filter(opt => opt && opt.value && opt.label);
-      return [];
-    } catch (error) {
-      console.error('Error processing options in MultiSelect:', error);
-      return [];
+  const handleToggle = (optionValue) => {
+    const newSelected = selected.includes(optionValue)
+      ? selected.filter(v => v !== optionValue)
+      : [...selected, optionValue];
+    
+    setSelected(newSelected);
+    if (onChange) {
+      onChange(newSelected);
     }
-  }, [options]);
+  };
 
-  const handleSelect = React.useCallback((selectedValue) => {
-    try {
-      if (!selectedValue || !onChange || typeof onChange !== 'function') return;
-      
-      const isSelected = safeValue.includes(selectedValue);
-      const newValue = isSelected 
-        ? safeValue.filter(v => v !== selectedValue)
-        : [...safeValue, selectedValue];
-      
-      onChange(newValue);
-    } catch (error) {
-      console.error('Error in handleSelect:', error);
-    }
-  }, [safeValue, onChange]);
-
-  const handleRemove = React.useCallback((valueToRemove) => {
-    try {
-      if (!onChange || typeof onChange !== 'function') return;
-      const newValue = safeValue.filter(v => v !== valueToRemove);
-      onChange(newValue);
-    } catch (error) {
-      console.error('Error in handleRemove:', error);
-    }
-  }, [safeValue, onChange]);
-
-  const selectedOptions = React.useMemo(() => {
-    try {
-      return safeOptions.filter(option => 
-        option && option.value && safeValue.includes(option.value)
-      );
-    } catch (error) {
-      console.error('Error filtering selected options:', error);
-      return [];
-    }
-  }, [safeOptions, safeValue]);
-
-  if (!Array.isArray(safeOptions) || safeOptions.length === 0) {
-    return (
-      <div className="w-full p-3 border rounded-md text-sm text-muted-foreground">
-        No recipients available (Admin/Manager roles required)
-      </div>
-    );
+  if (!Array.isArray(options)) {
+    console.error('MultiSelect: options must be an array', options);
+    return null;
   }
 
   return (
-    <ErrorBoundary>
-      <div className="space-y-2">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={open}
-              className="w-full justify-between"
-            >
-              {safeValue.length === 0 ? placeholder : `${safeValue.length} selected`}
-              <Settings className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0">
-            <Command>
-              <CommandInput placeholder="Search recipients..." />
-              <CommandEmpty>No recipients found.</CommandEmpty>
-              <CommandGroup>
-                {safeOptions.map((option) => {
-                  if (!option?.value) return null;
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      onSelect={() => handleSelect(option.value)}
-                    >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          safeValue.includes(option.value) ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                      {option.label || 'Unknown User'}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
-
-        {selectedOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {selectedOptions.map((option) => {
-              if (!option?.value) return null;
-              return (
-                <Badge key={option.value} variant="secondary" className="flex items-center gap-1">
-                  {option.label || 'Unknown'}
-                  <X
-                    className="h-3 w-3 cursor-pointer hover:text-red-500"
-                    onClick={() => handleRemove(option.value)}
-                  />
-                </Badge>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </ErrorBoundary>
+    <div className="border rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+      {options.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No options available</p>
+      ) : (
+        options.map((option) => (
+          <label
+            key={option.value}
+            className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded"
+          >
+            <input
+              type="checkbox"
+              checked={selected.includes(option.value)}
+              onChange={() => handleToggle(option.value)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm">{option.label}</span>
+          </label>
+        ))
+      )}
+    </div>
   );
-});
+}
 
-// Module configuration
-const MODULE_CONFIG = {
-  crm: {
-    label: 'CRM & Leads',
-    entities: {
-      Lead: {
-        label: 'Leads',
-        fields: [
-          { value: 'lead_score', label: 'Lead Score', type: 'number' },
-          { value: 'conversion_probability', label: 'Conversion Probability', type: 'number' },
-        ]
-      }
-    }
-  },
+// Configuration Constants
+const MODULE_CONFIGS = {
   inventory: {
-    label: 'Inventory Management',
-    entities: {
-      Inventory: {
-        label: 'Inventory Items',
-        fields: [
-          { value: 'current_stock', label: 'Current Stock', type: 'number' },
-          { value: 'minimum_stock', label: 'Minimum Stock', type: 'number' },
-        ]
-      }
-    }
+    label: 'Inventory',
+    icon: Package,
+    entities: ['Inventory'],
+    metrics: [
+      { value: 'current_stock', label: 'Current Stock Level' },
+      { value: 'reorder_point', label: 'Reorder Point' },
+      { value: 'minimum_stock', label: 'Minimum Stock' }
+    ]
+  },
+  finance: {
+    label: 'Finance',
+    icon: DollarSign,
+    entities: ['Expense', 'Income', 'Budget'],
+    metrics: [
+      { value: 'amount', label: 'Amount' },
+      { value: 'total_expenses', label: 'Total Expenses' },
+      { value: 'budget_utilization', label: 'Budget Utilization %' }
+    ]
+  },
+  hr: {
+    label: 'HR',
+    icon: Users,
+    entities: ['Attendance', 'Task'],
+    metrics: [
+      { value: 'attendance_rate', label: 'Attendance Rate %' },
+      { value: 'overdue_tasks', label: 'Overdue Tasks Count' }
+    ]
+  },
+  crm: {
+    label: 'CRM',
+    icon: Users,
+    entities: ['Lead', 'Admission'],
+    metrics: [
+      { value: 'conversion_rate', label: 'Conversion Rate %' },
+      { value: 'lead_response_time', label: 'Response Time (hours)' }
+    ]
   }
 };
 
 const CONDITION_OPTIONS = [
-  { value: 'less_than', label: 'Less Than (<)' },
-  { value: 'greater_than', label: 'Greater Than (>)' },
-  { value: 'equals', label: 'Equals (=)' }
+  { value: 'less_than', label: 'Less Than' },
+  { value: 'greater_than', label: 'Greater Than' },
+  { value: 'equals', label: 'Equals' }
 ];
 
 const NOTIFICATION_METHODS = [
-  { value: 'in_app', label: 'In-App Notification', icon: Bell },
-  { value: 'email', label: 'Email', icon: Settings },
-  { value: 'both', label: 'Both In-App & Email', icon: AlertTriangle }
+  { value: 'in_app', label: 'In-App Notification' },
+  { value: 'email', label: 'Email' },
+  { value: 'both', label: 'Both In-App & Email' }
 ];
 
-// Main component wrapped in error boundary
-function AlertsConfigurationContent() {
-  const [alerts, setAlerts] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
+const DEPARTMENT_OPTIONS = [
+  { value: 'boibari', label: '📚 Boibari' },
+  { value: 'prodhan_com_e_commerce', label: '🛒 Prodhan.com' },
+  { value: 'biddabari_publication', label: '📖 Biddabari Publication' },
+  { value: 'it', label: '💻 IT' },
+  { value: 'admission', label: '🎓 Admission' },
+  { value: 'service', label: '🛠️ Service' },
+  { value: 'marketing', label: '📣 Marketing' },
+  { value: 'sales', label: '💼 Sales' },
+  { value: 'finance', label: '💰 Finance' },
+  { value: 'hr', label: '👥 HR' },
+  { value: 'r_and_d', label: '🔬 R&D' }
+];
+
+const ROLE_OPTIONS = [
+  { value: 'admin', label: '👑 Admin' },
+  { value: 'super_admin', label: '⚡ Super Admin' },
+  { value: 'finance_head', label: '💰 Finance Head' },
+  { value: 'department_head', label: '🎯 Department Head' },
+  { value: 'manager', label: '📊 Manager' },
+  { value: 'inventory_manager', label: '📦 Inventory Manager' },
+  { value: 'hr_manager', label: '👥 HR Manager' },
+  { value: 'sales_manager', label: '💼 Sales Manager' }
+];
+
+const REPORT_FREQUENCY_OPTIONS = [
+  { value: 'daily', label: '📅 Daily' },
+  { value: 'weekly', label: '📆 Weekly' },
+  { value: 'monthly', label: '🗓️ Monthly' }
+];
+
+function AlertsConfigurationPage() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAlert, setEditingAlert] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');
-  
-  const [formData, setFormData] = useState(() => ({
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
     module: '',
     entity_type: '',
     metric_field: '',
-    condition: '',
-    threshold_value: '',
+    condition: 'less_than',
+    threshold_value: 0,
     notification_method: 'in_app',
     recipients: [],
+    recipient_roles: [],
+    recipient_departments: [],
     is_active: true,
-  }));
-
-  // Helper function to reset form
-  const resetForm = useCallback(() => {
-    setFormData({
-      name: '',
-      description: '',
-      module: '',
-      entity_type: '',
-      metric_field: '',
-      condition: '',
-      threshold_value: '',
-      notification_method: 'in_app',
-      recipients: [],
-      is_active: true,
-    });
-    setEditingAlert(null);
-  }, []);
-
-  // Helper function to reload alerts
-  const refreshAlerts = useCallback(async () => {
-    try {
-      const alertsResponse = await AlertConfiguration.list('-created_date');
-      setAlerts(Array.isArray(alertsResponse) ? alertsResponse : []);
-    } catch (error) {
-      console.error('Error reloading alerts:', error);
-      toast.error('Failed to reload alerts.');
-    }
-  }, []);
+    alert_type: 'threshold', // threshold | scheduled_report | low_stock
+    report_type: 'department_report', // department_report | inventory_report
+    report_frequency: 'daily',
+    include_pdf: true
+  });
 
   useEffect(() => {
-    let mounted = true;
-    
-    const loadData = async () => {
-      if (!mounted) return;
-      
-      setIsLoading(true);
-      try {
-        // Load data with individual error handling
-        let alertsList = [];
-        let usersList = [];
-        let currentUserData = null;
-
-        try {
-          const alertsResponse = await AlertConfiguration.list('-created_date');
-          alertsList = Array.isArray(alertsResponse) ? alertsResponse : [];
-        } catch (error) {
-          console.warn('Failed to load alerts:', error);
-          toast.error('Failed to load alerts configurations.');
-        }
-
-        try {
-          const usersResponse = await User.list();
-          usersList = Array.isArray(usersResponse) ? usersResponse : [];
-        } catch (error) {
-          console.warn('Failed to load users:', error);
-          toast.error('Failed to load user list for recipients.');
-        }
-
-        try {
-          currentUserData = await User.me();
-        } catch (error) {
-          console.warn('Failed to load current user:', error);
-          // Not critical, can be silent or a different toast
-        }
-
-        if (mounted) {
-          setAlerts(alertsList);
-          setAllUsers(usersList);
-          setCurrentUser(currentUserData);
-        }
-
-      } catch (error) {
-        console.error('Error in loadData:', error);
-        if (mounted) {
-          setAlerts([]);
-          setAllUsers([]);
-          setCurrentUser(null);
-          toast.error('An unexpected error occurred while loading data.');
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
     loadData();
-
-    return () => {
-      mounted = false;
-    };
-  }, []); // refreshAlerts is stable via useCallback, so no need to add to deps if not explicitly used here.
-
-  const handleFormChange = React.useCallback((key, value) => {
-    try {
-      setFormData((prev) => {
-        if (!prev) return { [key]: value };
-        
-        const newState = { ...prev, [key]: value };
-
-        if (key === 'module') {
-          newState.entity_type = '';
-          newState.metric_field = '';
-        } else if (key === 'entity_type') {
-          newState.metric_field = '';
-        }
-        
-        return newState;
-      });
-    } catch (error) {
-      console.error('Error in handleFormChange:', error);
-    }
   }, []);
 
-  const validateForm = React.useCallback(() => {
+  const loadData = async () => {
+    setIsLoading(true);
     try {
-      const required = ['name', 'module', 'entity_type', 'metric_field', 'condition', 'threshold_value', 'notification_method'];
-      
-      for (let field of required) {
-        if (!formData || !formData[field]) {
-          toast.error(`${field.replace('_', ' ')} is required`);
-          return false;
-        }
-      }
-
-      // Validate threshold_value based on metric field type
-      const currentModuleConfig = MODULE_CONFIG[formData.module];
-      const currentEntityConfig = currentModuleConfig?.entities[formData.entity_type];
-      const currentMetricField = currentEntityConfig?.fields.find(f => f.value === formData.metric_field);
-
-      if (currentMetricField && currentMetricField.type === 'number') {
-        const threshold = parseFloat(formData.threshold_value);
-        if (isNaN(threshold)) {
-          toast.error('Threshold value must be a valid number.');
-          return false;
-        }
-      }
-
-      const recipients = Array.isArray(formData.recipients) ? formData.recipients : [];
-      if (recipients.length === 0) {
-        toast.error('At least one recipient must be selected');
-        return false;
-      }
-
-      return true;
+      const [user, alertList, userList] = await Promise.all([
+        User.me(),
+        AlertConfiguration.list(),
+        User.list()
+      ]);
+      setCurrentUser(user);
+      setAlerts(alertList);
+      setUsers(userList);
     } catch (error) {
-      console.error('Error in validateForm:', error);
-      toast.error('Form validation error');
-      return false;
+      console.error("Error loading alerts:", error);
+      toast.error("Failed to load alerts");
+    } finally {
+      setIsLoading(false);
     }
-  }, [formData]);
+  };
 
-  const handleSubmit = React.useCallback(async (e) => {
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    
     try {
-      e.preventDefault();
-      
-      if (!validateForm()) return;
+      // Validate recipients
+      const recipients = [
+        ...formData.recipients,
+        ...users.filter(u => 
+          (formData.recipient_roles.length > 0 && formData.recipient_roles.includes(u.job_role)) ||
+          (formData.recipient_departments.length > 0 && formData.recipient_departments.includes(u.department))
+        ).map(u => u.email)
+      ];
 
-      const dataToSave = {
-        name: formData.name || '',
-        description: formData.description || '',
-        module: formData.module || '',
-        entity_type: formData.entity_type || '',
-        metric_field: formData.metric_field || '',
-        condition: formData.condition || '',
-        threshold_value: parseFloat(formData.threshold_value || '0'), // Ensure number for saving
-        notification_method: formData.notification_method || 'in_app',
-        recipients: Array.isArray(formData.recipients) ? formData.recipients : [],
-        is_active: Boolean(formData.is_active),
+      const uniqueRecipients = [...new Set(recipients)];
+
+      if (uniqueRecipients.length === 0) {
+        toast.error("Please select at least one recipient");
+        return;
+      }
+
+      const alertData = {
+        ...formData,
+        recipients: uniqueRecipients
       };
 
       if (editingAlert) {
-        await AlertConfiguration.update(editingAlert.id, dataToSave);
-        toast.success('Alert updated successfully!');
+        await AlertConfiguration.update(editingAlert.id, alertData);
+        toast.success("Alert updated successfully");
       } else {
-        await AlertConfiguration.create(dataToSave);
-        toast.success('Alert created successfully!');
+        await AlertConfiguration.create(alertData);
+        toast.success("Alert created successfully");
       }
-      
-      resetForm(); 
-      setIsFormOpen(false);
-      await refreshAlerts(); 
-      
-    } catch (error) {
-      console.error('Error saving alert:', error);
-      toast.error('Failed to save alert: ' + (error?.message || 'Please try again.'));
-    }
-  }, [formData, editingAlert, validateForm, resetForm, refreshAlerts]);
 
-  const handleEdit = React.useCallback((alert) => {
+      setIsFormOpen(false);
+      resetForm();
+      loadData();
+    } catch (error) {
+      console.error("Error saving alert:", error);
+      toast.error("Failed to save alert");
+    }
+  };
+
+  const handleEdit = (alert) => {
+    setEditingAlert(alert);
     setFormData({
       name: alert.name || '',
       description: alert.description || '',
       module: alert.module || '',
       entity_type: alert.entity_type || '',
       metric_field: alert.metric_field || '',
-      condition: alert.condition || '',
-      threshold_value: String(alert.threshold_value), // Convert to string for number input
+      condition: alert.condition || 'less_than',
+      threshold_value: alert.threshold_value || 0,
       notification_method: alert.notification_method || 'in_app',
-      recipients: Array.isArray(alert.recipients) ? alert.recipients.map(String) : [], // Ensure recipients are strings
-      is_active: Boolean(alert.is_active),
+      recipients: alert.recipients || [],
+      recipient_roles: alert.recipient_roles || [],
+      recipient_departments: alert.recipient_departments || [],
+      is_active: alert.is_active !== false,
+      alert_type: alert.alert_type || 'threshold',
+      report_type: alert.report_type || 'department_report',
+      report_frequency: alert.report_frequency || 'daily',
+      include_pdf: alert.include_pdf !== false
     });
-    setEditingAlert(alert);
     setIsFormOpen(true);
-  }, []);
+  };
 
-  const handleDelete = React.useCallback(async (alertId) => {
-    toast.promise(AlertConfiguration.delete(alertId), {
-      loading: 'Deleting alert...',
-      success: () => {
-        refreshAlerts(); // Reload alerts on successful deletion
-        return 'Alert deleted successfully!';
-      },
-      error: (err) => {
-        console.error('Failed to delete alert:', err);
-        return 'Failed to delete alert: ' + (err?.message || 'Please try again.');
-      },
-    });
-  }, [refreshAlerts]);
-
-  // Safe recipient options calculation
-  const recipientOptions = useMemo(() => {
-    try {
-      if (!Array.isArray(allUsers) || allUsers.length === 0) {
-        return [];
+  const handleDelete = async (alertId) => {
+    if (confirm("Are you sure you want to delete this alert?")) {
+      try {
+        await AlertConfiguration.delete(alertId);
+        toast.success("Alert deleted successfully");
+        loadData();
+      } catch (error) {
+        console.error("Error deleting alert:", error);
+        toast.error("Failed to delete alert");
       }
-      
-      const managerialRoles = ['admin', 'manager', 'department_head'];
-      
-      return allUsers
-        .filter(user => {
-          try {
-            return user && 
-                   typeof user === 'object' && 
-                   user.id && 
-                   user.job_role && 
-                   managerialRoles.includes(user.job_role);
-          } catch (error) {
-            return false;
-          }
-        })
-        .map(user => {
-          try {
-            const userId = String(user.id || '');
-            const fullName = String(user.full_name || 'Unknown User');
-            const role = String(user.job_role || 'manager').replace(/_/g, ' ');
-            const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-            
-            return {
-              value: userId,
-              label: `${fullName} (${capitalizedRole})`,
-            };
-          } catch (error) {
-            console.error('Error processing user for recipient options:', error);
-            return null;
-          }
-        })
-        .filter(Boolean);
-        
-    } catch (error) {
-      console.error('Error creating recipient options:', error);
-      return [];
     }
-  }, [allUsers]);
+  };
 
-  const filteredAlerts = useMemo(() => {
+  const handleSendTestEmail = async () => {
+    setIsSendingTest(true);
     try {
-      if (!Array.isArray(alerts)) return [];
-      
-      return alerts.filter(alert => {
-        try {
-          if (!alert || typeof alert !== 'object') return false;
-          
-          const searchLower = (searchTerm || '').toLowerCase();
-          const matchesSearch = !searchTerm || 
-            (alert.name || '').toLowerCase().includes(searchLower) ||
-            (alert.description || '').toLowerCase().includes(searchLower);
-            
-          const matchesModule = filterModule === 'all' || alert.module === filterModule;
-          
-          return matchesSearch && matchesModule;
-        } catch (error) {
-          console.error('Error filtering alert:', error);
-          return false;
-        }
+      const response = await base44.functions.invoke('sendTestEmail', {
+        recipient_email: currentUser.email
       });
+      
+      if (response.data.success) {
+        toast.success(`✅ Test email sent to ${currentUser.email}!`);
+      } else {
+        toast.error("Failed to send test email");
+      }
     } catch (error) {
-      console.error('Error filtering alerts:', error);
-      return [];
+      console.error("Test email error:", error);
+      toast.error("Failed to send test email");
+    } finally {
+      setIsSendingTest(false);
     }
-  }, [alerts, searchTerm, filterModule]);
+  };
+
+  const handleSendDepartmentReport = async (department) => {
+    try {
+      toast.info(`📊 Generating ${department} report...`);
+      
+      const response = await base44.functions.invoke('sendDepartmentReport', {
+        department: department,
+        include_pdf: true
+      });
+      
+      if (response.data.success) {
+        toast.success(`✅ ${department} report sent successfully!`);
+      } else {
+        toast.error("Failed to send report");
+      }
+    } catch (error) {
+      console.error("Department report error:", error);
+      toast.error("Failed to send department report");
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      module: '',
+      entity_type: '',
+      metric_field: '',
+      condition: 'less_than',
+      threshold_value: 0,
+      notification_method: 'in_app',
+      recipients: [],
+      recipient_roles: [],
+      recipient_departments: [],
+      is_active: true,
+      alert_type: 'threshold',
+      report_type: 'department_report',
+      report_frequency: 'daily',
+      include_pdf: true
+    });
+    setEditingAlert(null);
+  };
+
+  const filteredAlerts = alerts.filter(alert => {
+    const matchesSearch = !searchTerm || 
+      alert.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      alert.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesModule = filterModule === 'all' || alert.module === filterModule;
+    
+    return matchesSearch && matchesModule;
+  });
+
+  const getAlertTypeIcon = (alertType) => {
+    switch (alertType) {
+      case 'scheduled_report': return FileText;
+      case 'low_stock': return Package;
+      case 'threshold': return AlertTriangle;
+      default: return Bell;
+    }
+  };
+
+  const getAlertTypeBadge = (alertType) => {
+    switch (alertType) {
+      case 'scheduled_report': return 'bg-blue-100 text-blue-800';
+      case 'low_stock': return 'bg-orange-100 text-orange-800';
+      case 'threshold': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   if (isLoading) {
-    return (
-      <div className="p-8 text-center">
-        <div className="inline-flex items-center gap-2 text-muted-foreground">
-          <Settings className="w-5 h-5 animate-spin" />
-          Loading alert configurations...
-        </div>
-      </div>
-    );
+    return <div className="p-6 text-foreground">Loading alerts configuration...</div>;
   }
 
   return (
-    <ErrorBoundary>
-      <div className="p-8 space-y-8">
-        <header className="flex justify-between items-start">
-          <div>
-            <h1 className="text-4xl font-bold font-display text-gradient">System Alerts Configuration</h1>
-            <p className="text-lg text-muted-foreground mt-1">Create intelligent alerts to monitor key business metrics.</p>
-          </div>
-          <Dialog open={isFormOpen} onOpenChange={(open) => {
-            setIsFormOpen(open);
-            if (!open) {
-              resetForm(); // Reset form when dialog closes without saving
-            }
-          }}>
+    <div className="p-6 space-y-6 min-h-screen">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-4xl font-bold font-display text-gradient">Alerts & Notifications</h1>
+          <p className="text-lg text-muted-foreground mt-1">
+            Configure automated alerts, email notifications, and department reports
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleSendTestEmail} 
+            variant="outline"
+            disabled={isSendingTest}
+          >
+            {isSendingTest ? (
+              <>
+                <Mail className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Test Email
+              </>
+            )}
+          </Button>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-primary">
+              <Button className="bg-violet-600 hover:bg-violet-700" onClick={resetForm}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Alert
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingAlert ? 'Edit Alert' : 'Create New Alert'}</DialogTitle>
+                <DialogTitle>
+                  {editingAlert ? 'Edit Alert Configuration' : 'Create New Alert'}
+                </DialogTitle>
               </DialogHeader>
               
-              <ErrorBoundary>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Alert Name *</Label>
+              <form onSubmit={handleFormSubmit} className="space-y-6">
+                <Tabs defaultValue="basic" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                    <TabsTrigger value="conditions">Conditions</TabsTrigger>
+                    <TabsTrigger value="recipients">Recipients</TabsTrigger>
+                  </TabsList>
+
+                  {/* Basic Info Tab */}
+                  <TabsContent value="basic" className="space-y-4">
+                    <div>
+                      <Label>Alert Type</Label>
+                      <Select
+                        value={formData.alert_type}
+                        onValueChange={(value) => setFormData({...formData, alert_type: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="threshold">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4" />
+                              Threshold Alert
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="scheduled_report">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Scheduled Report
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="low_stock">
+                            <div className="flex items-center gap-2">
+                              <Package className="w-4 h-4" />
+                              Low Stock Alert
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Alert Name *</Label>
                       <Input
-                        id="name"
-                        value={formData?.name || ''}
-                        onChange={(e) => handleFormChange('name', e.target.value)}
-                        placeholder="e.g., Low Stock Alert"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        placeholder="e.g., Low Stock Alert - Boibari"
                         required
                       />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="module">Module *</Label>
-                      <Select 
-                        value={formData?.module || ''} 
-                        onValueChange={(value) => handleFormChange('module', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select module" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(MODULE_CONFIG).map(([key, config]) => (
-                            <SelectItem key={key} value={key}>
-                              {config.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Entity Type *</Label>
-                      <Select 
-                        value={formData?.entity_type || ''} 
-                        onValueChange={(value) => handleFormChange('entity_type', value)}
-                        disabled={!formData?.module}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select entity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formData?.module && MODULE_CONFIG[formData.module] && 
-                            Object.entries(MODULE_CONFIG[formData.module].entities).map(([key, entity]) => (
-                              <SelectItem key={key} value={key}>
-                                {entity.label}
-                              </SelectItem>
-                            ))
-                          }
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Metric Field *</Label>
-                      <Select 
-                        value={formData?.metric_field || ''} 
-                        onValueChange={(value) => handleFormChange('metric_field', value)}
-                        disabled={!formData?.entity_type}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formData?.module && formData?.entity_type && 
-                            MODULE_CONFIG[formData.module]?.entities?.[formData.entity_type]?.fields?.map((field) => (
-                              <SelectItem key={field.value} value={field.value}>
-                                {field.label}
-                              </SelectItem>
-                            ))
-                          }
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Condition *</Label>
-                      <Select 
-                        value={formData?.condition || ''} 
-                        onValueChange={(value) => handleFormChange('condition', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONDITION_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Threshold Value *</Label>
-                      <Input
-                        type="number"
-                        value={formData?.threshold_value || ''}
-                        onChange={(e) => handleFormChange('threshold_value', e.target.value)}
-                        placeholder="Enter value"
-                        required
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        placeholder="What does this alert monitor?"
+                        rows={3}
                       />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                    {formData.alert_type === 'scheduled_report' && (
+                      <>
+                        <div>
+                          <Label>Report Type</Label>
+                          <Select
+                            value={formData.report_type}
+                            onValueChange={(value) => setFormData({...formData, report_type: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="department_report">📊 Department Report</SelectItem>
+                              <SelectItem value="inventory_report">📦 Inventory Report</SelectItem>
+                              <SelectItem value="finance_report">💰 Finance Report</SelectItem>
+                              <SelectItem value="sales_report">💼 Sales Report</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label>Report Frequency</Label>
+                          <Select
+                            value={formData.report_frequency}
+                            onValueChange={(value) => setFormData({...formData, report_frequency: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {REPORT_FREQUENCY_OPTIONS.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={formData.include_pdf}
+                            onCheckedChange={(checked) => setFormData({...formData, include_pdf: checked})}
+                          />
+                          <Label>Include PDF Attachment</Label>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  {/* Conditions Tab */}
+                  <TabsContent value="conditions" className="space-y-4">
+                    {formData.alert_type !== 'scheduled_report' && (
+                      <>
+                        <div>
+                          <Label>Module *</Label>
+                          <Select
+                            value={formData.module}
+                            onValueChange={(value) => {
+                              setFormData({...formData, module: value, entity_type: '', metric_field: ''});
+                            }}
+                            required
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select module" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(MODULE_CONFIGS).map(([key, config]) => {
+                                const Icon = config.icon;
+                                return (
+                                  <SelectItem key={key} value={key}>
+                                    <div className="flex items-center gap-2">
+                                      <Icon className="w-4 h-4" />
+                                      {config.label}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {formData.module && (
+                          <div>
+                            <Label>Entity Type *</Label>
+                            <Select
+                              value={formData.entity_type}
+                              onValueChange={(value) => setFormData({...formData, entity_type: value, metric_field: ''})}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select entity" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MODULE_CONFIGS[formData.module]?.entities.map(entity => (
+                                  <SelectItem key={entity} value={entity}>
+                                    {entity}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {formData.entity_type && (
+                          <div>
+                            <Label>Metric Field *</Label>
+                            <Select
+                              value={formData.metric_field}
+                              onValueChange={(value) => setFormData({...formData, metric_field: value})}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select metric" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MODULE_CONFIGS[formData.module]?.metrics.map(metric => (
+                                  <SelectItem key={metric.value} value={metric.value}>
+                                    {metric.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Condition *</Label>
+                            <Select
+                              value={formData.condition}
+                              onValueChange={(value) => setFormData({...formData, condition: value})}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CONDITION_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label>Threshold Value *</Label>
+                            <Input
+                              type="number"
+                              value={formData.threshold_value}
+                              onChange={(e) => setFormData({...formData, threshold_value: parseFloat(e.target.value)})}
+                              placeholder="e.g., 10"
+                              required
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  {/* Recipients Tab */}
+                  <TabsContent value="recipients" className="space-y-4">
+                    <div>
                       <Label>Notification Method *</Label>
-                      <Select 
-                        value={formData?.notification_method || 'in_app'} 
-                        onValueChange={(value) => handleFormChange('notification_method', value)}
+                      <Select
+                        value={formData.notification_method}
+                        onValueChange={(value) => setFormData({...formData, notification_method: value})}
+                        required
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select method" />
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {NOTIFICATION_METHODS.map((method) => (
-                            <SelectItem key={method.value} value={method.value}>
-                              <div className="flex items-center gap-2">
-                                <method.icon className="w-4 h-4" />
-                                {method.label}
-                              </div>
+                          {NOTIFICATION_METHODS.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Recipients (Admin/Manager Only) *</Label>
+                    <div>
+                      <Label>Recipient Roles</Label>
                       <MultiSelect
-                        options={recipientOptions}
-                        value={formData?.recipients || []}
-                        onChange={(values) => handleFormChange('recipients', values)}
-                        placeholder="Select recipients"
+                        value={formData.recipient_roles}
+                        onChange={(values) => setFormData({...formData, recipient_roles: values})}
+                        options={ROLE_OPTIONS}
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label>Description (Optional)</Label>
-                    <Textarea
-                      value={formData?.description || ''}
-                      onChange={(e) => handleFormChange('description', e.target.value)}
-                      placeholder="Describe when this alert should trigger..."
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={formData?.is_active || false}
-                      onCheckedChange={(checked) => handleFormChange('is_active', checked)}
-                    />
-                    <Label>Active (alert will trigger when conditions are met)</Label>
-                  </div>
+                    <div>
+                      <Label>Recipient Departments</Label>
+                      <MultiSelect
+                        value={formData.recipient_departments}
+                        onChange={(values) => setFormData({...formData, recipient_departments: values})}
+                        options={DEPARTMENT_OPTIONS}
+                      />
+                    </div>
 
-                  <div className="flex justify-end space-x-2 pt-4 border-t">
-                    <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="btn-primary">
-                      {editingAlert ? 'Update Alert' : 'Create Alert'}
-                    </Button>
-                  </div>
-                </form>
-              </ErrorBoundary>
+                    <div className="flex items-center space-x-2 p-4 bg-accent rounded-lg">
+                      <Switch
+                        checked={formData.is_active}
+                        onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                      />
+                      <Label>Alert Active</Label>
+                    </div>
+
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        💡 <strong>Recipients Preview:</strong> This alert will notify{' '}
+                        {users.filter(u => 
+                          formData.recipient_roles.includes(u.job_role) ||
+                          formData.recipient_departments.includes(u.department)
+                        ).length} user(s)
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-violet-600 hover:bg-violet-700">
+                    {editingAlert ? 'Update Alert' : 'Create Alert'}
+                  </Button>
+                </div>
+              </form>
             </DialogContent>
           </Dialog>
-        </header>
+        </div>
+      </div>
 
-        <Card className="premium-card">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search alerts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="premium-card cursor-pointer hover:shadow-lg transition-all" onClick={() => handleSendDepartmentReport('boibari')}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-blue-600" />
               </div>
-              <Select value={filterModule} onValueChange={setFilterModule}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Modules" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Modules</SelectItem>
-                  {Object.entries(MODULE_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div>
+                <p className="font-semibold">📚 Boibari Report</p>
+                <p className="text-xs text-muted-foreground">Send now</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardHeader>
-            <CardTitle>Alert Configurations ({filteredAlerts.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredAlerts.length === 0 ? (
-              <div className="text-center py-12">
-                <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                  No alert configurations found
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Create your first alert to start monitoring key business metrics.
-                </p>
-                <Button onClick={() => { setIsFormOpen(true); resetForm(); }} className="btn-primary">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Alert
-                </Button>
+        <Card className="premium-card cursor-pointer hover:shadow-lg transition-all" onClick={() => handleSendDepartmentReport('prodhan_com_e_commerce')}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-green-600" />
               </div>
-            ) : (
+              <div>
+                <p className="font-semibold">🛒 Prodhan.com Report</p>
+                <p className="text-xs text-muted-foreground">Send now</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card cursor-pointer hover:shadow-lg transition-all" onClick={() => handleSendDepartmentReport('all_low_stock')}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                <Package className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-semibold">📦 Low Stock Alert</p>
+                <p className="text-xs text-muted-foreground">Send to inventory mgrs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card cursor-pointer hover:shadow-lg transition-all" onClick={() => handleSendDepartmentReport('finance_summary')}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="font-semibold">💰 Finance Report</p>
+                <p className="text-xs text-muted-foreground">Send to finance team</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Input
+              placeholder="Search alerts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="md:w-1/3"
+            />
+            <Select value={filterModule} onValueChange={setFilterModule}>
+              <SelectTrigger className="md:w-1/4">
+                <SelectValue placeholder="Filter by module" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Modules</SelectItem>
+                {Object.entries(MODULE_CONFIGS).map(([key, config]) => (
+                  <SelectItem key={key} value={key}>
+                    {config.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Alerts List */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            Configured Alerts ({filteredAlerts.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredAlerts.length === 0 ? (
+            <div className="text-center py-12">
+              <Bell className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No alerts configured yet. Create your first alert!</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Alert Name</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Module</TableHead>
                     <TableHead>Recipients</TableHead>
                     <TableHead>Status</TableHead>
@@ -783,63 +862,67 @@ function AlertsConfigurationContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAlerts.map((alert) => (
-                    <TableRow key={alert?.id || Math.random()}>
-                      <TableCell>
-                        <div className="font-medium">{alert?.name || 'Unknown Alert'}</div>
-                        {alert?.description && (
-                          <div className="text-xs text-muted-foreground mt-1">{alert.description}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {MODULE_CONFIG[alert?.module]?.label || alert?.module || 'Unknown'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {Array.isArray(alert?.recipients) ? `${alert.recipients.length} recipients` : 'No recipients'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={alert?.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                          {alert?.is_active ? (
-                            <>
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Active
-                            </>
-                          ) : (
-                            'Inactive'
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" title="Edit" onClick={() => handleEdit(alert)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" title="Delete" onClick={() => handleDelete(alert.id)}>
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredAlerts.map((alert) => {
+                    const AlertIcon = getAlertTypeIcon(alert.alert_type);
+                    return (
+                      <TableRow key={alert.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-semibold">{alert.name}</p>
+                            {alert.description && (
+                              <p className="text-xs text-muted-foreground">{alert.description}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getAlertTypeBadge(alert.alert_type)}>
+                            <AlertIcon className="w-3 h-3 mr-1" />
+                            {alert.alert_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{alert.module || 'N/A'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {alert.recipients?.length || 0} recipient(s)
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={alert.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {alert.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(alert)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(alert.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </ErrorBoundary>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
-// Export wrapped component
-export default function AlertsConfiguration() {
-  return (
-    <ErrorBoundary>
-      <AlertsConfigurationContent />
-    </ErrorBoundary>
-  );
-}
+export default withPermission(AlertsConfigurationPage, 'settings', 'can_view');
