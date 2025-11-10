@@ -85,6 +85,8 @@ import { base44 } from '@/api/base44Client';
 import FastLoadingProvider from '../components/common/FastLoadingProvider';
 import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
 import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
+import SmartOnboarding from '../components/onboarding/SmartOnboarding';
+import SmartHelp from '../components/ai/SmartHelp';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -1441,7 +1443,26 @@ export default function Layout({ children, currentPageName }) {
             </DialogContent>
           </Dialog>
 
-          {/* Enhanced Mobile Chatbot */}
+          {/* Smart Onboarding - Shows only once */}
+          {currentUser && !isAuthPage && (
+            <SmartOnboarding 
+              user={currentUser} 
+              onComplete={() => {
+                console.log('✅ Onboarding completed');
+                toast.success('🎉 Welcome! You\'re all set to explore the ERP!');
+              }}
+            />
+          )}
+
+          {/* AI Smart Help - Contextual assistance */}
+          {currentUser && !isAuthPage && currentPageName && (
+            <SmartHelp 
+              currentPage={`/${currentPageName}`}
+              currentLanguage={currentLanguage}
+            />
+          )}
+
+          {/* Chatbot - Enhanced positioning */}
           <Chatbot 
             currentUser={currentUser} 
             currentPageName={currentPageName} 

@@ -29,8 +29,10 @@ import {
 import AdmissionForm from '../components/admissions/AdmissionForm';
 import AdmissionImportExport from '../components/admissions/AdmissionImportExport';
 import { toast } from 'sonner';
+import { useOptimisticActions } from '../components/common/OptimisticActions';
+import { base44 } from '@/api/base44Client';
 
-export default function Admissions() {
+export default function AdmissionsPage() {
   const [admissions, setAdmissions] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -47,6 +49,7 @@ export default function Admissions() {
   const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = React.useRef(null);
   
+  const { optimisticTaskAction } = useOptimisticActions();
 
   useEffect(() => {
     loadData();
@@ -70,18 +73,51 @@ export default function Admissions() {
     }
   };
 
-  const handleFormSubmit = async (data) => {
+  const handleFormSubmit = async (formData) => {
     try {
+      let savedAdmission;
+      
       if (editingAdmission) {
-        await Admission.update(editingAdmission.id, data);
+        savedAdmission = await Admission.update(editingAdmission.id, formData);
+        toast.success('✅ Admission updated successfully!');
       } else {
-        await Admission.create(data);
+        savedAdmission = await Admission.create(formData);
+        toast.success('🎉 New admission created successfully!');
+        
+        // 🔥 TRIGGER AUTO-EMAIL NOTIFICATION
+        try {
+          const assignedEmployee = employees.find(e => e.id === formData.assigned_employee);
+          
+          await base44.functions.invoke('triggerAutoEmails', {
+            event_type: 'admission_created',
+            event_data: {
+              student_name: formData.student_name,
+              student_email: formData.student_email,
+              student_phone: formData.student_phone,
+              course_name: formData.course_name,
+              course_type: formData.course_type,
+              package_type: formData.package_type,
+              admission_fee: formData.admission_fee,
+              payment_status: formData.payment_status,
+              admission_date: formData.admission_date,
+              assigned_employee: assignedEmployee?.full_name,
+              assigned_employee_email: assignedEmployee?.email,
+              assigned_employee_id: assignedEmployee?.id
+            }
+          });
+          console.log('✅ Auto-email triggered for admission');
+        } catch (emailError) {
+          console.warn('⚠️ Auto-email failed (non-critical):', emailError);
+        }
       }
+      
       setIsFormOpen(false);
       setEditingAdmission(null);
-      loadData();
+      await loadData();
+      
     } catch (error) {
-      console.error("Error submitting admission form:", error);
+      console.error('Error saving admission:', error);
+      toast.error('Failed to save admission. Please try again.');
     }
   };
 

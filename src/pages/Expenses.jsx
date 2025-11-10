@@ -41,6 +41,18 @@ import { Calendar as CalendarIcon, Paperclip } from "lucide-react";
 import ExpenseAdjustmentForm from "../components/expenses/ExpenseAdjustmentForm";
 import ExpenseList from '../components/expenses/ExpenseList';
 
+import { useOptimisticActions } from '../components/common/OptimisticActions';
+import { base44 } from '@/api/base44Client';
+
+// Helper function to generate a voucher number
+const generateVoucherNumber = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const time = String(Date.now()).slice(-6);
+  return `EXP-${year}${month}-${time}`;
+};
+
 export default function Expenses() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userPermissions, setUserPermissions] = useState({});
@@ -70,6 +82,9 @@ export default function Expenses() {
   const [dateRange, setDateRange] = useState('this_month');
   const [customDateRange, setCustomDateRange] = useState({ from: null, to: null });
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0 });
+
+  // Optimistic update hook
+  const { optimisticUpdate: optimisticExpenseUpdate } = useOptimisticActions(expenses, setExpenses);
 
   // Memoized map for efficient user lookups
   const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
@@ -369,23 +384,32 @@ export default function Expenses() {
   const handleSubmitForApproval = async (expense) => {
     setIsProcessing(true);
     try {
-      await Expense.update(expense.id, {
-        status: expense.expense_type === 'advance' ? 'pending_advance_approval' : 'pending_manager_approval',
-        submitted_date: new Date().toISOString()
-      });
+      await optimisticExpenseUpdate(
+        expense.id,
+        {
+          status: expense.expense_type === 'advance' ? 'pending_advance_approval' : 'pending_manager_approval',
+          submitted_date: new Date().toISOString()
+        },
+        async () => {
+          const result = await Expense.update(expense.id, {
+            status: expense.expense_type === 'advance' ? 'pending_advance_approval' : 'pending_manager_approval',
+            submitted_date: new Date().toISOString()
+          });
+          // Notify managers
+          const submitterName = currentUser.display_name || currentUser.full_name;
+          await NotificationService.notifyExpenseApprovalRequest(
+            expense.id,
+            currentUser.id,
+            submitterName,
+            expense.expense_title,
+            expense.amount,
+            currentUser.department
+          );
+          return result;
+        }
+      );
       toast.success('Expense submitted for approval.');
       await loadData();
-
-      // Notify managers
-      const submitterName = currentUser.display_name || currentUser.full_name;
-      NotificationService.notifyExpenseApprovalRequest(
-        expense.id,
-        currentUser.id,
-        submitterName,
-        expense.expense_title,
-        expense.amount,
-        currentUser.department
-      );
     } catch (error) {
       console.error('Failed to submit for approval:', error);
       toast.error('Failed to submit for approval.');
@@ -394,71 +418,148 @@ export default function Expenses() {
     }
   };
 
-
-  const handleApproval = async (expense, newStatus, reason = '') => {
+  const handleApproveOrReject = async (expense, newStatus, reason = '') => {
     setIsProcessing(true);
     try {
-      let updateData = { status: newStatus };
-      let rejectionLevel = '';
+      let updates = {};
+      let eventType = '';
+      let emailData = {};
+      let stage = ''; // 'manager', 'finance', or 'advance_manager'
 
-      const generateVoucherNumber = () => {
-        const date = new Date();
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const time = String(Date.now()).slice(-6);
-        return `EXP-${year}${month}-${time}`;
-      };
-
-      if (newStatus === 'approved' || newStatus === 'advance_approved') {
-        updateData.manager_approved_by = currentUser.id;
-        updateData.manager_approved_by_name = currentUser.display_name || currentUser.full_name;
-        updateData.manager_approval_date = new Date().toISOString();
-        updateData.receipt_number = expense.receipt_number || generateVoucherNumber();
-
-        // If it's a final approval (e.g., simple 'approved' not 'advance_approved')
-        // Or if there's a multi-stage approval, this might need refinement
-        if (newStatus === 'approved' || expense.expense_type !== 'advance') { // For non-advance, manager approval is final
-          updateData.final_approval_date = new Date().toISOString();
-          // Assuming manager_approved_by is also the final approver for simplicity if no other stage
-        }
-
-      } else if (newStatus === 'rejected' || newStatus === 'advance_rejected') {
-        rejectionLevel = expense.expense_type === 'advance' ? 'advance' : 'manager';
-
-        updateData.manager_rejection_reason = reason;
-        updateData.rejection_history = [
-          ...(expense.rejection_history || []),
-          {
-            rejected_by: currentUser.id,
-            rejected_by_name: currentUser.display_name || currentUser.full_name, // Use display_name
-            rejection_date: new Date().toISOString(),
-            rejection_reason: reason,
-            rejection_level: rejectionLevel
-          }];
+      // Determine stage based on current status and expense type
+      if (expense.expense_type === 'advance' && expense.status === 'pending_advance_approval') {
+        stage = 'advance_manager';
+      } else if (expense.status === 'pending_manager_approval') {
+        stage = 'manager';
+      } else if (expense.status === 'pending_finance_approval') {
+        stage = 'finance';
+      } else {
+        console.warn("Unhandled expense status for approval/rejection:", expense.status);
+        toast.error("Cannot process: unknown expense stage.");
+        return;
       }
 
-      await Expense.update(expense.id, updateData);
+      const approverName = currentUser.display_name || currentUser.full_name;
+      
+      // Logic for Approval
+      if (newStatus.includes('approved')) {
+        eventType = 'expense_approved';
+        toast.success(`Expense ${stage.replace('_manager', '')} approved successfully!`);
 
-      try {
-        const approverName = currentUser.display_name || currentUser.full_name;
-
-        if (newStatus.includes('approved') || newStatus.includes('rejected')) {
-          await NotificationService.notifyExpenseDecision(
-            expense.id,
-            expense.submitted_by,
-            approverName, // Use display_name
-            expense.expense_title,
-            !newStatus.includes('rejected'), // true if approved, false if rejected
-            reason
-          );
+        if (stage === 'advance_manager') {
+          updates = {
+            status: 'advance_approved',
+            manager_approved_by: currentUser.id,
+            manager_approved_by_name: approverName,
+            manager_approval_date: new Date().toISOString(),
+            final_approval_date: new Date().toISOString(), // Advance is often one-step final approval
+            receipt_number: expense.receipt_number || generateVoucherNumber(),
+          };
+        } else if (stage === 'manager') {
+          updates = {
+            status: 'pending_finance_approval',
+            manager_approved_by: currentUser.id,
+            manager_approved_by_name: approverName,
+            manager_approval_date: new Date().toISOString()
+          };
+        } else if (stage === 'finance') {
+          updates = {
+            status: 'approved',
+            finance_approved_by: currentUser.id,
+            finance_approval_date: new Date().toISOString(),
+            final_approval_date: new Date().toISOString(),
+            receipt_number: expense.receipt_number || generateVoucherNumber()
+          };
         }
-      } catch (notificationError) {
-        console.error('⚠️ Notification failed (but expense was updated):', notificationError);
-        toast.warning('Expense updated successfully, but notification may not have been sent.');
+        emailData = {
+          expense_title: expense.expense_title,
+          amount: expense.amount,
+          submitted_by_name: expense.submitted_by_name,
+          submitted_by_id: expense.submitted_by,
+          approved_by_name: approverName,
+          receipt_number: updates.receipt_number
+        };
+
+      // Logic for Rejection
+      } else if (newStatus.includes('rejected')) {
+        eventType = 'expense_rejected';
+        toast.success(`Expense ${stage.replace('_manager', '')} rejected successfully!`);
+
+        const rejectionReasonText = reason || 'No reason provided.';
+        updates = {
+          status: (stage === 'advance_manager') ? 'advance_rejected' : 'rejected', // Advance has its own rejected status
+          rejection_history: [
+            ...(expense.rejection_history || []),
+            {
+              rejected_by: currentUser.id,
+              rejected_by_name: approverName,
+              rejection_date: new Date().toISOString(),
+              rejection_reason: rejectionReasonText,
+              rejection_level: stage
+            }
+          ]
+        };
+        if (stage === 'manager') {
+          updates.manager_rejection_reason = rejectionReasonText;
+        } else if (stage === 'finance') {
+          updates.finance_rejection_reason = rejectionReasonText;
+        } else if (stage === 'advance_manager') {
+          updates.manager_rejection_reason = rejectionReasonText; // Advance rejection also uses manager reason field
+        }
+
+        emailData = {
+          expense_title: expense.expense_title,
+          amount: expense.amount,
+          submitted_by_name: expense.submitted_by_name,
+          submitted_by_id: expense.submitted_by,
+          rejection_reason: rejectionReasonText,
+          rejected_by_name: approverName
+        };
+      } else {
+        console.warn("Unknown action status:", newStatus);
+        toast.error("Unknown action. Please try again.");
+        return;
       }
 
-      toast.success(`Expense ${newStatus.includes('approved') ? 'approved' : 'rejected'} successfully!`);
-      loadData();
+      // Perform optimistic update and actual update
+      await optimisticExpenseUpdate(
+        expense.id,
+        updates,
+        async () => {
+          const result = await Expense.update(expense.id, updates);
+          try {
+            const employeeData = allUsers.find(e => e.id === expense.submitted_by);
+            if (employeeData?.email) {
+              await base44.functions.invoke('triggerAutoEmails', {
+                event_type: eventType,
+                event_data: {
+                  ...emailData,
+                  employee_email: employeeData.email
+                }
+              });
+            } else {
+              console.warn('⚠️ No employee email found for notification.');
+            }
+          } catch (emailError) {
+            console.warn('⚠️ Auto-email failed:', emailError);
+          }
+
+          // Also trigger standard in-app notification for the submitter
+          if (newStatus.includes('approved') || newStatus.includes('rejected')) {
+            await NotificationService.notifyExpenseDecision(
+              expense.id,
+              expense.submitted_by,
+              approverName,
+              expense.expense_title,
+              !newStatus.includes('rejected'), // true if approved, false if rejected
+              reason
+            );
+          }
+          return result;
+        }
+      );
+
+      loadData(); // Reload data after action
 
     } catch (error) {
       console.error("❌ Error updating expense:", error);
@@ -469,6 +570,7 @@ export default function Expenses() {
     }
   };
 
+
   const handleAdjustment = (expense) => {
     setAdjustingExpense(expense);
     setIsAdjustmentOpen(true);
@@ -477,13 +579,26 @@ export default function Expenses() {
   const handleAdjustmentSubmit = async (adjustmentData) => {
     setIsSubmitting(true);
     try {
-      await Expense.update(adjustingExpense.id, {
-        ...adjustmentData,
-        status: 'adjusted',
-        adjusted_by: currentUser.id,
-        adjusted_by_name: currentUser.display_name || currentUser.full_name, // Use display_name
-        adjustment_date: new Date().toISOString(),
-      });
+      await optimisticExpenseUpdate(
+        adjustingExpense.id,
+        {
+          ...adjustmentData,
+          status: 'adjusted',
+          adjusted_by: currentUser.id,
+          adjusted_by_name: currentUser.display_name || currentUser.full_name, // Use display_name
+          adjustment_date: new Date().toISOString(),
+        },
+        async () => {
+          const result = await Expense.update(adjustingExpense.id, {
+            ...adjustmentData,
+            status: 'adjusted',
+            adjusted_by: currentUser.id,
+            adjusted_by_name: currentUser.display_name || currentUser.full_name,
+            adjustment_date: new Date().toISOString(),
+          });
+          return result;
+        }
+      );
 
       toast.success("Expense adjustment completed successfully!");
       setIsAdjustmentOpen(false);
@@ -507,7 +622,14 @@ export default function Expenses() {
   const handleDelete = async (expenseId) => {
     setIsProcessing(true);
     try {
-      await Expense.delete(expenseId);
+      await optimisticExpenseUpdate(
+        expenseId,
+        { _deleted: true }, // Mark as deleted for optimistic UI
+        async () => {
+          await Expense.delete(expenseId);
+          return { id: expenseId, _deleted: true }; // Return something to signify success
+        }
+      );
       toast.success("Expense deleted successfully!");
       await loadData();
     } catch (error) {
@@ -744,6 +866,7 @@ export default function Expenses() {
               <SelectItem value="pending_advance_approval">Pending Advance Approval</SelectItem>
               <SelectItem value="advance_approved">Advance Approved</SelectItem>
               <SelectItem value="advance_rejected">Advance Rejected</SelectItem>
+              <SelectItem value="pending_finance_approval">Pending Finance Approval</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="adjusted">Adjusted</SelectItem>
@@ -830,7 +953,7 @@ export default function Expenses() {
         expenses={expenses}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onApprove={handleApproval}
+        onApprove={handleApproveOrReject} // Replaced handleApproval with new dispatcher
         onAdjust={handleAdjustment}
         onSubmitForApproval={handleSubmitForApproval}
         onViewInvoice={handleViewInvoice}
@@ -935,6 +1058,7 @@ const getStatusColor = (status) => {
     'pending_advance_approval': 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
     'advance_approved': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
     'advance_rejected': 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
+    'pending_finance_approval': 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300', // New status color
     'approved': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
     'rejected': 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
     'adjusted': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300'
@@ -950,6 +1074,7 @@ const getStatusText = (status) => {
     'pending_advance_approval': 'Pending Advance Approval',
     'advance_approved': 'Advance Approved',
     'advance_rejected': 'Advance Rejected',
+    'pending_finance_approval': 'Pending Finance Approval', // New status text
     'approved': 'Approved',
     'rejected': 'Rejected',
     'adjusted': 'Adjusted'
