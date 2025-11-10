@@ -19,11 +19,13 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
 /**
- * EXPERT SMART ONBOARDING SYSTEM
+ * 🎯 ENHANCED SMART ONBOARDING SYSTEM
  * - 2-step quick onboarding
  * - Shows only once per user
  * - Role-based personalization
  * - Bilingual support (English/Bengali)
+ * - Fixed close button on step 2
+ * - Auto-responsive design
  */
 
 const translations = {
@@ -229,19 +231,20 @@ export default function SmartOnboarding({ user, onComplete }) {
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="max-w-2xl p-0 overflow-hidden border-0 bg-gradient-to-br from-violet-50 to-pink-50"
+        className="max-w-2xl w-[95vw] max-h-[90vh] p-0 overflow-y-auto border-0 bg-gradient-to-br from-violet-50 to-pink-50"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         {/* Progress Bar */}
-        <div className="relative">
+        <div className="relative sticky top-0 z-10 bg-gradient-to-br from-violet-50 to-pink-50">
           <Progress value={(currentStep / 2) * 100} className="h-2 rounded-none" />
+          {/* 🔥 FIXED: Close button now visible on both steps */}
           <div className="absolute top-2 right-4">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={handleSkip}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground hover:bg-white/50"
             >
               <X className="w-3 h-3 mr-1" />
               {t('skip')}
@@ -249,37 +252,37 @@ export default function SmartOnboarding({ user, onComplete }) {
           </div>
         </div>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-violet-500 to-pink-500 rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-10 h-10 text-white" />
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-violet-500 to-pink-500 rounded-2xl flex items-center justify-center">
+              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gradient mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gradient mb-2">
               {t('welcome')}
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               {t('subtitle')}
             </p>
           </div>
 
           {/* Step 1: Language Selection */}
           {currentStep === 1 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-300">
+            <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom duration-300">
               <div className="text-center">
-                <Globe className="w-12 h-12 mx-auto mb-3 text-violet-500" />
-                <h3 className="text-xl font-semibold mb-2">{t('step1_title')}</h3>
-                <p className="text-sm text-muted-foreground">{t('step1_desc')}</p>
+                <Globe className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-violet-500" />
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">{t('step1_title')}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('step1_desc')}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Card 
                   className={`cursor-pointer transition-all duration-300 hover:scale-105 ${selectedLanguage === 'en' ? 'border-2 border-violet-500 bg-violet-50' : ''}`}
                   onClick={() => handleLanguageSelect('en')}
                 >
-                  <CardContent className="p-6 text-center">
-                    <div className="text-4xl mb-3">🇬🇧</div>
-                    <h4 className="font-semibold text-lg mb-2">{translations.en.english}</h4>
+                  <CardContent className="p-4 sm:p-6 text-center">
+                    <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">🇬🇧</div>
+                    <h4 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">{translations.en.english}</h4>
                     <p className="text-xs text-muted-foreground">International</p>
                   </CardContent>
                 </Card>
@@ -288,9 +291,9 @@ export default function SmartOnboarding({ user, onComplete }) {
                   className={`cursor-pointer transition-all duration-300 hover:scale-105 ${selectedLanguage === 'bn' ? 'border-2 border-violet-500 bg-violet-50' : ''}`}
                   onClick={() => handleLanguageSelect('bn')}
                 >
-                  <CardContent className="p-6 text-center">
-                    <div className="text-4xl mb-3">🇧🇩</div>
-                    <h4 className="font-semibold text-lg mb-2">{translations.bn.bengali}</h4>
+                  <CardContent className="p-4 sm:p-6 text-center">
+                    <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">🇧🇩</div>
+                    <h4 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">{translations.bn.bengali}</h4>
                     <p className="text-xs text-muted-foreground">স্থানীয়</p>
                   </CardContent>
                 </Card>
@@ -300,47 +303,47 @@ export default function SmartOnboarding({ user, onComplete }) {
 
           {/* Step 2: Role Introduction */}
           {currentStep === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-300">
+            <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom duration-300">
               <div className="text-center">
-                <Award className="w-12 h-12 mx-auto mb-3 text-violet-500" />
-                <h3 className="text-xl font-semibold mb-2">{t('step2_title')}</h3>
-                <p className="text-sm text-muted-foreground">{t('step2_desc')}</p>
+                <Award className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-violet-500" />
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">{t('step2_title')}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('step2_desc')}</p>
               </div>
 
               <Card className="bg-gradient-to-br from-violet-100 to-pink-100 border-2 border-violet-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-pink-500 rounded-xl flex items-center justify-center">
-                      <Target className="w-6 h-6 text-white" />
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Target className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t('roleIntro')}</p>
-                      <h4 className="text-xl font-bold text-violet-700 capitalize">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('roleIntro')}</p>
+                      <h4 className="text-base sm:text-xl font-bold text-violet-700 capitalize truncate">
                         {user?.designation || userRole?.replace('_', ' ')}
                       </h4>
                     </div>
                   </div>
 
-                  <p className="font-semibold text-violet-800 mb-3">{t('youCan')}</p>
+                  <p className="font-semibold text-sm sm:text-base text-violet-800 mb-2 sm:mb-3">{t('youCan')}</p>
                   <div className="space-y-2">
                     {rolePermissions[selectedLanguage]?.map((permission, index) => (
                       <div 
                         key={index} 
-                        className="flex items-start gap-3 p-3 bg-white/70 backdrop-blur-sm rounded-lg animate-in fade-in slide-in-from-left"
+                        className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-white/70 backdrop-blur-sm rounded-lg animate-in fade-in slide-in-from-left"
                         style={{ animationDelay: `${index * 100}ms` }}
                       >
-                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-gray-700">{permission}</span>
+                        <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm text-gray-700">{permission}</span>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Zap className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs sm:text-sm text-blue-800">
                     <p className="font-semibold mb-1">💡 {selectedLanguage === 'en' ? 'Pro Tip' : 'প্রো টিপ'}</p>
                     <p>
                       {selectedLanguage === 'en' 
@@ -351,26 +354,26 @@ export default function SmartOnboarding({ user, onComplete }) {
                 </div>
               </div>
 
-              <div className="text-center pt-4">
+              <div className="text-center pt-2 sm:pt-4">
                 <Button
                   onClick={handleComplete}
                   disabled={isCompleting}
                   size="lg"
-                  className="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white px-12 py-6 text-lg rounded-xl shadow-lg"
+                  className="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white px-8 sm:px-12 py-4 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg w-full sm:w-auto"
                 >
                   {isCompleting ? (
                     <>
-                      <Sparkles className="w-5 h-5 mr-2 animate-spin" />
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                       {t('completing')}
                     </>
                   ) : (
                     <>
-                      <Zap className="w-5 h-5 mr-2" />
+                      <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       {t('complete')}
                     </>
                   )}
                 </Button>
-                <p className="text-xs text-muted-foreground mt-3">
+                <p className="text-xs text-muted-foreground mt-2 sm:mt-3">
                   {t('getStarted')}
                 </p>
               </div>
@@ -378,7 +381,7 @@ export default function SmartOnboarding({ user, onComplete }) {
           )}
 
           {/* Step Indicator */}
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="flex justify-center gap-2 mt-6 sm:mt-8">
             {[1, 2].map((step) => (
               <div
                 key={step}
