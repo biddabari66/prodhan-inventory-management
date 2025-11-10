@@ -65,7 +65,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Enhanced KPI Card Component with Expandable Details
+// Enhanced KPI Card Component - STABLE COLORS, NO ANIMATION LOOPS
 const KPICard = ({ title, value, change, icon: Icon, colorScheme, trend, description, onClick, expandableContent, isSearchMatch = true }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -74,8 +74,8 @@ const KPICard = ({ title, value, change, icon: Icon, colorScheme, trend, descrip
   const CardContentInternal = () => (
     <div className="relative z-10 p-6">
       <div className="flex items-start justify-between mb-4">
-        <div className={`p-4 rounded-2xl ${colorScheme.bgClass} shadow-inner-soft group-hover:shadow-lg transition-shadow duration-300`}>
-          <Icon className={`w-7 h-7 ${colorScheme.iconClass} group-hover:scale-110 transition-transform duration-300`} />
+        <div className={`p-4 rounded-2xl ${colorScheme.bgClass} transition-all duration-300`}>
+          <Icon className={`w-7 h-7 ${colorScheme.iconClass}`} />
         </div>
         <div className="flex items-center gap-2">
           {change && (
@@ -103,7 +103,7 @@ const KPICard = ({ title, value, change, icon: Icon, colorScheme, trend, descrip
 
       <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <p className={`text-4xl font-bold font-display tracking-tight ${colorScheme.textClass} group-hover:text-5xl transition-all duration-300`}>
+        <p className={`text-4xl font-bold font-display tracking-tight ${colorScheme.textClass}`}>
           {value}
         </p>
         {description && (
@@ -112,7 +112,7 @@ const KPICard = ({ title, value, change, icon: Icon, colorScheme, trend, descrip
       </div>
 
       {isExpanded && expandableContent && (
-        <div className="mt-4 pt-4 border-t border-white/20">
+        <div className="mt-4 pt-4 border-t border-gray-200">
           {expandableContent}
         </div>
       )}
@@ -121,10 +121,13 @@ const KPICard = ({ title, value, change, icon: Icon, colorScheme, trend, descrip
 
   return (
     <Card
-      className="premium-card group cursor-pointer transform-gpu hover:scale-105 transition-all duration-500 overflow-hidden"
+      className="premium-card group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden border-2"
+      style={{
+        background: colorScheme.cardBg,
+        borderColor: colorScheme.borderColor
+      }}
       onClick={onClick}
     >
-      <div className={`absolute inset-0 rounded-3xl ${colorScheme.glowClass} opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-2xl animate-pulse`}></div>
       <CardContentInternal />
     </Card>
   );
@@ -431,6 +434,7 @@ function DashboardComponent() {
     }
   };
 
+  // FIXED: Stable colors for KPI cards - NO color animations
   const advancedKpiCards = useMemo(() => [
     {
       title: 'Total Revenue',
@@ -442,8 +446,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-emerald-100',
         iconClass: 'text-emerald-600',
-        textClass: 'text-emerald-600',
-        glowClass: 'bg-emerald-500'
+        textClass: 'text-emerald-700',
+        cardBg: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+        borderColor: '#6ee7b7'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -472,8 +477,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-red-100',
         iconClass: 'text-red-600',
-        textClass: 'text-red-600',
-        glowClass: 'bg-red-500'
+        textClass: 'text-red-700',
+        cardBg: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+        borderColor: '#fca5a5'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -502,8 +508,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-blue-100',
         iconClass: 'text-blue-600',
-        textClass: 'text-blue-600',
-        glowClass: 'bg-blue-500'
+        textClass: 'text-blue-700',
+        cardBg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        borderColor: '#93c5fd'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -527,8 +534,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-orange-100',
         iconClass: 'text-orange-600',
-        textClass: 'text-orange-600',
-        glowClass: 'bg-orange-500'
+        textClass: 'text-orange-700',
+        cardBg: 'linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)',
+        borderColor: '#fb923c'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -552,8 +560,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-emerald-100',
         iconClass: 'text-emerald-600',
-        textClass: 'text-emerald-600',
-        glowClass: 'bg-emerald-500'
+        textClass: 'text-emerald-700',
+        cardBg: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+        borderColor: '#6ee7b7'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -573,8 +582,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-violet-100',
         iconClass: 'text-violet-600',
-        textClass: 'text-violet-600',
-        glowClass: 'bg-violet-500'
+        textClass: 'text-violet-700',
+        cardBg: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+        borderColor: '#c4b5fd'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -593,8 +603,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-teal-100',
         iconClass: 'text-teal-600',
-        textClass: 'text-teal-600',
-        glowClass: 'bg-teal-500'
+        textClass: 'text-teal-700',
+        cardBg: 'linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%)',
+        borderColor: '#5eead4'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -613,8 +624,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-blue-100',
         iconClass: 'text-blue-600',
-        textClass: 'text-blue-600',
-        glowClass: 'bg-blue-500'
+        textClass: 'text-blue-700',
+        cardBg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        borderColor: '#93c5fd'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -633,8 +645,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-orange-100',
         iconClass: 'text-orange-600',
-        textClass: 'text-orange-600',
-        glowClass: 'bg-orange-500'
+        textClass: 'text-orange-700',
+        cardBg: 'linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)',
+        borderColor: '#fb923c'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -653,8 +666,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-pink-100',
         iconClass: 'text-pink-600',
-        textClass: 'text-pink-600',
-        glowClass: 'bg-pink-500'
+        textClass: 'text-pink-700',
+        cardBg: 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)',
+        borderColor: '#f9a8d4'
       }
     },
     {
@@ -667,8 +681,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-cyan-100',
         iconClass: 'text-cyan-600',
-        textClass: 'text-cyan-600',
-        glowClass: 'bg-cyan-500'
+        textClass: 'text-cyan-700',
+        cardBg: 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)',
+        borderColor: '#67e8f9'
       }
     },
     {
@@ -681,8 +696,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-indigo-100',
         iconClass: 'text-indigo-600',
-        textClass: 'text-indigo-600',
-        glowClass: 'bg-indigo-500'
+        textClass: 'text-indigo-700',
+        cardBg: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+        borderColor: '#a5b4fc'
       }
     },
     {
@@ -695,8 +711,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-rose-100',
         iconClass: 'text-rose-600',
-        textClass: 'text-rose-600',
-        glowClass: 'bg-rose-500'
+        textClass: 'text-rose-700',
+        cardBg: 'linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%)',
+        borderColor: '#fda4af'
       },
       expandableContent: (
         <div className="space-y-2">
@@ -716,8 +733,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-amber-100',
         iconClass: 'text-amber-600',
-        textClass: 'text-amber-600',
-        glowClass: 'bg-amber-500'
+        textClass: 'text-amber-700',
+        cardBg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+        borderColor: '#fcd34d'
       }
     },
     {
@@ -730,8 +748,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-green-100',
         iconClass: 'text-green-600',
-        textClass: 'text-green-600',
-        glowClass: 'bg-green-500'
+        textClass: 'text-green-700',
+        cardBg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+        borderColor: '#86efac'
       }
     },
     {
@@ -744,8 +763,9 @@ function DashboardComponent() {
       colorScheme: {
         bgClass: 'bg-teal-100',
         iconClass: 'text-teal-600',
-        textClass: 'text-teal-600',
-        glowClass: 'bg-teal-500'
+        textClass: 'text-teal-700',
+        cardBg: 'linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%)',
+        borderColor: '#5eead4'
       }
     }
   ], [dashboardData]);
@@ -938,10 +958,10 @@ function DashboardComponent() {
       {/* Digital Clock */}
       <DigitalClock />
 
-      {/* Enhanced KPI Cards Grid with Advanced Metrics */}
+      {/* Enhanced KPI Cards Grid with Advanced Metrics - STABLE COLORS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredKpiCards.map((card, index) => (
-          <div key={card.title} className="slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+        {filteredKpiCards.map((card) => (
+          <div key={card.title}>
             <KPICard {...card} />
           </div>
         ))}
