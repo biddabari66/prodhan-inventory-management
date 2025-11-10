@@ -1256,11 +1256,11 @@ export default function Layout({ children, currentPageName }) {
                 <div className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-xl flex items-center justify-between touch-manipulation">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-gradient-to-tr from-violet-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg lg:text-xl flex-shrink-0">
-                      {currentUser ? currentUser.full_name.charAt(0).toUpperCase() : '?'}
+                      {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm lg:text-base font-semibold text-slate-800 dark:text-slate-200 truncate">
-                        {currentUser?.full_name}
+                        {currentUser?.display_name || currentUser?.full_name}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                         {currentUser?.designation}
@@ -1364,7 +1364,7 @@ export default function Layout({ children, currentPageName }) {
                       <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-violet-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
                         <AvatarFallback className="bg-gradient-to-br from-violet-500 to-pink-500 text-white font-bold text-sm lg:text-xs">
-                          {(currentUser?.full_name?.charAt(0) || 'U').toUpperCase()}
+                          {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -1375,11 +1375,11 @@ export default function Layout({ children, currentPageName }) {
                         <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
                           <AvatarImage src={currentUser?.profile_picture_url || ''} />
                           <AvatarFallback className="bg-gradient-to-br from-violet-500 to-pink-500 text-white font-bold text-sm">
-                            {(currentUser?.full_name?.charAt(0) || 'U').toUpperCase()}
+                            {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-primary truncate">{currentUser?.full_name}</p>
+                          <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
                           <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
                           <p className="text-xs text-violet-500 font-medium mt-1 truncate">{currentUser?.designation}</p>
                         </div>

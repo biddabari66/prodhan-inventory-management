@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -145,7 +146,7 @@ const PipelineColumn = ({ stage, leads, children }) => {
   );
 };
 
-export default function DragDropPipeline({ leadsByStatus, onLeadUpdate, onEditLead, users, getEmployeeName, getStatusColor, getLeadScoreColor, onStatusChange }) {
+export default function DragDropPipeline({ leadsByStatus, onLeadUpdate, onEditLead, users, getStatusColor, getLeadScoreColor, onStatusChange }) {
   const [draggedLead, setDraggedLead] = useState(null);
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -167,7 +168,8 @@ export default function DragDropPipeline({ leadsByStatus, onLeadUpdate, onEditLe
       if (onStatusChange) {
         onStatusChange(draggedLead.id, newStatus);
       } else if (onLeadUpdate) {
-        onLeadUpdate();
+        // Fallback or old update method, ensure it's still handled if onStatusChange isn't provided
+        onLeadUpdate(draggedLead.id, { lead_status: newStatus }); 
       }
     }
     setDraggedLead(null);
@@ -210,10 +212,11 @@ export default function DragDropPipeline({ leadsByStatus, onLeadUpdate, onEditLe
     }
   }, []);
 
-  const safeGetEmployeeName = (userId) => {
+  // Update getEmployeeNameLocal to use display_name
+  const getEmployeeNameLocal = (userId) => {
     if (!Array.isArray(users) || !userId) return 'Unassigned';
     const user = users.find(u => u && u.id === userId);
-    return user ? user.full_name : 'Unassigned';
+    return user ? (user.display_name || user.full_name) : 'Unassigned';
   };
 
   const leads = leadsByStatus || {};
@@ -283,7 +286,7 @@ export default function DragDropPipeline({ leadsByStatus, onLeadUpdate, onEditLe
                       >
                         <LeadCard 
                           lead={lead} 
-                          getEmployeeName={safeGetEmployeeName}
+                          getEmployeeName={getEmployeeNameLocal} // Using the updated local function
                           getStatusColor={getStatusColor}
                           getLeadScoreColor={getLeadScoreColor}
                           onLeadClick={onEditLead}

@@ -189,7 +189,7 @@ export default function ExpenseForm({
       ...formData,
       amount: parseFloat(formData.amount),
       submitted_by: currentUser?.id,
-      submitted_by_name: currentUser?.full_name,
+      submitted_by_name: currentUser?.display_name || currentUser?.full_name, // Updated to use display_name if available
       status: formData.expense_type === 'advance' ? 'pending_advance_approval' : 'pending_manager_approval'
     };
 
