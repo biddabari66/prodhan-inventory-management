@@ -24,7 +24,7 @@ import confetti from 'canvas-confetti';
  * - Shows only once per user
  * - Role-based personalization
  * - Bilingual support (English/Bengali)
- * - Fixed close button on step 2
+ * - Single close button (Skip Tour)
  * - Auto-responsive design
  */
 
@@ -231,14 +231,21 @@ export default function SmartOnboarding({ user, onComplete }) {
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="max-w-2xl w-[95vw] max-h-[90vh] p-0 overflow-y-auto border-0 bg-gradient-to-br from-violet-50 to-pink-50"
+        className="onboarding-dialog max-w-2xl w-[95vw] max-h-[90vh] p-0 overflow-y-auto border-0 bg-gradient-to-br from-violet-50 to-pink-50"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
+        {/* 🔥 FIXED: Hide default Dialog close button */}
+        <style>{`
+          .onboarding-dialog > button[aria-label="Close"] {
+            display: none !important;
+          }
+        `}</style>
+
         {/* Progress Bar */}
         <div className="relative sticky top-0 z-10 bg-gradient-to-br from-violet-50 to-pink-50">
           <Progress value={(currentStep / 2) * 100} className="h-2 rounded-none" />
-          {/* 🔥 FIXED: Close button now visible on both steps */}
+          {/* Custom Skip Button */}
           <div className="absolute top-2 right-4">
             <Button 
               variant="ghost" 
