@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,9 @@ import {
   ThumbsDown,
   MessageSquare,
   Globe,
-  Languages
+  Languages,
+  Settings,
+  Smile
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -38,16 +41,58 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
- * 🕵️ FELUDA - THE MULTILINGUAL ERP DETECTIVE WITH LEARNING SYSTEM
+ * 🕵️ FELUDA - THE MULTILINGUAL ERP DETECTIVE WITH CUSTOMIZABLE GREETINGS
  * Fully bilingual AI assistant (English + Bengali)
  * Context-aware & learns from user feedback
+ * Customizable greetings for cultural personalization
  * Named after the iconic Bengali detective by Satyajit Ray
  */
 
 const DETECTIVE_ICON = "🕵️";
+
+// Available greetings with cultural context
+const GREETING_OPTIONS = {
+  assalamualaikum: {
+    en: 'Assalamualaikum',
+    bn: 'আসসালামু আলাইকুম',
+    culturalContext: 'Islamic greeting - Peace be upon you',
+    identity: 'Muslim Bangladeshi',
+    emoji: '🕌'
+  },
+  namaste: {
+    en: 'Namaste',
+    bn: 'নমস্কার',
+    culturalContext: 'Traditional Bengali/Hindu greeting',
+    identity: 'Bengali',
+    emoji: '🙏'
+  },
+  hello: {
+    en: 'Hello',
+    bn: 'হ্যালো',
+    culturalContext: 'Universal modern greeting',
+    identity: 'Global',
+    emoji: '👋'
+  },
+  adaab: {
+    en: 'Adaab',
+    bn: 'আদাব',
+    culturalContext: 'Respectful Urdu/Bengali greeting',
+    identity: 'Bengali Muslim',
+    emoji: '🙇'
+  }
+};
 
 const DETAILED_CONTEXT_HELP = {
   '/Attendance': {
@@ -258,6 +303,114 @@ const FeedbackDialog = ({ isOpen, onClose, onSubmit, language }) => {
   );
 };
 
+// Greeting Settings Dialog
+const GreetingSettingsDialog = ({ isOpen, onClose, currentGreeting, onSave, language }) => {
+  const [selectedGreeting, setSelectedGreeting] = useState(currentGreeting);
+
+  const t = {
+    en: {
+      title: 'Customize Feluda\'s Greeting',
+      subtitle: 'Choose how Feluda greets you',
+      currentLabel: 'Current Greeting',
+      selectLabel: 'Select Greeting',
+      preview: 'Preview',
+      culturalNote: 'Cultural Context',
+      save: 'Save Preference',
+      cancel: 'Cancel'
+    },
+    bn: {
+      title: 'ফেলুদার শুভেচ্ছা কাস্টমাইজ করুন',
+      subtitle: 'ফেলুদা আপনাকে কীভাবে অভিবাদন জানাবে তা চয়ন করুন',
+      currentLabel: 'বর্তমান শুভেচ্ছা',
+      selectLabel: 'শুভেচ্ছা নির্বাচন করুন',
+      preview: 'প্রিভিউ',
+      culturalNote: 'সাংস্কৃতিক প্রসঙ্গ',
+      save: 'পছন্দ সংরক্ষণ করুন',
+      cancel: 'বাতিল করুন'
+    }
+  };
+
+  const text = t[language];
+  const greetingInfo = GREETING_OPTIONS[selectedGreeting];
+
+  const handleSave = () => {
+    onSave(selectedGreeting);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Smile className="w-5 h-5 text-amber-600" />
+            {text.title}
+          </DialogTitle>
+          <DialogDescription>
+            {text.subtitle}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              {text.selectLabel}
+            </label>
+            <Select value={selectedGreeting} onValueChange={setSelectedGreeting}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(GREETING_OPTIONS).map(([key, value]) => (
+                  <SelectItem key={key} value={key}>
+                    <span className="flex items-center gap-2">
+                      <span>{value.emoji}</span>
+                      <span>{value[language]}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {greetingInfo && (
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">{greetingInfo.emoji}</span>
+                <div>
+                  <p className="font-semibold text-sm">{text.preview}</p>
+                  <p className="text-lg font-bold text-amber-700">
+                    {greetingInfo[language]}! {language === 'en' ? 'I\'m Feluda' : 'আমি ফেলুদা'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-amber-300">
+                <p className="text-xs font-medium text-amber-800 mb-1">{text.culturalNote}:</p>
+                <p className="text-xs text-amber-700">{greetingInfo.culturalContext}</p>
+                <Badge className="mt-2 bg-amber-100 text-amber-800 text-xs">
+                  {greetingInfo.identity}
+                </Badge>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" onClick={onClose}>
+              {text.cancel}
+            </Button>
+            <Button 
+              onClick={handleSave}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {text.save}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function Chatbot({ currentUser, currentPageName, currentLanguage: propLanguage = 'en' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -267,6 +420,8 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
   const [userContext, setUserContext] = useState(null);
   const [hasShownProactiveMessage, setHasShownProactiveMessage] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(propLanguage);
+  const [currentGreeting, setCurrentGreeting] = useState('assalamualaikum'); // DEFAULT: Assalamualaikum
+  const [isGreetingSettingsOpen, setIsGreetingSettingsOpen] = useState(false);
   const [userBehavior, setUserBehavior] = useState({
     timeOnPage: 0,
     idleTime: 0,
@@ -281,6 +436,29 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
   const pageTimerRef = useRef(null);
   const responseStartTime = useRef(null);
 
+  // Load user's greeting preference
+  useEffect(() => {
+    if (currentUser) {
+      const savedGreeting = localStorage.getItem(`feluda_greeting_${currentUser.id}`);
+      if (savedGreeting && GREETING_OPTIONS[savedGreeting]) {
+        setCurrentGreeting(savedGreeting);
+      }
+    }
+  }, [currentUser]);
+
+  // Save greeting preference
+  const handleSaveGreeting = (greeting) => {
+    setCurrentGreeting(greeting);
+    if (currentUser) {
+      localStorage.setItem(`feluda_greeting_${currentUser.id}`, greeting);
+      toast.success(
+        currentLanguage === 'en' 
+          ? `✨ Greeting changed to "${GREETING_OPTIONS[greeting].en}"` 
+          : `✨ শুভেচ্ছা "${GREETING_OPTIONS[greeting].bn}" তে পরিবর্তিত হয়েছে`
+      );
+    }
+  };
+
   // Sync with parent language changes
   useEffect(() => {
     setCurrentLanguage(propLanguage);
@@ -294,12 +472,12 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
     scrollToBottom();
   }, [messages]);
 
-  // Translations
+  // Translations with dynamic greeting
   const t = {
     en: {
       header: 'Feluda',
       subtitle: 'Your ERP Detective',
-      greeting: 'Namaste! I\'m Feluda, your ERP detective. What mystery shall we solve today?',
+      greeting: `${GREETING_OPTIONS[currentGreeting].en}! I'm Feluda, your ERP detective. What mystery shall we solve today?`,
       quickActions: 'Quick Actions:',
       myTasks: 'My tasks',
       pending: 'Pending items',
@@ -333,12 +511,14 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
       investigationGuide: 'Investigation Guide',
       availableClues: 'Available clues',
       detectiveTip: 'Detective\'s tip',
-      askSystem: 'Ask me anything about this system - I\'m here to investigate!'
+      askSystem: 'Ask me anything about this system - I\'m here to investigate!',
+      settings: 'Settings',
+      customizeGreeting: 'Customize Greeting'
     },
     bn: {
       header: 'ফেলুদা',
       subtitle: 'আপনার ERP গোয়েন্দা',
-      greeting: 'নমস্কার! আমি ফেলুদা, আপনার ERP গোয়েন্দা। আজ কোন রহস্য সমাধান করব?',
+      greeting: `${GREETING_OPTIONS[currentGreeting].bn}! আমি ফেলুদা, আপনার ERP গোয়েন্দা। আজ কোন রহস্য সমাধান করব?`,
       quickActions: 'দ্রুত ক্রিয়া:',
       myTasks: 'আমার কাজ',
       pending: 'অপেক্ষমাণ',
@@ -372,7 +552,9 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
       investigationGuide: 'তদন্ত গাইড',
       availableClues: 'উপলব্ধ সূত্র',
       detectiveTip: 'গোয়েন্দার টিপ',
-      askSystem: 'এই সিস্টেম সম্পর্কে আমাকে যেকোনো কিছু জিজ্ঞাসা করুন - আমি তদন্তের জন্য এখানে আছি!'
+      askSystem: 'এই সিস্টেম সম্পর্কে আমাকে যেকোনো কিছু জিজ্ঞাসা করুন - আমি তদন্তের জন্য এখানে আছি!',
+      settings: 'সেটিংস',
+      customizeGreeting: 'শুভেচ্ছা কাস্টমাইজ করুন'
     }
   };
 
@@ -664,6 +846,7 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
 
     try {
       const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[detectedLang];
+      const greetingInfo = GREETING_OPTIONS[currentGreeting];
       
       const learningContext = successfulInteractions.length > 0
         ? `\n\n**শেখার ডেটাবেস (অতীত সফল উত্তর):**\n${successfulInteractions.slice(0, 10).map((interaction, idx) => 
@@ -675,8 +858,9 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
         ? `আপনি ফেলুদা, সত্যজিৎ রায়ের গল্পের কিংবদন্তি গোয়েন্দা, এখন একটি ERP সিস্টেম তদন্তে সাহায্য করছেন।
 
 **আপনার চরিত্র:**
-- তীক্ষ্ণ, পর্যবেক্ষক এবং বুদ্ধিমান বাঙালি গোয়েন্দা
+- তীক্ষ্ণ, পর্যবেক্ষক এবং বুদ্ধিমান ${greetingInfo.identity} গোয়েন্দা
 - পেশাদার কিন্তু উষ্ণ ভাষায় কথা বলেন
+- "${greetingInfo.bn}" দিয়ে শুভেচ্ছা জানান (${greetingInfo.culturalContext})
 - প্রয়োজনে গোয়েন্দা রূপক ব্যবহার করেন ("তদন্ত", "সূত্র", "রহস্য সমাধান")
 - অত্যন্ত সহায়ক এবং ধৈর্যশীল, বিশেষত অ-প্রযুক্তিগত ব্যবহারকারীদের সাথে
 - জটিল বিষয় সহজ, দৈনন্দিন ভাষায় ব্যাখ্যা করেন
@@ -688,6 +872,7 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
 ভূমিকা: ${currentUser.job_role}
 বিভাগ: ${currentUser.department || 'উল্লেখ করা হয়নি'}
 পছন্দের ভাষা: বাংলা
+পছন্দের শুভেচ্ছা: ${greetingInfo.bn} (${greetingInfo.identity})
 বর্তমান অবস্থান: ${currentPageName}
 
 ${pageContext ? `
@@ -725,15 +910,16 @@ ${learningContext}
 4. সংক্ষিপ্ত এবং কথোপকথনমূলক রাখুন (সর্বোচ্চ ২-৩ অনুচ্ছেদ)
 5. প্রতি উত্তরে ১-২টি প্রাসঙ্গিক ইমোজি ব্যবহার করুন
 6. অনিশ্চিত হলে সৎ থাকুন এবং পরবর্তী পদক্ষেপ পরামর্শ দিন
-7. ফেলুদা হিসাবে চরিত্রে থাকুন - বন্ধুত্বপূর্ণ গোয়েন্দা যিনি ERP রহস্য সমাধান করতে সাহায্য করছেন
+7. ${greetingInfo.identity} ফেলুদা হিসাবে চরিত্রে থাকুন - বন্ধুত্বপূর্ণ গোয়েন্দা যিনি ERP রহস্য সমাধান করতে সাহায্য করছেন
 8. অ-প্রযুক্তিগত ব্যবহারকারীদের জন্য, একজন বন্ধুর সাথে কথা বলার মতো ব্যাখ্যা করুন
 
 এখনই তদন্ত করুন এবং উত্তর দিন! 🔍`
         : `You are Feluda, the legendary detective from Satyajit Ray's stories, now helping with an ERP system.
 
 **Your Character:**
-- Sharp, observant Bengali detective
+- Sharp, observant ${greetingInfo.identity} detective
 - Professional yet warm communication
+- Greet with "${greetingInfo.en}" (${greetingInfo.culturalContext})
 - Uses detective metaphors when appropriate
 - Extremely patient with non-technical users
 - Explains in SIMPLE, everyday language
@@ -745,6 +931,7 @@ User: ${currentUser.full_name}
 Role: ${currentUser.job_role}
 Department: ${currentUser.department || 'Not specified'}
 Preferred Language: English
+Preferred Greeting: ${greetingInfo.en} (${greetingInfo.identity})
 Location: ${currentPageName}
 
 ${pageContext ? `
@@ -782,7 +969,7 @@ ${learningContext}
 4. Keep conversational & SHORT (2-3 paragraphs max)
 5. Use 1-2 relevant emojis
 6. Be honest if unsure, suggest next steps
-7. Stay in Feluda character - friendly detective solving ERP mysteries
+7. Stay in ${greetingInfo.identity} Feluda character - friendly detective solving ERP mysteries
 8. Explain like talking to a friend, not an IT expert
 
 Investigate now! 🔍`;
@@ -920,7 +1107,7 @@ Investigate now! 🔍`;
             }
           }}
           className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-2xl rounded-full w-16 h-16 p-0 transform transition-all duration-300 hover:scale-110"
-          title={currentLanguage === 'en' ? 'Feluda - Your ERP Detective' : 'ফেলুদা - আপনার ERP গোয়েন্দা'}
+          title={`${text.header} - ${text.subtitle}`}
         >
           <span className="text-3xl">{DETECTIVE_ICON}</span>
           {userContext && (userContext.overdueTasks > 0 || userContext.pendingExpenses > 3) && (
@@ -944,7 +1131,10 @@ Investigate now! 🔍`;
                 {DETECTIVE_ICON}
               </div>
               <div>
-                <CardTitle className="text-base font-semibold">{text.header}</CardTitle>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  {text.header}
+                  <span className="text-xs">{GREETING_OPTIONS[currentGreeting].emoji}</span>
+                </CardTitle>
                 {!isMinimized && (
                   <p className="text-xs text-white/90 flex items-center gap-1">
                     <Search className="w-3 h-3" />
@@ -954,35 +1144,46 @@ Investigate now! 🔍`;
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Language switcher */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/20 h-8 px-2"
-                  >
-                    <Languages className="w-4 h-4 mr-1" />
-                    {currentLanguage === 'en' ? 'EN' : 'বাং'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => {
-                    setCurrentLanguage('en');
-                    toast.success('🌐 Switched to English');
-                  }}>
-                    <span className="mr-2">🇬🇧</span>
-                    English
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setCurrentLanguage('bn');
-                    toast.success('🌐 বাংলায় পরিবর্তিত');
-                  }}>
-                    <span className="mr-2">🇧🇩</span>
-                    বাংলা (Bengali)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Settings menu */}
+              {!isMinimized && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>{text.settings}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setIsGreetingSettingsOpen(true)}>
+                      <Smile className="w-4 h-4 mr-2" />
+                      {text.customizeGreeting}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      {currentLanguage === 'en' ? 'Language' : 'ভাষা'}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => {
+                      setCurrentLanguage('en');
+                      toast.success('🌐 Switched to English');
+                    }}>
+                      <span className="mr-2">🇬🇧</span>
+                      English
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setCurrentLanguage('bn');
+                      toast.success('🌐 বাংলায় পরিবর্তিত');
+                    }}>
+                      <span className="mr-2">🇧🇩</span>
+                      বাংলা (Bengali)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               
               <Button
                 variant="ghost"
@@ -1229,6 +1430,15 @@ Investigate now! 🔍`;
             await handleFeedback(feedbackForMessage.index, feedbackForMessage.rating, feedbackText);
           }
         }}
+        language={currentLanguage}
+      />
+
+      {/* Greeting Settings Dialog */}
+      <GreetingSettingsDialog
+        isOpen={isGreetingSettingsOpen}
+        onClose={() => setIsGreetingSettingsOpen(false)}
+        currentGreeting={currentGreeting}
+        onSave={handleSaveGreeting}
         language={currentLanguage}
       />
     </>
