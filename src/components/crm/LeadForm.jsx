@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,43 +10,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchableUserSelect } from '@/components/ui/searchable-user-select'; // Added import for SearchableUserSelect
+import SearchableUserSelect from '@/components/common/SearchableUserSelect';
 
-export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // Added default empty array to users prop
+export default function LeadForm({ lead, users = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     student_name: '',
     phone: '',
     email: '',
     course_interest: '',
-    department: 'biddabari', // Default department as per outline
-    lead_source: 'walk_in',   // Default lead_source as per outline
+    department: 'biddabari',
+    lead_source: 'walk_in',
     lead_status: 'new',
     assigned_to: '',
-    city: '',                 // New field
-    age: '',                  // New field
-    education_level: '',      // New field
+    city: '',
+    age: '',
+    education_level: '',
     notes: '',
-    estimated_value: '',      // New field
+    estimated_value: '',
     next_follow_up: '',
-    ...lead // Spread existing lead data to override defaults
+    ...lead
   });
 
-  const handleInputChange = useCallback((e) => { // Renamed handleChange to handleInputChange
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
 
-  const handleSelectChange = useCallback((name, value) => { // This handler is now used directly in onValueChange
+  const handleSelectChange = useCallback((name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
-    onSubmit(formData); // Changed onSubmit to onSave
+    onSubmit(formData);
   }, [formData, onSubmit]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4"> {/* Changed className from space-y-6 p-1 to space-y-4 */}
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="student_name">Student Name *</Label>
@@ -87,7 +86,7 @@ export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // 
 
         <div className="space-y-2">
           <Label htmlFor="course_interest">Course Interest *</Label>
-          <Input // Changed from Select to Input
+          <Input
             id="course_interest"
             name="course_interest"
             value={formData.course_interest}
@@ -97,7 +96,6 @@ export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // 
           />
         </div>
 
-        {/* NEW: Department Selection */}
         <div className="space-y-2">
           <Label htmlFor="department">Department *</Label>
           <Select value={formData.department} onValueChange={(value) => handleSelectChange('department', value)}>
@@ -148,7 +146,6 @@ export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // 
           </Select>
         </div>
         
-        {/* New fields */}
         <div className="space-y-2">
           <Label htmlFor="city">City</Label>
           <Input
@@ -201,7 +198,7 @@ export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // 
         </div>
       </div>
 
-      {/* Updated Assign To field with SearchableUserSelect */}
+      {/* Searchable Assign To field */}
       <div>
         <Label>Assign To (Optional)</Label>
         <SearchableUserSelect
@@ -219,6 +216,7 @@ export default function LeadForm({ lead, users = [], onSubmit, onCancel }) { // 
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" name="notes" value={formData.notes} onChange={handleInputChange} rows={4} />
       </div>
+      
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" className="btn-primary">Save Lead</Button>
