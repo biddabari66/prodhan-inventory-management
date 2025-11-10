@@ -84,6 +84,7 @@ import UniversalSearch from '../components/common/UniversalSearch';
 import { base44 } from '@/api/base44Client';
 import FastLoadingProvider from '../components/common/FastLoadingProvider';
 import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
+import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -242,6 +243,8 @@ export default function Layout({ children, currentPageName }) {
   const [theme, setTheme] = useState('light');
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const isAuthPage = location.pathname === '/';
+  
+  const { prefetchForRoute } = usePrefetchOnHover();
 
   // Set favicon dynamically
   useEffect(() => {
@@ -254,12 +257,42 @@ export default function Layout({ children, currentPageName }) {
     link.href = NEW_LOGO_URL;
   }, []);
 
-  // Register Service Worker for PWA and performance
+  // ENHANCED: Register Service Worker with better error handling
   useEffect(() => {
     registerServiceWorker().then((registration) => {
       if (registration) {
-        console.log('⚡ PWA capabilities enabled');
+        console.log('⚡ PWA enabled - Lightning-fast loading activated!');
+        
+        // Update service worker when new version available
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              toast.info('🔄 New version available! Refresh for updates.', {
+                duration: 10000,
+                action: {
+                  label: 'Refresh',
+                  onClick: () => window.location.reload()
+                }
+              });
+            }
+          });
+        });
       }
+    }).catch(error => {
+      console.warn('Service Worker registration failed:', error);
+    });
+
+    // Preload critical fonts
+    const fontLinks = [
+      'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap'
+    ];
+    fontLinks.forEach(href => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'style';
+      link.href = href;
+      document.head.appendChild(link);
     });
   }, []);
 
@@ -733,6 +766,17 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
+  // ENHANCED NavItem with prefetching on hover
+  const EnhancedNavItem = ({ module, isMobile = false }) => {
+    const hoverProps = module.url ? prefetchForRoute(module.url) : {};
+    
+    return (
+      <div {...hoverProps}>
+        <NavItem module={module} isMobile={isMobile} />
+      </div>
+    );
+  };
+
   return (
     <FastLoadingProvider>
       <SessionProvider>
@@ -1121,6 +1165,39 @@ export default function Layout({ children, currentPageName }) {
                 }
               }
             }
+            /* PERFORMANCE: Reduce paint complexity */
+            * {
+              will-change: auto;
+            }
+
+            .nav-item:hover,
+            .premium-card:hover {
+              will-change: transform, box-shadow;
+            }
+
+            /* PERFORMANCE: Hardware acceleration for animations */
+            .animated-logo,
+            .nav-item,
+            .premium-card {
+              transform: translateZ(0);
+              backface-visibility: hidden;
+            }
+
+            /* PERFORMANCE: Optimize scrolling */
+            .sidebar,
+            .main-content {
+              contain: layout style paint;
+            }
+
+            /* Faster fade-in animation */
+            @keyframes quickFadeIn {
+              from { opacity: 0; transform: translateY(4px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+
+            .fade-in {
+              animation: quickFadeIn 0.2s ease-out;
+            }
           `}</style>
 
           {/* Mobile Overlay */}
@@ -1163,10 +1240,10 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Navigation Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {/* Navigation Menu */}
+              {/* Enhanced Navigation with Prefetching */}
               <nav className="space-y-1">
                 {getNavigationModules().map((mod) => (
-                  <NavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} />
+                  <EnhancedNavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} />
                 ))}
               </nav>
             </div>
