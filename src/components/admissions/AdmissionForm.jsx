@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Course } from '@/entities/Course';
-import SearchableUserSelect from '@/components/ui/searchable-user-select'; // Assuming this path for SearchableUserSelect
+import SearchableUserSelect from '@/components/common/SearchableUserSelect'; // Updated import path
 
 export default function AdmissionForm({ admission, employees = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState(() => ({

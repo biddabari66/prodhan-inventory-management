@@ -13,150 +13,8 @@ import { format } from 'date-fns';
 import { CalendarIcon, X, Check, ChevronsUpDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar imports
-
-// Enhanced SearchableUserSelect (adapted from original SearchableMultiSelect)
-const SearchableUserSelect = ({
-  users = [], // Renamed from 'options' in original MultiSelect
-  value = [], // Renamed from 'selected' in original MultiSelect
-  onChange,
-  placeholder = "Select users...",
-  showAvatar = false,
-  showBadge = true,
-  // allowClear and multiple are implicitly handled by the multi-select nature
-  // For `allowClear=false`, users still remove individuals. For `multiple=true`, it's the default behavior.
-}) => {
-  const [open, setOpen] = useState(false);
-
-  const safeUsers = Array.isArray(users) ? users : [];
-  const safeValue = Array.isArray(value) ? value : [];
-
-  // Prepare options for the Command component, including data for avatars and search
-  const userOptions = useMemo(() => {
-    return safeUsers
-      .filter(emp => emp && emp.id && emp.full_name) // Ensure valid employee objects
-      .map(emp => ({
-        value: emp.id,
-        label: `${emp.full_name}${emp.designation ? ` - ${emp.designation}` : ''}`, // Full label for display in command list
-        full_name: emp.full_name, // Simpler name for badges/avatars
-        avatar_url: emp.avatar_url, // URL for avatar image (assumed to be part of employee object)
-        searchTerms: `${emp.employee_id || ''} ${emp.department || ''} ${emp.email || ''}`, // Additional search terms
-      }));
-  }, [safeUsers]);
-
-  const toggleOption = (userValue) => {
-    const isSelected = safeValue.includes(userValue);
-    if (isSelected) {
-      onChange(safeValue.filter(item => item !== userValue));
-    } else {
-      onChange([...safeValue, userValue]);
-    }
-  };
-
-  const removeOption = (userValue) => {
-    onChange(safeValue.filter(item => item !== userValue));
-  };
-
-  const getSelectedItems = () => {
-    // Return the full option objects for selected values for easier access to full_name, avatar_url etc.
-    return userOptions.filter(opt => safeValue.includes(opt.value));
-  };
-
-  const selectedItems = getSelectedItems();
-
-  return (
-    <div className="space-y-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between min-h-[44px] h-auto"
-          >
-            {safeValue.length === 0 ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Search className="w-4 h-4" />
-                <span>{placeholder}</span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1 py-1">
-                {selectedItems.slice(0, 3).map((item) => (
-                  <Badge key={item.value} variant="secondary" className="text-xs flex items-center gap-1">
-                    {showAvatar && (
-                      <Avatar className="h-4 w-4">
-                        <AvatarImage src={item.avatar_url} alt={item.full_name} />
-                        <AvatarFallback className="text-[8px]">{item.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <span>{item.full_name}</span>
-                  </Badge>
-                ))}
-                {safeValue.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{safeValue.length - 3} more
-                  </Badge>
-                )}
-              </div>
-            )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search users by name, designation, ID..." />
-            <CommandEmpty>No user found.</CommandEmpty>
-            <CommandGroup className="max-h-[300px] overflow-y-auto">
-              {userOptions.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={`${option.full_name} ${option.searchTerms || ''}`} // Use full_name for better search relevance
-                  onSelect={() => toggleOption(option.value)}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      safeValue.includes(option.value) ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {showAvatar && (
-                    <Avatar className="h-6 w-6 mr-2">
-                      <AvatarImage src={option.avatar_url} alt={option.full_name} />
-                      <AvatarFallback className="text-[10px]">{option.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <span className="truncate">{option.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
-
-      {/* Display selected users as removable badges below the select trigger */}
-      {safeValue.length > 0 && showBadge && (
-        <div className="flex flex-wrap gap-1">
-          {selectedItems.map((item) => (
-            <Badge key={item.value} variant="secondary" className="text-xs flex items-center gap-1">
-              {showAvatar && (
-                <Avatar className="h-4 w-4">
-                  <AvatarImage src={item.avatar_url} alt={item.full_name} />
-                  <AvatarFallback className="text-[8px]">{item.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-              )}
-              <span>{item.full_name}</span>
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => removeOption(item.value)}
-              />
-            </Badge>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import SearchableUserSelect from '@/components/common/SearchableUserSelect';
 
 export default function TaskForm({ task = null, employees = [], onSubmit, onCancel }) {
   // Initialize form data with safe defaults
@@ -194,8 +52,6 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
       }
     }
   }, [task]);
-
-  // The previous employeeOptions useMemo is removed as SearchableUserSelect now handles its own internal options mapping based on the 'users' prop.
 
   const validateForm = () => {
     const newErrors = {};
@@ -276,7 +132,7 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-6"> {/* Updated className as per outline */}
+    <form onSubmit={handleSubmit} className="space-y-4 p-6">
       <div className="grid grid-cols-1 gap-4">
         {/* Task Title */}
         <div className="space-y-2">
@@ -304,17 +160,16 @@ export default function TaskForm({ task = null, employees = [], onSubmit, onCanc
         </div>
 
         {/* Assigned To field with searchable multi-select */}
-        <div className="space-y-2"> {/* Wrapped Label and SearchableUserSelect in a div for consistent spacing */}
+        <div className="space-y-2">
           <Label htmlFor="assigned_to">Assign To (Multiple) *</Label>
           <SearchableUserSelect
-            users={employees} // This is the `employees` prop passed to TaskForm
+            users={employees}
             value={formData.assigned_to}
-            onChange={(values) => handleInputChange('assigned_to', values)} // Using handleInputChange
+            onChange={(values) => handleInputChange('assigned_to', values)}
             placeholder="Search and select team members..."
-            allowClear={false} // Retained as per outline, though its effect is minimal for multi-select
+            allowClear={false}
             showAvatar={true}
             showBadge={true}
-            // `multiple` is true by default in SearchableUserSelect and its internal logic
           />
           {errors.assigned_to && <p className="text-sm text-red-500">{errors.assigned_to}</p>}
           <p className="text-xs text-muted-foreground">

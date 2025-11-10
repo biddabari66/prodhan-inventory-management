@@ -174,34 +174,9 @@ export default function SearchableUserSelect({
                 )}
               </div>
             </ScrollArea>
-
-            {/* No Results State */}
-            {users.length === 0 && (
-              <div className="p-6 text-center">
-                <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-500" />
-                <p className="text-sm text-amber-600 font-medium">No admission team members found</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Please ensure users have department set to 'admission'
-                </p>
-              </div>
-            )}
           </div>
         </>
       )}
-      
-      <DialogFooter className="gap-2 mt-4">
-        <Button variant="outline" onClick={handleClose}>
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleAssign} 
-          disabled={!selectedUser || users.length === 0}
-          className="bg-violet-600 hover:bg-violet-700"
-        >
-          <UserCheck className="w-4 h-4 mr-2" />
-          Assign {selectedCount} Leads
-        </Button>
-      </DialogFooter>
-    </Dialog>
+    </div>
   );
 }
