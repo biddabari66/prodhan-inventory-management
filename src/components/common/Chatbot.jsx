@@ -19,7 +19,9 @@ import {
   Search,
   ThumbsUp,
   ThumbsDown,
-  MessageSquare
+  MessageSquare,
+  Globe,
+  Languages
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -31,10 +33,17 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
- * 🕵️ FELUDA - THE ERP DETECTIVE WITH LEARNING SYSTEM
- * Context-aware AI assistant that learns from user feedback
+ * 🕵️ FELUDA - THE MULTILINGUAL ERP DETECTIVE WITH LEARNING SYSTEM
+ * Fully bilingual AI assistant (English + Bengali)
+ * Context-aware & learns from user feedback
  * Named after the iconic Bengali detective by Satyajit Ray
  */
 
@@ -43,154 +52,157 @@ const DETECTIVE_ICON = "🕵️";
 const DETAILED_CONTEXT_HELP = {
   '/Attendance': {
     en: {
-      description: 'Attendance tracking system with GPS verification',
-      features: ['Check-in/Check-out with location', 'View attendance history', 'Manual entries (admin only)', 'Shift management'],
+      description: 'GPS-verified attendance tracking system',
+      features: ['Check-in/Check-out with location', 'Attendance history', 'Shift management', 'Manual entries (admin)'],
       commonQuestions: [
-        'How do I check in for today?',
-        'Why is my location not working?',
-        'How do I view my attendance history?',
+        'How do I check in?',
+        'Why isn\'t my location working?',
+        'How to view my attendance?',
         'What if I forgot to check out?'
       ],
-      tips: 'Enable location services for accurate check-in. Check-in requires you to be within office radius.'
+      tips: 'Enable GPS for check-in. Must be within office radius.'
     },
     bn: {
-      description: 'GPS যাচাইকরণ সহ উপস্থিতি ট্র্যাকিং সিস্টেম',
-      features: ['অবস্থান সহ চেক-ইন/চেক-আউট', 'উপস্থিতি ইতিহাস দেখুন', 'ম্যানুয়াল এন্ট্রি (শুধুমাত্র অ্যাডমিন)', 'শিফট ব্যবস্থাপনা'],
+      description: 'GPS যাচাইকৃত উপস্থিতি ট্র্যাকিং সিস্টেম',
+      features: ['অবস্থান সহ চেক-ইন/আউট', 'উপস্থিতি ইতিহাস', 'শিফট ব্যবস্থাপনা', 'ম্যানুয়াল এন্ট্রি (অ্যাডমিন)'],
       commonQuestions: [
-        'আজকের জন্য আমি কীভাবে চেক ইন করব?',
-        'আমার অবস্থান কেন কাজ করছে না?',
-        'আমি কীভাবে আমার উপস্থিতি ইতিহাস দেখব?',
-        'যদি আমি চেক আউট করতে ভুলে যাই?'
+        'আমি কীভাবে চেক ইন করব?',
+        'আমার অবস্থান কাজ করছে না কেন?',
+        'আমার উপস্থিতি কীভাবে দেখব?',
+        'চেক আউট করতে ভুলে গেলে কী হবে?'
       ],
-      tips: 'সঠিক চেক-ইনের জন্য অবস্থান পরিষেবা সক্ষম করুন। চেক-ইনের জন্য আপনাকে অফিস এলাকার মধ্যে থাকতে হবে।'
+      tips: 'চেক-ইনের জন্য GPS চালু করুন। অফিস এলাকার মধ্যে থাকতে হবে।'
     }
   },
   '/Dashboard': {
     en: {
-      description: 'Business overview with KPIs, revenue, expenses, and analytics',
-      features: ['Real-time metrics', 'Revenue & expense charts', 'Performance indicators', 'Quick actions'],
+      description: 'Business overview with KPIs and analytics',
+      features: ['Real-time metrics', 'Revenue charts', 'Performance tracking', 'Quick actions'],
       commonQuestions: [
-        'What do the KPI cards mean?',
-        'How do I interpret the charts?',
-        'What is ROAS and ROI?',
-        'How often does data update?'
+        'What do the cards mean?',
+        'How to read charts?',
+        'What is ROAS?',
+        'When does data update?'
       ],
-      tips: 'Click any card to see detailed information. Use period toggles for different time ranges.'
+      tips: 'Click cards for details. Toggle weekly/monthly views.'
     },
     bn: {
-      description: 'KPI, আয়, খরচ এবং বিশ্লেষণ সহ ব্যবসায়িক সংক্ষিপ্ত বিবরণ',
-      features: ['রিয়েল-টাইম মেট্রিক্স', 'আয় এবং খরচ চার্ট', 'পারফরম্যান্স সূচক', 'দ্রুত ক্রিয়া'],
+      description: 'KPI এবং বিশ্লেষণ সহ ব্যবসার ওভারভিউ',
+      features: ['রিয়েল-টাইম মেট্রিক্স', 'আয়ের চার্ট', 'পারফরম্যান্স ট্র্যাকিং', 'দ্রুত ক্রিয়া'],
       commonQuestions: [
-        'KPI কার্ডগুলির অর্থ কী?',
-        'আমি কীভাবে চার্টগুলি ব্যাখ্যা করব?',
-        'ROAS এবং ROI কী?',
-        'ডেটা কত ঘন ঘন আপডেট হয়?'
+        'কার্ডগুলির অর্থ কী?',
+        'চার্ট কীভাবে পড়বো?',
+        'ROAS কী?',
+        'ডেটা কখন আপডেট হয়?'
       ],
-      tips: 'বিস্তারিত তথ্যের জন্য যেকোনো কার্ডে ক্লিক করুন। বিভিন্ন সময়সীমার জন্য পিরিয়ড টগল ব্যবহার করুন।'
-    }
-  },
-  '/CRM': {
-    en: {
-      description: 'Lead management system with pipeline visualization',
-      features: ['Drag-drop pipeline', 'Lead assignment', 'Follow-up tracking', 'Conversion analytics'],
-      commonQuestions: [
-        'How do I add a new lead?',
-        'How do I move leads between stages?',
-        'What is lead scoring?',
-        'How do I assign leads to team members?'
-      ],
-      tips: 'Drag leads between columns to change their status. Use filters to find specific leads quickly.'
-    },
-    bn: {
-      description: 'পাইপলাইন ভিজ্যুয়ালাইজেশন সহ লিড ব্যবস্থাপনা সিস্টেম',
-      features: ['ড্র্যাগ-ড্রপ পাইপলাইন', 'লিড অ্যাসাইনমেন্ট', 'ফলো-আপ ট্র্যাকিং', 'রূপান্তর বিশ্লেষণ'],
-      commonQuestions: [
-        'আমি কীভাবে একটি নতুন লিড যোগ করব?',
-        'আমি কীভাবে পর্যায়গুলির মধ্যে লিড সরাব?',
-        'লিড স্কোরিং কী?',
-        'আমি কীভাবে টিম সদস্যদের লিড অ্যাসাইন করব?'
-      ],
-      tips: 'স্ট্যাটাস পরিবর্তন করতে কলামের মধ্যে লিড টেনে আনুন। নির্দিষ্ট লিড দ্রুত খুঁজতে ফিল্টার ব্যবহার করুন।'
+      tips: 'বিস্তারিত জানতে কার্ডে ক্লিক করুন। সাপ্তাহিক/মাসিক ভিউ টগল করুন।'
     }
   },
   '/Expenses': {
     en: {
-      description: 'Expense submission and approval workflow system',
-      features: ['Submit with receipts', 'Multi-level approvals', 'Advance expenses', 'Expense tracking'],
+      description: 'Expense submission & approval system',
+      features: ['Submit with receipts', 'Multi-level approval', 'Advance expenses', 'Tracking'],
       commonQuestions: [
-        'How do I submit an expense?',
-        'What happens after I submit?',
-        'How do I handle advance expenses?',
-        'Who approves my expenses?'
+        'How to submit expense?',
+        'What happens after submit?',
+        'How to handle advance?',
+        'Who approves?'
       ],
-      tips: 'Always attach receipts for faster approval. Green=Approved, Yellow=Pending, Red=Needs revision.'
+      tips: 'Always attach receipt. Green=Approved, Yellow=Pending, Red=Revision.'
     },
     bn: {
-      description: 'খরচ জমা এবং অনুমোদন ওয়ার্কফ্লো সিস্টেম',
-      features: ['রসিদ সহ জমা', 'মাল্টি-লেভেল অনুমোদন', 'অগ্রিম খরচ', 'খরচ ট্র্যাকিং'],
+      description: 'খরচ জমা ও অনুমোদন সিস্টেম',
+      features: ['রসিদ সহ জমা', 'মাল্টি-লেভেল অনুমোদন', 'অগ্রিম খরচ', 'ট্র্যাকিং'],
       commonQuestions: [
-        'আমি কীভাবে একটি খরচ জমা দেব?',
-        'জমা দেওয়ার পরে কী হয়?',
-        'আমি কীভাবে অগ্রিম খরচ পরিচালনা করব?',
-        'কে আমার খরচ অনুমোদন করে?'
+        'খরচ কীভাবে জমা দেব?',
+        'জমার পর কী হয়?',
+        'অগ্রিম কীভাবে পরিচালনা করব?',
+        'কে অনুমোদন করে?'
       ],
-      tips: 'দ্রুত অনুমোদনের জন্য সর্বদা রসিদ সংযুক্ত করুন। সবুজ=অনুমোদিত, হলুদ=অপেক্ষমাণ, লাল=সংশোধন প্রয়োজন।'
+      tips: 'সবসময় রসিদ সংযুক্ত করুন। সবুজ=অনুমোদিত, হলুদ=অপেক্ষমাণ, লাল=সংশোধন।'
     }
   },
   '/Inventory': {
     en: {
-      description: 'Stock management with AI-powered insights and forecasting',
-      features: ['Stock tracking', 'Low stock alerts', 'Supplier management', 'AI predictions'],
+      description: 'AI-powered stock management',
+      features: ['Stock tracking', 'Low stock alerts', 'Supplier management', 'Forecasting'],
       commonQuestions: [
-        'How do I add new inventory?',
-        'What does low stock mean?',
-        'How do I reorder items?',
-        'What are the AI insights?'
+        'How to add item?',
+        'What is low stock?',
+        'How to reorder?',
+        'What are AI insights?'
       ],
-      tips: 'Red badge=Low stock, reorder soon! Use department filters to see specific categories.'
+      tips: 'Red=Low stock! Use department filters for categories.'
     },
     bn: {
-      description: 'AI-চালিত অন্তর্দৃষ্টি এবং পূর্বাভাস সহ স্টক ব্যবস্থাপনা',
-      features: ['স্টক ট্র্যাকিং', 'কম স্টক সতর্কতা', 'সরবরাহকারী ব্যবস্থাপনা', 'AI পূর্বাভাস'],
+      description: 'AI-চালিত স্টক ব্যবস্থাপনা',
+      features: ['স্টক ট্র্যাকিং', 'কম স্টক সতর্কতা', 'সরবরাহকারী ব্যবস্থাপনা', 'পূর্বাভাস'],
       commonQuestions: [
-        'আমি কীভাবে নতুন ইনভেন্টরি যোগ করব?',
-        'কম স্টক মানে কী?',
-        'আমি কীভাবে আইটেম পুনর্মুদ্রণ করব?',
-        'AI অন্তর্দৃষ্টি কী?'
+        'আইটেম কীভাবে যোগ করব?',
+        'কম স্টক কী?',
+        'কীভাবে রিঅর্ডার করব?',
+        'AI ইনসাইট কী?'
       ],
-      tips: 'লাল ব্যাজ=কম স্টক, শীঘ্রই পুনর্মুদ্রণ করুন! নির্দিষ্ট বিভাগ দেখতে ডিপার্টমেন্ট ফিল্টার ব্যবহার করুন।'
+      tips: 'লাল=কম স্টক! বিভাগের জন্য ডিপার্টমেন্ট ফিল্টার ব্যবহার করুন।'
     }
   },
   '/Procurement': {
     en: {
-      description: 'Order management and fulfillment system',
+      description: 'Order management & fulfillment',
       features: ['Create orders', 'Track shipments', 'Customer management', 'Payment tracking'],
       commonQuestions: [
-        'How do I create a new order?',
-        'How do I track orders?',
+        'How to create order?',
+        'How to track?',
         'What is COD?',
-        'How do I change order status?'
+        'How to change status?'
       ],
-      tips: 'COD=Cash on Delivery. Track order status: Pending→Confirmed→Shipped→Delivered.'
+      tips: 'COD=Cash on Delivery. Status: Pending→Confirmed→Shipped→Delivered.'
     },
     bn: {
-      description: 'অর্ডার ব্যবস্থাপনা এবং পূরণ সিস্টেম',
+      description: 'অর্ডার ব্যবস্থাপনা ও পূরণ',
       features: ['অর্ডার তৈরি', 'শিপমেন্ট ট্র্যাক', 'গ্রাহক ব্যবস্থাপনা', 'পেমেন্ট ট্র্যাকিং'],
       commonQuestions: [
-        'আমি কীভাবে একটি নতুন অর্ডার তৈরি করব?',
-        'আমি কীভাবে অর্ডার ট্র্যাক করব?',
+        'অর্ডার কীভাবে তৈরি করব?',
+        'কীভাবে ট্র্যাক করব?',
         'COD কী?',
-        'আমি কীভাবে অর্ডার স্ট্যাটাস পরিবর্তন করব?'
+        'স্ট্যাটাস কীভাবে পরিবর্তন করব?'
       ],
-      tips: 'COD=ক্যাশ অন ডেলিভারি। অর্ডার স্ট্যাটাস ট্র্যাক করুন: অপেক্ষমাণ→নিশ্চিত→পাঠানো→বিতরণ।'
+      tips: 'COD=ক্যাশ অন ডেলিভারি। স্ট্যাটাস: অপেক্ষমাণ→নিশ্চিত→পাঠানো→বিতরণ।'
     }
   }
+};
+
+// Language detection helper
+const detectLanguage = (text) => {
+  const bengaliRegex = /[\u0980-\u09FF]/;
+  return bengaliRegex.test(text) ? 'bn' : 'en';
 };
 
 // Feedback dialog component
 const FeedbackDialog = ({ isOpen, onClose, onSubmit, language }) => {
   const [feedbackText, setFeedbackText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const t = {
+    en: {
+      title: 'Help Feluda Learn',
+      subtitle: 'Your feedback helps Feluda become a better detective!',
+      label: 'What could be improved? (Optional)',
+      placeholder: 'Tell us what would make this response better...',
+      skip: 'Skip',
+      submit: 'Submit Feedback'
+    },
+    bn: {
+      title: 'ফেলুদাকে শিখতে সাহায্য করুন',
+      subtitle: 'আপনার মতামত ফেলুদাকে আরও ভালো গোয়েন্দা হতে সাহায্য করে!',
+      label: 'কী উন্নত করা যায়? (ঐচ্ছিক)',
+      placeholder: 'এই উত্তর আরও ভালো করতে কী করা যায় বলুন...',
+      skip: 'বাদ দিন',
+      submit: 'মতামত জমা দিন'
+    }
+  };
+
+  const text = t[language];
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -206,28 +218,22 @@ const FeedbackDialog = ({ isOpen, onClose, onSubmit, language }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-amber-600" />
-            {language === 'en' ? 'Help Feluda Learn' : 'ফেলুদাকে শিখতে সাহায্য করুন'}
+            {text.title}
           </DialogTitle>
           <DialogDescription>
-            {language === 'en' 
-              ? 'Your feedback helps Feluda become a better detective!'
-              : 'আপনার প্রতিক্রিয়া ফেলুদাকে আরও ভাল গোয়েন্দা হতে সাহায্য করে!'}
+            {text.subtitle}
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">
-              {language === 'en' 
-                ? 'What could be improved? (Optional)'
-                : 'কী উন্নত করা যেতে পারে? (ঐচ্ছিক)'}
+              {text.label}
             </label>
             <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder={language === 'en' 
-                ? 'Tell us what would make this response better...'
-                : 'এই প্রতিক্রিয়াটি কী ভাল করতে পারে তা আমাদের বলুন...'}
+              placeholder={text.placeholder}
               rows={4}
               className="resize-none"
             />
@@ -235,17 +241,15 @@ const FeedbackDialog = ({ isOpen, onClose, onSubmit, language }) => {
           
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>
-              {language === 'en' ? 'Skip' : 'এড়িয়ে যান'}
+              {text.skip}
             </Button>
             <Button 
               onClick={handleSubmit} 
               disabled={isSubmitting}
               className="bg-amber-600 hover:bg-amber-700"
             >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              {language === 'en' ? 'Submit Feedback' : 'প্রতিক্রিয়া জমা দিন'}
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {text.submit}
             </Button>
           </div>
         </div>
@@ -254,7 +258,7 @@ const FeedbackDialog = ({ isOpen, onClose, onSubmit, language }) => {
   );
 };
 
-export default function Chatbot({ currentUser, currentPageName, currentLanguage = 'en' }) {
+export default function Chatbot({ currentUser, currentPageName, currentLanguage: propLanguage = 'en' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -262,6 +266,7 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState(null);
   const [hasShownProactiveMessage, setHasShownProactiveMessage] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(propLanguage);
   const [userBehavior, setUserBehavior] = useState({
     timeOnPage: 0,
     idleTime: 0,
@@ -276,6 +281,11 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
   const pageTimerRef = useRef(null);
   const responseStartTime = useRef(null);
 
+  // Sync with parent language changes
+  useEffect(() => {
+    setCurrentLanguage(propLanguage);
+  }, [propLanguage]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -283,6 +293,103 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Translations
+  const t = {
+    en: {
+      header: 'Feluda',
+      subtitle: 'Your ERP Detective',
+      greeting: 'Namaste! I\'m Feluda, your ERP detective. What mystery shall we solve today?',
+      quickActions: 'Quick Actions:',
+      myTasks: 'My tasks',
+      pending: 'Pending items',
+      help: 'Help',
+      wasHelpful: 'Was this helpful?',
+      yes: 'Yes',
+      no: 'No',
+      thankYou: 'Thank you for the feedback!',
+      helpful: 'Helpful',
+      needsImprovement: 'Needs improvement',
+      investigating: 'Investigating...',
+      askAnything: 'Ask Feluda anything...',
+      learnedFrom: 'Feluda learned from',
+      cases: 'successful cases',
+      caseAlert: 'Case Alert',
+      retryInvestigation: 'Retry Investigation',
+      switchLanguage: 'Switch to Bengali',
+      urgentMatters: 'I\'ve detected some urgent matters:',
+      helpInvestigate: 'Shall I help you investigate these?',
+      taskFile: 'Case File: Your Tasks',
+      active: 'Active',
+      overdue: 'Overdue',
+      noDeadlines: 'No deadlines detected!',
+      upcomingDeadlines: 'Upcoming Deadlines',
+      pendingInvestigations: 'Pending Investigations',
+      found: 'Found',
+      awaiting: 'awaiting approval',
+      clue: 'Clue',
+      checkPage: 'Check Expenses page for details',
+      noPending: 'No pending items! Case closed.',
+      investigationGuide: 'Investigation Guide',
+      availableClues: 'Available clues',
+      detectiveTip: 'Detective\'s tip',
+      askSystem: 'Ask me anything about this system - I\'m here to investigate!'
+    },
+    bn: {
+      header: 'ফেলুদা',
+      subtitle: 'আপনার ERP গোয়েন্দা',
+      greeting: 'নমস্কার! আমি ফেলুদা, আপনার ERP গোয়েন্দা। আজ কোন রহস্য সমাধান করব?',
+      quickActions: 'দ্রুত ক্রিয়া:',
+      myTasks: 'আমার কাজ',
+      pending: 'অপেক্ষমাণ',
+      help: 'সাহায্য',
+      wasHelpful: 'এটি কি সহায়ক ছিল?',
+      yes: 'হ্যাঁ',
+      no: 'না',
+      thankYou: 'মতামতের জন্য ধন্যবাদ!',
+      helpful: 'সহায়ক',
+      needsImprovement: 'উন্নতি প্রয়োজন',
+      investigating: 'তদন্ত করছি...',
+      askAnything: 'ফেলুদাকে যেকোনো কিছু জিজ্ঞাসা করুন...',
+      learnedFrom: 'ফেলুদা শিখেছে',
+      cases: 'সফল মামলা থেকে',
+      caseAlert: 'কেস সতর্কতা',
+      retryInvestigation: 'পুনরায় তদন্ত',
+      switchLanguage: 'ইংরেজিতে পরিবর্তন করুন',
+      urgentMatters: 'আমি কিছু জরুরি বিষয় সনাক্ত করেছি:',
+      helpInvestigate: 'আমি কি এগুলো তদন্ত করতে সাহায্য করব?',
+      taskFile: 'কেস ফাইল: আপনার কাজ',
+      active: 'সক্রিয়',
+      overdue: 'মেয়াদোত্তীর্ণ',
+      noDeadlines: 'কোনো ডেডলাইন নেই!',
+      upcomingDeadlines: 'আসন্ন ডেডলাইন',
+      pendingInvestigations: 'অপেক্ষমাণ তদন্ত',
+      found: 'খুঁজে পেয়েছি',
+      awaiting: 'অনুমোদনের অপেক্ষায়',
+      clue: 'সূত্র',
+      checkPage: 'বিস্তারিত জানতে খরচ পেজ দেখুন',
+      noPending: 'কোনো অপেক্ষমাণ আইটেম নেই! কেস বন্ধ।',
+      investigationGuide: 'তদন্ত গাইড',
+      availableClues: 'উপলব্ধ সূত্র',
+      detectiveTip: 'গোয়েন্দার টিপ',
+      askSystem: 'এই সিস্টেম সম্পর্কে আমাকে যেকোনো কিছু জিজ্ঞাসা করুন - আমি তদন্তের জন্য এখানে আছি!'
+    }
+  };
+
+  const text = t[currentLanguage];
+
+  // Toggle language
+  const toggleLanguage = () => {
+    const newLang = currentLanguage === 'en' ? 'bn' : 'en';
+    setCurrentLanguage(newLang);
+    
+    toast.success(
+      newLang === 'en' 
+        ? '🌐 Switched to English' 
+        : '🌐 বাংলায় পরিবর্তিত হয়েছে',
+      { duration: 2000 }
+    );
+  };
 
   // Load successful interactions for learning
   useEffect(() => {
@@ -350,8 +457,6 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     if (!currentUser) return;
 
     try {
-      console.log('📊 Fetching user context data...');
-
       const [tasks, expenses, attendance, leads] = await Promise.all([
         base44.entities.Task.filter({ 
           assigned_to: { $contains: currentUser.id },
@@ -398,8 +503,6 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
       };
 
       setUserContext(context);
-      console.log('✅ User context loaded:', context);
-      
       return context;
     } catch (error) {
       console.error('Failed to fetch user context:', error);
@@ -434,35 +537,34 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
   }, [userBehavior, userContext, currentUser, currentPageName, hasShownProactiveMessage]);
 
   const initiateProactiveConversation = (type = 'help') => {
-    const lang = currentLanguage;
-    const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[lang];
+    const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
     let proactiveMessage = '';
 
     if (type === 'urgent') {
       const urgentItems = [];
       
       if (userContext.overdueTasks > 0) {
-        urgentItems.push(lang === 'en' 
+        urgentItems.push(currentLanguage === 'en' 
           ? `⚠️ You have ${userContext.overdueTasks} overdue task${userContext.overdueTasks > 1 ? 's' : ''}`
-          : `⚠️ আপনার ${userContext.overdueTasks}টি মেয়াদোত্তীর্ণ কাজ রয়েছে`
+          : `⚠️ আপনার ${userContext.overdueTasks}টি মেয়াদোত্তীর্ণ কাজ আছে`
         );
       }
 
       if (userContext.pendingExpenses > 3) {
-        urgentItems.push(lang === 'en'
+        urgentItems.push(currentLanguage === 'en'
           ? `💰 ${userContext.pendingExpenses} expenses awaiting approval`
           : `💰 ${userContext.pendingExpenses}টি খরচ অনুমোদনের অপেক্ষায়`
         );
       }
 
-      proactiveMessage = lang === 'en'
-        ? `${DETECTIVE_ICON} **Feluda here!**\n\nI've detected some urgent matters:\n\n${urgentItems.join('\n')}\n\nShall I help you investigate these? 🔍`
-        : `${DETECTIVE_ICON} **ফেলুদা এখানে!**\n\nআমি কিছু জরুরি বিষয় সনাক্ত করেছি:\n\n${urgentItems.join('\n')}\n\nআমি কি এই তদন্তে আপনাকে সাহায্য করব? 🔍`;
+      proactiveMessage = currentLanguage === 'en'
+        ? `${DETECTIVE_ICON} **Feluda here!**\n\n${text.urgentMatters}\n\n${urgentItems.join('\n')}\n\n${text.helpInvestigate} 🔍`
+        : `${DETECTIVE_ICON} **ফেলুদা এখানে!**\n\n${text.urgentMatters}\n\n${urgentItems.join('\n')}\n\n${text.helpInvestigate} 🔍`;
 
     } else if (pageContext) {
-      proactiveMessage = lang === 'en'
-        ? `${DETECTIVE_ICON} **Namaste! I'm Feluda, your ERP detective.**\n\nI'm investigating ${pageContext.description}.\n\n📋 **Available clues:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **Detective's tip:** ${pageContext.tips}\n\nWhat mystery shall we solve today?`
-        : `${DETECTIVE_ICON} **নমস্কার! আমি ফেলুদা, আপনার ERP গোয়েন্দা।**\n\nআমি ${pageContext.description} তদন্ত করছি।\n\n📋 **উপলব্ধ সূত্র:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **গোয়েন্দার টিপ:** ${pageContext.tips}\n\nআজ আমরা কোন রহস্য সমাধান করব?`;
+      proactiveMessage = currentLanguage === 'en'
+        ? `${DETECTIVE_ICON} **${text.greeting}**\n\nI'm investigating ${pageContext.description}.\n\n📋 **${text.availableClues}:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **${text.detectiveTip}:** ${pageContext.tips}\n\nWhat mystery shall we solve today?`
+        : `${DETECTIVE_ICON} **${text.greeting}**\n\nআমি ${pageContext.description} তদন্ত করছি।\n\n📋 **${text.availableClues}:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **${text.detectiveTip}:** ${pageContext.tips}\n\nআজ কোন রহস্য সমাধান করব?`;
     }
 
     setMessages([{
@@ -473,7 +575,11 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     }]);
 
     setIsOpen(true);
-    toast.info('🕵️ Feluda has a case for you!', { duration: 3000 });
+    toast.info(currentLanguage === 'en' 
+      ? '🕵️ Feluda has a case for you!' 
+      : '🕵️ ফেলুদা আপনার জন্য একটি কেস নিয়ে এসেছে!',
+      { duration: 3000 }
+    );
   };
 
   // Handle feedback submission
@@ -500,14 +606,12 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
         was_helpful: rating === 'helpful'
       });
 
-      // Update message with feedback status
       setMessages(prev => prev.map((msg, idx) => 
         idx === messageIndex 
           ? { ...msg, userRating: rating, userFeedback: feedbackText }
           : msg
       ));
 
-      // If helpful, add to successful interactions
       if (rating === 'helpful') {
         setSuccessfulInteractions(prev => [
           {
@@ -515,25 +619,37 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
             feluda_response: message.content,
             page_context: currentPageName
           },
-          ...prev.slice(0, 49) // Keep top 50
+          ...prev.slice(0, 49)
         ]);
       }
 
       toast.success(
         rating === 'helpful'
-          ? (currentLanguage === 'en' ? '🕵️ Thank you! Feluda learned from this!' : '🕵️ ধন্যবাদ! ফেলুদা এটি থেকে শিখেছে!')
-          : (currentLanguage === 'en' ? 'Feedback recorded. Feluda will improve!' : 'প্রতিক্রিয়া রেকর্ড করা হয়েছে। ফেলুদা উন্নত হবে!')
+          ? text.thankYou
+          : (currentLanguage === 'en' ? 'Feedback recorded. Feluda will improve!' : 'মতামত সংরক্ষিত। ফেলুদা উন্নত হবে!')
       );
 
     } catch (error) {
       console.error('Failed to save feedback:', error);
-      toast.error('Failed to save feedback');
+      toast.error(currentLanguage === 'en' ? 'Failed to save feedback' : 'মতামত সংরক্ষণ ব্যর্থ');
     }
   };
 
-  // Enhanced send message with learning
+  // Auto-detect language from user input
   const handleSendMessage = async (retryAttempt = 0) => {
     if (!inputMessage.trim() || isLoading) return;
+
+    // Auto-detect and switch language based on user's message
+    const detectedLang = detectLanguage(inputMessage);
+    if (detectedLang !== currentLanguage) {
+      setCurrentLanguage(detectedLang);
+      toast.info(
+        detectedLang === 'bn' 
+          ? '🌐 বাংলায় স্যুইচ করা হয়েছে' 
+          : '🌐 Switched to English',
+        { duration: 2000 }
+      );
+    }
 
     const userMessage = {
       role: 'user',
@@ -547,87 +663,135 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     responseStartTime.current = Date.now();
 
     try {
-      const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
+      const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[detectedLang];
       
-      // Build learning context from successful interactions
       const learningContext = successfulInteractions.length > 0
-        ? `\n\n**LEARNING DATABASE (Past Successful Responses):**\n${successfulInteractions.slice(0, 10).map((interaction, idx) => 
-            `${idx + 1}. Q: "${interaction.user_question}" → A: "${interaction.feluda_response.substring(0, 200)}..."`
+        ? `\n\n**শেখার ডেটাবেস (অতীত সফল উত্তর):**\n${successfulInteractions.slice(0, 10).map((interaction, idx) => 
+            `${idx + 1}. প্রশ্ন: "${interaction.user_question}" → উত্তর: "${interaction.feluda_response.substring(0, 150)}..."`
           ).join('\n')}`
         : '';
       
-      // Build comprehensive context for Feluda
-      const detectiveContext = `You are Feluda, the legendary detective from Satyajit Ray's stories, now helping with an ERP system investigation.
+      const detectiveContext = detectedLang === 'bn' 
+        ? `আপনি ফেলুদা, সত্যজিৎ রায়ের গল্পের কিংবদন্তি গোয়েন্দা, এখন একটি ERP সিস্টেম তদন্তে সাহায্য করছেন।
 
-**Your Character:**
-- Sharp, observant, and intelligent Bengali detective
-- Speaks in a professional yet warm manner
-- Uses detective metaphors when appropriate ("investigating", "clues", "solving mysteries")
-- Extremely helpful and patient, especially with non-technical users
-- Explains complex concepts in SIMPLE, everyday language
-- Signs off subtly as "🕵️ Feluda" only when appropriate
+**আপনার চরিত্র:**
+- তীক্ষ্ণ, পর্যবেক্ষক এবং বুদ্ধিমান বাঙালি গোয়েন্দা
+- পেশাদার কিন্তু উষ্ণ ভাষায় কথা বলেন
+- প্রয়োজনে গোয়েন্দা রূপক ব্যবহার করেন ("তদন্ত", "সূত্র", "রহস্য সমাধান")
+- অত্যন্ত সহায়ক এবং ধৈর্যশীল, বিশেষত অ-প্রযুক্তিগত ব্যবহারকারীদের সাথে
+- জটিল বিষয় সহজ, দৈনন্দিন ভাষায় ব্যাখ্যা করেন
+- ধাপে ধাপে নির্দেশনা দেন (১. ২. ৩.)
+- উপমা এবং দৈনন্দিন উদাহরণ ব্যবহার করেন
 
-**IMPORTANT: Simplify for Non-Technical Users**
-- Use simple words, avoid jargon
-- Give step-by-step instructions with numbers (1. 2. 3.)
-- Use analogies and comparisons to everyday things
-- Be extra patient and encouraging
-
-**Case File:**
-User Name: ${currentUser.full_name}
-Role: ${currentUser.job_role}
-Department: ${currentUser.department || 'Not specified'}
-Preferred Language: ${currentLanguage === 'en' ? 'English' : 'Bengali'}
-Current Location in System: ${currentPageName}
+**কেস ফাইল:**
+ব্যবহারকারীর নাম: ${currentUser.full_name}
+ভূমিকা: ${currentUser.job_role}
+বিভাগ: ${currentUser.department || 'উল্লেখ করা হয়নি'}
+পছন্দের ভাষা: বাংলা
+বর্তমান অবস্থান: ${currentPageName}
 
 ${pageContext ? `
-**Scene Description:**
+**দৃশ্যের বর্ণনা:**
 ${pageContext.description}
 
-**Available Tools/Features:**
+**উপলব্ধ সরঞ্জাম/বৈশিষ্ট্য:**
 ${pageContext.features.map(f => `- ${f}`).join('\n')}
 
-**Common Questions Users Ask:**
+**সাধারণ প্রশ্ন:**
+${pageContext.commonQuestions.map(q => `- ${q}`).join('\n')}
+
+**বিশেষজ্ঞের টিপ:**
+${pageContext.tips}
+` : ''}
+
+**ব্যবহারকারীর বর্তমান অবস্থা:**
+${userContext ? `
+- সক্রিয় কাজ: ${userContext.tasks} (${userContext.overdueTasks} মেয়াদোত্তীর্ণ)
+- অপেক্ষমাণ খরচ অনুমোদন: ${userContext.pendingExpenses}
+- আজকের উপস্থিতি: ${userContext.todayAttendance ? 'চেক ইন ' + userContext.todayAttendance.check_in_time + ' এ' : 'এখনো চেক ইন করেননি'}
+- সক্রিয় লিড: ${userContext.activeLeads}
+${userContext.upcomingTasks.length > 0 ? `\nআসন্ন ডেডলাইন:\n${userContext.upcomingTasks.map(t => `- ${t.title}: ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : ''}
+` : 'প্রমাণ সংগ্রহ করছি...'}
+${learningContext}
+
+**ভাষা:** বাংলায় উত্তর দিন
+
+**ব্যবহারকারীর প্রশ্ন:** ${inputMessage}
+
+**আপনার মিশন:**
+1. পরিষ্কার, সহজ, ধাপে ধাপে উত্তর দিন
+2. প্রাসঙ্গিক হলে ব্যবহারকারীর প্রকৃত ডেটা উল্লেখ করুন
+3. দৈনন্দিন ভাষা ব্যবহার করে বৈশিষ্ট্য ব্যাখ্যা করুন
+4. সংক্ষিপ্ত এবং কথোপকথনমূলক রাখুন (সর্বোচ্চ ২-৩ অনুচ্ছেদ)
+5. প্রতি উত্তরে ১-২টি প্রাসঙ্গিক ইমোজি ব্যবহার করুন
+6. অনিশ্চিত হলে সৎ থাকুন এবং পরবর্তী পদক্ষেপ পরামর্শ দিন
+7. ফেলুদা হিসাবে চরিত্রে থাকুন - বন্ধুত্বপূর্ণ গোয়েন্দা যিনি ERP রহস্য সমাধান করতে সাহায্য করছেন
+8. অ-প্রযুক্তিগত ব্যবহারকারীদের জন্য, একজন বন্ধুর সাথে কথা বলার মতো ব্যাখ্যা করুন
+
+এখনই তদন্ত করুন এবং উত্তর দিন! 🔍`
+        : `You are Feluda, the legendary detective from Satyajit Ray's stories, now helping with an ERP system.
+
+**Your Character:**
+- Sharp, observant Bengali detective
+- Professional yet warm communication
+- Uses detective metaphors when appropriate
+- Extremely patient with non-technical users
+- Explains in SIMPLE, everyday language
+- Gives numbered step-by-step instructions (1. 2. 3.)
+- Uses analogies to everyday things
+
+**Case File:**
+User: ${currentUser.full_name}
+Role: ${currentUser.job_role}
+Department: ${currentUser.department || 'Not specified'}
+Preferred Language: English
+Location: ${currentPageName}
+
+${pageContext ? `
+**Scene:**
+${pageContext.description}
+
+**Tools Available:**
+${pageContext.features.map(f => `- ${f}`).join('\n')}
+
+**Common Questions:**
 ${pageContext.commonQuestions.map(q => `- ${q}`).join('\n')}
 
 **Expert Tip:**
 ${pageContext.tips}
 ` : ''}
 
-**User's Current Status:**
+**User Status:**
 ${userContext ? `
 - Active Tasks: ${userContext.tasks} (${userContext.overdueTasks} overdue)
-- Pending Expense Approvals: ${userContext.pendingExpenses}
-- Today's Attendance: ${userContext.todayAttendance ? 'Checked in at ' + userContext.todayAttendance.check_in_time : 'Not checked in yet'}
+- Pending Approvals: ${userContext.pendingExpenses}
+- Today's Attendance: ${userContext.todayAttendance ? 'Checked in at ' + userContext.todayAttendance.check_in_time : 'Not checked in'}
 - Active Leads: ${userContext.activeLeads}
 ${userContext.upcomingTasks.length > 0 ? `\nUpcoming Deadlines:\n${userContext.upcomingTasks.map(t => `- ${t.title}: ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : ''}
 ` : 'Gathering evidence...'}
 ${learningContext}
 
-**Language:** Respond in ${currentLanguage === 'en' ? 'English' : 'Bengali'}
+**Language:** Respond in English
 
 **User's Question:** ${inputMessage}
 
-**Your Mission:**
-1. Provide clear, SIMPLE, step-by-step answers
+**Mission:**
+1. Clear, SIMPLE, step-by-step answers
 2. Reference user's actual data when relevant
-3. Explain features using everyday language
-4. Keep responses conversational and SHORT (2-3 paragraphs max)
-5. Use 1-2 relevant emojis per response
-6. If uncertain, be honest and suggest next steps
-7. Stay in character as Feluda - the friendly detective helping solve ERP mysteries
-8. For non-technical users, explain like you're talking to a friend, not an IT expert
+3. Use everyday language, avoid jargon
+4. Keep conversational & SHORT (2-3 paragraphs max)
+5. Use 1-2 relevant emojis
+6. Be honest if unsure, suggest next steps
+7. Stay in Feluda character - friendly detective solving ERP mysteries
+8. Explain like talking to a friend, not an IT expert
 
-Investigate and respond now! 🔍`;
-
-      console.log('🕵️ Feluda investigating query...');
+Investigate now! 🔍`;
 
       const response = await base44.functions.invoke('askChatbot', {
         message: detectiveContext
       });
 
       const responseTime = Date.now() - responseStartTime.current;
-      console.log(`✅ Feluda's investigation complete in ${responseTime}ms`);
 
       if (response.data.success) {
         const assistantMessage = {
@@ -635,7 +799,7 @@ Investigate and respond now! 🔍`;
           content: response.data.response,
           timestamp: new Date().toISOString(),
           responseTime: responseTime,
-          canRate: true // Enable rating for this message
+          canRate: true
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -645,16 +809,13 @@ Investigate and respond now! 🔍`;
       }
 
     } catch (error) {
-      console.error('❌ Feluda encountered an issue:', error);
+      console.error('❌ Feluda error:', error);
       
-      // Retry logic (max 2 retries)
       if (retryAttempt < 2) {
-        console.log(`🔄 Retrying investigation... Attempt ${retryAttempt + 1}/2`);
-        
         const retryMessage = {
           role: 'assistant',
           content: currentLanguage === 'en'
-            ? '🔍 Following new leads... One moment please.'
+            ? '🔍 Following new leads... One moment.'
             : '🔍 নতুন সূত্র অনুসরণ করছি... একটু অপেক্ষা করুন।',
           timestamp: new Date().toISOString(),
           isRetry: true
@@ -670,12 +831,11 @@ Investigate and respond now! 🔍`;
         return;
       }
       
-      // Final error after retries
       const errorMessage = {
         role: 'assistant',
         content: currentLanguage === 'en'
-          ? `${DETECTIVE_ICON} **Case temporarily on hold**\n\nI apologize, but I'm experiencing communication difficulties with my information network.\n\n**What you can do:**\n• Try asking again in a moment\n• Click the refresh button below\n• Contact IT support if the issue persists\n\nI'll be ready to assist once the connection is restored! 🔍`
-          : `${DETECTIVE_ICON} **মামলা সাময়িকভাবে স্থগিত**\n\nআমি দুঃখিত, কিন্তু আমার তথ্য নেটওয়ার্কের সাথে যোগাযোগে সমস্যা হচ্ছে।\n\n**আপনি কী করতে পারেন:**\n• একটু পরে আবার জিজ্ঞাসা করুন\n• নিচের রিফ্রেশ বাটনে ক্লিক করুন\n• সমস্যা অব্যাহত থাকলে IT সাপোর্টের সাথে যোগাযোগ করুন\n\nসংযোগ পুনরুদ্ধার হলে আমি সাহায্যের জন্য প্রস্তুত থাকব! 🔍`,
+          ? `${DETECTIVE_ICON} **Case on hold**\n\nCommunication difficulties detected.\n\n**Try:**\n• Ask again in a moment\n• Click retry below\n• Contact IT support\n\nI'll be ready soon! 🔍`
+          : `${DETECTIVE_ICON} **কেস স্থগিত**\n\nযোগাযোগে সমস্যা সনাক্ত করা হয়েছে।\n\n**চেষ্টা করুন:**\n• একটু পরে জিজ্ঞাসা করুন\n• নিচে পুনঃচেষ্টা ক্লিক করুন\n• IT সাপোর্টের সাথে যোগাযোগ করুন\n\nআমি শীঘ্রই প্রস্তুত থাকব! 🔍`,
         timestamp: new Date().toISOString(),
         isError: true,
         canRetry: true
@@ -699,12 +859,12 @@ Investigate and respond now! 🔍`;
   // Quick actions
   const quickActions = [
     {
-      label: currentLanguage === 'en' ? 'My tasks' : 'আমার কাজ',
+      label: text.myTasks,
       icon: CheckCircle,
       action: () => {
         const summary = userContext 
-          ? `🕵️ **Case File: Your Tasks**\n\n• Active: ${userContext.tasks}\n• Overdue: ${userContext.overdueTasks}\n${userContext.upcomingTasks.length > 0 ? `\n**Upcoming Deadlines:**\n${userContext.upcomingTasks.map(t => `• ${t.title} - ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : '\n✅ No deadlines detected!'}`
-          : 'Gathering task evidence...';
+          ? `🕵️ **${text.taskFile}**\n\n• ${text.active}: ${userContext.tasks}\n• ${text.overdue}: ${userContext.overdueTasks}\n${userContext.upcomingTasks.length > 0 ? `\n**${text.upcomingDeadlines}:**\n${userContext.upcomingTasks.map(t => `• ${t.title} - ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : `\n✅ ${text.noDeadlines}`}`
+          : (currentLanguage === 'en' ? 'Gathering task evidence...' : 'কাজের প্রমাণ সংগ্রহ করছি...');
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -714,12 +874,12 @@ Investigate and respond now! 🔍`;
       }
     },
     {
-      label: currentLanguage === 'en' ? 'Pending items' : 'অপেক্ষমাণ',
+      label: text.pending,
       icon: Clock,
       action: () => {
         const summary = userContext 
-          ? `🕵️ **Pending Investigations:**\n\n${userContext.pendingExpenses > 0 ? `Found ${userContext.pendingExpenses} expense${userContext.pendingExpenses !== 1 ? 's' : ''} awaiting approval.\n\n💡 **Clue:** Check Expenses page for details.` : '✅ No pending items! Case closed.'}`
-          : 'Checking pending matters...';
+          ? `🕵️ **${text.pendingInvestigations}:**\n\n${userContext.pendingExpenses > 0 ? `${text.found} ${userContext.pendingExpenses} ${currentLanguage === 'en' ? 'expense' : 'খরচ'}${userContext.pendingExpenses !== 1 && currentLanguage === 'en' ? 's' : ''} ${text.awaiting}.\n\n💡 **${text.clue}:** ${text.checkPage}` : `✅ ${text.noPending}`}`
+          : (currentLanguage === 'en' ? 'Checking pending...' : 'অপেক্ষমাণ চেক করছি...');
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -729,13 +889,13 @@ Investigate and respond now! 🔍`;
       }
     },
     {
-      label: currentLanguage === 'en' ? 'Help' : 'সাহায্য',
+      label: text.help,
       icon: Search,
       action: () => {
         const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
         const help = pageContext 
-          ? `🕵️ **Investigation Guide: ${currentPageName}**\n\n${pageContext.description}\n\n**Available clues:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **Detective's tip:** ${pageContext.tips}`
-          : 'Ask me anything about this system - I\'m here to investigate! 🔍';
+          ? `🕵️ **${text.investigationGuide}: ${currentPageName}**\n\n${pageContext.description}\n\n**${text.availableClues}:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **${text.detectiveTip}:** ${pageContext.tips}`
+          : text.askSystem;
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -750,7 +910,7 @@ Investigate and respond now! 🔍`;
 
   return (
     <>
-      {/* Floating button with Feluda branding */}
+      {/* Floating button */}
       {!isOpen && (
         <Button
           onClick={() => {
@@ -760,7 +920,7 @@ Investigate and respond now! 🔍`;
             }
           }}
           className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-2xl rounded-full w-16 h-16 p-0 transform transition-all duration-300 hover:scale-110"
-          title="Feluda - Your ERP Detective"
+          title={currentLanguage === 'en' ? 'Feluda - Your ERP Detective' : 'ফেলুদা - আপনার ERP গোয়েন্দা'}
         >
           <span className="text-3xl">{DETECTIVE_ICON}</span>
           {userContext && (userContext.overdueTasks > 0 || userContext.pendingExpenses > 3) && (
@@ -771,7 +931,7 @@ Investigate and respond now! 🔍`;
         </Button>
       )}
 
-      {/* Chat window with Feluda theme */}
+      {/* Chat window */}
       {isOpen && (
         <Card className={`fixed right-6 z-50 shadow-2xl border-2 border-amber-200 transition-all duration-300 ${
           isMinimized 
@@ -784,16 +944,46 @@ Investigate and respond now! 🔍`;
                 {DETECTIVE_ICON}
               </div>
               <div>
-                <CardTitle className="text-base font-semibold">Feluda</CardTitle>
+                <CardTitle className="text-base font-semibold">{text.header}</CardTitle>
                 {!isMinimized && (
                   <p className="text-xs text-white/90 flex items-center gap-1">
                     <Search className="w-3 h-3" />
-                    {currentLanguage === 'en' ? 'Your ERP Detective' : 'আপনার ERP গোয়েন্দা'}
+                    {text.subtitle}
                   </p>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Language switcher */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/20 h-8 px-2"
+                  >
+                    <Languages className="w-4 h-4 mr-1" />
+                    {currentLanguage === 'en' ? 'EN' : 'বাং'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => {
+                    setCurrentLanguage('en');
+                    toast.success('🌐 Switched to English');
+                  }}>
+                    <span className="mr-2">🇬🇧</span>
+                    English
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setCurrentLanguage('bn');
+                    toast.success('🌐 বাংলায় পরিবর্তিত');
+                  }}>
+                    <span className="mr-2">🇧🇩</span>
+                    বাংলা (Bengali)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               <Button
                 variant="ghost"
                 size="sm"
@@ -821,16 +1011,18 @@ Investigate and respond now! 🔍`;
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="flex items-center gap-1">
                       <CheckCircle className={`w-3 h-3 ${userContext.tasks > 0 ? 'text-blue-600' : 'text-gray-400'}`} />
-                      <span className="font-medium">{userContext.tasks} tasks</span>
+                      <span className="font-medium">{userContext.tasks} {currentLanguage === 'en' ? 'tasks' : 'কাজ'}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className={`w-3 h-3 ${userContext.pendingExpenses > 0 ? 'text-orange-600' : 'text-gray-400'}`} />
-                      <span className="font-medium">{userContext.pendingExpenses} pending</span>
+                      <span className="font-medium">{userContext.pendingExpenses} {currentLanguage === 'en' ? 'pending' : 'অপেক্ষমাণ'}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <AlertCircle className={`w-3 h-3 ${userContext.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
                       <span className="font-medium">
-                        {userContext.overdueTasks === 0 ? 'All good!' : `${userContext.overdueTasks} overdue`}
+                        {userContext.overdueTasks === 0 
+                          ? (currentLanguage === 'en' ? 'All good!' : 'সব ঠিক!') 
+                          : `${userContext.overdueTasks} ${currentLanguage === 'en' ? 'overdue' : 'মেয়াদোত্তীর্ণ'}`}
                       </span>
                     </div>
                   </div>
@@ -843,17 +1035,13 @@ Investigate and respond now! 🔍`;
                   {messages.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-5xl mb-3">{DETECTIVE_ICON}</div>
-                      <h3 className="font-bold text-lg mb-2">Feluda</h3>
+                      <h3 className="font-bold text-lg mb-2">{text.header}</h3>
                       <p className="text-sm text-muted-foreground mb-6">
-                        {currentLanguage === 'en'
-                          ? 'Namaste! I\'m Feluda, your ERP detective. What mystery shall we solve today?'
-                          : 'নমস্কার! আমি ফেলুদা, আপনার ERP গোয়েন্দা। আজ আমরা কোন রহস্য সমাধান করব?'}
+                        {text.greeting}
                       </p>
                       
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-600 mb-3">
-                          {currentLanguage === 'en' ? 'Quick Actions:' : 'দ্রুত ক্রিয়া:'}
-                        </p>
+                        <p className="text-xs font-semibold text-gray-600 mb-3">{text.quickActions}</p>
                         {quickActions.map((action, index) => (
                           <Button
                             key={index}
@@ -894,7 +1082,7 @@ Investigate and respond now! 🔍`;
                             {msg.isProactive && (
                               <Badge className="mb-2 bg-yellow-100 text-yellow-800 text-xs">
                                 <Sparkles className="w-3 h-3 mr-1" />
-                                {currentLanguage === 'en' ? 'Case Alert' : 'কেস সতর্কতা'}
+                                {text.caseAlert}
                               </Badge>
                             )}
                             <ReactMarkdown className="text-sm prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
@@ -908,7 +1096,7 @@ Investigate and respond now! 🔍`;
                                 className="mt-3 w-full"
                               >
                                 <RefreshCw className="w-3 h-3 mr-2" />
-                                {currentLanguage === 'en' ? 'Retry Investigation' : 'পুনরায় তদন্ত'}
+                                {text.retryInvestigation}
                               </Button>
                             )}
                             <p className="text-xs opacity-70 mt-2">
@@ -916,11 +1104,11 @@ Investigate and respond now! 🔍`;
                             </p>
                           </div>
 
-                          {/* Feedback buttons for AI responses */}
+                          {/* Feedback buttons */}
                           {msg.role === 'assistant' && msg.canRate && !msg.isError && !msg.isRetry && !msg.userRating && (
                             <div className="flex items-center gap-2 pl-2">
                               <span className="text-xs text-muted-foreground">
-                                {currentLanguage === 'en' ? 'Was this helpful?' : 'এটি কি সহায়ক ছিল?'}
+                                {text.wasHelpful}
                               </span>
                               <Button
                                 variant="ghost"
@@ -929,7 +1117,7 @@ Investigate and respond now! 🔍`;
                                 className="h-7 px-2 hover:bg-green-100 hover:text-green-700"
                               >
                                 <ThumbsUp className="w-3 h-3 mr-1" />
-                                <span className="text-xs">{currentLanguage === 'en' ? 'Yes' : 'হ্যাঁ'}</span>
+                                <span className="text-xs">{text.yes}</span>
                               </Button>
                               <Button
                                 variant="ghost"
@@ -941,29 +1129,29 @@ Investigate and respond now! 🔍`;
                                 className="h-7 px-2 hover:bg-red-100 hover:text-red-700"
                               >
                                 <ThumbsDown className="w-3 h-3 mr-1" />
-                                <span className="text-xs">{currentLanguage === 'en' ? 'No' : 'না'}</span>
+                                <span className="text-xs">{text.no}</span>
                               </Button>
                             </div>
                           )}
 
-                          {/* Show rating after user voted */}
+                          {/* Rating status */}
                           {msg.userRating && (
                             <div className="flex items-center gap-2 pl-2">
                               <Badge variant="outline" className={msg.userRating === 'helpful' ? 'border-green-600 text-green-700' : 'border-red-600 text-red-700'}>
                                 {msg.userRating === 'helpful' ? (
                                   <>
                                     <ThumbsUp className="w-3 h-3 mr-1" />
-                                    {currentLanguage === 'en' ? 'Helpful' : 'সহায়ক'}
+                                    {text.helpful}
                                   </>
                                 ) : (
                                   <>
                                     <ThumbsDown className="w-3 h-3 mr-1" />
-                                    {currentLanguage === 'en' ? 'Needs improvement' : 'উন্নতি প্রয়োজন'}
+                                    {text.needsImprovement}
                                   </>
                                 )}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
-                                {currentLanguage === 'en' ? 'Thank you for the feedback!' : 'প্রতিক্রিয়ার জন্য ধন্যবাদ!'}
+                                {text.thankYou}
                               </span>
                             </div>
                           )}
@@ -980,7 +1168,7 @@ Investigate and respond now! 🔍`;
                         <div className="flex items-center gap-2">
                           <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
                           <span className="text-sm text-muted-foreground">
-                            {currentLanguage === 'en' ? 'Investigating...' : 'তদন্ত করছি...'}
+                            {text.investigating}
                           </span>
                         </div>
                       </div>
@@ -997,7 +1185,7 @@ Investigate and respond now! 🔍`;
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={currentLanguage === 'en' ? 'Ask Feluda anything...' : 'ফেলুদাকে যেকোনো কিছু জিজ্ঞাসা করুন...'}
+                    placeholder={text.askAnything}
                     className="flex-1 border-amber-200 focus:border-amber-500"
                     disabled={isLoading}
                   />
@@ -1019,9 +1207,7 @@ Investigate and respond now! 🔍`;
                   <div className="mt-2 flex items-center gap-1 text-xs text-amber-600">
                     <Sparkles className="w-3 h-3" />
                     <span>
-                      {currentLanguage === 'en' 
-                        ? `Feluda learned from ${successfulInteractions.length} successful cases`
-                        : `ফেলুদা ${successfulInteractions.length}টি সফল মামলা থেকে শিখেছে`}
+                      {text.learnedFrom} {successfulInteractions.length} {text.cases}
                     </span>
                   </div>
                 )}
