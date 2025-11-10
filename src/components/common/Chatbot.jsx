@@ -10,27 +10,24 @@ import {
   X, 
   Loader2, 
   Sparkles, 
-  Bot,
   MinusCircle,
   AlertCircle,
   CheckCircle,
   Clock,
-  FileText,
-  TrendingUp,
-  Lightbulb,
-  RefreshCw
+  RefreshCw,
+  Search
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 
 /**
- * 🤖 ENHANCED PROACTIVE AI CHATBOT
- * - Context-aware with detailed page understanding
- * - User-specific data integration
- * - Improved error handling
- * - Retry mechanism
+ * 🕵️ FELUDA - THE ERP DETECTIVE
+ * Context-aware AI assistant with comprehensive business intelligence
+ * Named after the iconic Bengali detective by Satyajit Ray
  */
+
+const DETECTIVE_ICON = "🕵️";
 
 const DETAILED_CONTEXT_HELP = {
   '/Attendance': {
@@ -187,7 +184,6 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState(null);
   const [hasShownProactiveMessage, setHasShownProactiveMessage] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const [userBehavior, setUserBehavior] = useState({
     timeOnPage: 0,
     idleTime: 0,
@@ -357,13 +353,13 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
       }
 
       proactiveMessage = lang === 'en'
-        ? `Hi ${currentUser.full_name.split(' ')[0]}! 👋\n\nI noticed you have some urgent items:\n\n${urgentItems.join('\n')}\n\nWould you like help managing these?`
-        : `হাই ${currentUser.full_name.split(' ')[0]}! 👋\n\nআমি লক্ষ্য করেছি আপনার কিছু জরুরি আইটেম আছে:\n\n${urgentItems.join('\n')}\n\nএগুলো পরিচালনায় সাহায্য চান?`;
+        ? `${DETECTIVE_ICON} **Feluda here!**\n\nI've detected some urgent matters:\n\n${urgentItems.join('\n')}\n\nShall I help you investigate these? 🔍`
+        : `${DETECTIVE_ICON} **ফেলুদা এখানে!**\n\nআমি কিছু জরুরি বিষয় সনাক্ত করেছি:\n\n${urgentItems.join('\n')}\n\nআমি কি এই তদন্তে আপনাকে সাহায্য করব? 🔍`;
 
     } else if (pageContext) {
       proactiveMessage = lang === 'en'
-        ? `Hi ${currentUser.full_name.split(' ')[0]}! 👋\n\nI'm here to help with ${pageContext.description}.\n\n📋 Available features:\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 Tip: ${pageContext.tips}\n\nWhat would you like to know?`
-        : `হাই ${currentUser.full_name.split(' ')[0]}! 👋\n\nআমি ${pageContext.description} নিয়ে সাহায্য করতে এখানে আছি।\n\n📋 উপলব্ধ বৈশিষ্ট্য:\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 টিপ: ${pageContext.tips}\n\nআপনি কী জানতে চান?`;
+        ? `${DETECTIVE_ICON} **Namaste! I'm Feluda, your ERP detective.**\n\nI'm investigating ${pageContext.description}.\n\n📋 **Available clues:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **Detective's tip:** ${pageContext.tips}\n\nWhat mystery shall we solve today?`
+        : `${DETECTIVE_ICON} **নমস্কার! আমি ফেলুদা, আপনার ERP গোয়েন্দা।**\n\nআমি ${pageContext.description} তদন্ত করছি।\n\n📋 **উপলব্ধ সূত্র:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **গোয়েন্দার টিপ:** ${pageContext.tips}\n\nআজ আমরা কোন রহস্য সমাধান করব?`;
     }
 
     setMessages([{
@@ -374,10 +370,10 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     }]);
 
     setIsOpen(true);
-    toast.info('💬 AI Assistant has a message for you!', { duration: 3000 });
+    toast.info('🕵️ Feluda has a case for you!', { duration: 3000 });
   };
 
-  // Enhanced send message with retry
+  // Enhanced send message
   const handleSendMessage = async (retryAttempt = 0) => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -394,57 +390,67 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     try {
       const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
       
-      // Build comprehensive context
-      const enhancedContext = `You are a helpful ERP assistant for Biddabari Group.
+      // Build comprehensive context for Feluda
+      const detectiveContext = `You are Feluda, the legendary detective from Satyajit Ray's stories, now helping with an ERP system investigation.
 
-User Profile:
-- Name: ${currentUser.full_name}
-- Role: ${currentUser.job_role}
-- Department: ${currentUser.department || 'N/A'}
+**Your Character:**
+- Sharp, observant, and intelligent
+- Speaks in a professional yet approachable manner
+- Uses detective metaphors when appropriate ("investigating", "clues", "solving mysteries")
+- Helpful and patient with users
+- Signs off subtly as "🕵️ Feluda" only when appropriate
 
-Current Page: ${currentPageName}
+**Case File:**
+User Name: ${currentUser.full_name}
+Role: ${currentUser.job_role}
+Department: ${currentUser.department || 'Not specified'}
+Current Location in System: ${currentPageName}
+
 ${pageContext ? `
-Page Description: ${pageContext.description}
+**Scene Description:**
+${pageContext.description}
 
-Available Features:
+**Available Tools/Features:**
 ${pageContext.features.map(f => `- ${f}`).join('\n')}
 
-Common Questions Users Ask:
+**Common Questions Users Ask:**
 ${pageContext.commonQuestions.map(q => `- ${q}`).join('\n')}
 
-Pro Tip: ${pageContext.tips}
+**Expert Tip:**
+${pageContext.tips}
 ` : ''}
 
-User's Current Status:
+**User's Current Status:**
 ${userContext ? `
 - Active Tasks: ${userContext.tasks} (${userContext.overdueTasks} overdue)
 - Pending Expense Approvals: ${userContext.pendingExpenses}
 - Today's Attendance: ${userContext.todayAttendance ? 'Checked in at ' + userContext.todayAttendance.check_in_time : 'Not checked in yet'}
 - Active Leads: ${userContext.activeLeads}
 ${userContext.upcomingTasks.length > 0 ? `\nUpcoming Deadlines:\n${userContext.upcomingTasks.map(t => `- ${t.title}: ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : ''}
-` : 'Fetching user context...'}
+` : 'Gathering evidence...'}
 
-Language: Respond in ${currentLanguage === 'en' ? 'English' : 'Bengali'}
+**Language:** Respond in ${currentLanguage === 'en' ? 'English' : 'Bengali'}
 
-User Question: ${inputMessage}
+**User's Question:** ${inputMessage}
 
-Instructions:
-- Be helpful, friendly, and professional
-- Give specific, actionable advice
-- Reference the user's actual data when relevant
-- If they ask about features, explain based on the page context
-- Keep responses concise but informative (2-3 paragraphs max)
-- Use emojis sparingly for emphasis
-- If you don't know something, be honest and suggest who to contact
-`;
+**Your Mission:**
+1. Provide clear, actionable answers
+2. Reference user's actual data when relevant
+3. Explain features based on page context
+4. Keep responses conversational (2-3 short paragraphs)
+5. Use 1-2 relevant emojis per response
+6. If uncertain, be honest and suggest next steps
+7. Stay in character as Feluda - professional detective helping solve ERP mysteries
 
-      console.log('🤖 Sending to AI with enhanced context...');
+Investigate and respond now! 🔍`;
+
+      console.log('🕵️ Feluda investigating query...');
 
       const response = await base44.functions.invoke('askChatbot', {
-        message: enhancedContext
+        message: detectiveContext
       });
 
-      console.log('✅ AI Response received:', response.data);
+      console.log('✅ Feluda\'s investigation complete:', response.data);
 
       if (response.data.success) {
         const assistantMessage = {
@@ -454,31 +460,29 @@ Instructions:
         };
 
         setMessages(prev => [...prev, assistantMessage]);
-        setRetryCount(0); // Reset retry count on success
 
       } else {
-        throw new Error(response.data.error || 'AI service error');
+        throw new Error(response.data.error || 'Investigation failed');
       }
 
     } catch (error) {
-      console.error('❌ Chatbot error:', error);
+      console.error('❌ Feluda encountered an issue:', error);
       
       // Retry logic (max 2 retries)
       if (retryAttempt < 2) {
-        console.log(`🔄 Retrying... Attempt ${retryAttempt + 1}/2`);
+        console.log(`🔄 Retrying investigation... Attempt ${retryAttempt + 1}/2`);
         
         const retryMessage = {
           role: 'assistant',
           content: currentLanguage === 'en'
-            ? '⏳ Connection issue detected. Retrying...'
-            : '⏳ সংযোগ সমস্যা সনাক্ত করা হয়েছে। পুনরায় চেষ্টা করা হচ্ছে...',
+            ? '🔍 Following new leads... One moment please.'
+            : '🔍 নতুন সূত্র অনুসরণ করছি... একটু অপেক্ষা করুন।',
           timestamp: new Date().toISOString(),
           isRetry: true
         };
         
         setMessages(prev => [...prev, retryMessage]);
         
-        // Remove retry message and try again after 2 seconds
         setTimeout(() => {
           setMessages(prev => prev.filter(m => !m.isRetry));
           handleSendMessage(retryAttempt + 1);
@@ -491,8 +495,8 @@ Instructions:
       const errorMessage = {
         role: 'assistant',
         content: currentLanguage === 'en'
-          ? `😔 I apologize, but I'm having trouble connecting to my AI brain right now.\n\n**What you can do:**\n• Try asking again in a moment\n• Click the refresh button below\n• Contact your IT support if the issue persists\n\nI'm here to help once the connection is restored! 🙏`
-          : `😔 আমি দুঃখিত, কিন্তু আমি এখন আমার AI মস্তিষ্কের সাথে সংযোগ করতে সমস্যা হচ্ছে।\n\n**আপনি কী করতে পারেন:**\n• একটু পরে আবার জিজ্ঞাসা করুন\n• নিচের রিফ্রেশ বাটনে ক্লিক করুন\n• সমস্যা অব্যাহত থাকলে আপনার IT সাপোর্টের সাথে যোগাযোগ করুন\n\nসংযোগ পুনরুদ্ধার হলে আমি সাহায্যের জন্য এখানে আছি! 🙏`,
+          ? `${DETECTIVE_ICON} **Case temporarily on hold**\n\nI apologize, but I'm experiencing communication difficulties with my information network.\n\n**What you can do:**\n• Try asking again in a moment\n• Click the refresh button below\n• Contact IT support if the issue persists\n\nI'll be ready to assist once the connection is restored! 🔍`
+          : `${DETECTIVE_ICON} **মামলা সাময়িকভাবে স্থগিত**\n\nআমি দুঃখিত, কিন্তু আমার তথ্য নেটওয়ার্কের সাথে যোগাযোগে সমস্যা হচ্ছে।\n\n**আপনি কী করতে পারেন:**\n• একটু পরে আবার জিজ্ঞাসা করুন\n• নিচের রিফ্রেশ বাটনে ক্লিক করুন\n• সমস্যা অব্যাহত থাকলে IT সাপোর্টের সাথে যোগাযোগ করুন\n\nসংযোগ পুনরুদ্ধার হলে আমি সাহায্যের জন্য প্রস্তুত থাকব! 🔍`,
         timestamp: new Date().toISOString(),
         isError: true,
         canRetry: true
@@ -505,7 +509,6 @@ Instructions:
   };
 
   const handleRetry = () => {
-    // Remove error message and retry
     setMessages(prev => prev.filter(m => !m.isError));
     const lastUserMessage = messages.filter(m => m.role === 'user').pop();
     if (lastUserMessage) {
@@ -517,12 +520,12 @@ Instructions:
   // Quick actions
   const quickActions = [
     {
-      label: currentLanguage === 'en' ? 'Show my tasks' : 'আমার কাজ দেখান',
+      label: currentLanguage === 'en' ? 'My tasks' : 'আমার কাজ',
       icon: CheckCircle,
       action: () => {
         const summary = userContext 
-          ? `📋 **Your Tasks Summary:**\n\n• Active: ${userContext.tasks}\n• Overdue: ${userContext.overdueTasks}\n${userContext.upcomingTasks.length > 0 ? `\n**Upcoming Deadlines:**\n${userContext.upcomingTasks.map(t => `• ${t.title} - ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : '\n✅ No upcoming deadlines!'}`
-          : 'Loading task data...';
+          ? `🕵️ **Case File: Your Tasks**\n\n• Active: ${userContext.tasks}\n• Overdue: ${userContext.overdueTasks}\n${userContext.upcomingTasks.length > 0 ? `\n**Upcoming Deadlines:**\n${userContext.upcomingTasks.map(t => `• ${t.title} - ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : '\n✅ No deadlines detected!'}`
+          : 'Gathering task evidence...';
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -532,12 +535,12 @@ Instructions:
       }
     },
     {
-      label: currentLanguage === 'en' ? 'Pending approvals' : 'অপেক্ষমাণ অনুমোদন',
+      label: currentLanguage === 'en' ? 'Pending items' : 'অপেক্ষমাণ',
       icon: Clock,
       action: () => {
         const summary = userContext 
-          ? `💰 **Pending Approvals:**\n\n${userContext.pendingExpenses > 0 ? `You have ${userContext.pendingExpenses} expense${userContext.pendingExpenses !== 1 ? 's' : ''} awaiting approval.\n\n💡 **Tip:** Review them in the Expenses page for faster processing.` : '✅ No pending expenses! You\'re all caught up.'}`
-          : 'Loading approval data...';
+          ? `🕵️ **Pending Investigations:**\n\n${userContext.pendingExpenses > 0 ? `Found ${userContext.pendingExpenses} expense${userContext.pendingExpenses !== 1 ? 's' : ''} awaiting approval.\n\n💡 **Clue:** Check Expenses page for details.` : '✅ No pending items! Case closed.'}`
+          : 'Checking pending matters...';
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -547,13 +550,13 @@ Instructions:
       }
     },
     {
-      label: currentLanguage === 'en' ? 'Page help' : 'পৃষ্ঠা সাহায্য',
-      icon: Lightbulb,
+      label: currentLanguage === 'en' ? 'Help' : 'সাহায্য',
+      icon: Search,
       action: () => {
         const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
         const help = pageContext 
-          ? `📖 **${currentPageName} Help**\n\n${pageContext.description}\n\n**Features:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **Tip:** ${pageContext.tips}\n\n**Common Questions:**\n${pageContext.commonQuestions.map(q => `• ${q}`).join('\n')}`
-          : 'Ask me anything about using this system!';
+          ? `🕵️ **Investigation Guide: ${currentPageName}**\n\n${pageContext.description}\n\n**Available clues:**\n${pageContext.features.map(f => `• ${f}`).join('\n')}\n\n💡 **Detective's tip:** ${pageContext.tips}`
+          : 'Ask me anything about this system - I\'m here to investigate! 🔍';
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -568,7 +571,7 @@ Instructions:
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button with Feluda branding */}
       {!isOpen && (
         <Button
           onClick={() => {
@@ -577,9 +580,10 @@ Instructions:
               fetchUserContext();
             }
           }}
-          className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-2xl rounded-full w-16 h-16 p-0 transform transition-all duration-300 hover:scale-110"
+          className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-2xl rounded-full w-16 h-16 p-0 transform transition-all duration-300 hover:scale-110"
+          title="Feluda - Your ERP Detective"
         >
-          <MessageCircle className="w-7 h-7" />
+          <span className="text-3xl">{DETECTIVE_ICON}</span>
           {userContext && (userContext.overdueTasks > 0 || userContext.pendingExpenses > 3) && (
             <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold animate-pulse">
               {userContext.overdueTasks + userContext.pendingExpenses}
@@ -588,24 +592,24 @@ Instructions:
         </Button>
       )}
 
-      {/* Chat window */}
+      {/* Chat window with Feluda theme */}
       {isOpen && (
-        <Card className={`fixed right-6 z-50 shadow-2xl border-2 border-violet-200 transition-all duration-300 ${
+        <Card className={`fixed right-6 z-50 shadow-2xl border-2 border-amber-200 transition-all duration-300 ${
           isMinimized 
             ? 'bottom-6 w-80 h-16' 
             : 'bottom-6 w-[420px] max-w-[95vw] h-[600px] max-h-[85vh]'
         }`}>
-          <CardHeader className="flex flex-row items-center justify-between p-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-t-xl">
+          <CardHeader className="flex flex-row items-center justify-between p-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-t-xl">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <Bot className="w-5 h-5" />
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-2xl">
+                {DETECTIVE_ICON}
               </div>
               <div>
-                <CardTitle className="text-base font-semibold">AI Assistant</CardTitle>
+                <CardTitle className="text-base font-semibold">Feluda</CardTitle>
                 {!isMinimized && (
-                  <p className="text-xs text-white/80 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    {currentLanguage === 'en' ? 'Context-aware help' : 'প্রসঙ্গ-সচেতন সাহায্য'}
+                  <p className="text-xs text-white/90 flex items-center gap-1">
+                    <Search className="w-3 h-3" />
+                    {currentLanguage === 'en' ? 'Your ERP Detective' : 'আপনার ERP গোয়েন্দা'}
                   </p>
                 )}
               </div>
@@ -634,7 +638,7 @@ Instructions:
             <CardContent className="p-0 flex flex-col h-[calc(100%-80px)]">
               {/* Context banner */}
               {userContext && (
-                <div className="p-3 bg-gradient-to-r from-violet-50 to-purple-50 border-b">
+                <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b">
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="flex items-center gap-1">
                       <CheckCircle className={`w-3 h-3 ${userContext.tasks > 0 ? 'text-blue-600' : 'text-gray-400'}`} />
@@ -659,11 +663,12 @@ Instructions:
                 <div className="space-y-4">
                   {messages.length === 0 ? (
                     <div className="text-center py-8">
-                      <Bot className="w-12 h-12 mx-auto mb-3 text-violet-600" />
+                      <div className="text-5xl mb-3">{DETECTIVE_ICON}</div>
+                      <h3 className="font-bold text-lg mb-2">Feluda</h3>
                       <p className="text-sm text-muted-foreground mb-6">
                         {currentLanguage === 'en'
-                          ? 'Hi! I\'m your AI assistant. How can I help you today?'
-                          : 'হাই! আমি আপনার AI সহায়ক। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?'}
+                          ? 'Namaste! I\'m Feluda, your ERP detective. What mystery shall we solve today?'
+                          : 'নমস্কার! আমি ফেলুদা, আপনার ERP গোয়েন্দা। আজ আমরা কোন রহস্য সমাধান করব?'}
                       </p>
                       
                       <div className="space-y-2">
@@ -674,7 +679,7 @@ Instructions:
                             onClick={action.action}
                             variant="outline"
                             size="sm"
-                            className="w-full justify-start text-left"
+                            className="w-full justify-start text-left hover:border-amber-600"
                           >
                             <action.icon className="w-4 h-4 mr-2" />
                             {action.label}
@@ -689,14 +694,14 @@ Instructions:
                         className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         {msg.role === 'assistant' && (
-                          <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Bot className="w-4 h-4 text-white" />
+                          <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 text-lg">
+                            {DETECTIVE_ICON}
                           </div>
                         )}
                         <div
                           className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                             msg.role === 'user'
-                              ? 'bg-violet-600 text-white'
+                              ? 'bg-amber-600 text-white'
                               : msg.isError
                               ? 'bg-red-50 text-red-800 border border-red-200'
                               : msg.isRetry
@@ -707,7 +712,7 @@ Instructions:
                           {msg.isProactive && (
                             <Badge className="mb-2 bg-yellow-100 text-yellow-800 text-xs">
                               <Sparkles className="w-3 h-3 mr-1" />
-                              Proactive
+                              Case Alert
                             </Badge>
                           )}
                           <ReactMarkdown className="text-sm prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
@@ -721,7 +726,7 @@ Instructions:
                               className="mt-3 w-full"
                             >
                               <RefreshCw className="w-3 h-3 mr-2" />
-                              {currentLanguage === 'en' ? 'Retry' : 'পুনরায় চেষ্টা করুন'}
+                              {currentLanguage === 'en' ? 'Retry Investigation' : 'পুনরায় তদন্ত'}
                             </Button>
                           )}
                           <p className="text-xs opacity-70 mt-2">
@@ -733,11 +738,11 @@ Instructions:
                   )}
                   {isLoading && (
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-500 rounded-full flex items-center justify-center">
-                        <Bot className="w-4 h-4 text-white" />
+                      <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-lg">
+                        {DETECTIVE_ICON}
                       </div>
                       <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                        <Loader2 className="w-5 h-5 animate-spin text-violet-600" />
+                        <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
                       </div>
                     </div>
                   )}
@@ -752,14 +757,14 @@ Instructions:
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={currentLanguage === 'en' ? 'Type your message...' : 'আপনার বার্তা টাইপ করুন...'}
-                    className="flex-1"
+                    placeholder={currentLanguage === 'en' ? 'Ask Feluda anything...' : 'ফেলুদাকে যেকোনো কিছু জিজ্ঞাসা করুন...'}
+                    className="flex-1 border-amber-200 focus:border-amber-500"
                     disabled={isLoading}
                   />
                   <Button
                     onClick={() => handleSendMessage()}
                     disabled={!inputMessage.trim() || isLoading}
-                    className="bg-violet-600 hover:bg-violet-700"
+                    className="bg-amber-600 hover:bg-amber-700"
                   >
                     {isLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
