@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   MessageCircle, 
   Send, 
@@ -15,15 +16,25 @@ import {
   CheckCircle,
   Clock,
   RefreshCw,
-  Search
+  Search,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
 
 /**
- * 🕵️ FELUDA - THE ERP DETECTIVE
- * Context-aware AI assistant with comprehensive business intelligence
+ * 🕵️ FELUDA - THE ERP DETECTIVE WITH LEARNING SYSTEM
+ * Context-aware AI assistant that learns from user feedback
  * Named after the iconic Bengali detective by Satyajit Ray
  */
 
@@ -176,6 +187,73 @@ const DETAILED_CONTEXT_HELP = {
   }
 };
 
+// Feedback dialog component
+const FeedbackDialog = ({ isOpen, onClose, onSubmit, language }) => {
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    await onSubmit(feedbackText);
+    setFeedbackText('');
+    setIsSubmitting(false);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-amber-600" />
+            {language === 'en' ? 'Help Feluda Learn' : 'ফেলুদাকে শিখতে সাহায্য করুন'}
+          </DialogTitle>
+          <DialogDescription>
+            {language === 'en' 
+              ? 'Your feedback helps Feluda become a better detective!'
+              : 'আপনার প্রতিক্রিয়া ফেলুদাকে আরও ভাল গোয়েন্দা হতে সাহায্য করে!'}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              {language === 'en' 
+                ? 'What could be improved? (Optional)'
+                : 'কী উন্নত করা যেতে পারে? (ঐচ্ছিক)'}
+            </label>
+            <Textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder={language === 'en' 
+                ? 'Tell us what would make this response better...'
+                : 'এই প্রতিক্রিয়াটি কী ভাল করতে পারে তা আমাদের বলুন...'}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              {language === 'en' ? 'Skip' : 'এড়িয়ে যান'}
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSubmitting}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              {language === 'en' ? 'Submit Feedback' : 'প্রতিক্রিয়া জমা দিন'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function Chatbot({ currentUser, currentPageName, currentLanguage = 'en' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -189,10 +267,14 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     idleTime: 0,
     lastActivity: Date.now()
   });
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackForMessage, setFeedbackForMessage] = useState(null);
+  const [successfulInteractions, setSuccessfulInteractions] = useState([]);
 
   const messagesEndRef = useRef(null);
   const idleTimerRef = useRef(null);
   const pageTimerRef = useRef(null);
+  const responseStartTime = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -201,6 +283,27 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load successful interactions for learning
+  useEffect(() => {
+    const loadSuccessfulInteractions = async () => {
+      try {
+        const feedback = await base44.entities.FeludaFeedback.filter({
+          was_helpful: true,
+          language: currentLanguage
+        }, '-created_date', 50);
+        
+        setSuccessfulInteractions(feedback);
+        console.log(`🧠 Loaded ${feedback.length} successful interactions for learning`);
+      } catch (error) {
+        console.error('Failed to load learning data:', error);
+      }
+    };
+
+    if (currentUser) {
+      loadSuccessfulInteractions();
+    }
+  }, [currentUser, currentLanguage]);
 
   // Track user behavior
   useEffect(() => {
@@ -373,7 +476,62 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     toast.info('🕵️ Feluda has a case for you!', { duration: 3000 });
   };
 
-  // Enhanced send message
+  // Handle feedback submission
+  const handleFeedback = async (messageIndex, rating, feedbackText = '') => {
+    try {
+      const message = messages[messageIndex];
+      const previousUserMessage = messages.slice(0, messageIndex).reverse().find(m => m.role === 'user');
+      
+      if (!message || !previousUserMessage) return;
+
+      const responseTime = message.responseTime || 0;
+
+      await base44.entities.FeludaFeedback.create({
+        user_id: currentUser.id,
+        user_name: currentUser.full_name,
+        user_question: previousUserMessage.content,
+        feluda_response: message.content,
+        rating: rating,
+        feedback_text: feedbackText || '',
+        page_context: currentPageName,
+        user_role: currentUser.job_role,
+        language: currentLanguage,
+        response_time_ms: responseTime,
+        was_helpful: rating === 'helpful'
+      });
+
+      // Update message with feedback status
+      setMessages(prev => prev.map((msg, idx) => 
+        idx === messageIndex 
+          ? { ...msg, userRating: rating, userFeedback: feedbackText }
+          : msg
+      ));
+
+      // If helpful, add to successful interactions
+      if (rating === 'helpful') {
+        setSuccessfulInteractions(prev => [
+          {
+            user_question: previousUserMessage.content,
+            feluda_response: message.content,
+            page_context: currentPageName
+          },
+          ...prev.slice(0, 49) // Keep top 50
+        ]);
+      }
+
+      toast.success(
+        rating === 'helpful'
+          ? (currentLanguage === 'en' ? '🕵️ Thank you! Feluda learned from this!' : '🕵️ ধন্যবাদ! ফেলুদা এটি থেকে শিখেছে!')
+          : (currentLanguage === 'en' ? 'Feedback recorded. Feluda will improve!' : 'প্রতিক্রিয়া রেকর্ড করা হয়েছে। ফেলুদা উন্নত হবে!')
+      );
+
+    } catch (error) {
+      console.error('Failed to save feedback:', error);
+      toast.error('Failed to save feedback');
+    }
+  };
+
+  // Enhanced send message with learning
   const handleSendMessage = async (retryAttempt = 0) => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -386,24 +544,40 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage 
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
+    responseStartTime.current = Date.now();
 
     try {
       const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
+      
+      // Build learning context from successful interactions
+      const learningContext = successfulInteractions.length > 0
+        ? `\n\n**LEARNING DATABASE (Past Successful Responses):**\n${successfulInteractions.slice(0, 10).map((interaction, idx) => 
+            `${idx + 1}. Q: "${interaction.user_question}" → A: "${interaction.feluda_response.substring(0, 200)}..."`
+          ).join('\n')}`
+        : '';
       
       // Build comprehensive context for Feluda
       const detectiveContext = `You are Feluda, the legendary detective from Satyajit Ray's stories, now helping with an ERP system investigation.
 
 **Your Character:**
-- Sharp, observant, and intelligent
-- Speaks in a professional yet approachable manner
+- Sharp, observant, and intelligent Bengali detective
+- Speaks in a professional yet warm manner
 - Uses detective metaphors when appropriate ("investigating", "clues", "solving mysteries")
-- Helpful and patient with users
+- Extremely helpful and patient, especially with non-technical users
+- Explains complex concepts in SIMPLE, everyday language
 - Signs off subtly as "🕵️ Feluda" only when appropriate
+
+**IMPORTANT: Simplify for Non-Technical Users**
+- Use simple words, avoid jargon
+- Give step-by-step instructions with numbers (1. 2. 3.)
+- Use analogies and comparisons to everyday things
+- Be extra patient and encouraging
 
 **Case File:**
 User Name: ${currentUser.full_name}
 Role: ${currentUser.job_role}
 Department: ${currentUser.department || 'Not specified'}
+Preferred Language: ${currentLanguage === 'en' ? 'English' : 'Bengali'}
 Current Location in System: ${currentPageName}
 
 ${pageContext ? `
@@ -428,19 +602,21 @@ ${userContext ? `
 - Active Leads: ${userContext.activeLeads}
 ${userContext.upcomingTasks.length > 0 ? `\nUpcoming Deadlines:\n${userContext.upcomingTasks.map(t => `- ${t.title}: ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : ''}
 ` : 'Gathering evidence...'}
+${learningContext}
 
 **Language:** Respond in ${currentLanguage === 'en' ? 'English' : 'Bengali'}
 
 **User's Question:** ${inputMessage}
 
 **Your Mission:**
-1. Provide clear, actionable answers
+1. Provide clear, SIMPLE, step-by-step answers
 2. Reference user's actual data when relevant
-3. Explain features based on page context
-4. Keep responses conversational (2-3 short paragraphs)
+3. Explain features using everyday language
+4. Keep responses conversational and SHORT (2-3 paragraphs max)
 5. Use 1-2 relevant emojis per response
 6. If uncertain, be honest and suggest next steps
-7. Stay in character as Feluda - professional detective helping solve ERP mysteries
+7. Stay in character as Feluda - the friendly detective helping solve ERP mysteries
+8. For non-technical users, explain like you're talking to a friend, not an IT expert
 
 Investigate and respond now! 🔍`;
 
@@ -450,13 +626,16 @@ Investigate and respond now! 🔍`;
         message: detectiveContext
       });
 
-      console.log('✅ Feluda\'s investigation complete:', response.data);
+      const responseTime = Date.now() - responseStartTime.current;
+      console.log(`✅ Feluda's investigation complete in ${responseTime}ms`);
 
       if (response.data.success) {
         const assistantMessage = {
           role: 'assistant',
           content: response.data.response,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          responseTime: responseTime,
+          canRate: true // Enable rating for this message
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -672,7 +851,9 @@ Investigate and respond now! 🔍`;
                       </p>
                       
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-600 mb-3">Quick Actions:</p>
+                        <p className="text-xs font-semibold text-gray-600 mb-3">
+                          {currentLanguage === 'en' ? 'Quick Actions:' : 'দ্রুত ক্রিয়া:'}
+                        </p>
                         {quickActions.map((action, index) => (
                           <Button
                             key={index}
@@ -698,40 +879,94 @@ Investigate and respond now! 🔍`;
                             {DETECTIVE_ICON}
                           </div>
                         )}
-                        <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                            msg.role === 'user'
-                              ? 'bg-amber-600 text-white'
-                              : msg.isError
-                              ? 'bg-red-50 text-red-800 border border-red-200'
-                              : msg.isRetry
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {msg.isProactive && (
-                            <Badge className="mb-2 bg-yellow-100 text-yellow-800 text-xs">
-                              <Sparkles className="w-3 h-3 mr-1" />
-                              Case Alert
-                            </Badge>
+                        <div className="max-w-[80%] space-y-2">
+                          <div
+                            className={`rounded-2xl px-4 py-3 ${
+                              msg.role === 'user'
+                                ? 'bg-amber-600 text-white'
+                                : msg.isError
+                                ? 'bg-red-50 text-red-800 border border-red-200'
+                                : msg.isRetry
+                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {msg.isProactive && (
+                              <Badge className="mb-2 bg-yellow-100 text-yellow-800 text-xs">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                {currentLanguage === 'en' ? 'Case Alert' : 'কেস সতর্কতা'}
+                              </Badge>
+                            )}
+                            <ReactMarkdown className="text-sm prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                              {msg.content}
+                            </ReactMarkdown>
+                            {msg.canRetry && (
+                              <Button
+                                onClick={handleRetry}
+                                size="sm"
+                                variant="outline"
+                                className="mt-3 w-full"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-2" />
+                                {currentLanguage === 'en' ? 'Retry Investigation' : 'পুনরায় তদন্ত'}
+                              </Button>
+                            )}
+                            <p className="text-xs opacity-70 mt-2">
+                              {new Date(msg.timestamp).toLocaleTimeString()}
+                            </p>
+                          </div>
+
+                          {/* Feedback buttons for AI responses */}
+                          {msg.role === 'assistant' && msg.canRate && !msg.isError && !msg.isRetry && !msg.userRating && (
+                            <div className="flex items-center gap-2 pl-2">
+                              <span className="text-xs text-muted-foreground">
+                                {currentLanguage === 'en' ? 'Was this helpful?' : 'এটি কি সহায়ক ছিল?'}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFeedback(index, 'helpful')}
+                                className="h-7 px-2 hover:bg-green-100 hover:text-green-700"
+                              >
+                                <ThumbsUp className="w-3 h-3 mr-1" />
+                                <span className="text-xs">{currentLanguage === 'en' ? 'Yes' : 'হ্যাঁ'}</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setFeedbackForMessage({ index, rating: 'not_helpful' });
+                                  setFeedbackDialogOpen(true);
+                                }}
+                                className="h-7 px-2 hover:bg-red-100 hover:text-red-700"
+                              >
+                                <ThumbsDown className="w-3 h-3 mr-1" />
+                                <span className="text-xs">{currentLanguage === 'en' ? 'No' : 'না'}</span>
+                              </Button>
+                            </div>
                           )}
-                          <ReactMarkdown className="text-sm prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                            {msg.content}
-                          </ReactMarkdown>
-                          {msg.canRetry && (
-                            <Button
-                              onClick={handleRetry}
-                              size="sm"
-                              variant="outline"
-                              className="mt-3 w-full"
-                            >
-                              <RefreshCw className="w-3 h-3 mr-2" />
-                              {currentLanguage === 'en' ? 'Retry Investigation' : 'পুনরায় তদন্ত'}
-                            </Button>
+
+                          {/* Show rating after user voted */}
+                          {msg.userRating && (
+                            <div className="flex items-center gap-2 pl-2">
+                              <Badge variant="outline" className={msg.userRating === 'helpful' ? 'border-green-600 text-green-700' : 'border-red-600 text-red-700'}>
+                                {msg.userRating === 'helpful' ? (
+                                  <>
+                                    <ThumbsUp className="w-3 h-3 mr-1" />
+                                    {currentLanguage === 'en' ? 'Helpful' : 'সহায়ক'}
+                                  </>
+                                ) : (
+                                  <>
+                                    <ThumbsDown className="w-3 h-3 mr-1" />
+                                    {currentLanguage === 'en' ? 'Needs improvement' : 'উন্নতি প্রয়োজন'}
+                                  </>
+                                )}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {currentLanguage === 'en' ? 'Thank you for the feedback!' : 'প্রতিক্রিয়ার জন্য ধন্যবাদ!'}
+                              </span>
+                            </div>
                           )}
-                          <p className="text-xs opacity-70 mt-2">
-                            {new Date(msg.timestamp).toLocaleTimeString()}
-                          </p>
                         </div>
                       </div>
                     ))
@@ -742,7 +977,12 @@ Investigate and respond now! 🔍`;
                         {DETECTIVE_ICON}
                       </div>
                       <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                        <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+                          <span className="text-sm text-muted-foreground">
+                            {currentLanguage === 'en' ? 'Investigating...' : 'তদন্ত করছি...'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -773,11 +1013,38 @@ Investigate and respond now! 🔍`;
                     )}
                   </Button>
                 </div>
+                
+                {/* Learning indicator */}
+                {successfulInteractions.length > 0 && (
+                  <div className="mt-2 flex items-center gap-1 text-xs text-amber-600">
+                    <Sparkles className="w-3 h-3" />
+                    <span>
+                      {currentLanguage === 'en' 
+                        ? `Feluda learned from ${successfulInteractions.length} successful cases`
+                        : `ফেলুদা ${successfulInteractions.length}টি সফল মামলা থেকে শিখেছে`}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           )}
         </Card>
       )}
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog
+        isOpen={feedbackDialogOpen}
+        onClose={() => {
+          setFeedbackDialogOpen(false);
+          setFeedbackForMessage(null);
+        }}
+        onSubmit={async (feedbackText) => {
+          if (feedbackForMessage) {
+            await handleFeedback(feedbackForMessage.index, feedbackForMessage.rating, feedbackText);
+          }
+        }}
+        language={currentLanguage}
+      />
     </>
   );
 }
