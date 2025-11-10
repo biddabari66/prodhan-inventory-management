@@ -56,6 +56,7 @@ import AttendanceMy from './pages/AttendanceMy';
 import SendEmail from './pages/SendEmail';
 import SubmittedReports from './pages/SubmittedReports';
 import ProductAnalytics from './pages/ProductAnalytics';
+import FeludaAnalytics from './pages/FeludaAnalytics';
 import Layout from './Layout.jsx';
 
 
@@ -118,6 +119,7 @@ export const PAGES = {
     "SendEmail": SendEmail,
     "SubmittedReports": SubmittedReports,
     "ProductAnalytics": ProductAnalytics,
+    "FeludaAnalytics": FeludaAnalytics,
 }
 
 export const pagesConfig = {
