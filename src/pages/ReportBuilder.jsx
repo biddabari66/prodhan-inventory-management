@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { User } from "@/entities/User";
 import { CustomReport } from "@/entities/CustomReport";
@@ -48,7 +49,8 @@ const AVAILABLE_ENTITIES = [
   { value: 'Income', label: '💰 Income', icon: '💰' },
   { value: 'Lead', label: '🎯 Leads', icon: '🎯' },
   { value: 'Admission', label: '🎓 Admissions', icon: '🎓' },
-  { value: 'Attendance', label: '🕐 Attendance', icon: '🕐' }
+  { value: 'Attendance', label: '🕐 Attendance', icon: '🕐' },
+  { value: 'User', label: '👤 Users', icon: '👤' }
 ];
 
 const ENTITY_FIELDS = {
@@ -234,6 +236,7 @@ function ReportBuilderPage() {
 
     try {
       const configuration = {
+        report_name: reportName,
         target_entity: targetEntity,
         selected_fields: selectedFields,
         filters,
