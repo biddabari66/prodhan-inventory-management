@@ -227,6 +227,10 @@ export default function InventoryPage() {
     }, [currentUser, canViewAllDepartments, userDepartment]);
 
     useEffect(() => {
+        loadUserAndInventory();
+    }, []);
+
+    useEffect(() => {
         filterInventory();
     }, [inventory, selectedDepartment, searchTerm, currentUser]); // Changed dependency from searchQuery to searchTerm
 
@@ -622,8 +626,11 @@ export default function InventoryPage() {
                                 value={searchTerm}
                                 onChange={setSearchTerm}
                                 onSearch={(term) => {
-                                  setSearchTerm(term);
-                                  // Client-side filtering happens automatically via useEffect
+                                    setSearchTerm(term);
+                                    // Calling loadUserAndInventory to refresh data after a finalized search,
+                                    // assuming SmartInventorySearch might influence backend data fetching or insights.
+                                    // The filterInventory useEffect will re-run after 'inventory' state is updated by loadUserAndInventory.
+                                    loadUserAndInventory();
                                 }}
                                 currentUser={currentUser}
                                 placeholder="🔍 Search inventory with AI suggestions..."
@@ -665,8 +672,6 @@ export default function InventoryPage() {
                                             <TableHead>Category</TableHead>
                                             <TableHead>Department</TableHead>
                                             <TableHead>Stock</TableHead>
-                                            <TableHead>Returned</TableHead>
-                                            <TableHead>Damaged</TableHead>
                                             <TableHead>Price (৳)</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Actions</TableHead>
@@ -675,90 +680,66 @@ export default function InventoryPage() {
                                     <TableBody>
                                         {filteredInventory.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                                     No inventory items found. Add items or adjust filters.
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            filteredInventory.map(item => {
-                                                // Calculate returned and damaged quantities from movement_details if available
-                                                const returnedQty = item.movement_details?.total_returned_qty || 0;
-                                                const damagedQty = item.movement_details?.total_damaged_qty || 0;
-                                                
-                                                return (
-                                                    <TableRow key={item.id} onClick={() => handleViewItem(item)} className="cursor-pointer">
-                                                        <TableCell className="font-medium">
-                                                            <div className="flex items-center gap-2">
-                                                                {item.category === 'books' && <BookOpen className="w-4 h-4 text-cyan-500" />}
-                                                                {item.category !== 'books' && <Package className="w-4 h-4 text-purple-500" />}
-                                                                {item.item_name}
-                                                            </div>
-                                                            {item.isbn && (
-                                                                <p className="text-xs text-muted-foreground">ISBN: {item.isbn}</p>
-                                                            )}
-                                                            {item.author_name && (
-                                                                <p className="text-xs text-muted-foreground">By: {item.author_name}</p>
-                                                            )}
-                                                            {item.barcode && (
-                                                                <p className="text-xs text-muted-foreground">SKU: {item.barcode}</p>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>{item.category}</TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="outline" className={
-                                                                item.department === 'boibari'
-                                                                    ? 'bg-cyan-100 text-cyan-800'
-                                                                    : 'bg-purple-100 text-purple-800'
-                                                            }>
-                                                                {item.department === 'boibari' ? 'Boibari' : 'Prodhan.com'}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="font-medium">{item.current_stock}</div>
-                                                            <div className="text-xs text-muted-foreground">Min: {item.minimum_stock}</div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {returnedQty > 0 ? (
-                                                                <Badge className="bg-orange-100 text-orange-800">
-                                                                    {returnedQty}
-                                                                </Badge>
-                                                            ) : (
-                                                                <span className="text-muted-foreground">-</span>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {damagedQty > 0 ? (
-                                                                <Badge className="bg-red-100 text-red-800">
-                                                                    {damagedQty}
-                                                                </Badge>
-                                                            ) : (
-                                                                <span className="text-muted-foreground">-</span>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>৳{item.selling_price?.toLocaleString()}</TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}>
-                                                                {item.current_stock < item.minimum_stock ? 'Low Stock' : 'In Stock'}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex gap-2">
-                                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }}>
-                                                                    Edit
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
-                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })
+                                            filteredInventory.map(item => (
+                                                <TableRow key={item.id} onClick={() => handleViewItem(item)} className="cursor-pointer">
+                                                    <TableCell className="font-medium">
+                                                        <div className="flex items-center gap-2">
+                                                            {item.category === 'books' && <BookOpen className="w-4 h-4 text-cyan-500" />}
+                                                            {item.category !== 'books' && <Package className="w-4 h-4 text-purple-500" />}
+                                                            {item.item_name}
+                                                        </div>
+                                                        {item.isbn && (
+                                                            <p className="text-xs text-muted-foreground">ISBN: {item.isbn}</p>
+                                                        )}
+                                                        {item.author_name && (
+                                                            <p className="text-xs text-muted-foreground">By: {item.author_name}</p>
+                                                        )}
+                                                        {item.barcode && (
+                                                            <p className="text-xs text-muted-foreground">SKU: {item.barcode}</p>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>{item.category}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className={
+                                                            item.department === 'boibari'
+                                                                ? 'bg-cyan-100 text-cyan-800'
+                                                                : 'bg-purple-100 text-purple-800'
+                                                        }>
+                                                            {item.department === 'boibari' ? 'Boibari' : 'Prodhan.com'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="font-medium">{item.current_stock}</div>
+                                                        <div className="text-xs text-muted-foreground">Min: {item.minimum_stock}</div>
+                                                    </TableCell>
+                                                    <TableCell>৳{item.selling_price?.toLocaleString()}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}>
+                                                            {item.current_stock < item.minimum_stock ? 'Low Stock' : 'In Stock'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex gap-2">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
+                                                                Edit
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteClick(item)}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
                                         )}
                                     </TableBody>
                                 </Table>

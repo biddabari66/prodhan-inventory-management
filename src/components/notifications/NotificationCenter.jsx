@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, X, AlertTriangle, Info, CheckCircle, ExternalLink, Loader2, AlertCircle as AlertCircleIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+// Card and ScrollArea components are no longer directly used in the updated UI structure, removing their imports for cleanliness.
 import { Separator } from '@/components/ui/separator';
 import { Notification } from '@/entities/Notification';
 import { toast } from 'sonner';
@@ -12,10 +13,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import ActionableNotification from './ActionableNotification';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
-import { Settings as SettingsIcon } from 'lucide-react';
 
 const getCategoryIcon = (category) => {
   const icons = {
@@ -95,40 +92,47 @@ const NotificationItem = ({ notification, onNotificationClick }) => {
 export default function NotificationCenter({ currentUser }) {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // Initial state set to true for loading on first open
+  const [error, setError] = useState(null); // New state for error handling
 
+  // unreadCount is now a derived state
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const loadNotifications = useCallback(async () => {
-    if (!currentUser?.id) {
-      setNotifications([]);
-      setIsLoading(false);
+    if (!currentUser?.id) { // Ensure currentUser.id is available before attempting to load
+      setNotifications([]); // Clear notifications if no user is logged in
+      setIsLoading(false); // Make sure loading state is cleared
       return;
     }
 
     setIsLoading(true);
-    setError(null);
+    setError(null); // Clear any previous errors
     try {
       const userNotifications = await Notification.filter(
         { user_id: currentUser.id },
         '-created_date',
         50
       );
+      // Ensure userNotifications is an array, handling potential undefined or non-array returns
       const notificationList = Array.isArray(userNotifications) ? userNotifications : [];
       setNotifications(notificationList);
     } catch (err) {
       console.error("Failed to load notifications:", err);
+      // Simplify the error message to avoid complex objects
       setError("Could not load notifications. Please try again later.");
+      // Error toast is avoided here to prevent spamming if the issue is persistent;
+      // the error message will be displayed within the dropdown.
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser]); // Dependencies include currentUser
 
   useEffect(() => {
+    // Load notifications only when the dropdown is opened
     if (isOpen) {
       loadNotifications();
     }
+    // The previous polling interval has been removed, notifications now load on dropdown open.
   }, [isOpen, loadNotifications]);
 
   const handleMarkAsRead = async (notificationId) => {
@@ -137,6 +141,7 @@ export default function NotificationCenter({ currentUser }) {
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
+      // unreadCount is derived, so it will update automatically.
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
       toast.error('Failed to mark notification as read');
@@ -146,7 +151,7 @@ export default function NotificationCenter({ currentUser }) {
   const handleMarkAllAsRead = async () => {
     try {
       const unreadNotifications = notifications.filter(n => !n.is_read);
-      if (unreadNotifications.length === 0) return;
+      if (unreadNotifications.length === 0) return; // No unread notifications to process
 
       const promises = unreadNotifications.map(n =>
         Notification.update(n.id, { is_read: true })
@@ -154,6 +159,7 @@ export default function NotificationCenter({ currentUser }) {
 
       await Promise.all(promises);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      // unreadCount is derived, so it will update automatically.
       toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
@@ -161,19 +167,15 @@ export default function NotificationCenter({ currentUser }) {
     }
   };
 
-  const handleNotificationAction = (action, data) => {
-    // Reload notifications after action
-    loadNotifications();
-  };
-
   const handleNotificationItemClick = (notification) => {
     if (!notification.is_read) {
       handleMarkAsRead(notification.id);
     }
 
-    if (notification.action_url && !notification.is_actionable) {
+    if (notification.action_url) {
+      // Navigate to the action URL
       window.location.href = notification.action_url;
-      setIsOpen(false);
+      setIsOpen(false); // Close the dropdown after navigation
     }
   };
 
@@ -193,18 +195,11 @@ export default function NotificationCenter({ currentUser }) {
       <DropdownMenuContent align="end" className="w-80 md:w-96 p-0 premium-card z-50">
         <div className="flex items-center justify-between p-3 border-b border-border">
           <h3 className="font-semibold text-base">Notifications</h3>
-          <div className="flex items-center gap-2">
-            <Link to={createPageUrl('NotificationPreferences')}>
-              <Button variant="ghost" size="sm" className="h-7">
-                <SettingsIcon className="w-4 h-4" />
-              </Button>
-            </Link>
-            {unreadCount > 0 && (
-              <Button variant="link" size="sm" onClick={handleMarkAllAsRead} className="text-xs">
-                Mark all read
-              </Button>
-            )}
-          </div>
+          {unreadCount > 0 && (
+            <Button variant="link" size="sm" onClick={handleMarkAllAsRead} className="text-sm">
+              Mark all as read
+            </Button>
+          )}
         </div>
 
         <div className="max-h-96 overflow-y-auto">
@@ -226,18 +221,7 @@ export default function NotificationCenter({ currentUser }) {
           ) : (
             notifications.map((notif, index) => (
               <React.Fragment key={notif.id}>
-                {notif.is_actionable ? (
-                  <ActionableNotification
-                    notification={notif}
-                    onAction={handleNotificationAction}
-                    onMarkAsRead={handleMarkAsRead}
-                  />
-                ) : (
-                  <NotificationItem
-                    notification={notif}
-                    onNotificationClick={handleNotificationItemClick}
-                  />
-                )}
+                <NotificationItem notification={notif} onNotificationClick={handleNotificationItemClick} />
                 {index < notifications.length - 1 && (
                   <Separator className="my-0" />
                 )}
