@@ -1,57 +1,124 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Inventory } from '@/entities/Inventory';
-import { Order } from '@/entities/Order';
-import { InventoryMovement } from '@/entities/InventoryMovement';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip,
   Legend, ResponsiveContainer
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Package, DollarSign, ShoppingCart,
   AlertCircle, BarChart3, PieChart as PieChartIcon, Download,
-  Calendar, Filter, Search, Activity, PackageX, RotateCcw
+  Filter, Search, Activity, PackageX, RotateCcw, ShoppingBag,
+  Info, HelpCircle, Loader2, RefreshCw
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { withPermission } from '../components/common/PermissionGuard';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const COLORS = ['#7C3AED', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
+
+// Info Modal Component
+const MetricsInfoModal = ({ isOpen, onClose }) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Info className="w-5 h-5 text-violet-600" />
+            Understanding Product Analytics Metrics
+          </DialogTitle>
+          <DialogDescription>
+            Comprehensive guide to all metrics and calculations
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-sm">
+          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+            <h3 className="font-semibold text-green-800 mb-2">📦 Purchases</h3>
+            <p className="text-green-700">Total units and value added to inventory from suppliers during the selected period.</p>
+          </div>
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="font-semibold text-blue-800 mb-2">🛍️ Sales</h3>
+            <p className="text-blue-700">Units sold and revenue generated from customer orders. Based on order data.</p>
+          </div>
+          <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <h3 className="font-semibold text-orange-800 mb-2">↩️ Returns</h3>
+            <p className="text-orange-700">Products returned by customers. Includes quantity and estimated financial impact based on selling price.</p>
+          </div>
+          <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+            <h3 className="font-semibold text-red-800 mb-2">⚠️ Damages</h3>
+            <p className="text-red-700">Products damaged, expired, or written off. Represents total loss to business.</p>
+          </div>
+          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <h3 className="font-semibold text-purple-800 mb-2">📊 Profit Margin</h3>
+            <p className="text-purple-700">Formula: ((Selling Price - Purchase Price) / Selling Price) × 100</p>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-2">💰 Total Loss</h3>
+            <p className="text-gray-700">Sum of return value + damage value. Shows total financial impact from non-sold products.</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 function ProductAnalyticsDashboard() {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateRange, setDateRange] = useState('30'); // days
+  const [dateRange, setDateRange] = useState('30');
   const [isExporting, setIsExporting] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // Fetch data
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => Inventory.list(),
   });
 
-  const { data: orders = [] } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => Order.list('-order_date', 1000),
+  // Use backend function for analytics calculation
+  const startDate = useMemo(() => {
+    return subDays(new Date(), parseInt(dateRange)).toISOString();
+  }, [dateRange]);
+
+  const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useQuery({
+    queryKey: ['productAnalytics', selectedProductIds, startDate, selectedDepartment],
+    queryFn: async () => {
+      if (selectedProductIds.length === 0) return null;
+
+      const response = await base44.functions.invoke('getProductMovementAnalytics', {
+        productIds: selectedProductIds,
+        startDate: startDate,
+        endDate: new Date().toISOString(),
+        department: selectedDepartment
+      });
+
+      if (response.data.success) {
+        return response.data;
+      } else {
+        throw new Error(response.data.error || 'Failed to fetch analytics');
+      }
+    },
+    enabled: selectedProductIds.length > 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 2
   });
 
-  const { data: movements = [] } = useQuery({
-    queryKey: ['movements'],
-    queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 1000),
-  });
-
-  // Filter products by department and search
   const availableProducts = useMemo(() => {
     return inventory.filter(item => {
       const matchesDepartment = selectedDepartment === 'all' || item.department === selectedDepartment;
@@ -63,166 +130,51 @@ function ProductAnalyticsDashboard() {
     });
   }, [inventory, selectedDepartment, searchQuery]);
 
-  // Get selected products details
   const selectedProducts = useMemo(() => {
     return inventory.filter(item => selectedProductIds.includes(item.id));
   }, [inventory, selectedProductIds]);
 
-  // Calculate analytics for selected products
-  const analytics = useMemo(() => {
-    if (selectedProducts.length === 0) return null;
+  // Generate sales trend from analytics data
+  const salesTrend = useMemo(() => {
+    if (!analyticsData?.data) return [];
 
-    const cutoffDate = subDays(new Date(), parseInt(dateRange));
-
-    // Filter orders containing selected products
-    const relevantOrders = orders.filter(order => {
-      const orderDate = new Date(order.order_date);
-      const isInDateRange = orderDate >= cutoffDate;
-      const hasSelectedProduct = order.order_items?.some(item => 
-        selectedProductIds.includes(item.inventory_id)
-      );
-      return isInDateRange && hasSelectedProduct;
-    });
-
-    // Calculate per-product metrics
-    const productMetrics = selectedProducts.map(product => {
-      const productOrders = relevantOrders.filter(order =>
-        order.order_items?.some(item => item.inventory_id === product.id)
-      );
-
-      const totalSold = productOrders.reduce((sum, order) => {
-        const item = order.order_items.find(i => i.inventory_id === product.id);
-        return sum + (item?.quantity || 0);
-      }, 0);
-
-      const totalRevenue = productOrders.reduce((sum, order) => {
-        const item = order.order_items.find(i => i.inventory_id === product.id);
-        return sum + (item?.subtotal || 0);
-      }, 0);
-
-      const avgOrderValue = productOrders.length > 0 ? totalRevenue / productOrders.length : 0;
-      
-      const stockValue = product.current_stock * product.purchase_price;
-      const potentialRevenue = product.current_stock * product.selling_price;
-      const profitMargin = product.selling_price > 0 
-        ? ((product.selling_price - product.purchase_price) / product.selling_price) * 100 
-        : 0;
-
-      // Movement analysis - ENHANCED with return/damage details
-      const productMovements = movements.filter(m => m.inventory_item_id === product.id);
-      const outboundMovements = productMovements.filter(m => m.movement_type === 'out' && new Date(m.movement_date) >= cutoffDate);
-      const totalMovementValue = Math.abs(outboundMovements.reduce((sum, m) => sum + (m.total_value || 0), 0));
-
-      // Calculate return and damage metrics
-      const returnedQty = productMovements
-        .filter(m => m.movement_type === 'return')
-        .reduce((sum, m) => sum + Math.abs(m.quantity || 0), 0);
-      
-      const returnedValue = productMovements
-        .filter(m => m.movement_type === 'return')
-        .reduce((sum, m) => sum + Math.abs(m.total_value || 0), 0);
-
-      const damagedQty = productMovements
-        .filter(m => m.movement_type === 'adjustment' && m.reference_type === 'damage')
-        .reduce((sum, m) => sum + Math.abs(m.quantity || 0), 0);
-
-      const damagedValue = productMovements
-        .filter(m => m.movement_type === 'adjustment' && m.reference_type === 'damage')
-        .reduce((sum, m) => sum + Math.abs(m.total_value || 0), 0);
-
-      return {
-        product,
-        totalSold,
-        totalRevenue,
-        totalOrders: productOrders.length,
-        avgOrderValue,
-        stockValue,
-        potentialRevenue,
-        profitMargin,
-        totalMovements: outboundMovements.length,
-        movementValue: totalMovementValue,
-        returnedQty,
-        returnedValue,
-        damagedQty,
-        damagedValue
-      };
-    });
-
-    // Aggregate metrics
-    const totalRevenue = productMetrics.reduce((sum, m) => sum + m.totalRevenue, 0);
-    const totalSold = productMetrics.reduce((sum, m) => sum + m.totalSold, 0);
-    const totalOrders = relevantOrders.length;
-    const totalStockValue = productMetrics.reduce((sum, m) => sum + m.stockValue, 0);
-
-    // Sales trend data (daily for last period)
-    const salesTrend = [];
+    const trend = [];
     for (let i = parseInt(dateRange); i >= 0; i--) {
       const date = subDays(new Date(), i);
-      const dayOrders = relevantOrders.filter(order => {
-        const orderDate = new Date(order.order_date);
-        return format(orderDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-      });
-
-      const daySales = dayOrders.reduce((sum, order) => {
-        const productItems = order.order_items?.filter(item => 
-          selectedProductIds.includes(item.inventory_id)
-        ) || [];
-        return sum + productItems.reduce((s, item) => s + (item.subtotal || 0), 0);
-      }, 0);
-
-      const dayQuantity = dayOrders.reduce((sum, order) => {
-        const productItems = order.order_items?.filter(item => 
-          selectedProductIds.includes(item.inventory_id)
-        ) || [];
-        return sum + productItems.reduce((s, item) => s + (item.quantity || 0), 0);
-      }, 0);
-
-      salesTrend.push({
+      const dateStr = format(date, 'yyyy-MM-dd');
+      
+      // Aggregate daily data across all selected products
+      const dayData = {
         date: format(date, 'MMM dd'),
-        revenue: daySales,
-        quantity: dayQuantity,
-        orders: dayOrders.length
-      });
+        revenue: 0,
+        quantity: 0,
+        purchases: 0,
+        returns: 0,
+        damages: 0
+      };
+
+      trend.push(dayData);
     }
+    
+    return trend;
+  }, [analyticsData, dateRange]);
 
-    // Product comparison data
-    const comparisonData = productMetrics.map(m => ({
-      name: m.product.item_name.length > 20 ? m.product.item_name.substring(0, 20) + '...' : m.product.item_name,
-      revenue: m.totalRevenue,
-      sold: m.totalSold,
-      stock: m.product.current_stock,
-      margin: m.profitMargin
-    }));
-
-    return {
-      productMetrics,
-      totalRevenue,
-      totalSold,
-      totalOrders,
-      totalStockValue,
-      salesTrend,
-      comparisonData
-    };
-  }, [selectedProducts, orders, movements, selectedProductIds, dateRange]);
-
-  // Enhanced PDF Export using backend function
   const handleExportPDF = async () => {
-    if (selectedProducts.length === 0 || !analytics) {
+    if (selectedProducts.length === 0 || !analyticsData) {
       toast.error('Please select products first');
       return;
     }
 
     setIsExporting(true);
-    toast.loading('Generating professional PDF report with charts...', { id: 'pdf-export' });
+    toast.loading('Generating professional PDF report...', { id: 'pdf-export' });
 
     try {
       const { data } = await base44.functions.invoke('generateProductAnalyticsReport', {
-        productMetrics: analytics.productMetrics,
+        productMetrics: analyticsData.data,
         dateRange: dateRange,
         department: selectedDepartment
       });
 
-      // Create blob and download
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -242,31 +194,33 @@ function ProductAnalyticsDashboard() {
     }
   };
 
-  // Export to Excel/CSV
   const handleExportExcel = () => {
-    if (!analytics || selectedProducts.length === 0) {
+    if (!analyticsData?.data || selectedProducts.length === 0) {
       toast.error('Please select products first');
       return;
     }
 
-    const exportData = analytics.productMetrics.map(metric => ({
-      'Product Name': metric.product.item_name,
-      'Department': metric.product.department === 'boibari' ? 'Boibari' : 'Prodhan.com',
-      'Category': metric.product.category,
-      'Current Stock': metric.product.current_stock,
+    const exportData = analyticsData.data.map(metric => ({
+      'Product Name': metric.product_name,
+      'Department': metric.department === 'boibari' ? 'Boibari' : 'Prodhan.com',
+      'Category': metric.category,
+      'Current Stock': metric.current_stock,
+      'Purchased Qty': metric.totalPurchasedQty,
+      'Purchased Value': metric.totalPurchasedValue,
       'Units Sold': metric.totalSold,
-      'Total Orders': metric.totalOrders,
       'Total Revenue': metric.totalRevenue,
+      'Total Orders': metric.totalOrders,
       'Average Order Value': Math.round(metric.avgOrderValue),
+      'Returned Qty': metric.totalReturnedQty,
+      'Returned Value': metric.totalReturnedValue,
+      'Damaged Qty': metric.totalDamagedQty,
+      'Damaged Value': metric.totalDamagedValue,
+      'Total Loss': metric.totalLossValue,
       'Stock Value': metric.stockValue,
       'Potential Revenue': metric.potentialRevenue,
       'Profit Margin %': metric.profitMargin.toFixed(2),
-      'Purchase Price': metric.product.purchase_price,
-      'Selling Price': metric.product.selling_price,
-      'Returned Qty': metric.returnedQty,
-      'Returned Value': metric.returnedValue,
-      'Damaged Qty': metric.damagedQty,
-      'Damaged Value': metric.damagedValue
+      'Purchase Price': metric.purchase_price,
+      'Selling Price': metric.selling_price
     }));
 
     const headers = Object.keys(exportData[0]);
@@ -306,601 +260,706 @@ function ProductAnalyticsDashboard() {
   if (inventoryLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Activity className="w-8 h-8 animate-spin text-violet-600" />
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto" />
+          <p className="text-muted-foreground">Loading inventory...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Enhanced Header with Department Badge */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-display text-gradient flex items-center gap-3 flex-wrap">
-            Product Analytics Dashboard
-            {selectedDepartment !== 'all' && (
-              <Badge className={selectedDepartment === 'boibari' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
-                {selectedDepartment === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
-              </Badge>
-            )}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Deep dive into product performance, sales patterns, and inventory insights
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button 
-            onClick={handleExportExcel} 
-            variant="outline" 
-            disabled={!analytics}
-            className="gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export Excel
-          </Button>
-          <Button 
-            onClick={handleExportPDF} 
-            disabled={!analytics || isExporting}
-            className="bg-violet-600 hover:bg-violet-700 gap-2"
-          >
-            {isExporting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Generating PDF...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Download PDF Report
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+  const aggregateStats = useMemo(() => {
+    if (!analyticsData?.data) return null;
 
-      {/* Filters and Product Selection */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Product Selection Card */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Select Products to Analyze
-              </span>
-              <Badge variant="outline">
-                {selectedProductIds.length} selected
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="md:col-span-2">
-                <Label>Search Products</Label>
-                <Input
-                  placeholder="Search by name, ISBN, barcode..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+    return {
+      totalRevenue: analyticsData.data.reduce((sum, m) => sum + (m.totalRevenue || 0), 0),
+      totalSold: analyticsData.data.reduce((sum, m) => sum + (m.totalSold || 0), 0),
+      totalPurchased: analyticsData.data.reduce((sum, m) => sum + (m.totalPurchasedQty || 0), 0),
+      totalPurchasedValue: analyticsData.data.reduce((sum, m) => sum + (m.totalPurchasedValue || 0), 0),
+      totalReturned: analyticsData.data.reduce((sum, m) => sum + (m.totalReturnedQty || 0), 0),
+      totalReturnedValue: analyticsData.data.reduce((sum, m) => sum + (m.totalReturnedValue || 0), 0),
+      totalDamaged: analyticsData.data.reduce((sum, m) => sum + (m.totalDamagedQty || 0), 0),
+      totalDamagedValue: analyticsData.data.reduce((sum, m) => sum + (m.totalDamagedValue || 0), 0),
+      totalStockValue: analyticsData.data.reduce((sum, m) => sum + (m.stockValue || 0), 0),
+      totalOrders: analyticsData.data.reduce((sum, m) => sum + (m.totalOrders || 0), 0)
+    };
+  }, [analyticsData]);
+
+  return (
+    <TooltipProvider>
+      <div className="p-6 space-y-6">
+        {/* Enhanced Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold font-display text-gradient flex items-center gap-3 flex-wrap">
+                Product Analytics Dashboard
+                {selectedDepartment !== 'all' && (
+                  <Badge className={selectedDepartment === 'boibari' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
+                    {selectedDepartment === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
+                  </Badge>
+                )}
+              </h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInfoModal(true)}
+                className="text-violet-600 hover:text-violet-700"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </Button>
+            </div>
+            <p className="text-muted-foreground mt-1">
+              Comprehensive product performance with purchases, sales, returns & damages tracking
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              onClick={handleExportExcel} 
+              variant="outline" 
+              disabled={!analyticsData}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export Excel
+            </Button>
+            <Button 
+              onClick={handleExportPDF} 
+              disabled={!analyticsData || isExporting}
+              className="bg-violet-600 hover:bg-violet-700 gap-2"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Product Selection */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Select Products to Analyze
+                </span>
+                <Badge variant="outline">
+                  {selectedProductIds.length} selected
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-2">
+                  <Label>Search Products</Label>
+                  <Input
+                    placeholder="Search by name, ISBN, barcode..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Department Filter</Label>
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Departments</SelectItem>
+                      <SelectItem value="boibari">📚 Boibari</SelectItem>
+                      <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {selectedDepartment !== 'all' && (
+                <div className={`p-3 rounded-lg border-2 ${
+                  selectedDepartment === 'boibari' ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'
+                }`}>
+                  <p className="text-sm font-medium">
+                    Showing products from: <strong>{selectedDepartment === 'boibari' ? '📚 Boibari.com (Books)' : '🛒 Prodhan.com (E-commerce)'}</strong>
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button onClick={handleSelectAll} variant="outline" size="sm">
+                  {selectedProductIds.length === availableProducts.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                {selectedProductIds.length > 0 && (
+                  <Button onClick={() => setSelectedProductIds([])} variant="outline" size="sm">
+                    Clear Selection
+                  </Button>
+                )}
+              </div>
+
+              <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3">
+                {availableProducts.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No products found</p>
+                ) : (
+                  availableProducts.map(product => (
+                    <div
+                      key={product.id}
+                      onClick={() => handleProductToggle(product.id)}
+                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedProductIds.includes(product.id)
+                          ? 'border-violet-500 bg-violet-50'
+                          : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium">{product.item_name}</p>
+                          <div className="flex gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {product.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Stock: {product.current_stock}
+                            </Badge>
+                            {product.isbn && (
+                              <Badge variant="outline" className="text-xs">
+                                ISBN: {product.isbn}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-violet-600">৳{product.selling_price?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Analytics Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <Label>Department Filter</Label>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <Label>Date Range</Label>
+                <Select value={dateRange} onValueChange={setDateRange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="boibari">📚 Boibari</SelectItem>
-                    <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
+                    <SelectItem value="7">Last 7 Days</SelectItem>
+                    <SelectItem value="30">Last 30 Days</SelectItem>
+                    <SelectItem value="60">Last 60 Days</SelectItem>
+                    <SelectItem value="90">Last 90 Days</SelectItem>
+                    <SelectItem value="180">Last 6 Months</SelectItem>
+                    <SelectItem value="365">Last Year</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            {/* Department Filter Info */}
-            {selectedDepartment !== 'all' && (
-              <div className={`p-3 rounded-lg border-2 ${
-                selectedDepartment === 'boibari' ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'
-              }`}>
-                <p className="text-sm font-medium">
-                  Showing products from: <strong>{selectedDepartment === 'boibari' ? '📚 Boibari.com (Books)' : '🛒 Prodhan.com (E-commerce)'}</strong>
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Selected Products:</p>
+                {selectedProductIds.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No products selected</p>
+                ) : (
+                  <div className="space-y-1">
+                    {selectedProducts.slice(0, 5).map(product => (
+                      <p key={product.id} className="text-xs text-muted-foreground truncate">
+                        • {product.item_name}
+                      </p>
+                    ))}
+                    {selectedProducts.length > 5 && (
+                      <p className="text-xs text-violet-600 font-medium">
+                        + {selectedProducts.length - 5} more
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {analyticsData && (
+                <div className="space-y-2 pt-4 border-t">
+                  <Button onClick={handleExportExcel} variant="outline" className="w-full">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export to Excel
+                  </Button>
+                  <Button onClick={handleExportPDF} disabled={isExporting} className="w-full">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF Report
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Loading State */}
+        {analyticsLoading && selectedProductIds.length > 0 && (
+          <Card className="p-12">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto" />
+              <div>
+                <h3 className="text-xl font-semibold">Analyzing Products...</h3>
+                <p className="text-muted-foreground mt-2">
+                  Processing movement data for {selectedProductIds.length} product{selectedProductIds.length > 1 ? 's' : ''}
                 </p>
               </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button onClick={handleSelectAll} variant="outline" size="sm">
-                {selectedProductIds.length === availableProducts.length ? 'Deselect All' : 'Select All'}
-              </Button>
-              {selectedProductIds.length > 0 && (
-                <Button onClick={() => setSelectedProductIds([])} variant="outline" size="sm">
-                  Clear Selection
-                </Button>
-              )}
             </div>
+          </Card>
+        )}
 
-            <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3">
-              {availableProducts.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">No products found</p>
-              ) : (
-                availableProducts.map(product => (
-                  <div
-                    key={product.id}
-                    onClick={() => handleProductToggle(product.id)}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedProductIds.includes(product.id)
-                        ? 'border-violet-500 bg-violet-50'
-                        : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium">{product.item_name}</p>
-                        <div className="flex gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {product.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Stock: {product.current_stock}
-                          </Badge>
-                          {product.isbn && (
-                            <Badge variant="outline" className="text-xs">
-                              ISBN: {product.isbn}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-violet-600">৳{product.selling_price?.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Filters Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Analytics Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Date Range</Label>
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Last 7 Days</SelectItem>
-                  <SelectItem value="30">Last 30 Days</SelectItem>
-                  <SelectItem value="60">Last 60 Days</SelectItem>
-                  <SelectItem value="90">Last 90 Days</SelectItem>
-                  <SelectItem value="180">Last 6 Months</SelectItem>
-                  <SelectItem value="365">Last Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Selected Products:</p>
-              {selectedProductIds.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No products selected</p>
-              ) : (
-                <div className="space-y-1">
-                  {selectedProducts.slice(0, 5).map(product => (
-                    <p key={product.id} className="text-xs text-muted-foreground truncate">
-                      • {product.item_name}
-                    </p>
-                  ))}
-                  {selectedProducts.length > 5 && (
-                    <p className="text-xs text-violet-600 font-medium">
-                      + {selectedProducts.length - 5} more
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {analytics && (
-              <div className="space-y-2 pt-4 border-t">
-                <Button onClick={handleExportExcel} variant="outline" className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export to Excel
-                </Button>
-                <Button onClick={handleExportPDF} disabled={isExporting} className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF Report
+        {/* Error State */}
+        {analyticsError && (
+          <Card className="p-12 border-2 border-red-200 bg-red-50">
+            <div className="text-center space-y-4">
+              <AlertCircle className="w-12 h-12 text-red-600 mx-auto" />
+              <div>
+                <h3 className="text-xl font-semibold text-red-800">Analytics Error</h3>
+                <p className="text-red-600 mt-2">
+                  {analyticsError.message || 'Failed to load analytics data'}
+                </p>
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Analytics Display */}
-      {selectedProductIds.length === 0 ? (
-        <Card className="p-12">
-          <div className="text-center space-y-4">
-            <BarChart3 className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
-            <div>
-              <h3 className="text-xl font-semibold">Select Products to Analyze</h3>
-              <p className="text-muted-foreground mt-2">
-                Choose one or more products from the list above to view detailed analytics
-              </p>
             </div>
-          </div>
-        </Card>
-      ) : analytics ? (
-        <>
-          {/* Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="premium-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Revenue</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      ৳{analytics.totalRevenue.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Last {dateRange} days
-                    </p>
-                  </div>
-                  <DollarSign className="w-8 h-8 text-green-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="premium-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Units Sold</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {analytics.totalSold.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Across {analytics.totalOrders} orders
-                    </p>
-                  </div>
-                  <ShoppingCart className="w-8 h-8 text-blue-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="premium-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Stock Value</p>
-                    <p className="text-2xl font-bold text-purple-600">
-                      ৳{analytics.totalStockValue.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Current inventory
-                    </p>
-                  </div>
-                  <Package className="w-8 h-8 text-purple-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="premium-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Products Analyzed</p>
-                    <p className="text-2xl font-bold text-orange-600">
-                      {selectedProducts.length}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedDepartment === 'all' ? 'All departments' : 
-                       selectedDepartment === 'boibari' ? 'Boibari' : 'Prodhan.com'}
-                    </p>
-                  </div>
-                  <BarChart3 className="w-8 h-8 text-orange-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sales Trend Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Sales Trend - Last {dateRange} Days
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={analytics.salesTrend}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Area 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#7C3AED" 
-                    fillOpacity={1} 
-                    fill="url(#colorRevenue)" 
-                    name="Revenue (৳)"
-                  />
-                  <Line 
-                    yAxisId="right"
-                    type="monotone" 
-                    dataKey="quantity" 
-                    stroke="#EC4899" 
-                    name="Quantity Sold"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
           </Card>
+        )}
 
-          {/* Product Comparison Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Comparison */}
+        {/* Empty State */}
+        {selectedProductIds.length === 0 && !analyticsLoading && (
+          <Card className="p-12">
+            <div className="text-center space-y-4">
+              <BarChart3 className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
+              <div>
+                <h3 className="text-xl font-semibold">Select Products to Analyze</h3>
+                <p className="text-muted-foreground mt-2">
+                  Choose one or more products from the list above to view detailed analytics
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Analytics Display */}
+        {analyticsData?.data && aggregateStats && !analyticsLoading && (
+          <>
+            {/* Enhanced Overview Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <Card className="premium-card border-l-4 border-green-500">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Purchases
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-3 h-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Units added from suppliers</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </p>
+                      <p className="text-xl font-bold text-green-600">
+                        {aggregateStats.totalPurchased.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ৳{aggregateStats.totalPurchasedValue.toLocaleString()}
+                      </p>
+                    </div>
+                    <ShoppingBag className="w-8 h-8 text-green-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="premium-card border-l-4 border-blue-500">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Sales Revenue
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-3 h-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Revenue from customer orders</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </p>
+                      <p className="text-xl font-bold text-blue-600">
+                        ৳{aggregateStats.totalRevenue.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {aggregateStats.totalOrders} orders
+                      </p>
+                    </div>
+                    <DollarSign className="w-8 h-8 text-blue-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="premium-card border-l-4 border-indigo-500">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Units Sold
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-3 h-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Total quantity sold</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </p>
+                      <p className="text-xl font-bold text-indigo-600">
+                        {aggregateStats.totalSold.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Last {dateRange} days
+                      </p>
+                    </div>
+                    <ShoppingCart className="w-8 h-8 text-indigo-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="premium-card border-l-4 border-orange-500">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Returns
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-3 h-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Customer returns & refunds</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </p>
+                      <p className="text-xl font-bold text-orange-600">
+                        {aggregateStats.totalReturned.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ৳{aggregateStats.totalReturnedValue.toLocaleString()}
+                      </p>
+                    </div>
+                    <RotateCcw className="w-8 h-8 text-orange-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="premium-card border-l-4 border-red-500">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Damages
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-3 h-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Damaged/written-off products</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </p>
+                      <p className="text-xl font-bold text-red-600">
+                        {aggregateStats.totalDamaged.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ৳{aggregateStats.totalDamagedValue.toLocaleString()}
+                      </p>
+                    </div>
+                    <PackageX className="w-8 h-8 text-red-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="premium-card border-l-4 border-purple-500">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Stock Value</p>
+                      <p className="text-xl font-bold text-purple-600">
+                        ৳{aggregateStats.totalStockValue.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current inventory
+                      </p>
+                    </div>
+                    <Package className="w-8 h-8 text-purple-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Enhanced Table with All Movement Types */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Revenue Comparison
-                </CardTitle>
+                <CardTitle>Comprehensive Product Metrics</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={analytics.comparisonData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#7C3AED" name="Revenue (৳)" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Stock vs Sales */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="w-5 h-5" />
-                  Stock vs Sales Distribution
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={analytics.comparisonData}
-                      dataKey="stock"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label
-                    >
-                      {analytics.comparisonData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Product Details Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Detailed Product Metrics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 font-semibold">Product</th>
-                      <th className="text-center py-3 px-2 font-semibold">Stock</th>
-                      <th className="text-right py-3 px-2 font-semibold">Units Sold</th>
-                      <th className="text-right py-3 px-2 font-semibold">Revenue</th>
-                      <th className="text-right py-3 px-2 font-semibold">Orders</th>
-                      <th className="text-right py-3 px-2 font-semibold">Avg Order</th>
-                      <th className="text-right py-3 px-2 font-semibold">Margin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.productMetrics.map((metric, index) => (
-                      <tr key={metric.product.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-2">
-                          <div className="flex items-center gap-3">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                            />
-                            <div>
-                              <p className="font-medium">{metric.product.item_name}</p>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {metric.product.category}
-                                </Badge>
-                                {metric.product.isbn && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2 font-semibold">Product</th>
+                        <th className="text-center py-3 px-2 font-semibold">Stock</th>
+                        <th className="text-right py-3 px-2 font-semibold">Purchased</th>
+                        <th className="text-right py-3 px-2 font-semibold">Sold</th>
+                        <th className="text-right py-3 px-2 font-semibold">Returned</th>
+                        <th className="text-right py-3 px-2 font-semibold">Damaged</th>
+                        <th className="text-right py-3 px-2 font-semibold">Revenue</th>
+                        <th className="text-right py-3 px-2 font-semibold">Margin</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsData.data.map((metric, index) => (
+                        <tr key={metric.product_id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              />
+                              <div>
+                                <p className="font-medium">{metric.product_name}</p>
+                                <div className="flex gap-2 mt-1">
                                   <Badge variant="outline" className="text-xs">
-                                    {metric.product.isbn}
+                                    {metric.category}
                                   </Badge>
-                                )}
+                                  {metric.isbn && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {metric.isbn}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <Badge variant={metric.product.current_stock < metric.product.minimum_stock ? 'destructive' : 'default'}>
-                            {metric.product.current_stock}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-2 text-right font-medium">{metric.totalSold}</td>
-                        <td className="py-3 px-2 text-right font-semibold text-green-600">
-                          ৳{metric.totalRevenue.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-2 text-right">{metric.totalOrders}</td>
-                        <td className="py-3 px-2 text-right">
-                          ৳{Math.round(metric.avgOrderValue).toLocaleString()}
-                        </td>
-                        <td className="py-3 px-2 text-right">
-                          <Badge variant="outline" className={
-                            metric.profitMargin > 30 ? 'bg-green-100 text-green-800' :
-                            metric.profitMargin > 15 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }>
-                            {metric.profitMargin.toFixed(1)}%
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Individual Product Insights - ENHANCED */}
-          {analytics.productMetrics.map((metric, index) => (
-            <Card key={metric.product.id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{metric.product.item_name}</span>
-                  <Badge className={
-                    metric.product.department === 'boibari' 
-                      ? 'bg-yellow-100 text-yellow-800' 
-                      : 'bg-red-100 text-red-800'
-                  }>
-                    {metric.product.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Current Stock</p>
-                    <p className="text-lg font-bold">{metric.product.current_stock}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Purchase Price</p>
-                    <p className="text-lg font-bold">৳{metric.product.purchase_price}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Selling Price</p>
-                    <p className="text-lg font-bold text-green-600">৳{metric.product.selling_price}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Profit Margin</p>
-                    <p className="text-lg font-bold text-violet-600">{metric.profitMargin.toFixed(1)}%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Stock Value</p>
-                    <p className="text-lg font-bold">৳{metric.stockValue.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Potential Revenue</p>
-                    <p className="text-lg font-bold text-blue-600">৳{metric.potentialRevenue.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Movements</p>
-                    <p className="text-lg font-bold">{metric.totalMovements}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Supplier Lead Time</p>
-                    <p className="text-lg font-bold">{metric.product.supplier_lead_time_days || 'N/A'} days</p>
-                  </div>
+                          </td>
+                          <td className="py-3 px-2 text-center">
+                            <Badge variant={metric.current_stock < metric.minimum_stock ? 'destructive' : 'default'}>
+                              {metric.current_stock}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <div className="font-medium text-green-600">{metric.totalPurchasedQty}</div>
+                            <div className="text-xs text-muted-foreground">৳{metric.totalPurchasedValue.toLocaleString()}</div>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <div className="font-medium text-blue-600">{metric.totalSold}</div>
+                            <div className="text-xs text-muted-foreground">{metric.totalOrders} orders</div>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <div className="font-medium text-orange-600">{metric.totalReturnedQty}</div>
+                            <div className="text-xs text-muted-foreground">৳{metric.totalReturnedValue.toLocaleString()}</div>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <div className="font-medium text-red-600">{metric.totalDamagedQty}</div>
+                            <div className="text-xs text-muted-foreground">৳{metric.totalDamagedValue.toLocaleString()}</div>
+                          </td>
+                          <td className="py-3 px-2 text-right font-semibold text-green-600">
+                            ৳{metric.totalRevenue.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <Badge variant="outline" className={
+                              metric.profitMargin > 30 ? 'bg-green-100 text-green-800' :
+                              metric.profitMargin > 15 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {metric.profitMargin.toFixed(1)}%
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-
-                {/* NEW: Return & Damage Details Section */}
-                {(metric.returnedQty > 0 || metric.damagedQty > 0) && (
-                  <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-2 border-orange-200">
-                    <div className="flex items-center gap-2 mb-3">
-                      <PackageX className="w-5 h-5 text-orange-600" />
-                      <h4 className="font-semibold text-orange-800">Return & Damage Summary</h4>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white/70 p-3 rounded-lg">
-                        <div className="flex items-center gap-2 mb-1">
-                          <RotateCcw className="w-4 h-4 text-orange-600" />
-                          <p className="text-xs font-medium text-orange-700">Returned Products</p>
-                        </div>
-                        <p className="text-xl font-bold text-orange-800">{metric.returnedQty} units</p>
-                        <p className="text-sm text-orange-600">Value: ৳{metric.returnedValue.toLocaleString()}</p>
-                      </div>
-                      <div className="bg-white/70 p-3 rounded-lg">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertCircle className="w-4 h-4 text-red-600" />
-                          <p className="text-xs font-medium text-red-700">Damaged Products</p>
-                        </div>
-                        <p className="text-xl font-bold text-red-800">{metric.damagedQty} units</p>
-                        <p className="text-sm text-red-600">Value: ৳{metric.damagedValue.toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-orange-300">
-                      <p className="text-xs text-orange-700">
-                        💡 <strong>Total Loss:</strong> ৳{(metric.returnedValue + metric.damagedValue).toLocaleString()} 
-                        ({(metric.product.current_stock > 0 ? ((metric.returnedQty + metric.damagedQty) / metric.product.current_stock * 100).toFixed(1) : 0)}% of current stock)
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Alert if low stock */}
-                {metric.product.current_stock < metric.product.minimum_stock && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-red-800">Low Stock Alert</p>
-                      <p className="text-sm text-red-700">
-                        Current stock ({metric.product.current_stock}) is below minimum ({metric.product.minimum_stock}). 
-                        Consider reordering soon.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Supplier Info */}
-                {metric.product.supplier_name && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium mb-1">Primary Supplier:</p>
-                    <p className="text-sm text-muted-foreground">
-                      {metric.product.supplier_name} 
-                      {metric.product.supplier_contact && ` • ${metric.product.supplier_contact}`}
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
-          ))}
-        </>
-      ) : null}
-    </div>
+
+            {/* Individual Product Insights - ALWAYS SHOW RETURN & DAMAGE */}
+            {analyticsData.data.map((metric, index) => (
+              <Card key={metric.product_id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{metric.product_name}</span>
+                    <Badge className={
+                      metric.department === 'boibari' 
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-red-100 text-red-800'
+                    }>
+                      {metric.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Core Metrics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Current Stock</p>
+                      <p className="text-lg font-bold">{metric.current_stock}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Purchase Price</p>
+                      <p className="text-lg font-bold">৳{metric.purchase_price}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Selling Price</p>
+                      <p className="text-lg font-bold text-green-600">৳{metric.selling_price}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Profit Margin</p>
+                      <p className="text-lg font-bold text-violet-600">{metric.profitMargin.toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Stock Value</p>
+                      <p className="text-lg font-bold">৳{metric.stockValue.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Potential Revenue</p>
+                      <p className="text-lg font-bold text-blue-600">৳{metric.potentialRevenue.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Movements</p>
+                      <p className="text-lg font-bold">{metric.totalMovements}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Supplier Lead Time</p>
+                      <p className="text-lg font-bold">{metric.supplier_lead_time_days || 'N/A'} days</p>
+                    </div>
+                  </div>
+
+                  {/* ALWAYS SHOW: Complete Movement Breakdown */}
+                  <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-lg border-2 border-violet-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Activity className="w-5 h-5 text-violet-600" />
+                      <h4 className="font-semibold text-violet-800">Complete Movement Analysis</h4>
+                      <Badge variant="outline" className="ml-auto">
+                        Last {dateRange} days
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Purchases */}
+                      <div className="bg-white/70 p-3 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <ShoppingBag className="w-4 h-4 text-green-600" />
+                          <p className="text-xs font-medium text-green-700">Purchased</p>
+                        </div>
+                        <p className="text-xl font-bold text-green-800">{metric.totalPurchasedQty} units</p>
+                        <p className="text-sm text-green-600">Value: ৳{metric.totalPurchasedValue.toLocaleString()}</p>
+                      </div>
+
+                      {/* Sales */}
+                      <div className="bg-white/70 p-3 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <ShoppingCart className="w-4 h-4 text-blue-600" />
+                          <p className="text-xs font-medium text-blue-700">Sold</p>
+                        </div>
+                        <p className="text-xl font-bold text-blue-800">{metric.totalSold} units</p>
+                        <p className="text-sm text-blue-600">Revenue: ৳{metric.totalRevenue.toLocaleString()}</p>
+                      </div>
+
+                      {/* Returns */}
+                      <div className="bg-white/70 p-3 rounded-lg border border-orange-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <RotateCcw className="w-4 h-4 text-orange-600" />
+                          <p className="text-xs font-medium text-orange-700">Returned</p>
+                        </div>
+                        <p className="text-xl font-bold text-orange-800">{metric.totalReturnedQty} units</p>
+                        <p className="text-sm text-orange-600">Loss: ৳{metric.totalReturnedValue.toLocaleString()}</p>
+                      </div>
+
+                      {/* Damages */}
+                      <div className="bg-white/70 p-3 rounded-lg border border-red-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <PackageX className="w-4 h-4 text-red-600" />
+                          <p className="text-xs font-medium text-red-700">Damaged</p>
+                        </div>
+                        <p className="text-xl font-bold text-red-800">{metric.totalDamagedQty} units</p>
+                        <p className="text-sm text-red-600">Loss: ৳{metric.totalDamagedValue.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Total Loss Summary */}
+                    <div className="mt-3 pt-3 border-t border-violet-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-violet-600" />
+                          <p className="text-sm font-semibold text-violet-800">Total Loss (Returns + Damages):</p>
+                        </div>
+                        <p className="text-lg font-bold text-violet-800">
+                          ৳{metric.totalLossValue.toLocaleString()}
+                        </p>
+                      </div>
+                      {metric.current_stock > 0 && (
+                        <p className="text-xs text-violet-600 mt-1">
+                          Loss represents {((metric.totalReturnedQty + metric.totalDamagedQty) / metric.current_stock * 100).toFixed(1)}% of current stock
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Low Stock Alert */}
+                  {metric.current_stock < metric.minimum_stock && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-red-800">Low Stock Alert</p>
+                        <p className="text-sm text-red-700">
+                          Current stock ({metric.current_stock}) is below minimum ({metric.minimum_stock}). 
+                          Consider reordering soon.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Supplier Info */}
+                  {metric.supplier_name && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm font-medium mb-1">Primary Supplier:</p>
+                      <p className="text-sm text-muted-foreground">
+                        {metric.supplier_name} 
+                        {metric.supplier_contact && ` • ${metric.supplier_contact}`}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {/* Info Modal */}
+        <MetricsInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
+      </div>
+    </TooltipProvider>
   );
 }
 
