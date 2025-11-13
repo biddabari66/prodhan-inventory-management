@@ -11,13 +11,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Fetch inventory items and movements
         const [inventoryItems, movements] = await Promise.all([
             base44.asServiceRole.entities.Inventory.list(),
             base44.asServiceRole.entities.InventoryMovement.list()
         ]);
 
-        // Aggregate movements by inventory item
         const movementsByItem = {};
         movements.forEach(m => {
             if (!movementsByItem[m.inventory_item_id]) {
@@ -51,8 +49,8 @@ Deno.serve(async (req) => {
             "Item Name", 
             "Category", 
             "Stock", 
-            "Price (৳)", 
-            "Value (৳)",
+            "Price (Tk)", 
+            "Value (Tk)",
             "Returned",
             "Damaged"
         ];
@@ -76,10 +74,10 @@ Deno.serve(async (req) => {
                 item.item_name,
                 item.category,
                 item.current_stock || 0,
-                (item.purchase_price || 0).toFixed(2),
-                totalValue.toFixed(2),
-                `${returnedQty} (৳${returnedValue.toFixed(2)})`,
-                `${damagedQty} (৳${damagedValue.toFixed(2)})`
+                `Tk ${(item.purchase_price || 0).toFixed(2)}`,
+                `Tk ${totalValue.toFixed(2)}`,
+                `${returnedQty} (Tk ${returnedValue.toFixed(2)})`,
+                `${damagedQty} (Tk ${damagedValue.toFixed(2)})`
             ];
             tableRows.push(itemData);
         });
@@ -95,16 +93,16 @@ Deno.serve(async (req) => {
         const finalY = doc.lastAutoTable.finalY || 40;
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
-        doc.text(`Grand Total Stock Value: ৳${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 14, finalY + 10);
-        doc.text(`Total Returned Value: ৳${totalReturned.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 14, finalY + 18);
-        doc.text(`Total Damaged Value: ৳${totalDamaged.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 14, finalY + 26);
+        doc.text(`Grand Total Stock Value: Tk ${grandTotal.toFixed(2)}`, 14, finalY + 10);
+        doc.text(`Total Returned Value: Tk ${totalReturned.toFixed(2)}`, 14, finalY + 18);
+        doc.text(`Total Damaged Value: Tk ${totalDamaged.toFixed(2)}`, 14, finalY + 26);
         
         const pdfBytes = doc.output('arraybuffer');
         return new Response(pdfBytes, {
             status: 200,
             headers: { 
                 'Content-Type': 'application/pdf', 
-                'Content-Disposition': 'attachment; filename=stock_valuation_with_returns_damages.pdf' 
+                'Content-Disposition': 'attachment; filename=stock_valuation_report.pdf' 
             }
         });
 

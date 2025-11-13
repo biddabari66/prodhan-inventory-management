@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import { Expense } from '@/entities/Expense';
 import { Income } from '@/entities/Income';
 import { Lead } from '@/entities/Lead';
 import { User } from '@/entities/User';
+import { Inventory } from '@/entities/Inventory';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 
@@ -23,7 +23,8 @@ const ENTITY_MAP = {
     'Expense': Expense,
     'Income': Income,
     'Lead': Lead,
-    'User': User
+    'User': User,
+    'Inventory': Inventory
 };
 
 const ENTITY_FIELDS = {
@@ -63,6 +64,14 @@ const ENTITY_FIELDS = {
         { value: 'designation', label: 'Designation' },
         { value: 'job_role', label: 'Job Role' },
         { value: 'is_active', label: 'Active Status' }
+    ],
+    'Inventory': [
+        { value: 'category', label: 'Category' },
+        { value: 'department', label: 'Department' },
+        { value: 'status', label: 'Status' },
+        { value: 'supplier_name', label: 'Supplier' },
+        { value: 'author_name', label: 'Author (Books)' },
+        { value: 'subject', label: 'Subject' }
     ]
 };
 
@@ -119,7 +128,6 @@ export default function CustomReports() {
 
             const allRecords = await Entity.list();
             
-            // Enhanced aggregation logic
             const groupedData = allRecords.reduce((acc, record) => {
                 const key = record[config.groupBy] || 'N/A';
                 if (!acc[key]) {
@@ -141,6 +149,15 @@ export default function CustomReports() {
                 } else if (config.metric === 'average' && record.amount) {
                     acc[key].sum += record.amount || 0;
                     acc[key].value = acc[key].sum / acc[key].count;
+                } else if (config.entity === 'Inventory') {
+                    // For inventory, use current_stock or selling_price for metrics
+                    if (config.metric === 'sum') {
+                        acc[key].sum += (record.current_stock || 0);
+                        acc[key].value = acc[key].sum;
+                    } else if (config.metric === 'average') {
+                        acc[key].sum += (record.current_stock || 0);
+                        acc[key].value = acc[key].sum / acc[key].count;
+                    }
                 }
                 
                 return acc;
@@ -148,7 +165,7 @@ export default function CustomReports() {
 
             const processedData = Object.values(groupedData).map(item => ({
                 ...item,
-                value: Math.round(item.value * 100) / 100 // Round to 2 decimal places
+                value: Math.round(item.value * 100) / 100
             }));
 
             setReportData(processedData);
@@ -256,7 +273,7 @@ export default function CustomReports() {
                         </LineChart>
                     </ResponsiveContainer>
                 );
-            default: // bar
+            default:
                 return (
                     <ResponsiveContainer {...chartProps}>
                         <BarChart data={reportData}>
@@ -314,6 +331,7 @@ export default function CustomReports() {
                                                 <SelectItem value="Income">Income</SelectItem>
                                                 <SelectItem value="Lead">Leads</SelectItem>
                                                 <SelectItem value="User">Users</SelectItem>
+                                                <SelectItem value="Inventory">📦 Inventory</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -336,7 +354,7 @@ export default function CustomReports() {
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="count">Count</SelectItem>
-                                                {(config.entity === 'Expense' || config.entity === 'Income' || config.entity === 'Admission') && (
+                                                {(config.entity === 'Expense' || config.entity === 'Income' || config.entity === 'Admission' || config.entity === 'Inventory') && (
                                                     <>
                                                         <SelectItem value="sum">Sum</SelectItem>
                                                         <SelectItem value="average">Average</SelectItem>

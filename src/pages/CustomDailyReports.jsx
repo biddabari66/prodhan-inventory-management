@@ -151,6 +151,29 @@ const ENTITY_CONFIG = {
       { key: 'notes', label: 'Notes', type: 'text' },
       { key: 'created_date', label: 'Created Date', type: 'datetime' }
     ]
+  },
+  Inventory: {
+    label: 'Inventory',
+    icon: Package,
+    entity: Inventory,
+    color: 'bg-amber-500',
+    fields: [
+      { key: 'item_name', label: 'Item Name', type: 'text' },
+      { key: 'category', label: 'Category', type: 'text' },
+      { key: 'department', label: 'Department', type: 'text' },
+      { key: 'current_stock', label: 'Current Stock', type: 'number' },
+      { key: 'minimum_stock', label: 'Minimum Stock', type: 'number' },
+      { key: 'purchase_price', label: 'Purchase Price', type: 'currency' },
+      { key: 'selling_price', label: 'Selling Price', type: 'currency' },
+      { key: 'total_sell', label: 'Total Sold', type: 'number' },
+      { key: 'profits', label: 'Profits', type: 'currency' },
+      { key: 'status', label: 'Status', type: 'badge' },
+      { key: 'supplier_name', label: 'Supplier', type: 'text' },
+      { key: 'author_name', label: 'Author', type: 'text' },
+      { key: 'isbn', label: 'ISBN', type: 'text' },
+      { key: 'barcode', label: 'Barcode/SKU', type: 'text' },
+      { key: 'created_date', label: 'Created Date', type: 'datetime' }
+    ]
   }
 };
 
@@ -196,7 +219,11 @@ export default function CustomDailyReports() {
 
       // Filter data by date range
       const filteredData = allData.filter(item => {
-        const itemDate = new Date(item.created_date || item.admission_date || item.expense_date || item.income_date || item.date);
+        // Dynamically determine the date field based on entity, with created_date as a common fallback
+        const itemDateRaw = item.created_date || item.admission_date || item.expense_date || item.income_date || item.date;
+        if (!itemDateRaw) return false; // Skip items without a relevant date field
+
+        const itemDate = new Date(itemDateRaw);
         // Ensure itemDate is valid and within range
         return itemDate instanceof Date && !isNaN(itemDate) &&
                itemDate >= dateRange.from && itemDate <= dateRange.to;
@@ -311,8 +338,8 @@ export default function CustomDailyReports() {
           }
 
           // Escape quotes and wrap in quotes if value contains comma, quotes, or newlines
-          if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-            return `"${value.replace(/"/g, '""')}"`;
+          if (String(value).includes(',') || String(value).includes('"') || String(value).includes('\n')) {
+            return `"${String(value).replace(/"/g, '""')}"`;
           }
           return value;
         }).join(',')

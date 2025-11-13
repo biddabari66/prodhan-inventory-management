@@ -17,7 +17,7 @@ import {
 import {
   TrendingUp, TrendingDown, Package, DollarSign, ShoppingCart,
   AlertCircle, BarChart3, PieChart as PieChartIcon, Download,
-  Calendar, Filter, Search, Activity
+  Calendar, Filter, Search, Activity, PackageX, RotateCcw
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -108,10 +108,27 @@ function ProductAnalyticsDashboard() {
         ? ((product.selling_price - product.purchase_price) / product.selling_price) * 100 
         : 0;
 
-      // Movement analysis
+      // Movement analysis - ENHANCED with return/damage details
       const productMovements = movements.filter(m => m.inventory_item_id === product.id);
       const outboundMovements = productMovements.filter(m => m.movement_type === 'out' && new Date(m.movement_date) >= cutoffDate);
       const totalMovementValue = Math.abs(outboundMovements.reduce((sum, m) => sum + (m.total_value || 0), 0));
+
+      // Calculate return and damage metrics
+      const returnedQty = productMovements
+        .filter(m => m.movement_type === 'return')
+        .reduce((sum, m) => sum + Math.abs(m.quantity || 0), 0);
+      
+      const returnedValue = productMovements
+        .filter(m => m.movement_type === 'return')
+        .reduce((sum, m) => sum + Math.abs(m.total_value || 0), 0);
+
+      const damagedQty = productMovements
+        .filter(m => m.movement_type === 'adjustment' && m.reference_type === 'damage')
+        .reduce((sum, m) => sum + Math.abs(m.quantity || 0), 0);
+
+      const damagedValue = productMovements
+        .filter(m => m.movement_type === 'adjustment' && m.reference_type === 'damage')
+        .reduce((sum, m) => sum + Math.abs(m.total_value || 0), 0);
 
       return {
         product,
@@ -123,7 +140,11 @@ function ProductAnalyticsDashboard() {
         potentialRevenue,
         profitMargin,
         totalMovements: outboundMovements.length,
-        movementValue: totalMovementValue
+        movementValue: totalMovementValue,
+        returnedQty,
+        returnedValue,
+        damagedQty,
+        damagedValue
       };
     });
 
@@ -241,7 +262,11 @@ function ProductAnalyticsDashboard() {
       'Potential Revenue': metric.potentialRevenue,
       'Profit Margin %': metric.profitMargin.toFixed(2),
       'Purchase Price': metric.product.purchase_price,
-      'Selling Price': metric.product.selling_price
+      'Selling Price': metric.product.selling_price,
+      'Returned Qty': metric.returnedQty,
+      'Returned Value': metric.returnedValue,
+      'Damaged Qty': metric.damagedQty,
+      'Damaged Value': metric.damagedValue
     }));
 
     const headers = Object.keys(exportData[0]);
@@ -761,7 +786,7 @@ function ProductAnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          {/* Individual Product Insights */}
+          {/* Individual Product Insights - ENHANCED */}
           {analytics.productMetrics.map((metric, index) => (
             <Card key={metric.product.id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
               <CardHeader>
@@ -811,6 +836,40 @@ function ProductAnalyticsDashboard() {
                     <p className="text-lg font-bold">{metric.product.supplier_lead_time_days || 'N/A'} days</p>
                   </div>
                 </div>
+
+                {/* NEW: Return & Damage Details Section */}
+                {(metric.returnedQty > 0 || metric.damagedQty > 0) && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-2 border-orange-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PackageX className="w-5 h-5 text-orange-600" />
+                      <h4 className="font-semibold text-orange-800">Return & Damage Summary</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/70 p-3 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <RotateCcw className="w-4 h-4 text-orange-600" />
+                          <p className="text-xs font-medium text-orange-700">Returned Products</p>
+                        </div>
+                        <p className="text-xl font-bold text-orange-800">{metric.returnedQty} units</p>
+                        <p className="text-sm text-orange-600">Value: ৳{metric.returnedValue.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-white/70 p-3 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-red-600" />
+                          <p className="text-xs font-medium text-red-700">Damaged Products</p>
+                        </div>
+                        <p className="text-xl font-bold text-red-800">{metric.damagedQty} units</p>
+                        <p className="text-sm text-red-600">Value: ৳{metric.damagedValue.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-orange-300">
+                      <p className="text-xs text-orange-700">
+                        💡 <strong>Total Loss:</strong> ৳{(metric.returnedValue + metric.damagedValue).toLocaleString()} 
+                        ({(metric.product.current_stock > 0 ? ((metric.returnedQty + metric.damagedQty) / metric.product.current_stock * 100).toFixed(1) : 0)}% of current stock)
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Alert if low stock */}
                 {metric.product.current_stock < metric.product.minimum_stock && (
