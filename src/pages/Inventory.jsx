@@ -622,11 +622,8 @@ export default function InventoryPage() {
                                 value={searchTerm}
                                 onChange={setSearchTerm}
                                 onSearch={(term) => {
-                                    setSearchTerm(term);
-                                    // Calling loadUserAndInventory to refresh data after a finalized search,
-                                    // assuming SmartInventorySearch might influence backend data fetching or insights.
-                                    // The filterInventory useEffect will re-run after 'inventory' state is updated by loadUserAndInventory.
-                                    loadUserAndInventory();
+                                  setSearchTerm(term);
+                                  // Client-side filtering happens automatically via useEffect
                                 }}
                                 currentUser={currentUser}
                                 placeholder="🔍 Search inventory with AI suggestions..."
