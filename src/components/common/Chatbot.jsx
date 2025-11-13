@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,14 +52,14 @@ import {
 } from "@/components/ui/select";
 
 /**
- * 🕵️ FELUDA - THE MULTILINGUAL ERP DETECTIVE WITH CUSTOMIZABLE GREETINGS
- * Fully bilingual AI assistant (English + Bengali)
+ * 🕵️ FELUDA - THE MULTILINGUAL ERP DETECTIVE (BENGALI PRIMARY)
+ * Fully bilingual AI assistant - BENGALI is PRIMARY language
  * Context-aware & learns from user feedback
- * Customizable greetings for cultural personalization
- * Named after the iconic Bengali detective by Satyajit Ray
+ * Reduced proactive intrusion with 6-hour cooldown
  */
 
 const DETECTIVE_ICON = "🕵️";
+const PROACTIVE_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // Available greetings with cultural context
 const GREETING_OPTIONS = {
@@ -215,12 +214,6 @@ const DETAILED_CONTEXT_HELP = {
       tips: 'COD=ক্যাশ অন ডেলিভারি। স্ট্যাটাস: অপেক্ষমাণ→নিশ্চিত→পাঠানো→বিতরণ।'
     }
   }
-};
-
-// Language detection helper
-const detectLanguage = (text) => {
-  const bengaliRegex = /[\u0980-\u09FF]/;
-  return bengaliRegex.test(text) ? 'bn' : 'en';
 };
 
 // Feedback dialog component
@@ -411,7 +404,7 @@ const GreetingSettingsDialog = ({ isOpen, onClose, currentGreeting, onSave, lang
   );
 };
 
-export default function Chatbot({ currentUser, currentPageName, currentLanguage: propLanguage = 'en' }) {
+export default function Chatbot({ currentUser, currentPageName, currentLanguage: propLanguage = 'bn' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -419,8 +412,8 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState(null);
   const [hasShownProactiveMessage, setHasShownProactiveMessage] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState(propLanguage);
-  const [currentGreeting, setCurrentGreeting] = useState('assalamualaikum'); // DEFAULT: Assalamualaikum
+  const [currentLanguage, setCurrentLanguage] = useState(propLanguage || 'bn'); // DEFAULT: Bengali
+  const [currentGreeting, setCurrentGreeting] = useState('assalamualaikum');
   const [isGreetingSettingsOpen, setIsGreetingSettingsOpen] = useState(false);
   const [userBehavior, setUserBehavior] = useState({
     timeOnPage: 0,
@@ -443,6 +436,10 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
       if (savedGreeting && GREETING_OPTIONS[savedGreeting]) {
         setCurrentGreeting(savedGreeting);
       }
+      
+      // Load user's preferred language (default to Bengali if not set)
+      const savedLanguage = localStorage.getItem(`feluda_language_${currentUser.id}`) || 'bn';
+      setCurrentLanguage(savedLanguage);
     }
   }, [currentUser]);
 
@@ -459,10 +456,18 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
     }
   };
 
-  // Sync with parent language changes
-  useEffect(() => {
-    setCurrentLanguage(propLanguage);
-  }, [propLanguage]);
+  // Save language preference when changed
+  const handleLanguageChange = (newLang) => {
+    setCurrentLanguage(newLang);
+    if (currentUser) {
+      localStorage.setItem(`feluda_language_${currentUser.id}`, newLang);
+    }
+    toast.success(
+      newLang === 'en' 
+        ? '🌐 Switched to English' 
+        : '🌐 বাংলায় পরিবর্তিত হয়েছে'
+    );
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -513,7 +518,8 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
       detectiveTip: 'Detective\'s tip',
       askSystem: 'Ask me anything about this system - I\'m here to investigate!',
       settings: 'Settings',
-      customizeGreeting: 'Customize Greeting'
+      customizeGreeting: 'Customize Greeting',
+      outputLanguage: 'Output Language'
     },
     bn: {
       header: 'ফেলুদা',
@@ -554,24 +560,12 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
       detectiveTip: 'গোয়েন্দার টিপ',
       askSystem: 'এই সিস্টেম সম্পর্কে আমাকে যেকোনো কিছু জিজ্ঞাসা করুন - আমি তদন্তের জন্য এখানে আছি!',
       settings: 'সেটিংস',
-      customizeGreeting: 'শুভেচ্ছা কাস্টমাইজ করুন'
+      customizeGreeting: 'শুভেচ্ছা কাস্টমাইজ করুন',
+      outputLanguage: 'আউটপুট ভাষা'
     }
   };
 
   const text = t[currentLanguage];
-
-  // Toggle language
-  const toggleLanguage = () => {
-    const newLang = currentLanguage === 'en' ? 'bn' : 'en';
-    setCurrentLanguage(newLang);
-    
-    toast.success(
-      newLang === 'en' 
-        ? '🌐 Switched to English' 
-        : '🌐 বাংলায় পরিবর্তিত হয়েছে',
-      { duration: 2000 }
-    );
-  };
 
   // Load successful interactions for learning
   useEffect(() => {
@@ -698,23 +692,27 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
     }
   }, [currentUser, userContext, fetchUserContext]);
 
-  // Proactive conversation
+  // ENHANCED: Proactive conversation with 6-hour cooldown
   useEffect(() => {
     if (!currentUser || !userContext || hasShownProactiveMessage) return;
 
-    const complexPages = ['/Expenses', '/CRM', '/Inventory', '/Procurement'];
-    const isComplexPage = complexPages.some(page => currentPageName?.includes(page.slice(1)));
-
-    if (isComplexPage && userBehavior.timeOnPage > 15 && userBehavior.idleTime > 5) {
-      initiateProactiveConversation();
-      setHasShownProactiveMessage(true);
+    // Check cooldown
+    const lastProactiveOpen = localStorage.getItem(`feluda_last_proactive_${currentUser.id}`);
+    if (lastProactiveOpen) {
+      const timeSinceLastOpen = Date.now() - parseInt(lastProactiveOpen);
+      if (timeSinceLastOpen < PROACTIVE_COOLDOWN_MS) {
+        console.log('⏰ Feluda proactive cooldown active. Time remaining:', Math.round((PROACTIVE_COOLDOWN_MS - timeSinceLastOpen) / 1000 / 60), 'minutes');
+        return;
+      }
     }
 
-    if (userContext.overdueTasks > 0 || userContext.pendingExpenses > 3) {
-      if (userBehavior.timeOnPage > 10 && !hasShownProactiveMessage) {
-        initiateProactiveConversation('urgent');
-        setHasShownProactiveMessage(true);
-      }
+    // Only trigger for CRITICAL situations
+    const isCritical = userContext.overdueTasks >= 3 || userContext.pendingExpenses >= 5;
+    
+    if (isCritical && userBehavior.timeOnPage > 15) {
+      initiateProactiveConversation('urgent');
+      setHasShownProactiveMessage(true);
+      localStorage.setItem(`feluda_last_proactive_${currentUser.id}`, Date.now().toString());
     }
   }, [userBehavior, userContext, currentUser, currentPageName, hasShownProactiveMessage]);
 
@@ -817,21 +815,9 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
     }
   };
 
-  // Auto-detect language from user input
+  // FIXED: Do NOT auto-detect language from input, respect user's choice
   const handleSendMessage = async (retryAttempt = 0) => {
     if (!inputMessage.trim() || isLoading) return;
-
-    // Auto-detect and switch language based on user's message
-    const detectedLang = detectLanguage(inputMessage);
-    if (detectedLang !== currentLanguage) {
-      setCurrentLanguage(detectedLang);
-      toast.info(
-        detectedLang === 'bn' 
-          ? '🌐 বাংলায় স্যুইচ করা হয়েছে' 
-          : '🌐 Switched to English',
-        { duration: 2000 }
-      );
-    }
 
     const userMessage = {
       role: 'user',
@@ -845,7 +831,7 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
     responseStartTime.current = Date.now();
 
     try {
-      const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[detectedLang];
+      const pageContext = DETAILED_CONTEXT_HELP[`/${currentPageName}`]?.[currentLanguage];
       const greetingInfo = GREETING_OPTIONS[currentGreeting];
       
       const learningContext = successfulInteractions.length > 0
@@ -854,24 +840,25 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
           ).join('\n')}`
         : '';
       
-      const detectiveContext = detectedLang === 'bn' 
+      // CRITICAL: Language directive based on user's CHOSEN language, not input language
+      const detectiveContext = currentLanguage === 'bn' 
         ? `আপনি ফেলুদা, সত্যজিৎ রায়ের গল্পের কিংবদন্তি গোয়েন্দা, এখন একটি ERP সিস্টেম তদন্তে সাহায্য করছেন।
+
+**গুরুত্বপূর্ণ: আপনাকে অবশ্যই সম্পূর্ণ বাংলায় উত্তর দিতে হবে। ব্যবহারকারী যেই ভাষায়ই প্রশ্ন করুক না কেন, আপনার উত্তর শুধুমাত্র বাংলায় হতে হবে। কোনো ইংরেজি শব্দ বা মিশ্র ভাষা ব্যবহার করবেন না।**
 
 **আপনার চরিত্র:**
 - তীক্ষ্ণ, পর্যবেক্ষক এবং বুদ্ধিমান ${greetingInfo.identity} গোয়েন্দা
-- পেশাদার কিন্তু উষ্ণ ভাষায় কথা বলেন
+- পেশাদার কিন্তু উষ্ণ বাংলা ভাষায় কথা বলেন
 - "${greetingInfo.bn}" দিয়ে শুভেচ্ছা জানান (${greetingInfo.culturalContext})
 - প্রয়োজনে গোয়েন্দা রূপক ব্যবহার করেন ("তদন্ত", "সূত্র", "রহস্য সমাধান")
 - অত্যন্ত সহায়ক এবং ধৈর্যশীল, বিশেষত অ-প্রযুক্তিগত ব্যবহারকারীদের সাথে
-- জটিল বিষয় সহজ, দৈনন্দিন ভাষায় ব্যাখ্যা করেন
-- ধাপে ধাপে নির্দেশনা দেন (১. ২. ৩.)
-- উপমা এবং দৈনন্দিন উদাহরণ ব্যবহার করেন
+- জটিল বিষয় সহজ, দৈনন্দিন বাংলা ভাষায় ব্যাখ্যা করেন
+- ধাপে ধাপে বাংলায় নির্দেশনা দেন (১. ২. ৩.)
 
 **কেস ফাইল:**
 ব্যবহারকারীর নাম: ${currentUser.full_name}
 ভূমিকা: ${currentUser.job_role}
 বিভাগ: ${currentUser.department || 'উল্লেখ করা হয়নি'}
-পছন্দের ভাষা: বাংলা
 পছন্দের শুভেচ্ছা: ${greetingInfo.bn} (${greetingInfo.identity})
 বর্তমান অবস্থান: ${currentPageName}
 
@@ -899,38 +886,38 @@ ${userContext.upcomingTasks.length > 0 ? `\nআসন্ন ডেডলাই�
 ` : 'প্রমাণ সংগ্রহ করছি...'}
 ${learningContext}
 
-**ভাষা:** বাংলায় উত্তর দিন
-
-**ব্যবহারকারীর প্রশ্ন:** ${inputMessage}
+**ব্যবহারকারীর প্রশ্ন (যেকোনো ভাষায় হতে পারে):** ${inputMessage}
 
 **আপনার মিশন:**
-1. পরিষ্কার, সহজ, ধাপে ধাপে উত্তর দিন
-2. প্রাসঙ্গিক হলে ব্যবহারকারীর প্রকৃত ডেটা উল্লেখ করুন
-3. দৈনন্দিন ভাষা ব্যবহার করে বৈশিষ্ট্য ব্যাখ্যা করুন
-4. সংক্ষিপ্ত এবং কথোপকথনমূলক রাখুন (সর্বোচ্চ ২-৩ অনুচ্ছেদ)
-5. প্রতি উত্তরে ১-২টি প্রাসঙ্গিক ইমোজি ব্যবহার করুন
-6. অনিশ্চিত হলে সৎ থাকুন এবং পরবর্তী পদক্ষেপ পরামর্শ দিন
-7. ${greetingInfo.identity} ফেলুদা হিসাবে চরিত্রে থাকুন - বন্ধুত্বপূর্ণ গোয়েন্দা যিনি ERP রহস্য সমাধান করতে সাহায্য করছেন
-8. অ-প্রযুক্তিগত ব্যবহারকারীদের জন্য, একজন বন্ধুর সাথে কথা বলার মতো ব্যাখ্যা করুন
+1. **শুধুমাত্র বাংলায় উত্তর দিন** - ব্যবহারকারীর ইনপুট ইংরেজি বা অন্য ভাষায় হলেও আপনার উত্তর অবশ্যই বাংলায় হতে হবে
+2. পরিষ্কার, সহজ, ধাপে ধাপে বাংলায় উত্তর দিন
+3. প্রাসঙ্গিক হলে ব্যবহারকারীর প্রকৃত ডেটা উল্লেখ করুন
+4. দৈনন্দিন বাংলা ভাষা ব্যবহার করুন, কারিগরি শব্দ এড়িয়ে চলুন
+5. সংক্ষিপ্ত এবং কথোপকথনমূলক রাখুন (সর্বোচ্চ ২-৩ অনুচ্ছেদ)
+6. প্রতি উত্তরে ১-২টি প্রাসঙ্গিক ইমোজি ব্যবহার করুন
+7. অনিশ্চিত হলে সৎ থাকুন এবং পরবর্তী পদক্ষেপ পরামর্শ দিন
+8. ${greetingInfo.identity} ফেলুদা হিসাবে চরিত্রে থাকুন
 
-এখনই তদন্ত করুন এবং উত্তর দিন! 🔍`
+**মনে রাখবেন: সম্পূর্ণ উত্তর বাংলায় লিখতে হবে। কোনো ইংরেজি ব্যবহার করবেন না।**
+
+এখনই তদন্ত করুন এবং বাংলায় উত্তর দিন! 🔍`
         : `You are Feluda, the legendary detective from Satyajit Ray's stories, now helping with an ERP system.
+
+**CRITICAL: You MUST respond ENTIRELY in English. Even if the user's input is in another language, your response must be strictly in English. Do not use any Bengali or other languages in your response.**
 
 **Your Character:**
 - Sharp, observant ${greetingInfo.identity} detective
-- Professional yet warm communication
+- Professional yet warm communication in English
 - Greet with "${greetingInfo.en}" (${greetingInfo.culturalContext})
 - Uses detective metaphors when appropriate
 - Extremely patient with non-technical users
-- Explains in SIMPLE, everyday language
+- Explains in SIMPLE, everyday English language
 - Gives numbered step-by-step instructions (1. 2. 3.)
-- Uses analogies to everyday things
 
 **Case File:**
 User: ${currentUser.full_name}
 Role: ${currentUser.job_role}
 Department: ${currentUser.department || 'Not specified'}
-Preferred Language: English
 Preferred Greeting: ${greetingInfo.en} (${greetingInfo.identity})
 Location: ${currentPageName}
 
@@ -958,22 +945,22 @@ ${userContext.upcomingTasks.length > 0 ? `\nUpcoming Deadlines:\n${userContext.u
 ` : 'Gathering evidence...'}
 ${learningContext}
 
-**Language:** Respond in English
-
-**User's Question:** ${inputMessage}
+**User's Question (may be in any language):** ${inputMessage}
 
 **Mission:**
-1. Clear, SIMPLE, step-by-step answers
-2. Reference user's actual data when relevant
-3. Use everyday language, avoid jargon
-4. Keep conversational & SHORT (2-3 paragraphs max)
-5. Use 1-2 relevant emojis
-6. Be honest if unsure, suggest next steps
-7. Stay in ${greetingInfo.identity} Feluda character - friendly detective solving ERP mysteries
-8. Explain like talking to a friend, not an IT expert
+1. **Respond ONLY in English** - Even if user's input is in Bengali or other language, your response must be in English
+2. Clear, SIMPLE, step-by-step answers in English
+3. Reference user's actual data when relevant
+4. Use everyday English language, avoid jargon
+5. Keep conversational & SHORT (2-3 paragraphs max)
+6. Use 1-2 relevant emojis
+7. Be honest if unsure, suggest next steps
+8. Stay in ${greetingInfo.identity} Feluda character
+
+**Remember: Write your entire response in English only. No Bengali allowed.**
 
 Investigate now! 🔍`;
-
+      
       const response = await base44.functions.invoke('askChatbot', {
         message: detectiveContext
       });
@@ -1110,7 +1097,7 @@ Investigate now! 🔍`;
           title={`${text.header} - ${text.subtitle}`}
         >
           <span className="text-3xl">{DETECTIVE_ICON}</span>
-          {userContext && (userContext.overdueTasks > 0 || userContext.pendingExpenses > 3) && (
+          {userContext && (userContext.overdueTasks >= 3 || userContext.pendingExpenses >= 5) && (
             <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold animate-pulse">
               {userContext.overdueTasks + userContext.pendingExpenses}
             </div>
@@ -1165,21 +1152,17 @@ Investigate now! 🔍`;
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                      {currentLanguage === 'en' ? 'Language' : 'ভাষা'}
+                      {text.outputLanguage}
                     </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => {
-                      setCurrentLanguage('en');
-                      toast.success('🌐 Switched to English');
-                    }}>
+                    <DropdownMenuItem onClick={() => handleLanguageChange('en')}>
                       <span className="mr-2">🇬🇧</span>
                       English
+                      {currentLanguage === 'en' && <span className="ml-auto">✓</span>}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                      setCurrentLanguage('bn');
-                      toast.success('🌐 বাংলায় পরিবর্তিত');
-                    }}>
+                    <DropdownMenuItem onClick={() => handleLanguageChange('bn')}>
                       <span className="mr-2">🇧🇩</span>
                       বাংলা (Bengali)
+                      {currentLanguage === 'bn' && <span className="ml-auto">✓</span>}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

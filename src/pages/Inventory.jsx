@@ -39,17 +39,20 @@ import { usePerformanceMonitor, CacheManager, useDebounce } from '../components/
 // Lazy load heavy components
 const AIInventoryInsights = React.lazy(() => import('../components/inventory/AIInventoryInsights'));
 
+// NEW IMPORT
+import SmartInventorySearch from '../components/inventory/SmartInventorySearch';
+
 // Fallback basic form component - extracted to avoid hooks rule violation
 function BasicInventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
     const [formData, setFormData] = useState(
         item || {
-            item_name: '', 
-            category: 'electronics', 
+            item_name: '',
+            category: 'electronics',
             department: selectedDepartment || 'prodhan_com_e_commerce',
-            current_stock: 0, 
+            current_stock: 0,
             minimum_stock: 10,
-            purchase_price: 0, 
-            selling_price: 0, 
+            purchase_price: 0,
+            selling_price: 0,
             supplier_name: ''
         }
     );
@@ -78,9 +81,9 @@ function BasicInventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
                 </div>
                 <div className="space-y-2">
                     <Label>Category</Label>
-                    <select 
-                        value={formData.category} 
-                        onChange={e => handleChange('category', e.target.value)} 
+                    <select
+                        value={formData.category}
+                        onChange={e => handleChange('category', e.target.value)}
                         className="w-full p-2 border rounded-md"
                         required
                     >
@@ -94,9 +97,9 @@ function BasicInventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
                 </div>
                 <div className="space-y-2">
                     <Label>Department</Label>
-                    <select 
-                        value={formData.department} 
-                        onChange={e => handleChange('department', e.target.value)} 
+                    <select
+                        value={formData.department}
+                        onChange={e => handleChange('department', e.target.value)}
                         className="w-full p-2 border rounded-md"
                         required
                     >
@@ -133,7 +136,7 @@ function BasicInventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
 function InventoryForm({ item, onSubmit, onCancel, currentUser, selectedDepartment }) {
     // Determine department from item or selected department
     const itemDepartment = item?.department || selectedDepartment;
-    
+
     // For Boibari department or books category, show BookMetadataManager
     if (itemDepartment === 'boibari' || item?.category === 'books') {
         return (
@@ -162,7 +165,7 @@ function InventoryForm({ item, onSubmit, onCancel, currentUser, selectedDepartme
 
     // Fallback: basic form
     return (
-        <BasicInventoryForm 
+        <BasicInventoryForm
             item={item}
             onSubmit={onSubmit}
             onCancel={onCancel}
@@ -181,27 +184,37 @@ export default function InventoryPage() {
     const [editingItem, setEditingItem] = useState(null);
     const [reportGenerating, setReportGenerating] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchTerm, setSearchTerm] = useState(''); // Replaced searchQuery/searchInput with searchTerm
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
-    // Debounced search for better performance
-    const [searchInput, setSearchInput] = useState('');
-    const debouncedSetSearch = useDebounce((value) => {
-        setSearchQuery(value);
-    }, 300);
+    // Removed useDebounce and related states/handlers as per outline's SmartInventorySearch integration
 
-    const handleSearchChange = (e) => {
-        const value = e.target.value;
-        setSearchInput(value);
-        debouncedSetSearch(value);
+    // Track inventory interactions for AI learning
+    const logInventoryInteraction = async (itemId, itemName, interactionType) => {
+        if (!currentUser) return;
+
+        try {
+            // Assuming base44.entities.UserInventoryInteraction is available globally or imported from a platform-specific context
+            await base44.entities.UserInventoryInteraction.create({
+                user_id: currentUser.id,
+                user_name: currentUser.full_name,
+                item_id: itemId,
+                item_name: itemName,
+                interaction_type: interactionType,
+                department: currentUser.department,
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Failed to log inventory interaction:', error);
+        }
     };
 
     // Determine user's accessible department
-    const canViewAllDepartments = currentUser?.job_role === 'super_admin' || 
-                                   currentUser?.job_role === 'admin' || 
+    const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
+                                   currentUser?.job_role === 'admin' ||
                                    currentUser?.job_role === 'inventory_manager';
-    
+
     const userDepartment = canViewAllDepartments ? 'all' : (currentUser?.department || 'all');
 
     // Initialize with user's department, but allow 'all' if user has permissions
@@ -219,20 +232,20 @@ export default function InventoryPage() {
 
     useEffect(() => {
         filterInventory();
-    }, [inventory, selectedDepartment, searchQuery, currentUser]); // Added currentUser to dependencies
+    }, [inventory, selectedDepartment, searchTerm, currentUser]); // Changed dependency from searchQuery to searchTerm
 
     // 🔥 ENHANCED: Auto-email on low stock detection
     useEffect(() => {
         const checkLowStock = async () => {
             if (!inventory || inventory.length === 0) return;
 
-            const lowStockItems = inventory.filter(item => 
+            const lowStockItems = inventory.filter(item =>
                 item.current_stock <= (item.reorder_point || item.minimum_stock)
             );
 
             for (const item of lowStockItems) {
                 const alreadyNotified = localStorage.getItem(`low_stock_notified_${item.id}`);
-                
+
                 // Notify if never notified, or if last notification was more than 24 hours ago
                 if (!alreadyNotified || Date.now() - parseInt(alreadyNotified) > 24 * 60 * 60 * 1000) {
                     try {
@@ -250,7 +263,7 @@ export default function InventoryPage() {
                                 manager_emails: [] // Will be fetched by the function based on department/roles
                             }
                         });
-                        
+
                         localStorage.setItem(`low_stock_notified_${item.id}`, Date.now().toString());
                         console.log(`✅ Low stock alert sent for: ${item.item_name}`);
                     } catch (error) {
@@ -276,7 +289,7 @@ export default function InventoryPage() {
                 setCurrentUser(cachedUser);
                 setInventory(cachedInventory);
                 setIsLoading(false);
-                
+
                 // Refresh in background
                 setTimeout(async () => {
                     const [user, data] = await Promise.all([
@@ -296,7 +309,7 @@ export default function InventoryPage() {
                 ]);
                 setCurrentUser(user);
                 setInventory(data);
-                
+
                 CacheManager.set('current_user', user, 2 * 60 * 1000);
                 CacheManager.set('inventory_list', data, 3 * 60 * 1000);
             }
@@ -320,8 +333,9 @@ export default function InventoryPage() {
             filtered = filtered.filter(item => item.department === selectedDepartment);
         }
 
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
+        // Use searchTerm for client-side filtering
+        if (searchTerm.trim()) {
+            const query = searchTerm.toLowerCase();
             filtered = filtered.filter(item =>
                 item.item_name?.toLowerCase().includes(query) ||
                 item.category?.toLowerCase().includes(query) ||
@@ -350,13 +364,13 @@ export default function InventoryPage() {
 
         try {
             console.log('Submitting inventory data:', data);
-            
+
             // CRITICAL: Enforce department segregation on create/update
             if (!canViewAllDepartments && data.department !== userDepartment) {
                 toast.error('You can only manage items from your department');
                 return;
             }
-            
+
             if (editingItem) {
                 await Inventory.update(editingItem.id, data);
                 toast.success('Inventory item updated successfully');
@@ -382,6 +396,13 @@ export default function InventoryPage() {
         }
         setEditingItem(item);
         setIsFormOpen(true);
+        logInventoryInteraction(item.id, item.item_name, 'edit'); // Log interaction
+    };
+
+    const handleViewItem = (item) => {
+        logInventoryInteraction(item.id, item.item_name, 'view');
+        // This function is for logging purposes. It can be extended
+        // to open a detailed view of the item if needed.
     };
 
     const handleGenerateReport = async (reportType) => {
@@ -389,7 +410,7 @@ export default function InventoryPage() {
         try {
             let response;
             let filename;
-    
+
             switch (reportType) {
                 case 'valuation':
                     response = await generateStockValuationReport();
@@ -406,7 +427,7 @@ export default function InventoryPage() {
                 default:
                     throw new Error('Invalid report type');
             }
-    
+
             if (response.data) {
                 const blob = new Blob([response.data], { type: 'application/pdf' });
                 const url = window.URL.createObjectURL(blob);
@@ -421,7 +442,7 @@ export default function InventoryPage() {
             } else {
                 throw new Error('Failed to generate report');
             }
-    
+
         } catch (error) {
             console.error(`Error generating ${reportType} report:`, error);
             toast.error(error.message || 'An error occurred while generating the report');
@@ -495,15 +516,15 @@ export default function InventoryPage() {
                             </div>
                         </div>
                         <p className="text-base md:text-lg text-muted-foreground mt-1">
-                            {canViewAllDepartments 
-                                ? 'AI-powered inventory tracking with department segregation' 
+                            {canViewAllDepartments
+                                ? 'AI-powered inventory tracking with department segregation'
                                 : `Viewing ${userDepartment === 'boibari' ? 'Boibari.com' : 'Prodhan.com'} inventory only`}
                         </p>
                     </div>
                     <div className="flex gap-2 flex-wrap">
                         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                            <Button 
-                                className="btn-primary" 
+                            <Button
+                                className="btn-primary"
                                 onClick={() => {
                                     setEditingItem(null);
                                     setIsFormOpen(true);
@@ -520,9 +541,9 @@ export default function InventoryPage() {
                                         {selectedDepartment === 'prodhan_com_e_commerce' && ' - Prodhan.com (E-commerce)'}
                                     </DialogTitle>
                                 </DialogHeader>
-                                <InventoryForm 
-                                    item={editingItem} 
-                                    onSubmit={handleFormSubmit} 
+                                <InventoryForm
+                                    item={editingItem}
+                                    onSubmit={handleFormSubmit}
                                     onCancel={() => setIsFormOpen(false)}
                                     currentUser={currentUser}
                                     selectedDepartment={selectedDepartment}
@@ -598,22 +619,27 @@ export default function InventoryPage() {
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-6 space-y-6">
+                    {/* Enhanced Search with AI Suggestions */}
                     <Card className="premium-card">
                         <CardContent className="p-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                                <Input
-                                    placeholder="Search by name, ISBN, author, category..."
-                                    value={searchInput}
-                                    onChange={handleSearchChange}
-                                    className="pl-10"
-                                />
-                            </div>
+                            <SmartInventorySearch
+                                value={searchTerm}
+                                onChange={setSearchTerm}
+                                onSearch={(term) => {
+                                    setSearchTerm(term);
+                                    // Calling loadUserAndInventory to refresh data after a finalized search,
+                                    // assuming SmartInventorySearch might influence backend data fetching or insights.
+                                    // The filterInventory useEffect will re-run after 'inventory' state is updated by loadUserAndInventory.
+                                    loadUserAndInventory();
+                                }}
+                                currentUser={currentUser}
+                                placeholder="🔍 Search inventory with AI suggestions..."
+                            />
                         </CardContent>
                     </Card>
 
-                    <InventoryImportExport 
-                        inventory={filteredInventory} 
+                    <InventoryImportExport
+                        inventory={filteredInventory}
                         onImportComplete={loadUserAndInventory}
                     />
 
@@ -660,7 +686,7 @@ export default function InventoryPage() {
                                             </TableRow>
                                         ) : (
                                             filteredInventory.map(item => (
-                                                <TableRow key={item.id}>
+                                                <TableRow key={item.id} onClick={() => handleViewItem(item)} className="cursor-pointer">
                                                     <TableCell className="font-medium">
                                                         <div className="flex items-center gap-2">
                                                             {item.category === 'books' && <BookOpen className="w-4 h-4 text-cyan-500" />}
@@ -680,8 +706,8 @@ export default function InventoryPage() {
                                                     <TableCell>{item.category}</TableCell>
                                                     <TableCell>
                                                         <Badge variant="outline" className={
-                                                            item.department === 'boibari' 
-                                                                ? 'bg-cyan-100 text-cyan-800' 
+                                                            item.department === 'boibari'
+                                                                ? 'bg-cyan-100 text-cyan-800'
                                                                 : 'bg-purple-100 text-purple-800'
                                                         }>
                                                             {item.department === 'boibari' ? 'Boibari' : 'Prodhan.com'}
@@ -702,9 +728,9 @@ export default function InventoryPage() {
                                                             <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
                                                                 Edit
                                                             </Button>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
                                                                 onClick={() => handleDeleteClick(item)}
                                                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                             >
@@ -728,7 +754,7 @@ export default function InventoryPage() {
                             <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
                         </div>
                     }>
-                        <AIInventoryInsights 
+                        <AIInventoryInsights
                             department={selectedDepartment}
                             inventoryItems={filteredInventory}
                         />
@@ -761,7 +787,7 @@ export default function InventoryPage() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-muted-foreground mb-4">
-                                Deep dive into product performance, sales patterns, and inventory insights. 
+                                Deep dive into product performance, sales patterns, and inventory insights.
                                 Select multiple products to compare and analyze trends.
                             </p>
                             <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-6 rounded-lg border-2 border-violet-200">
@@ -783,7 +809,7 @@ export default function InventoryPage() {
                             </div>
                         </CardContent>
                     </Card>
-                    
+
                     {/* Quick Analytics Preview */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card className="premium-card">
@@ -799,14 +825,14 @@ export default function InventoryPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                        
+
                         <Card className="premium-card">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-muted-foreground">Total Stock Value</p>
                                         <p className="text-2xl font-bold text-green-600">
-                                            ৳{filteredInventory.reduce((sum, item) => 
+                                            ৳{filteredInventory.reduce((sum, item) =>
                                                 sum + (item.current_stock * item.purchase_price || 0), 0
                                             ).toLocaleString()}
                                         </p>
@@ -815,17 +841,17 @@ export default function InventoryPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                        
+
                         <Card className="premium-card">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-muted-foreground">Avg Profit Margin</p>
                                         <p className="text-2xl font-bold text-blue-600">
-                                            {filteredInventory.length > 0 
+                                            {filteredInventory.length > 0
                                                 ? (filteredInventory.reduce((sum, item) => {
-                                                    const margin = item.selling_price > 0 
-                                                        ? ((item.selling_price - item.purchase_price) / item.selling_price) * 100 
+                                                    const margin = item.selling_price > 0
+                                                        ? ((item.selling_price - item.purchase_price) / item.selling_price) * 100
                                                         : 0;
                                                     return sum + margin;
                                                 }, 0) / filteredInventory.length).toFixed(1)
@@ -853,8 +879,8 @@ export default function InventoryPage() {
                                     onClick={() => handleGenerateReport('valuation')}
                                     disabled={!!reportGenerating}
                                 >
-                                    {reportGenerating === 'valuation' ? 
-                                        <RefreshCw className="w-6 h-6 animate-spin" /> : 
+                                    {reportGenerating === 'valuation' ?
+                                        <RefreshCw className="w-6 h-6 animate-spin" /> :
                                         <FileText className="w-6 h-6 mb-2" />
                                     }
                                     Stock Valuation Report
@@ -865,8 +891,8 @@ export default function InventoryPage() {
                                     onClick={() => handleGenerateReport('low_stock')}
                                     disabled={!!reportGenerating}
                                 >
-                                    {reportGenerating === 'low_stock' ? 
-                                        <RefreshCw className="w-6 h-6 animate-spin" /> : 
+                                    {reportGenerating === 'low_stock' ?
+                                        <RefreshCw className="w-6 h-6 animate-spin" /> :
                                         <TrendingDown className="w-6 h-6 mb-2" />
                                     }
                                     Low Stock Alert Report
@@ -877,8 +903,8 @@ export default function InventoryPage() {
                                     onClick={() => handleGenerateReport('movement_summary')}
                                     disabled={!!reportGenerating}
                                 >
-                                    {reportGenerating === 'movement_summary' ? 
-                                        <RefreshCw className="w-6 h-6 animate-spin" /> : 
+                                    {reportGenerating === 'movement_summary' ?
+                                        <RefreshCw className="w-6 h-6 animate-spin" /> :
                                         <RotateCcw className="w-6 h-6 mb-2" />
                                     }
                                     Movement Summary Report

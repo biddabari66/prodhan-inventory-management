@@ -87,6 +87,8 @@ import { registerServiceWorker } from '../components/common/PerformanceOptimizer
 import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
 import SmartOnboarding from '../components/onboarding/SmartOnboarding';
 import SmartHelp from '../components/ai/SmartHelp';
+import MobileBottomNav from '../components/common/MobileBottomNav';
+import PWAInstaller from '../components/common/PWAInstaller';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -1296,7 +1298,7 @@ export default function Layout({ children, currentPageName }) {
           </aside>
 
           {/* Main Content Area */}
-          <div className={`flex-1 flex flex-col transition-all duration-300 overflow-hidden
+          <div className={`flex-1 flex flex-col transition-all duration-300 overflow-hidden pb-16 lg:pb-0
             ${isSidebarOpen ? 'lg:ml-72 ml-0' : 'lg:ml-20 ml-0'}
           `}>
             
@@ -1432,6 +1434,9 @@ export default function Layout({ children, currentPageName }) {
             </main>
           </div>
 
+          {/* Mobile Bottom Navigation */}
+          <MobileBottomNav />
+
           {/* Mobile-Optimized Profile Dialog */}
           <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
             <DialogContent className="w-full h-full max-w-none max-h-none p-0 m-0 border-0 rounded-none lg:w-[90vw] lg:h-[90vh] lg:max-w-4xl lg:max-h-[90vh] lg:rounded-2xl lg:border lg:m-auto lg:p-6 overflow-y-auto">
@@ -1468,6 +1473,8 @@ export default function Layout({ children, currentPageName }) {
             currentPageName={currentPageName} 
             currentLanguage={currentLanguage} 
           />
+          {/* PWA Installer */}
+          <PWAInstaller />
         </div>
       </SessionProvider>
     </FastLoadingProvider>
