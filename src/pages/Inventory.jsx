@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Inventory } from '@/entities/Inventory';
+import { InventoryMovement } from '@/entities/InventoryMovement'; // NEW IMPORT
 import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,8 +40,8 @@ import { usePerformanceMonitor, CacheManager, useDebounce } from '../components/
 // Lazy load heavy components
 const AIInventoryInsights = React.lazy(() => import('../components/inventory/AIInventoryInsights'));
 
-// NEW IMPORT
 import SmartInventorySearch from '../components/inventory/SmartInventorySearch';
+import { base44 } from '@/api/base44Client'; // NEW IMPORT
 
 // Fallback basic form component - extracted to avoid hooks rule violation
 function BasicInventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
@@ -179,23 +180,21 @@ export default function InventoryPage() {
 
     const [inventory, setInventory] = useState([]);
     const [filteredInventory, setFilteredInventory] = useState([]);
+    const [inventoryWithMovements, setInventoryWithMovements] = useState([]); // NEW STATE
     const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [reportGenerating, setReportGenerating] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
-    const [searchTerm, setSearchTerm] = useState(''); // Replaced searchQuery/searchInput with searchTerm
+    const [searchTerm, setSearchTerm] = useState('');
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
-
-    // Removed useDebounce and related states/handlers as per outline's SmartInventorySearch integration
 
     // Track inventory interactions for AI learning
     const logInventoryInteraction = async (itemId, itemName, interactionType) => {
         if (!currentUser) return;
 
         try {
-            // Assuming base44.entities.UserInventoryInteraction is available globally or imported from a platform-specific context
             await base44.entities.UserInventoryInteraction.create({
                 user_id: currentUser.id,
                 user_name: currentUser.full_name,
@@ -230,9 +229,10 @@ export default function InventoryPage() {
         loadUserAndInventory();
     }, []);
 
+    // Filter effect now depends on inventoryWithMovements
     useEffect(() => {
         filterInventory();
-    }, [inventory, selectedDepartment, searchTerm, currentUser]); // Changed dependency from searchQuery to searchTerm
+    }, [inventory, inventoryWithMovements, selectedDepartment, searchTerm, currentUser]);
 
     // 🔥 ENHANCED: Auto-email on low stock detection
     useEffect(() => {
@@ -249,7 +249,6 @@ export default function InventoryPage() {
                 // Notify if never notified, or if last notification was more than 24 hours ago
                 if (!alreadyNotified || Date.now() - parseInt(alreadyNotified) > 24 * 60 * 60 * 1000) {
                     try {
-                        // Assuming base44 is globally available or handled by the environment
                         await base44.functions.invoke('triggerAutoEmails', {
                             event_type: 'inventory_low_stock',
                             event_data: {
@@ -282,36 +281,41 @@ export default function InventoryPage() {
         try {
             // Check cache first
             const cachedUser = CacheManager.get('current_user');
-            const cachedInventory = CacheManager.get('inventory_list');
+            const cachedInventory = CacheManager.get('inventory_list'); // Only raw inventory is cached here
 
             if (cachedUser && cachedInventory) {
                 console.log('⚡ Loading from cache (instant)');
                 setCurrentUser(cachedUser);
-                setInventory(cachedInventory);
+                setInventory(cachedInventory); // Set raw inventory
+                // We don't cache movements, so enrichment will happen with a background fetch
                 setIsLoading(false);
 
-                // Refresh in background
+                // Refresh in background, including movements for enrichment
                 setTimeout(async () => {
-                    const [user, data] = await Promise.all([
+                    const [user, data, movements] = await Promise.all([
                         User.me(),
-                        Inventory.list()
+                        Inventory.list(),
+                        InventoryMovement.list('-movement_date', 1000) // Fetch recent movements
                     ]);
                     setCurrentUser(user);
                     setInventory(data);
+                    enrichInventoryWithMovements(data, movements); // Enrich inventory with movements
                     CacheManager.set('current_user', user, 2 * 60 * 1000);
-                    CacheManager.set('inventory_list', data, 3 * 60 * 1000);
+                    CacheManager.set('inventory_list', data, 3 * 60 * 1000); // Cache raw inventory
                 }, 0);
             } else {
                 console.log('📡 Loading from API');
-                const [user, data] = await Promise.all([
+                const [user, data, movements] = await Promise.all([
                     User.me(),
-                    Inventory.list()
+                    Inventory.list(),
+                    InventoryMovement.list('-movement_date', 1000) // Fetch recent movements
                 ]);
                 setCurrentUser(user);
-                setInventory(data);
+                setInventory(data); // Set raw inventory
+                enrichInventoryWithMovements(data, movements); // Enrich inventory with movements
 
                 CacheManager.set('current_user', user, 2 * 60 * 1000);
-                CacheManager.set('inventory_list', data, 3 * 60 * 1000);
+                CacheManager.set('inventory_list', data, 3 * 60 * 1000); // Cache raw inventory
             }
         } catch (error) {
             console.error("Error loading data:", error);
@@ -321,10 +325,48 @@ export default function InventoryPage() {
         }
     };
 
+    // NEW FUNCTION: Enrich inventory with movement data
+    const enrichInventoryWithMovements = (inventoryData, movements) => {
+        const movementsByItem = {};
+        
+        movements.forEach(m => {
+            if (!movementsByItem[m.inventory_item_id]) {
+                movementsByItem[m.inventory_item_id] = {
+                    total_returned_qty: 0,
+                    total_damaged_qty: 0,
+                    total_returned_value: 0,
+                    total_damaged_value: 0
+                };
+            }
+
+            const movementData = movementsByItem[m.inventory_item_id];
+            
+            // Assuming 'return' type for returns, and 'adjustment' with 'damage' reference for damaged items
+            if (m.movement_type === 'return') {
+                movementData.total_returned_qty += Math.abs(m.quantity || 0);
+                movementData.total_returned_value += Math.abs(m.total_value || 0);
+            } else if (m.reference_type === 'damage') { // Damage is often recorded as an adjustment with a specific reference_type
+                movementData.total_damaged_qty += Math.abs(m.quantity || 0);
+                movementData.total_damaged_value += Math.abs(m.total_value || 0);
+            }
+        });
+
+        const enriched = inventoryData.map(item => ({
+            ...item,
+            returned_qty: movementsByItem[item.id]?.total_returned_qty || 0,
+            damaged_qty: movementsByItem[item.id]?.total_damaged_qty || 0,
+            returned_value: movementsByItem[item.id]?.total_returned_value || 0,
+            damaged_value: movementsByItem[item.id]?.total_damaged_value || 0
+        }));
+
+        setInventoryWithMovements(enriched);
+    };
+
     const filterInventory = () => {
         if (!currentUser) return; // Wait for currentUser to be loaded
 
-        let filtered = inventory;
+        // Use inventoryWithMovements if available, otherwise fallback to raw inventory
+        let filtered = inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory;
 
         // CRITICAL: Department-based data segregation
         if (!canViewAllDepartments) {
@@ -672,6 +714,8 @@ export default function InventoryPage() {
                                             <TableHead>Category</TableHead>
                                             <TableHead>Department</TableHead>
                                             <TableHead>Stock</TableHead>
+                                            <TableHead>Returned</TableHead> {/* NEW COLUMN */}
+                                            <TableHead>Damaged</TableHead> {/* NEW COLUMN */}
                                             <TableHead>Price (৳)</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Actions</TableHead>
@@ -680,7 +724,7 @@ export default function InventoryPage() {
                                     <TableBody>
                                         {filteredInventory.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground"> {/* COLSPAN UPDATED */}
                                                     No inventory items found. Add items or adjust filters.
                                                 </TableCell>
                                             </TableRow>
@@ -716,6 +760,14 @@ export default function InventoryPage() {
                                                     <TableCell>
                                                         <div className="font-medium">{item.current_stock}</div>
                                                         <div className="text-xs text-muted-foreground">Min: {item.minimum_stock}</div>
+                                                    </TableCell>
+                                                    <TableCell> {/* NEW CELL */}
+                                                        <div className="font-medium text-orange-600">{item.returned_qty || 0}</div>
+                                                        <div className="text-xs text-muted-foreground">৳{(item.returned_value || 0).toLocaleString()}</div>
+                                                    </TableCell>
+                                                    <TableCell> {/* NEW CELL */}
+                                                        <div className="font-medium text-red-600">{item.damaged_qty || 0}</div>
+                                                        <div className="text-xs text-muted-foreground">৳{(item.damaged_value || 0).toLocaleString()}</div>
                                                     </TableCell>
                                                     <TableCell>৳{item.selling_price?.toLocaleString()}</TableCell>
                                                     <TableCell>
