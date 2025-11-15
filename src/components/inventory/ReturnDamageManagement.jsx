@@ -1,15 +1,11 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Inventory } from '@/entities/Inventory';
-// Order is not used in this file, but might be used by ReturnDamageForm if it were in the same file.
-// Since ReturnDamageForm is extracted, if Order is not used anywhere else in ReturnDamageManagement, it can be removed.
-// The outline doesn't remove it, so we'll keep it for now assuming it might be referenced elsewhere or in future changes.
 import { Order } from '@/entities/Order'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label'; // Keep Label for department filter
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -17,23 +13,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   PackageX, AlertOctagon, RotateCcw,
-  AlertTriangle, DollarSign, TrendingDown, Building2
+  AlertTriangle, DollarSign, TrendingDown, Building2, Pencil, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import ReturnDamageForm from './ReturnDamageForm'; // Import the extracted form component
+import ReturnDamageForm from './ReturnDamageForm';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ReturnDamageManagement({ selectedDepartment }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('returns');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formType, setFormType] = useState('return');
-  // searchQuery and statusFilter are declared but not used in the provided outline.
-  // They were probably remnants from previous iterations or planned features.
-  // We'll keep them as they are just state variables and don't affect functionality if unused.
   const [searchQuery, setSearchQuery] = useState(''); 
   const [statusFilter, setStatusFilter] = useState('all'); 
   const [departmentFilter, setDepartmentFilter] = useState(selectedDepartment || 'all');
+  const [editingMovement, setEditingMovement] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [movementToDelete, setMovementToDelete] = useState(null);
 
   // Fetch data
   const { data: inventory = [] } = useQuery({
@@ -51,20 +57,17 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
     queryFn: () => base44.auth.me(),
   });
 
-  // Update department filter when parent changes
   useEffect(() => {
     if (selectedDepartment) {
       setDepartmentFilter(selectedDepartment);
     }
   }, [selectedDepartment]);
 
-  // Filter inventory by department
   const departmentFilteredInventory = useMemo(() => {
     if (departmentFilter === 'all') return inventory;
     return inventory.filter(item => item.department === departmentFilter);
   }, [inventory, departmentFilter]);
 
-  // Filter returns and damages from movements with department filter
   const returnsData = useMemo(() => {
     return movements.filter(m =>
       m.reference_type === 'return' &&
@@ -87,35 +90,29 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       const item = inventory.find(i => i.id === data.inventory_item_id);
       if (!item) throw new Error('Product not found');
 
-      // Determine quantity direction based on action
       let quantityChange = 0;
       if (data.action === 'restock') {
-        quantityChange = data.quantity; // Add back to stock
+        quantityChange = data.quantity;
       } else if (data.action === 'write_off') {
-        quantityChange = 0; // Don't add back
+        quantityChange = 0;
       } else if (data.action === 'return_to_supplier') {
-        quantityChange = 0; // Don't add back to our inventory
+        quantityChange = 0;
       }
-      // For 'repair' or 'dispose', quantityChange remains 0, meaning it's not added back to current_stock.
-      // If it should be removed from stock for repair/disposal, a negative quantityChange would be needed.
-      // Based on the outline, these actions don't directly modify current_stock (only 'restock' adds).
 
       const newStock = item.current_stock + quantityChange;
 
-      // Update inventory
       await Inventory.update(data.inventory_item_id, {
         current_stock: newStock
       });
 
-      // Create movement record
       await base44.entities.InventoryMovement.create({
         inventory_item_id: data.inventory_item_id,
         movement_type: quantityChange > 0 ? 'in' : 'adjustment',
-        quantity: quantityChange, // Store the calculated quantity change
+        quantity: quantityChange,
         reference_type: data.type === 'return' ? 'return' : 'damage',
         reference_number: data.order_number || `${data.type.toUpperCase()}-${Date.now()}`,
         unit_cost: item.purchase_price || 0,
-        total_value: -Math.abs(data.financial_impact), // Negative for loss
+        total_value: -Math.abs(data.financial_impact),
         performed_by: currentUser?.id || 'system',
         notes: `${data.type === 'return' ? 'Return' : 'Damage'} - Reason: ${data.reason}. Action: ${data.action}. ${data.notes}`,
         movement_date: data.incident_date,
@@ -138,22 +135,154 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       queryClient.invalidateQueries(['movements']);
       toast.success(`${data.type === 'return' ? 'Return' : 'Damage'} recorded successfully!`);
       setIsFormOpen(false);
+      setEditingMovement(null);
     },
     onError: (error) => {
       toast.error(`Failed to record incident: ${error.message}`);
     },
   });
 
+  // Update movement mutation
+  const updateMovementMutation = useMutation({
+    mutationFn: async ({ movementId, data }) => {
+      const movement = movements.find(m => m.id === movementId);
+      if (!movement) throw new Error('Movement not found');
+
+      const item = inventory.find(i => i.id === data.inventory_item_id);
+      if (!item) throw new Error('Product not found');
+
+      // Calculate the difference in quantities
+      const oldQuantity = movement.quantity || 0;
+      let newQuantityChange = 0;
+
+      if (data.action === 'restock') {
+        newQuantityChange = data.quantity;
+      }
+
+      const quantityDifference = newQuantityChange - oldQuantity;
+      const newStock = item.current_stock + quantityDifference;
+
+      // Update inventory
+      await Inventory.update(data.inventory_item_id, {
+        current_stock: newStock
+      });
+
+      // Update movement record
+      await base44.entities.InventoryMovement.update(movementId, {
+        inventory_item_id: data.inventory_item_id,
+        movement_type: newQuantityChange > 0 ? 'in' : 'adjustment',
+        quantity: newQuantityChange,
+        reference_number: data.order_number || movement.reference_number,
+        unit_cost: item.purchase_price || 0,
+        total_value: -Math.abs(data.financial_impact),
+        notes: `${data.type === 'return' ? 'Return' : 'Damage'} - Reason: ${data.reason}. Action: ${data.action}. ${data.notes}`,
+        movement_date: data.incident_date,
+        balance_after: newStock,
+        metadata: {
+          type: data.type,
+          reason: data.reason,
+          condition: data.condition,
+          action: data.action,
+          customer_name: data.customer_name,
+          restocking_fee: data.restocking_fee,
+          financial_impact: data.financial_impact
+        }
+      });
+
+      return { item, newStock };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries(['movements']);
+      toast.success('Record updated successfully!');
+      setIsFormOpen(false);
+      setEditingMovement(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to update record: ${error.message}`);
+    },
+  });
+
+  // Delete movement mutation
+  const deleteMovementMutation = useMutation({
+    mutationFn: async (movementId) => {
+      const movement = movements.find(m => m.id === movementId);
+      if (!movement) throw new Error('Movement not found');
+
+      const item = inventory.find(i => i.id === movement.inventory_item_id);
+      if (!item) throw new Error('Product not found');
+
+      // Reverse the stock change
+      const quantityToReverse = movement.quantity || 0;
+      const newStock = item.current_stock - quantityToReverse;
+
+      await Inventory.update(movement.inventory_item_id, {
+        current_stock: Math.max(0, newStock)
+      });
+
+      // Delete the movement record
+      await base44.entities.InventoryMovement.delete(movementId);
+
+      return { item, newStock };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries(['movements']);
+      toast.success('Record deleted successfully!');
+      setDeleteConfirmOpen(false);
+      setMovementToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete record: ${error.message}`);
+    },
+  });
+
   const handleOpenForm = (type) => {
     setFormType(type);
+    setEditingMovement(null);
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (data) => {
-    recordIncidentMutation.mutate(data);
+  const handleEdit = (movement) => {
+    const metadata = movement.metadata || {};
+    setEditingMovement({
+      id: movement.id,
+      inventory_item_id: movement.inventory_item_id,
+      quantity: Math.abs(movement.quantity || 0),
+      type: movement.reference_type === 'return' ? 'return' : 'damage',
+      reason: metadata.reason || '',
+      condition: metadata.condition || 'damaged',
+      action: metadata.action || 'write_off',
+      customer_name: metadata.customer_name || '',
+      order_number: movement.reference_number || '',
+      incident_date: movement.movement_date,
+      financial_impact: Math.abs(movement.total_value || 0),
+      restocking_fee: metadata.restocking_fee || 0,
+      notes: movement.notes || ''
+    });
+    setFormType(movement.reference_type === 'return' ? 'return' : 'damage');
+    setIsFormOpen(true);
   };
 
-  // Calculate statistics with department filter
+  const handleDelete = (movement) => {
+    setMovementToDelete(movement);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (movementToDelete) {
+      deleteMovementMutation.mutate(movementToDelete.id);
+    }
+  };
+
+  const handleSubmit = (data) => {
+    if (editingMovement) {
+      updateMovementMutation.mutate({ movementId: editingMovement.id, data });
+    } else {
+      recordIncidentMutation.mutate(data);
+    }
+  };
+
   const stats = useMemo(() => {
     const returnCount = returnsData.length;
     const damageCount = damagesData.length;
@@ -174,10 +303,8 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       restock: { label: 'Restocked', class: 'bg-green-100 text-green-800' },
       return_to_supplier: { label: 'Returned to Supplier', class: 'bg-purple-100 text-purple-800' },
       write_off: { label: 'Written Off', class: 'bg-red-100 text-red-800' },
-      // The outline explicitly removes 'repair' and 'dispose' from this config.
-      // Any action not in this config will fall to the default case.
     };
-    const { label, class: className } = config[action] || { label: action, class: 'bg-gray-100 text-gray-800' }; // Default to gray badge with action as label
+    const { label, class: className } = config[action] || { label: action, class: 'bg-gray-100 text-gray-800' };
     return <Badge className={className}>{label}</Badge>;
   };
 
@@ -349,12 +476,13 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
                     <TableHead>Reason</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead className="text-right">Impact</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {returnsData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         <RotateCcw className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No returns recorded</p>
                       </TableCell>
@@ -367,7 +495,7 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
                           <TableCell>{format(new Date(movement.movement_date), 'MMM dd, yyyy')}</TableCell>
                           <TableCell className="font-medium">{getItemName(movement.inventory_item_id)}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{movement.quantity}</Badge>
+                            <Badge variant="outline">{Math.abs(movement.quantity)}</Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {movement.reference_number || '-'}
@@ -377,6 +505,26 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
                           <TableCell className="text-right text-red-600 font-medium">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(movement)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Pencil className="w-4 h-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(movement)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -405,12 +553,13 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
                     <TableHead>Action</TableHead>
                     <TableHead>Reported By</TableHead>
                     <TableHead className="text-right">Loss Value</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {damagesData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         <AlertOctagon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No damages recorded</p>
                       </TableCell>
@@ -442,6 +591,26 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
                           <TableCell className="text-right text-red-600 font-semibold">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
                           </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(movement)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Pencil className="w-4 h-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(movement)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       );
                     })
@@ -454,19 +623,22 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       </Tabs>
 
       {/* Return/Damage Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => {
+        setIsFormOpen(open);
+        if (!open) setEditingMovement(null);
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {formType === 'return' ? (
                 <>
                   <RotateCcw className="w-5 h-5 text-blue-600" />
-                  Record Product Return
+                  {editingMovement ? 'Edit Product Return' : 'Record Product Return'}
                 </>
               ) : (
                 <>
                   <AlertOctagon className="w-5 h-5 text-red-600" />
-                  Record Defective Product {/* Changed from "Record Damaged Product" as per outline */}
+                  {editingMovement ? 'Edit Defective Product' : 'Record Defective Product'}
                 </>
               )}
             </DialogTitle>
@@ -474,11 +646,39 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
           <ReturnDamageForm
             inventory={departmentFilteredInventory}
             onSubmit={handleSubmit}
-            onCancel={() => setIsFormOpen(false)}
+            onCancel={() => {
+              setIsFormOpen(false);
+              setEditingMovement(null);
+            }}
             type={formType}
+            initialData={editingMovement}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this {movementToDelete?.reference_type === 'return' ? 'return' : 'damage'} record 
+              and reverse the stock changes. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMovementToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
