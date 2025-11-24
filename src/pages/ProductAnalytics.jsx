@@ -271,7 +271,20 @@ function ProductAnalyticsDashboard() {
   }
 
   const aggregateStats = useMemo(() => {
-    if (!analyticsData?.data || !Array.isArray(analyticsData.data)) return null;
+    if (!analyticsData?.data || !Array.isArray(analyticsData.data) || analyticsData.data.length === 0) {
+      return {
+        totalRevenue: 0,
+        totalSold: 0,
+        totalPurchased: 0,
+        totalPurchasedValue: 0,
+        totalReturned: 0,
+        totalReturnedValue: 0,
+        totalDamaged: 0,
+        totalDamagedValue: 0,
+        totalStockValue: 0,
+        totalOrders: 0
+      };
+    }
 
     return {
       totalRevenue: analyticsData.data.reduce((sum, m) => sum + (m.totalRevenue || 0), 0),
@@ -564,7 +577,7 @@ function ProductAnalyticsDashboard() {
         )}
 
         {/* Analytics Display */}
-        {analyticsData?.data && Array.isArray(analyticsData.data) && aggregateStats && !analyticsLoading && (
+        {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && !analyticsLoading && (
           <>
             {/* Enhanced Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -742,7 +755,7 @@ function ProductAnalyticsDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsData.data.map((metric, index) => (
+                     {(analyticsData?.data || []).map((metric, index) => (
                         <tr key={metric.product_id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-2">
                             <div className="flex items-center gap-3">
@@ -807,7 +820,7 @@ function ProductAnalyticsDashboard() {
             </Card>
 
             {/* Individual Product Insights - ALWAYS SHOW RETURN & DAMAGE */}
-            {analyticsData.data.map((metric, index) => (
+            {(analyticsData?.data || []).map((metric, index) => (
               <Card key={metric.product_id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
