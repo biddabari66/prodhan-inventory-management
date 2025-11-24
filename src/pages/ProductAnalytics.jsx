@@ -259,12 +259,12 @@ function ProductAnalyticsDashboard() {
     }
   };
 
-  if (inventoryLoading) {
+  if (inventoryLoading || !inventory || inventory.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto" />
-          <p className="text-muted-foreground">Loading inventory...</p>
+          <p className="text-muted-foreground">Loading inventory data...</p>
         </div>
       </div>
     );
@@ -507,8 +507,9 @@ function ProductAnalyticsDashboard() {
                 </div>
               )}
             </CardContent>
-          </Card>
-        </div>
+            </Card>
+            </div>
+            )}
 
         {/* Loading State */}
         {analyticsLoading && selectedProductIds.length > 0 && (
@@ -567,8 +568,9 @@ function ProductAnalyticsDashboard() {
         {analyticsData?.data && Array.isArray(analyticsData.data) && aggregateStats && !analyticsLoading && (
           <>
             {/* Enhanced Overview Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <Card className="premium-card border-l-4 border-green-500">
+            {aggregateStats && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <Card className="premium-card border-l-4 border-green-500">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -722,7 +724,8 @@ function ProductAnalyticsDashboard() {
             </div>
 
             {/* Enhanced Table with All Movement Types */}
-            <Card>
+            {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && (
+              <Card>
               <CardHeader>
                 <CardTitle>Comprehensive Product Metrics</CardTitle>
               </CardHeader>
@@ -807,7 +810,7 @@ function ProductAnalyticsDashboard() {
             </Card>
 
             {/* Individual Product Insights - ALWAYS SHOW RETURN & DAMAGE */}
-            {analyticsData.data.map((metric, index) => (
+            {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.map((metric, index) => (
               <Card key={metric.product_id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
