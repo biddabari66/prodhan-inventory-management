@@ -114,9 +114,11 @@ function ProductAnalyticsDashboard() {
         throw new Error(response.data.error || 'Failed to fetch analytics');
       }
     },
-    enabled: selectedProductIds.length > 0,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    retry: 2
+    enabled: selectedProductIds.length > 0 && inventory.length > 0,
+    staleTime: 2 * 60 * 1000,
+    retry: 2,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false
   });
 
   const availableProducts = useMemo(() => {
@@ -269,7 +271,7 @@ function ProductAnalyticsDashboard() {
   }
 
   const aggregateStats = useMemo(() => {
-    if (!analyticsData?.data) return null;
+    if (!analyticsData?.data || !Array.isArray(analyticsData.data)) return null;
 
     return {
       totalRevenue: analyticsData.data.reduce((sum, m) => sum + (m.totalRevenue || 0), 0),
@@ -562,7 +564,7 @@ function ProductAnalyticsDashboard() {
         )}
 
         {/* Analytics Display */}
-        {analyticsData?.data && aggregateStats && !analyticsLoading && (
+        {analyticsData?.data && Array.isArray(analyticsData.data) && aggregateStats && !analyticsLoading && (
           <>
             {/* Enhanced Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

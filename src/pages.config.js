@@ -59,7 +59,7 @@ import ProductAnalytics from './pages/ProductAnalytics';
 import FeludaAnalytics from './pages/FeludaAnalytics';
 import ReportBuilder from './pages/ReportBuilder';
 import NotificationPreferences from './pages/NotificationPreferences';
-import Layout from './Layout.jsx';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -129,5 +129,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Attendance",
     Pages: PAGES,
-    Layout: Layout,
+    Layout: __Layout,
 };
