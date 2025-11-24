@@ -721,10 +721,8 @@ function ProductAnalyticsDashboard() {
                 </CardContent>
               </Card>
               </div>
-              )
 
               {/* Enhanced Table with All Movement Types */}
-              {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && (
               <Card>
               <CardHeader>
                 <CardTitle>Comprehensive Product Metrics</CardTitle>
@@ -810,7 +808,7 @@ function ProductAnalyticsDashboard() {
             </Card>
 
             {/* Individual Product Insights - ALWAYS SHOW RETURN & DAMAGE */}
-            {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.map((metric, index) => (
+            {analyticsData.data.map((metric, index) => (
               <Card key={metric.product_id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
