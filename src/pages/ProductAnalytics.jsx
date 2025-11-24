@@ -567,9 +567,8 @@ function ProductAnalyticsDashboard() {
         {analyticsData?.data && Array.isArray(analyticsData.data) && aggregateStats && !analyticsLoading && (
           <>
             {/* Enhanced Overview Stats */}
-            {aggregateStats && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card className="premium-card border-l-4 border-green-500">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <Card className="premium-card border-l-4 border-green-500">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
