@@ -90,6 +90,83 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       const item = inventory.find(i => i.id === data.inventory_item_id);
       if (!item) throw new Error('Product not found');
 
+      // Handle partial returns
+      if (data.use_partial_return && data.type === 'return') {
+        const goodQty = parseInt(data.good_condition_qty) || 0;
+        const damagedQty = parseInt(data.damaged_qty) || 0;
+
+        let newStock = item.current_stock;
+
+        // Process good condition items (restock)
+        if (goodQty > 0) {
+          newStock += goodQty;
+          await base44.entities.InventoryMovement.create({
+            inventory_item_id: data.inventory_item_id,
+            movement_type: 'in',
+            quantity: goodQty,
+            reference_type: 'return',
+            reference_number: data.order_number || `RETURN-${Date.now()}-GOOD`,
+            unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
+            total_value: -Math.abs((data.financial_impact / data.quantity) * goodQty),
+            performed_by: currentUser?.id || 'system',
+            notes: `${data.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return'} - Good Condition - Restocked. Reason: ${data.reason}. ${data.notes}`,
+            movement_date: data.incident_date,
+            balance_after: newStock,
+            metadata: {
+              type: data.type,
+              return_type: data.return_type,
+              reason: data.reason,
+              condition: 'good',
+              action: 'restock',
+              customer_name: data.customer_name,
+              supplier_name: data.supplier_name,
+              restocking_fee: data.restocking_fee,
+              financial_impact: (data.financial_impact / data.quantity) * goodQty,
+              is_partial: true,
+              good_qty: goodQty,
+              damaged_qty: damagedQty
+            }
+          });
+        }
+
+        // Process damaged items (write-off)
+        if (damagedQty > 0) {
+          await base44.entities.InventoryMovement.create({
+            inventory_item_id: data.inventory_item_id,
+            movement_type: 'adjustment',
+            quantity: 0,
+            reference_type: 'damage',
+            reference_number: data.order_number || `RETURN-${Date.now()}-DAMAGED`,
+            unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
+            total_value: -Math.abs((data.financial_impact / data.quantity) * damagedQty),
+            performed_by: currentUser?.id || 'system',
+            notes: `${data.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return'} - Damaged - Written Off. Reason: ${data.reason}. ${data.notes}`,
+            movement_date: data.incident_date,
+            balance_after: newStock,
+            metadata: {
+              type: 'damage',
+              return_type: data.return_type,
+              reason: data.reason,
+              condition: 'damaged',
+              action: 'write_off',
+              customer_name: data.customer_name,
+              supplier_name: data.supplier_name,
+              financial_impact: (data.financial_impact / data.quantity) * damagedQty,
+              is_partial: true,
+              good_qty: goodQty,
+              damaged_qty: damagedQty
+            }
+          });
+        }
+
+        await Inventory.update(data.inventory_item_id, {
+          current_stock: newStock
+        });
+
+        return { item, newStock };
+      }
+
+      // Standard single-action return/damage
       let quantityChange = 0;
       if (data.action === 'restock') {
         quantityChange = data.quantity;
@@ -111,18 +188,20 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
         quantity: quantityChange,
         reference_type: data.type === 'return' ? 'return' : 'damage',
         reference_number: data.order_number || `${data.type.toUpperCase()}-${Date.now()}`,
-        unit_cost: item.purchase_price || 0,
+        unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
         total_value: -Math.abs(data.financial_impact),
         performed_by: currentUser?.id || 'system',
-        notes: `${data.type === 'return' ? 'Return' : 'Damage'} - Reason: ${data.reason}. Action: ${data.action}. ${data.notes}`,
+        notes: `${data.return_type === 'purchase_return' ? 'Purchase Return' : data.type === 'return' ? 'Sales Return' : 'Damage'} - Reason: ${data.reason}. Action: ${data.action}. ${data.notes}`,
         movement_date: data.incident_date,
         balance_after: newStock,
         metadata: {
           type: data.type,
+          return_type: data.return_type,
           reason: data.reason,
           condition: data.condition,
           action: data.action,
           customer_name: data.customer_name,
+          supplier_name: data.supplier_name,
           restocking_fee: data.restocking_fee,
           financial_impact: data.financial_impact
         }
@@ -250,15 +329,19 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       inventory_item_id: movement.inventory_item_id,
       quantity: Math.abs(movement.quantity || 0),
       type: movement.reference_type === 'return' ? 'return' : 'damage',
+      return_type: metadata.return_type || 'sales_return',
       reason: metadata.reason || '',
       condition: metadata.condition || 'damaged',
       action: metadata.action || 'write_off',
       customer_name: metadata.customer_name || '',
+      supplier_name: metadata.supplier_name || '',
       order_number: movement.reference_number || '',
       incident_date: movement.movement_date,
       financial_impact: Math.abs(movement.total_value || 0),
       restocking_fee: metadata.restocking_fee || 0,
-      notes: movement.notes || ''
+      notes: movement.notes || '',
+      good_condition_qty: metadata.good_qty || 0,
+      damaged_qty: metadata.damaged_qty || 0
     });
     setFormType(movement.reference_type === 'return' ? 'return' : 'damage');
     setIsFormOpen(true);
@@ -493,14 +576,37 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
                       return (
                         <TableRow key={movement.id}>
                           <TableCell>{format(new Date(movement.movement_date), 'MMM dd, yyyy')}</TableCell>
-                          <TableCell className="font-medium">{getItemName(movement.inventory_item_id)}</TableCell>
+                          <TableCell className="font-medium">
+                            {getItemName(movement.inventory_item_id)}
+                            {metadata.return_type && (
+                              <Badge variant="outline" className={`ml-2 text-xs ${
+                                metadata.return_type === 'purchase_return' 
+                                  ? 'bg-purple-100 text-purple-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {metadata.return_type === 'purchase_return' ? 'Purchase' : 'Sales'}
+                              </Badge>
+                            )}
+                          </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{Math.abs(movement.quantity)}</Badge>
+                            <div className="space-y-1">
+                              <Badge variant="outline">{Math.abs(movement.quantity)}</Badge>
+                              {metadata.is_partial && (
+                                <div className="text-xs text-muted-foreground">
+                                  <p>Good: {metadata.good_qty || 0}</p>
+                                  <p>Damaged: {metadata.damaged_qty || 0}</p>
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {movement.reference_number || '-'}
                           </TableCell>
-                          <TableCell className="text-sm">{metadata.customer_name || '-'}</TableCell>
+                          <TableCell className="text-sm">
+                            {metadata.return_type === 'purchase_return' 
+                              ? metadata.supplier_name || '-'
+                              : metadata.customer_name || '-'}
+                          </TableCell>
                           <TableCell className="text-sm">{metadata.reason || '-'}</TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
                           <TableCell className="text-right text-red-600 font-medium">
