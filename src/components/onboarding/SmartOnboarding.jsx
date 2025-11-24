@@ -245,18 +245,6 @@ export default function SmartOnboarding({ user, onComplete }) {
         {/* Progress Bar */}
         <div className="relative sticky top-0 z-10 bg-gradient-to-br from-violet-50 to-pink-50">
           <Progress value={(currentStep / 2) * 100} className="h-2 rounded-none" />
-          {/* Custom Skip Button */}
-          <div className="absolute top-2 right-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleSkip}
-              className="text-xs text-muted-foreground hover:text-foreground hover:bg-white/50"
-            >
-              <X className="w-3 h-3 mr-1" />
-              {t('skip')}
-            </Button>
-          </div>
         </div>
 
         <div className="p-4 sm:p-8">
@@ -401,6 +389,19 @@ export default function SmartOnboarding({ user, onComplete }) {
                 }`}
               />
             ))}
+          </div>
+
+          {/* Fixed Skip Button - Bottom Right */}
+          <div className="mt-6 sm:mt-8 flex justify-end">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSkip}
+              className="text-xs text-muted-foreground hover:text-foreground hover:bg-white/50 gap-1"
+            >
+              {t('skip')}
+              <ChevronRight className="w-3 h-3" />
+            </Button>
           </div>
         </div>
       </DialogContent>
