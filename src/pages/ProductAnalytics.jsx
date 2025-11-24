@@ -507,9 +507,8 @@ function ProductAnalyticsDashboard() {
                 </div>
               )}
             </CardContent>
-            </Card>
-            </div>
-            )}
+          </Card>
+        </div>
 
         {/* Loading State */}
         {analyticsLoading && selectedProductIds.length > 0 && (
@@ -721,10 +720,11 @@ function ProductAnalyticsDashboard() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+              </div>
+              )
 
-            {/* Enhanced Table with All Movement Types */}
-            {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && (
+              {/* Enhanced Table with All Movement Types */}
+              {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && (
               <Card>
               <CardHeader>
                 <CardTitle>Comprehensive Product Metrics</CardTitle>
