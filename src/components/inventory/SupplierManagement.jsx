@@ -400,8 +400,6 @@ export default function SupplierManagement({ selectedDepartment }) {
   const [isImporting, setIsImporting] = useState(false);
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const [payingSupplier, setPayingSupplier] = useState(null);
-  const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
-  const [payingSupplier, setPayingSupplier] = useState(null);
 
   // Fetch suppliers
   const { data: suppliers = [], isLoading } = useQuery({
@@ -473,33 +471,6 @@ export default function SupplierManagement({ selectedDepartment }) {
     },
   });
 
-  const manualPaymentMutation = useMutation({
-    mutationFn: async ({ supplierId, paymentData }) => {
-        const supplier = suppliers.find(s => s.id === supplierId);
-        if (!supplier) throw new Error('Supplier not found');
-
-        const newPaymentHistory = [...(supplier.payment_history || []), paymentData];
-        const newTotalPaid = (supplier.total_paid || 0) + paymentData.amount;
-
-        return await base44.entities.Supplier.update(supplierId, {
-            payment_history: newPaymentHistory,
-            total_paid: newTotalPaid,
-            current_balance: (supplier.total_value || 0) - newTotalPaid, // Recalculate balance
-            last_payment_date: paymentData.payment_date,
-            last_payment_amount: paymentData.amount,
-        });
-    },
-    onSuccess: () => {
-        queryClient.invalidateQueries(['suppliers']);
-        toast.success('Payment recorded successfully!');
-        setIsPaymentFormOpen(false);
-        setPayingSupplier(null);
-    },
-    onError: (error) => {
-        toast.error('Failed to record payment: ' + error.message);
-    },
-  });
-
   const handleSubmit = (data) => {
     if (editingSupplier) {
       updateSupplierMutation.mutate({ id: editingSupplier.id, data });
@@ -519,25 +490,9 @@ export default function SupplierManagement({ selectedDepartment }) {
     }
   };
 
-  const handleManualPayment = (supplier) => {
-    setPayingSupplier(supplier);
-    setIsPaymentFormOpen(true);
-  };
 
-  const handlePaymentSubmit = (paymentData) => {
-    if (!payingSupplier) return;
-    manualPaymentMutation.mutate({ supplierId: payingSupplier.id, paymentData });
-  };
 
-  const handleManualPayment = (supplier) => {
-    setPayingSupplier(supplier);
-    setIsPaymentFormOpen(true);
-  };
 
-  const handlePaymentSubmit = (paymentData) => {
-    if (!payingSupplier) return;
-    manualPaymentMutation.mutate({ supplierId: payingSupplier.id, paymentData });
-  };
 
   // Export to CSV
   const handleExportSuppliers = () => {
