@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -205,16 +204,16 @@ const SupplierForm = ({ supplier, onSubmit, onCancel }) => {
               </Select>
             </div>
             <div>
-              <Label>Lead Time (Days)</Label>
+              <Label>Average Lead Time (Days)</Label>
               <Input
                 type="number"
                 min="0"
-                value={formData.lead_time_days}
-                onChange={(e) => setFormData({...formData, lead_time_days: parseInt(e.target.value) || 0})}
+                value={formData.delivery_time_days}
+                onChange={(e) => setFormData({...formData, delivery_time_days: parseInt(e.target.value) || 0})}
               />
             </div>
             <div>
-              <Label>Min Order Quantity</Label>
+              <Label>Min Order Quantity (Units)</Label>
               <Input
                 type="number"
                 min="1"
@@ -226,7 +225,7 @@ const SupplierForm = ({ supplier, onSubmit, onCancel }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Credit Limit (৳)</Label>
+              <Label>Credit Limit Amount (BDT)</Label>
               <Input
                 type="number"
                 min="0"
