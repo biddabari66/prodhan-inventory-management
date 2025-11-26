@@ -10,6 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, AlertTriangle, FileText, TrendingDown, RotateCcw, Search, Brain, BookOpen, Package, Trash2, Shield, Building2, BarChart3, DollarSign, TrendingUp, PackageX, ShoppingCart, FileSignature } from 'lucide-react';
+import SalesPage from './Sales.jsx';
+import PurchaseOrdersPage from './PurchaseOrders.jsx';
+import ProductAnalyticsDashboard from './ProductAnalytics.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';
 import StockMovementHistory from '../components/inventory/StockMovementHistory';
@@ -813,15 +816,15 @@ export default function InventoryPage() {
                 </TabsContent>
 
                 <TabsContent value="sales" className="mt-6">
-                    {/* Placeholder for Sales Page Content */}
+                    <SalesPage />
                 </TabsContent>
 
                 <TabsContent value="purchase-orders" className="mt-6">
-                    {/* Placeholder for Purchase Orders Page Content */}
+                    <PurchaseOrdersPage />
                 </TabsContent>
 
                 <TabsContent value="analytics" className="mt-6">
-                    {/* Placeholder for Product Analytics Page Content */}
+                    <ProductAnalyticsDashboard />
                 </TabsContent>
 
                 <TabsContent value="reports" className="mt-6">
