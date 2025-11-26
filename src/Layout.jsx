@@ -70,7 +70,8 @@ import {
   ChevronLeft,
   MoreHorizontal,
   Mail,
-  ChevronRight
+  ChevronRight,
+  ShoppingCart
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { AuditLog } from "@/entities/AuditLog";
