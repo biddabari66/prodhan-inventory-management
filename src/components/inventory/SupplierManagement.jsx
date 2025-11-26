@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -18,7 +17,7 @@ import {
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 
-const SupplierForm = ({ supplier, onSubmit, onCancel }) => {
+const SupplierForm = ({ supplier, onSubmit, onCancel, onManualPayment }) => {
   const [formData, setFormData] = useState(supplier || {
     supplier_name: '',
     supplier_code: '',
@@ -187,38 +186,27 @@ const SupplierForm = ({ supplier, onSubmit, onCancel }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Payment Terms</Label>
-              <Select
-                value={formData.payment_terms}
-                onValueChange={(value) => setFormData({...formData, payment_terms: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cod">Cash on Delivery</SelectItem>
-                  <SelectItem value="net_15">Net 15 Days</SelectItem>
-                  <SelectItem value="net_30">Net 30 Days</SelectItem>
-                  <SelectItem value="net_60">Net 60 Days</SelectItem>
-                  <SelectItem value="advance_payment">Advance Payment</SelectItem>
-                  <SelectItem value="consignment">Consignment</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Lead Time (Days)</Label>
               <Input
-                type="number"
-                min="0"
-                value={formData.lead_time_days}
-                onChange={(e) => setFormData({...formData, lead_time_days: parseInt(e.target.value) || 0})}
+                value={formData.payment_terms_description || ''}
+                onChange={(e) => setFormData({...formData, payment_terms_description: e.target.value})}
+                placeholder="e.g., Net 30, COD"
               />
             </div>
             <div>
-              <Label>Min Order Quantity</Label>
+              <Label>Average Delivery Time (Days)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={formData.average_lead_time_days || 0}
+                onChange={(e) => setFormData({...formData, average_lead_time_days: parseInt(e.target.value) || 0})}
+              />
+            </div>
+            <div>
+              <Label>Minimum Order Quantity</Label>
               <Input
                 type="number"
                 min="1"
-                value={formData.minimum_order_quantity}
+                value={formData.minimum_order_quantity || 1}
                 onChange={(e) => setFormData({...formData, minimum_order_quantity: parseInt(e.target.value) || 1})}
               />
             </div>
@@ -226,12 +214,12 @@ const SupplierForm = ({ supplier, onSubmit, onCancel }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Credit Limit (৳)</Label>
+              <Label>Credit Limit Amount (BDT)</Label>
               <Input
                 type="number"
                 min="0"
-                value={formData.credit_limit}
-                onChange={(e) => setFormData({...formData, credit_limit: parseFloat(e.target.value) || 0})}
+                value={formData.credit_limit_amount || 0}
+                onChange={(e) => setFormData({...formData, credit_limit_amount: parseFloat(e.target.value) || 0})}
               />
             </div>
             <div>
@@ -397,6 +385,85 @@ const SupplierForm = ({ supplier, onSubmit, onCancel }) => {
   );
 };
 
+const ManualPaymentForm = ({ supplier, onSubmit, onCancel }) => {
+    const [amount, setAmount] = useState('');
+    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
+    const [notes, setNotes] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!amount || parseFloat(amount) <= 0) {
+            toast.error('Please enter a valid payment amount.');
+            return;
+        }
+        onSubmit({
+            amount: parseFloat(amount),
+            payment_date: paymentDate,
+            payment_method: paymentMethod,
+            notes: notes,
+            reference_number: `MANUAL-${Date.now()}`
+        });
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Manual Payment for {supplier.supplier_name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label>Amount Paid (BDT)</Label>
+                        <Input
+                            type="number"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="Enter amount"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <Label>Payment Date</Label>
+                        <Input
+                            type="date"
+                            value={paymentDate}
+                            onChange={(e) => setPaymentDate(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <Label>Payment Method</Label>
+                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="cash">Cash</SelectItem>
+                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                <SelectItem value="cheque">Cheque</SelectItem>
+                                <SelectItem value="mobile_banking">Mobile Banking</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label>Notes</Label>
+                        <Textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="e.g., Advance payment for PO-123"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+            <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700">Record Payment</Button>
+            </div>
+        </form>
+    );
+};
+
 export default function SupplierManagement({ selectedDepartment }) {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -406,6 +473,8 @@ export default function SupplierManagement({ selectedDepartment }) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
+  const [payingSupplier, setPayingSupplier] = useState(null);
 
   // Fetch suppliers
   const { data: suppliers = [], isLoading } = useQuery({
@@ -450,6 +519,33 @@ export default function SupplierManagement({ selectedDepartment }) {
     },
   });
 
+  const manualPaymentMutation = useMutation({
+    mutationFn: async ({ supplierId, paymentData }) => {
+        const supplier = suppliers.find(s => s.id === supplierId);
+        if (!supplier) throw new Error('Supplier not found');
+
+        const newPaymentHistory = [...(supplier.payment_history || []), paymentData];
+        const newTotalPaid = (supplier.total_paid || 0) + paymentData.amount;
+
+        return await base44.entities.Supplier.update(supplierId, {
+            payment_history: newPaymentHistory,
+            total_paid: newTotalPaid,
+            current_balance: (supplier.total_value || 0) - newTotalPaid, // Recalculate balance
+            last_payment_date: paymentData.payment_date,
+            last_payment_amount: paymentData.amount,
+        });
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries(['suppliers']);
+        toast.success('Payment recorded successfully!');
+        setIsPaymentFormOpen(false);
+        setPayingSupplier(null);
+    },
+    onError: (error) => {
+        toast.error('Failed to record payment: ' + error.message);
+    },
+  });
+
   const handleSubmit = (data) => {
     if (editingSupplier) {
       updateSupplierMutation.mutate({ id: editingSupplier.id, data });
@@ -467,6 +563,16 @@ export default function SupplierManagement({ selectedDepartment }) {
     if (confirm(`Are you sure you want to delete ${supplier.supplier_name}?`)) {
       deleteSupplierMutation.mutate(supplier.id);
     }
+  };
+
+  const handleManualPayment = (supplier) => {
+    setPayingSupplier(supplier);
+    setIsPaymentFormOpen(true);
+  };
+
+  const handlePaymentSubmit = (paymentData) => {
+    if (!payingSupplier) return;
+    manualPaymentMutation.mutate({ supplierId: payingSupplier.id, paymentData });
   };
 
   // Export to CSV
@@ -883,6 +989,7 @@ export default function SupplierManagement({ selectedDepartment }) {
                 setIsFormOpen(false);
                 setEditingSupplier(null);
               }}
+              onManualPayment={handleManualPayment}
             />
           </div>
         </DialogContent>
@@ -970,6 +1077,22 @@ export default function SupplierManagement({ selectedDepartment }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manual Payment Dialog */}
+        <Dialog open={isPaymentFormOpen} onOpenChange={setIsPaymentFormOpen}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Record Manual Payment</DialogTitle>
+                </DialogHeader>
+                {payingSupplier && (
+                    <ManualPaymentForm
+                        supplier={payingSupplier}
+                        onSubmit={handlePaymentSubmit}
+                        onCancel={() => setIsPaymentFormOpen(false)}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

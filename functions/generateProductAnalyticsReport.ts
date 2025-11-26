@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
         doc.setFontSize(18);
         doc.setTextColor(16, 185, 129); // Green
         doc.setFont('helvetica', 'bold');
-        doc.text(`৳${totalRevenue.toLocaleString()}`, margin + 5, yPos + 17);
+        doc.text(`BDT ${totalRevenue.toLocaleString()}`, margin + 5, yPos + 17);
         
         doc.setTextColor(59, 130, 246); // Blue
         doc.text(totalSold.toLocaleString(), margin + (pageWidth - 2 * margin) / 2 + 7, yPos + 17);
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         doc.setFontSize(18);
         doc.setTextColor(124, 58, 237); // Violet
         doc.setFont('helvetica', 'bold');
-        doc.text(`৳${totalStockValue.toLocaleString()}`, margin + 5, yPos + 17);
+        doc.text(`BDT ${totalStockValue.toLocaleString()}`, margin + 5, yPos + 17);
         
         doc.setTextColor(245, 158, 11); // Orange
         doc.text(`${avgMargin.toFixed(1)}%`, margin + (pageWidth - 2 * margin) / 2 + 7, yPos + 17);
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
 
             // Revenue
             doc.setTextColor(16, 185, 129); // Green
-            doc.text(`৳${metric.totalRevenue.toLocaleString()}`, margin + 110, yPos + 8);
+            doc.text(`BDT ${metric.totalRevenue.toLocaleString()}`, margin + 110, yPos + 8);
             doc.setTextColor(0, 0, 0);
 
             // Orders
@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
             doc.setTextColor(0, 0, 0);
             doc.text(metric.product.item_name.substring(0, 40), margin + 10, yPos);
             doc.setTextColor(16, 185, 129);
-            doc.text(`৳${metric.totalRevenue.toLocaleString()}`, margin + 120, yPos);
+            doc.text(`BDT ${metric.totalRevenue.toLocaleString()}`, margin + 120, yPos);
             yPos += 5;
         });
 
@@ -290,7 +290,7 @@ Deno.serve(async (req) => {
             doc.setFontSize(8);
             doc.setTextColor(...color);
             doc.setFont('helvetica', 'bold');
-            doc.text(`৳${metric.totalRevenue.toLocaleString()}`, margin + 52 + barWidth, yPos + 6);
+            doc.text(`BDT ${metric.totalRevenue.toLocaleString()}`, margin + 52 + barWidth, yPos + 6);
 
             yPos += barSpacing;
         });
@@ -345,10 +345,10 @@ Deno.serve(async (req) => {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
         doc.text(
-            `${topByRevenue[0].product.item_name} generated ৳${topByRevenue[0].totalRevenue.toLocaleString()} (${topByRevenue[0].profitMargin.toFixed(1)}% margin)`,
-            margin + 5,
-            yPos + 12
-        );
+                        `${topByRevenue[0].product.item_name} generated BDT ${topByRevenue[0].totalRevenue.toLocaleString()} (${topByRevenue[0].profitMargin.toFixed(1)}% margin)`,
+                        margin + 5,
+                        yPos + 12
+                    );
         yPos += 20;
 
         // Footer

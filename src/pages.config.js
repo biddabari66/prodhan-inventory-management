@@ -59,8 +59,6 @@ import ProductAnalytics from './pages/ProductAnalytics';
 import FeludaAnalytics from './pages/FeludaAnalytics';
 import ReportBuilder from './pages/ReportBuilder';
 import NotificationPreferences from './pages/NotificationPreferences';
-import Sales from './pages/Sales';
-import PurchaseOrders from './pages/PurchaseOrders';
 import __Layout from './Layout.jsx';
 
 
@@ -126,8 +124,6 @@ export const PAGES = {
     "FeludaAnalytics": FeludaAnalytics,
     "ReportBuilder": ReportBuilder,
     "NotificationPreferences": NotificationPreferences,
-    "Sales": Sales,
-    "PurchaseOrders": PurchaseOrders,
 }
 
 export const pagesConfig = {

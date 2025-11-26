@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Inventory } from '@/entities/Inventory';
 import { InventoryMovement } from '@/entities/InventoryMovement'; // NEW IMPORT
@@ -10,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, AlertTriangle, FileText, TrendingDown, RotateCcw, Search, Brain, BookOpen, Package, Trash2, Shield, Building2, BarChart3, DollarSign, TrendingUp, PackageX } from 'lucide-react';
+import { Plus, AlertTriangle, FileText, TrendingDown, RotateCcw, Search, Brain, BookOpen, Package, Trash2, Shield, Building2, BarChart3, DollarSign, TrendingUp, PackageX, ShoppingCart, FileSignature } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';
 import StockMovementHistory from '../components/inventory/StockMovementHistory';
@@ -637,25 +636,24 @@ export default function InventoryPage() {
             </header>
 
             <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
+                <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="ai-insights">
-                        <Brain className="w-4 h-4 mr-2" />
-                        AI Insights
+                    <TabsTrigger value="sales">
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Sales
                     </TabsTrigger>
-                    <TabsTrigger value="movements">Movements</TabsTrigger>
-                    <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
-                    <TabsTrigger value="returns">
-                        <PackageX className="w-4 h-4 mr-2" />
-                        Returns
-                    </TabsTrigger>
-                    <TabsTrigger value="suppliers">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Suppliers
+                    <TabsTrigger value="purchase-orders">
+                        <FileSignature className="w-4 h-4 mr-2" />
+                        Purchase Orders
                     </TabsTrigger>
                     <TabsTrigger value="analytics">
                         <BarChart3 className="w-4 h-4 mr-2" />
                         Analytics
+                    </TabsTrigger>
+                    <TabsTrigger value="movements">Movements</TabsTrigger>
+                    <TabsTrigger value="suppliers">
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Suppliers
                     </TabsTrigger>
                     <TabsTrigger value="reports">Reports</TabsTrigger>
                 </TabsList>
@@ -800,122 +798,30 @@ export default function InventoryPage() {
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="ai-insights" className="mt-6">
-                    <React.Suspense fallback={
-                        <div className="flex items-center justify-center p-12">
-                            <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
-                        </div>
-                    }>
-                        <AIInventoryInsights
-                            department={selectedDepartment}
-                            inventoryItems={filteredInventory}
-                        />
-                    </React.Suspense>
-                </TabsContent>
+
 
                 <TabsContent value="movements" className="mt-6">
                     <StockMovementHistory onMovementAdded={loadUserAndInventory} />
                 </TabsContent>
 
-                <TabsContent value="reconciliation" className="mt-6">
-                    <StockReconciliation onReconciliationComplete={loadUserAndInventory} />
-                </TabsContent>
 
-                <TabsContent value="returns" className="mt-6">
-                    <ReturnDamageManagement selectedDepartment={selectedDepartment} />
-                </TabsContent>
+
+
 
                 <TabsContent value="suppliers" className="mt-6">
                     <SupplierManagement selectedDepartment={selectedDepartment} />
                 </TabsContent>
 
+                <TabsContent value="sales" className="mt-6">
+                    {/* Placeholder for Sales Page Content */}
+                </TabsContent>
+
+                <TabsContent value="purchase-orders" className="mt-6">
+                    {/* Placeholder for Purchase Orders Page Content */}
+                </TabsContent>
+
                 <TabsContent value="analytics" className="mt-6">
-                    <Card className="premium-card mb-6">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BarChart3 className="w-5 h-5 text-violet-600" />
-                                Product Analytics Dashboard
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4">
-                                Deep dive into product performance, sales patterns, and inventory insights.
-                                Select multiple products to compare and analyze trends.
-                            </p>
-                            <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-6 rounded-lg border-2 border-violet-200">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="font-semibold text-lg mb-2">Advanced Analytics</h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            Multi-product comparison • Sales trends • Profit analysis • Inventory forecasting
-                                        </p>
-                                    </div>
-                                    <Button
-                                        onClick={() => window.open('/ProductAnalytics', '_blank')}
-                                        className="bg-violet-600 hover:bg-violet-700"
-                                    >
-                                        <BarChart3 className="w-4 h-4 mr-2" />
-                                        Open Analytics
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Quick Analytics Preview */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="premium-card">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Total Products</p>
-                                        <p className="text-2xl font-bold text-violet-600">
-                                            {filteredInventory.length}
-                                        </p>
-                                    </div>
-                                    <Package className="w-8 h-8 text-violet-500 opacity-50" />
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="premium-card">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Total Stock Value</p>
-                                        <p className="text-2xl font-bold text-green-600">
-                                            ৳{filteredInventory.reduce((sum, item) =>
-                                                sum + (item.current_stock * item.purchase_price || 0), 0
-                                            ).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <DollarSign className="w-8 h-8 text-green-500 opacity-50" />
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="premium-card">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Avg Profit Margin</p>
-                                        <p className="text-2xl font-bold text-blue-600">
-                                            {filteredInventory.length > 0
-                                                ? (filteredInventory.reduce((sum, item) => {
-                                                    const margin = item.selling_price > 0
-                                                        ? ((item.selling_price - item.purchase_price) / item.selling_price) * 100
-                                                        : 0;
-                                                    return sum + margin;
-                                                }, 0) / filteredInventory.length).toFixed(1)
-                                                : 0
-                                            }%
-                                        </p>
-                                    </div>
-                                    <TrendingUp className="w-8 h-8 text-blue-500 opacity-50" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    {/* Placeholder for Product Analytics Page Content */}
                 </TabsContent>
 
                 <TabsContent value="reports" className="mt-6">
