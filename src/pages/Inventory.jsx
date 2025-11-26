@@ -205,39 +205,19 @@ export default function InventoryPage() {
                 </div>
              </header>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 md:grid-cols-4">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="sales"><ShoppingCart className="w-4 h-4 mr-2"/>Sales</TabsTrigger>
-                    <TabsTrigger value="purchase-orders"><FileSignature className="w-4 h-4 mr-2"/>Purchase Orders</TabsTrigger>
-                    <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-2"/>Analytics</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="mt-6">
-                    <InventoryOverview 
-                        inventory={filteredInventory}
-                        onEdit={(item) => {
-                            setEditingItem(item);
-                            setIsFormOpen(true);
-                        }}
-                        onDeleteClick={(item) => {
-                            setItemToDelete(item);
-                            setDeleteConfirmOpen(true);
-                        }}
-                        onSearch={setSearchTerm}
-                        searchTerm={searchTerm}
-                    />
-                </TabsContent>
-                <TabsContent value="sales" className="mt-6">
-                    <SalesPage />
-                </TabsContent>
-                <TabsContent value="purchase-orders" className="mt-6">
-                    <PurchaseOrdersPage />
-                </TabsContent>
-                <TabsContent value="analytics" className="mt-6">
-                    <ProductAnalyticsDashboard />
-                </TabsContent>
-            </Tabs>
+            <InventoryOverview 
+    inventory={filteredInventory}
+    onEdit={(item) => {
+        setEditingItem(item);
+        setIsFormOpen(true);
+    }}
+    onDeleteClick={(item) => {
+        setItemToDelete(item);
+        setDeleteConfirmOpen(true);
+    }}
+    onSearch={setSearchTerm}
+    searchTerm={searchTerm}
+/>
 
         </div>
     );

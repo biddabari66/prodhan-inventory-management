@@ -664,25 +664,14 @@ export default function Layout({ children, currentPageName }) {
         id: 'inventory',
         label: t('Inventory'),
         icon: Warehouse,
-        url: createPageUrl('Inventory'),
-        isExpandable: false,
-        colorClass: 'text-orange-500'
-      },
-      {
-        id: 'sales',
-        label: t(isMobile ? 'Sales' : 'Sales'),
-        icon: ShoppingCart,
-        url: createPageUrl('Sales'),
-        isExpandable: false,
-        colorClass: 'text-amber-500'
-      },
-      {
-        id: 'purchase_orders',
-        label: t(isMobile ? 'Purchase Orders' : 'Purchase Orders'),
-        icon: Package,
-        url: createPageUrl('PurchaseOrders'),
-        isExpandable: false,
-        colorClass: 'text-indigo-500'
+        isExpandable: true,
+        colorClass: 'text-orange-500',
+        subItems: [
+          { label: t('Inventory Overview'), url: createPageUrl('Inventory'), icon: Package, colorClass: 'text-orange-500', permission: 'inventory' },
+          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-amber-500', permission: 'sales' },
+          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: FileSignature, colorClass: 'text-indigo-500', permission: 'purchase_orders' },
+          { label: t('Product Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-sky-500', permission: 'inventory' },
+        ]
       },
       {
         id: 'courses',
