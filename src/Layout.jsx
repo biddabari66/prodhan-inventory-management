@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense, lazy, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -573,7 +572,8 @@ export default function Layout({ children, currentPageName }) {
       'SubmittedReports': 'manual_reporting',
       'SendEmail': 'hr',
       'Inventory': 'inventory',
-      'Procurement': 'purchase', // Changed from 'procurement' to 'purchase'
+      'Sales': 'sales',
+      'PurchaseOrders': 'purchase_orders',
       'Courses': 'courses',
       'Reports': 'reports',
       'CustomReports': 'reports',
@@ -668,12 +668,20 @@ export default function Layout({ children, currentPageName }) {
         colorClass: 'text-orange-500'
       },
       {
-        id: 'purchase', // Changed from procurement
-        label: t(isMobile ? 'Procurement' : 'Procurement'),
-        icon: Package,
-        url: createPageUrl('Procurement'),
+        id: 'sales',
+        label: t(isMobile ? 'Sales' : 'Sales'),
+        icon: ShoppingCart,
+        url: createPageUrl('Sales'),
         isExpandable: false,
         colorClass: 'text-amber-500'
+      },
+      {
+        id: 'purchase_orders',
+        label: t(isMobile ? 'Purchase Orders' : 'Purchase Orders'),
+        icon: Package,
+        url: createPageUrl('PurchaseOrders'),
+        isExpandable: false,
+        colorClass: 'text-indigo-500'
       },
       {
         id: 'courses',
