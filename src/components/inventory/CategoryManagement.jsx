@@ -285,21 +285,23 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <FolderTree className="w-6 h-6 text-violet-600" />
-            Category Management
-          </h2>
-          <p className="text-muted-foreground">
-            {isAdmin ? 'Manage categories for all departments' : `Manage categories for ${userDepartment === 'boibari' ? 'Boibari' : 'Prodhan.com'}`}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+            <FolderTree className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">ক্যাটাগরি ম্যানেজমেন্ট</h2>
+            <p className="text-slate-500 text-sm">
+              {isAdmin ? 'সকল বিভাগের ক্যাটাগরি পরিচালনা করুন' : `${userDepartment === 'boibari' ? 'বইবাড়ি' : 'প্রধান.কম'} এর ক্যাটাগরি পরিচালনা করুন`}
+            </p>
+          </div>
         </div>
         <Button 
           onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}
-          className="bg-violet-600 hover:bg-violet-700"
+          className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-lg shadow-violet-500/30"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Category
+          ক্যাটাগরি যোগ করুন
         </Button>
       </div>
 

@@ -869,8 +869,8 @@ function PurchaseOrdersPage() {
             <Package className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Purchase Orders</h1>
-            <p className="text-slate-600 mt-1 text-base">Supplier management and inventory procurement tracking</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">ক্রয় আদেশ</h1>
+            <p className="text-slate-600 mt-1 text-base">সাপ্লায়ার ম্যানেজমেন্ট ও ইনভেন্টরি সংগ্রহ ট্র্যাকিং</p>
           </div>
         </div>
         <Button
