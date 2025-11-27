@@ -308,7 +308,7 @@ function ProductAnalyticsDashboard() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold font-display text-gradient flex items-center gap-3 flex-wrap">
-                Product Analytics Dashboard
+                Product Analytics & Reports
                 {selectedDepartment !== 'all' && (
                   <Badge className={selectedDepartment === 'boibari' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
                     {selectedDepartment === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
@@ -325,7 +325,7 @@ function ProductAnalyticsDashboard() {
               </Button>
             </div>
             <p className="text-muted-foreground mt-1">
-              Comprehensive product performance with purchases, sales, returns & damages tracking
+              Comprehensive product performance, detailed reporting with purchases, sales, returns & damages tracking
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
