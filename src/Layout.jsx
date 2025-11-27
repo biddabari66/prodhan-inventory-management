@@ -670,7 +670,7 @@ export default function Layout({ children, currentPageName }) {
           { label: t('Overview'), url: createPageUrl('Inventory'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory' },
           { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-orange-500', permission: 'sales' },
           { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-orange-500', permission: 'purchase_orders' },
-          { label: t('Product Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-orange-500', permission: 'inventory' }
+          { label: t('Analytics & Reports'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-orange-500', permission: 'inventory' }
         ],
         colorClass: 'text-orange-500'
       },

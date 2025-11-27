@@ -63,9 +63,25 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
 
   const departmentFilteredSuppliers = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return [];
-    return suppliers.filter(s => 
-      s.department === formData.department || s.department === 'both'
-    );
+    return suppliers.filter(s => {
+      // Handle department matching - support both exact match and variations
+      const supplierDept = s.department?.toLowerCase() || '';
+      const formDept = formData.department?.toLowerCase() || '';
+      
+      // Check for exact match
+      if (supplierDept === formDept) return true;
+      
+      // Check for 'both' (supplier serves both departments)
+      if (supplierDept === 'both') return true;
+      
+      // Handle prodhan variations (prodhan, prodhan_com, prodhan_com_e_commerce)
+      if (formDept.includes('prodhan') && supplierDept.includes('prodhan')) return true;
+      
+      // Handle boibari match
+      if (formDept === 'boibari' && supplierDept === 'boibari') return true;
+      
+      return false;
+    });
   }, [suppliers, formData.department]);
 
   const handleSupplierChange = (supplierId) => {
