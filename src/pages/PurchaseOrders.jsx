@@ -19,6 +19,7 @@ import {
   CheckCircle, Clock, AlertCircle, XCircle, Edit, Trash2, Eye,
   FileText, Download, Search, Filter, MoreVertical, CreditCard
 } from 'lucide-react';
+import SearchableProductSelect from '../components/common/SearchableProductSelect';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -349,22 +350,16 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-gray-50 rounded-lg border">
             <div className="md:col-span-2">
               <Label>Select Existing Product</Label>
-              <Select value={selectedItem} onValueChange={(value) => {
-                setSelectedItem(value);
-                const item = departmentFilteredInventory.find(i => i.id === value);
-                if (item) setItemPrice(item.purchase_price || 0);
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose product..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {departmentFilteredInventory.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.item_name} (Stock: {item.current_stock})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableProductSelect
+                inventory={departmentFilteredInventory}
+                value={selectedItem}
+                onValueChange={(value) => {
+                  setSelectedItem(value);
+                  const item = departmentFilteredInventory.find(i => i.id === value);
+                  if (item) setItemPrice(item.purchase_price || 0);
+                }}
+                placeholder="Search and select product..."
+              />
             </div>
             <div>
               <Label>Quantity</Label>

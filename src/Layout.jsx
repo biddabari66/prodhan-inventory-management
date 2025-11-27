@@ -1510,13 +1510,15 @@ export default function Layout({ children, currentPageName }) {
           <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
             ${isSidebarOpen ? 'w-[240px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
             
-            {/* Clean Sidebar Header */}
-            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+            {/* Premium Sidebar Header */}
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-10 h-10 rounded-lg flex-shrink-0" />
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/30">
+                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-6 h-6" />
+                </div>
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-lg font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate">
+                    <span className="text-lg font-bold text-white whitespace-nowrap block truncate drop-shadow-sm">
                       Bee ERP
                     </span>
                   </div>
@@ -1527,7 +1529,7 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setIsSidebarOpen(false)} 
                   variant="ghost" 
                   size="sm"
-                  className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 lg:hidden h-9 w-9 p-0 touch-manipulation rounded-lg"
+                  className="text-white/80 hover:text-white hover:bg-white/20 lg:hidden h-9 w-9 p-0 touch-manipulation rounded-lg"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -1537,11 +1539,11 @@ export default function Layout({ children, currentPageName }) {
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
                 variant="ghost" 
                 size="sm"
-                className="hidden lg:flex text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 touch-manipulation rounded-lg"
+                className="hidden lg:flex text-white/70 hover:text-white hover:bg-white/20 h-8 w-8 p-0 touch-manipulation rounded-lg"
               >
                 {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </Button>
-            </div>
+              </div>
 
             {/* Navigation Content */}
             <div className="flex-1 overflow-y-auto py-4 px-3">

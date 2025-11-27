@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { 
-  FileText, TrendingDown, RotateCcw, RefreshCw, Building2, 
-  Download, BookOpen, ShoppingCart, Calendar, ShoppingBag, PackageX
+  FileText, TrendingDown, RotateCcw, RefreshCw, 
+  BookOpen, ShoppingCart, ShoppingBag, PackageX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
@@ -20,6 +21,12 @@ function InventoryReportsPage() {
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Fetch categories dynamically
+  const { data: categories = [] } = useQuery({
+    queryKey: ['productCategories'],
+    queryFn: () => base44.entities.ProductCategory.list(),
+  });
 
   const handleGenerateReport = async (reportType) => {
     setReportGenerating(reportType);
@@ -163,9 +170,11 @@ function InventoryReportsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="books">Books</SelectItem>
-                    <SelectItem value="electronics">Electronics</SelectItem>
-                    <SelectItem value="stationery">Stationery</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
