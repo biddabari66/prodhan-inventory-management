@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +54,7 @@ const OrderImportDialog = ({ isOpen, onClose, onImportComplete, customers, inven
     }
   }, [isOpen]);
 
-  const downloadTemplate = () => {
+  const downloadTemplate = (department = 'boibari') => {
     const headers = [
       'customer_name', 'customer_phone', 'customer_email', 'product_name',
       'quantity', 'unit_price', 'discount', 'shipping_address', 'city',
@@ -63,23 +62,32 @@ const OrderImportDialog = ({ isOpen, onClose, onImportComplete, customers, inven
       'department', 'shipping_cost', 'customer_notes'
     ];
 
-    const sampleData = [
-      'John Doe', '01700000000', 'john@example.com', 'BCS Preliminary Book',
-      '2', '500', '50', '123 Main St, Gulshan', 'Dhaka', 'Dhaka', '1212',
-      'cod', 'pending', 'boibari', '60', 'Please deliver before 5 PM'
-    ];
+    let sampleData;
+    if (department === 'boibari') {
+      sampleData = [
+        'মোঃ রহিম', '01700000001', 'rahim@example.com', 'BCS Preliminary Book',
+        '2', '500', '50', '১২৩ গুলশান, রোড ১১', 'Dhaka', 'Dhaka', '1212',
+        'cod', 'pending', 'boibari', '60', 'দয়া করে বিকাল ৫টার আগে ডেলিভারি দিন'
+      ];
+    } else {
+      sampleData = [
+        'Fatima Ahmed', '01800000002', 'fatima@example.com', 'Wireless Mouse',
+        '1', '850', '0', '456 Banani, Block A', 'Dhaka', 'Dhaka', '1213',
+        'bkash', 'paid', 'prodhan_com_e_commerce', '60', 'Call before delivery'
+      ];
+    }
 
     const csvContent = `${headers.join(',')}\n${sampleData.join(',')}`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'order_import_template.csv';
+    a.download = `order_import_template_${department}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    toast.success('Template downloaded successfully!');
+    toast.success(`${department === 'boibari' ? 'Boibari' : 'Prodhan.com'} template downloaded!`);
   };
 
   const parseCSV = (text) => {
@@ -399,12 +407,27 @@ const OrderImportDialog = ({ isOpen, onClose, onImportComplete, customers, inven
                 Step 1: Download Template
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Button onClick={downloadTemplate} variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                Download CSV Template
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
+            <CardContent className="space-y-3">
+              <p className="text-sm font-medium">Choose department template:</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  onClick={() => downloadTemplate('boibari')} 
+                  variant="outline" 
+                  className="w-full bg-yellow-50 hover:bg-yellow-100 border-yellow-300"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  📚 Boibari Template
+                </Button>
+                <Button 
+                  onClick={() => downloadTemplate('prodhan_com_e_commerce')} 
+                  variant="outline" 
+                  className="w-full bg-red-50 hover:bg-red-100 border-red-300"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  🛒 Prodhan.com Template
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
                 Fill in the template with your order data. Each row should represent one product item for a customer.
                 Orders with multiple items should have multiple rows for the same customer details.
               </p>
