@@ -30,6 +30,8 @@ import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader
 import OrderInvoice from '../components/invoices/OrderInvoice';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import SearchableProductSelect from '../components/common/SearchableProductSelect';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
@@ -276,18 +278,13 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
                   ({departmentFilteredInventory.length} available)
                 </span>
               </Label>
-              <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
-                <SelectTrigger>
-                  <SelectValue placeholder={departmentFilteredInventory.length === 0 ? 'No products available' : 'Choose product...'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {departmentFilteredInventory.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.item_name} - BDT {item.selling_price?.toLocaleString()} (Stock: {item.current_stock})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableProductSelect
+                products={departmentFilteredInventory}
+                value={selectedInventoryItem}
+                onChange={setSelectedInventoryItem}
+                placeholder="Search by name, ISBN, barcode..."
+                disabled={departmentFilteredInventory.length === 0}
+              />
             </div>
             <div>
               <Label>Quantity</Label>
@@ -586,6 +583,7 @@ function SalesPage() {
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
 
   const { data: currentUser } = useCachedQuery(
     ['currentUser'],
@@ -742,6 +740,56 @@ function SalesPage() {
 
   const handleQuickStatusChange = (order, newStatus) => {
     updateOrderStatusMutation.mutate({ orderId: order.id, newStatus });
+  };
+
+  const handleBulkAction = async (action) => {
+    if (selectedOrderIds.length === 0) {
+      toast.error('Please select orders first');
+      return;
+    }
+
+    if (action === 'delete') {
+      if (!confirm(`Delete ${selectedOrderIds.length} order(s)? This cannot be undone.`)) {
+        return;
+      }
+      
+      try {
+        await Promise.all(selectedOrderIds.map(id => Order.delete(id)));
+        queryClient.invalidateQueries(['orders']);
+        toast.success(`${selectedOrderIds.length} order(s) deleted successfully`);
+        setSelectedOrderIds([]);
+      } catch (error) {
+        toast.error('Failed to delete orders: ' + error.message);
+      }
+    } else {
+      // Bulk status update
+      try {
+        await Promise.all(selectedOrderIds.map(id => 
+          Order.update(id, { order_status: action })
+        ));
+        queryClient.invalidateQueries(['orders']);
+        toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
+        setSelectedOrderIds([]);
+      } catch (error) {
+        toast.error('Failed to update orders: ' + error.message);
+      }
+    }
+  };
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.length === filteredOrders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredOrders.map(o => o.id));
+    }
   };
 
   const handleOrderSubmit = (orderData) => {
@@ -1020,11 +1068,72 @@ function SalesPage() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Bar */}
+      {selectedOrderIds.length > 0 && (
+        <Card className="bg-violet-50 border-violet-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-violet-600 text-white">
+                  {selectedOrderIds.length} order(s) selected
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setSelectedOrderIds([])}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('confirmed')}
+                  className="text-blue-600 hover:bg-blue-50"
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Confirm All
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('delivered')}
+                  className="text-green-600 hover:bg-green-50"
+                >
+                  <Truck className="w-4 h-4 mr-1" />
+                  Mark Delivered
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('delete')}
+                  className="text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Sales Orders ({filteredOrders.length})
+          <CardTitle className="flex items-center justify-between">
+            <span>Sales Orders ({filteredOrders.length})</span>
+            {filteredOrders.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSelectAll}
+                className="text-violet-600 hover:text-violet-700"
+              >
+                {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1032,6 +1141,12 @@ function SalesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Order #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
@@ -1045,7 +1160,7 @@ function SalesPage() {
               <TableBody>
                 {filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p>No sales orders found</p>
                     </TableCell>
@@ -1053,6 +1168,12 @@ function SalesPage() {
                 ) : (
                   filteredOrders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedOrderIds.includes(order.id)}
+                          onCheckedChange={() => toggleOrderSelection(order.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono font-semibold text-violet-600">
                         {order.order_number}
                       </TableCell>

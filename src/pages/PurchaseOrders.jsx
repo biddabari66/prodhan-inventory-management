@@ -62,6 +62,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
   }, [inventory, formData.department]);
 
   const departmentFilteredSuppliers = useMemo(() => {
+    if (!suppliers || suppliers.length === 0) return [];
     return suppliers.filter(s => 
       s.department === formData.department || s.department === 'both'
     );
