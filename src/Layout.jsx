@@ -1426,23 +1426,19 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          {/* Professional Sidebar - Modern Gradient Background */}
-          <aside className={`sidebar fixed top-0 left-0 h-full overflow-y-auto z-50 flex flex-col bg-gradient-to-b from-white via-slate-50/50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-r border-slate-200/80 dark:border-slate-700 transition-all duration-300 shadow-xl
-            ${isSidebarOpen ? 'w-80 lg:w-72 translate-x-0' : 'w-80 lg:w-20 -translate-x-full lg:translate-x-0'}`}>
+          {/* Professional Fixed Sidebar - Clean Enterprise Design */}
+          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
+            ${isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
             
-            {/* Premium Sidebar Header */}
-            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-5 sidebar-header flex items-center justify-between h-20 lg:h-24 border-b-4 border-white/20 shadow-lg">
+            {/* Clean Sidebar Header */}
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="relative">
-                  <img src={NEW_LOGO_URL} alt="Bee ERP Logo" className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex-shrink-0 animated-logo border-2 border-white/30" />
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></div>
-                </div>
+                <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-10 h-10 rounded-lg flex-shrink-0" />
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-xl lg:text-2xl font-black font-display text-white whitespace-nowrap block truncate tracking-tight">
+                    <span className="text-lg font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate">
                       Bee ERP
                     </span>
-                    <span className="text-xs text-white/80 hidden lg:block font-medium">Business Intelligence Platform</span>
                   </div>
                 )}
               </Link>
@@ -1451,70 +1447,98 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setIsSidebarOpen(false)} 
                   variant="ghost" 
                   size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/20 lg:hidden h-10 w-10 p-0 touch-manipulation rounded-xl"
+                  className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 lg:hidden h-9 w-9 p-0 touch-manipulation rounded-lg"
                 >
                   <X className="w-5 h-5" />
                 </Button>
               )}
+              {/* Desktop collapse toggle */}
+              <Button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                variant="ghost" 
+                size="sm"
+                className="hidden lg:flex text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 touch-manipulation rounded-lg"
+              >
+                {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </Button>
             </div>
 
             {/* Navigation Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {/* Enhanced Navigation with Prefetching */}
-              <nav className="space-y-1">
+            <div className="flex-1 overflow-y-auto py-4 px-3">
+              <nav className={`space-y-1 ${!isSidebarOpen ? 'flex flex-col items-center' : ''}`}>
                 {getNavigationModules().map((mod) => (
-                  <EnhancedNavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} />
+                  <EnhancedNavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} isCollapsed={!isSidebarOpen} />
                 ))}
               </nav>
             </div>
 
-            {/* Premium User Footer */}
-            {isSidebarOpen && (
-              <div className="p-4 border-t border-slate-200/50 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
-                <div className="relative bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-md border border-slate-200/60 dark:border-slate-700 flex items-center justify-between touch-manipulation group hover:shadow-lg transition-all duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="flex items-center gap-3 min-w-0 relative z-10">
-                    <div className="relative">
-                      <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-lg">
-                        {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                      </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white"></div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm lg:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
-                        {currentUser?.display_name || currentUser?.full_name}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
-                        {currentUser?.designation}
-                      </p>
-                    </div>
+            {/* User Footer */}
+            <div className={`border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
+              {isSidebarOpen ? (
+                <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                    {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                      {currentUser?.display_name || currentUser?.full_name}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {currentUser?.designation || currentUser?.email}
+                    </p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 h-10 w-10 p-0 flex-shrink-0 touch-manipulation"
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <MoreHorizontal className="w-5 h-5" />
+                        <MoreHorizontal className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-64 premium-card">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => setIsProfileOpen(true)} className="min-h-[48px] lg:min-h-[40px]">
+                    <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-xl">
+                      <DropdownMenuLabel className="text-slate-700 dark:text-slate-300">My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
+                      <DropdownMenuItem onSelect={() => setIsProfileOpen(true)} className="cursor-pointer">
                         <UserIcon className="mr-2 h-4 w-4" />
                         <span>Profile</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleLogout} className="min-h-[48px] lg:min-h-[40px]">
+                      <DropdownMenuItem onSelect={handleLogout} className="cursor-pointer text-red-600 dark:text-red-400">
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Log out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="relative group">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all">
+                    {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
+                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                      <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{currentUser?.display_name || currentUser?.full_name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsProfileOpen(true)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left"
+                    >
+                      <UserIcon className="w-4 h-4" />
+                      <span>Profile</span>
+                    </button>
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Log out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </aside>
 
           {/* Main Content Area - Premium Background */}
