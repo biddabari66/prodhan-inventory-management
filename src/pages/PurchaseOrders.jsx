@@ -1103,6 +1103,7 @@ function PurchaseOrdersPage() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

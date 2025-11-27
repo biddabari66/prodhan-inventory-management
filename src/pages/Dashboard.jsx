@@ -1013,6 +1013,7 @@ function DashboardComponent() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

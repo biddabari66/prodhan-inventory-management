@@ -1008,6 +1008,7 @@ export default function AttendancePage() {
           </TabsContent>
         )}
       </Tabs>
+      </div>
     </div>
   );
 }

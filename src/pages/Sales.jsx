@@ -1121,9 +1121,9 @@ function SalesPage() {
       )}
 
       {/* Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+          <CardTitle className="flex items-center justify-between text-xl font-semibold text-slate-900">
             <span>Sales Orders ({filteredOrders.length})</span>
             {filteredOrders.length > 0 && (
               <Button
@@ -1306,6 +1306,7 @@ function SalesPage() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

@@ -217,26 +217,44 @@ export default function AdmissionsPage() {
   if (isLoading) return <div className="p-8">Loading admissions...</div>;
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-4xl font-bold font-display text-gradient">Admissions</h1>
-          <p className="text-lg text-muted-foreground mt-1">Manage student admissions and enrollment.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <UserCheck className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Admissions Management</h1>
+            <p className="text-slate-600 mt-1 text-base">Complete student enrollment tracking and analytics</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <input type="file" ref={fileInputRef} onChange={handleFileUploadForExtraction} className="hidden" accept="image/*,application/pdf" />
-          <Button variant="outline" onClick={() => fileInputRef.current.click()} disabled={isExtracting}>
+          <Button 
+            variant="outline" 
+            onClick={() => fileInputRef.current.click()} 
+            disabled={isExtracting}
+            className="border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 px-5 py-6"
+          >
               {isExtracting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileUp className="w-4 h-4 mr-2" />}
               Autofill from Doc
           </Button>
-          <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsImportExportOpen(true)}
+            className="border-slate-300 hover:border-violet-500 hover:bg-violet-50 px-5 py-6"
+          >
             <Upload className="w-4 h-4 mr-2" />
             Import/Export
           </Button>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-primary" onClick={() => setEditingAdmission(null)}>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button 
+                onClick={() => setEditingAdmission(null)}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 px-6 py-6 text-base font-semibold"
+              >
+                <Plus className="w-5 h-5 mr-2" />
                 New Admission
               </Button>
             </DialogTrigger>
@@ -253,71 +271,69 @@ export default function AdmissionsPage() {
             </DialogContent>
           </Dialog>
         </div>
-      </header>
+      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="premium-card hover:scale-105 transition-transform duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-emerald-600">৳{totalRevenue.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+      {/* Enhanced Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-white border-l-4 border-l-emerald-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-emerald-600" />
               </div>
+              <Badge className="bg-emerald-100 text-emerald-800 font-semibold">Revenue</Badge>
             </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Revenue</p>
+            <p className="text-4xl font-bold text-emerald-600">৳{totalRevenue.toLocaleString()}</p>
+            <p className="text-xs text-slate-500 mt-2">From {totalAdmissions} admissions</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card hover:scale-105 transition-transform duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Admissions</p>
-                <p className="text-2xl font-bold text-blue-600">{totalAdmissions}</p>
+        <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <UsersIcon className="w-6 h-6 text-blue-600" />
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <UserCheck className="w-6 h-6 text-blue-600" />
-              </div>
+              <Badge className="bg-blue-100 text-blue-800 font-semibold">Count</Badge>
             </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Admissions</p>
+            <p className="text-4xl font-bold text-blue-600">{totalAdmissions}</p>
+            <p className="text-xs text-slate-500 mt-2">All-time enrollment</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card hover:scale-105 transition-transform duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Students</p>
-                <p className="text-2xl font-bold text-green-600">{activeStudents}</p>
+        <Card className="bg-white border-l-4 border-l-violet-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
+                <UserCheck className="w-6 h-6 text-violet-600" />
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <UsersIcon className="w-6 h-6 text-green-600" />
-              </div>
+              <Badge className="bg-violet-100 text-violet-800 font-semibold">Active</Badge>
             </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Active Students</p>
+            <p className="text-4xl font-bold text-violet-600">{activeStudents}</p>
+            <p className="text-xs text-slate-500 mt-2">Currently enrolled</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card hover:scale-105 transition-transform duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Payment Rate</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {totalAdmissions > 0 ? Math.round((paidAdmissions / totalAdmissions) * 100) : 0}%
-                </p>
+        <Card className="bg-white border-l-4 border-l-teal-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-teal-600" />
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
+              <Badge className="bg-teal-100 text-teal-800 font-semibold">Rate</Badge>
             </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Payment Rate</p>
+            <p className="text-4xl font-bold text-teal-600">{totalAdmissions > 0 ? Math.round((paidAdmissions / totalAdmissions) * 100) : 0}%</p>
+            <p className="text-xs text-slate-500 mt-2">Fully paid students</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="premium-card">
+      <Card className="bg-white border border-slate-200 shadow-sm">
         <CardHeader>
           <CardTitle>Filters & Search</CardTitle>
         </CardHeader>
@@ -369,11 +385,12 @@ export default function AdmissionsPage() {
       </Card>
 
       {/* Admissions Table */}
-      <Card className="premium-card">
-        <CardHeader>
-          <CardTitle>Admissions ({filteredAdmissions.length})</CardTitle>
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+          <CardTitle className="text-xl font-semibold text-slate-900">Admissions ({filteredAdmissions.length})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -440,6 +457,7 @@ export default function AdmissionsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -451,6 +469,7 @@ export default function AdmissionsPage() {
         employees={employees}
         admissions={filteredAdmissions}
       />
+      </div>
     </div>
   );
 }
