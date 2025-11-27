@@ -290,7 +290,7 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
             <FolderTree className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">ক্যাটাগরি ম্যানেজমেন্ট</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Category Management</h2>
             <p className="text-slate-500 text-sm">
               {isAdmin ? 'সকল বিভাগের ক্যাটাগরি পরিচালনা করুন' : `${userDepartment === 'boibari' ? 'বইবাড়ি' : 'প্রধান.কম'} এর ক্যাটাগরি পরিচালনা করুন`}
             </p>
