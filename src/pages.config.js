@@ -67,6 +67,7 @@ import InventorySuppliers from './pages/InventorySuppliers';
 import InventoryReports from './pages/InventoryReports';
 import ScheduledReports from './pages/ScheduledReports';
 import DocumentCenter from './pages/DocumentCenter';
+import CategorySettings from './pages/CategorySettings';
 import __Layout from './Layout.jsx';
 
 
@@ -140,6 +141,7 @@ export const PAGES = {
     "InventoryReports": InventoryReports,
     "ScheduledReports": ScheduledReports,
     "DocumentCenter": DocumentCenter,
+    "CategorySettings": CategorySettings,
 }
 
 export const pagesConfig = {
