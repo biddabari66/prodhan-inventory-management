@@ -267,34 +267,7 @@ function ProductAnalyticsDashboard() {
     }
   };
 
-  if (inventoryLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto" />
-          <p className="text-muted-foreground">Loading inventory data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!inventory || inventory.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <Package className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
-          <div>
-            <h3 className="text-xl font-semibold">No Inventory Items Found</h3>
-            <p className="text-muted-foreground mt-2">
-              Add products to your inventory first to view analytics
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Safe analytics data extraction
+  // Safe analytics data extraction - MUST be before any conditional returns
   const safeAnalyticsData = useMemo(() => {
     return analyticsData?.data && Array.isArray(analyticsData.data) ? analyticsData.data : [];
   }, [analyticsData]);
@@ -328,6 +301,35 @@ function ProductAnalyticsDashboard() {
       totalOrders: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalOrders || 0), 0)
     };
   }, [safeAnalyticsData]);
+
+  // Loading state
+  if (inventoryLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto" />
+          <p className="text-muted-foreground">Loading inventory data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty inventory state
+  if (!inventory || inventory.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Package className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
+          <div>
+            <h3 className="text-xl font-semibold">No Inventory Items Found</h3>
+            <p className="text-muted-foreground mt-2">
+              Add products to your inventory first to view analytics
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
