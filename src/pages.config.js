@@ -131,7 +131,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Attendance",
+    mainPage: "Inventory",
     Pages: PAGES,
     Layout: __Layout,
 };
