@@ -1525,8 +1525,8 @@ export default function Layout({ children, currentPageName }) {
             ${isSidebarOpen ? 'lg:ml-[280px] ml-0' : 'lg:ml-[72px] ml-0'}
           `}>
             
-            {/* Professional Header with Gradient Accent */}
-            <header className="header h-18 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 mobile-safe-area">
+            {/* Professional Header */}
+            <header className="header h-16 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
               <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
                 <Button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
