@@ -1,683 +1,783 @@
-import React, { useState, useEffect } from "react";
-import { User } from "@/entities/User";
-import { CustomReport } from "@/entities/CustomReport";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+} from 'recharts';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { 
-  BarChart3, 
-  LineChart as LineChartIcon, 
-  PieChart as PieChartIcon,
-  Table as TableIcon,
-  Plus,
-  Trash2,
-  Eye,
-  Save,
-  Play,
-  Settings,
-  Layers,
-  Filter,
-  TrendingUp,
-  Calendar
-} from "lucide-react";
-import { toast } from "sonner";
-import { base44 } from '@/api/base44Client';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { withPermission } from '../components/common/PermissionGuard';
+  BarChart3, Play, Save, Download, FileSpreadsheet, FileText, Printer,
+  Settings, Filter, Calendar as CalendarIcon, Plus, Trash2, Eye, Wand2,
+  Users, DollarSign, Package, Target, Clock, TrendingUp, Layers, Sparkles
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 
-const AVAILABLE_ENTITIES = [
-  { value: 'Inventory', label: '📦 Inventory', icon: '📦' },
-  { value: 'Expense', label: '💸 Expenses', icon: '💸' },
-  { value: 'Income', label: '💰 Income', icon: '💰' },
-  { value: 'Lead', label: '🎯 Leads', icon: '🎯' },
-  { value: 'Admission', label: '🎓 Admissions', icon: '🎓' },
-  { value: 'Attendance', label: '🕐 Attendance', icon: '🕐' }
-];
+import { Admission } from '@/entities/Admission';
+import { Expense } from '@/entities/Expense';
+import { Income } from '@/entities/Income';
+import { Lead } from '@/entities/Lead';
+import { User } from '@/entities/User';
+import { Attendance } from '@/entities/Attendance';
+import { Inventory } from '@/entities/Inventory';
+import { PurchaseOrder } from '@/entities/PurchaseOrder';
+import { CustomReport } from '@/entities/CustomReport';
+import { ScheduledReport } from '@/entities/ScheduledReport';
 
-const ENTITY_FIELDS = {
-  Inventory: [
-    { value: 'item_name', label: 'Item Name', type: 'string' },
-    { value: 'category', label: 'Category', type: 'string' },
-    { value: 'department', label: 'Department', type: 'string' },
-    { value: 'current_stock', label: 'Current Stock', type: 'number' },
-    { value: 'minimum_stock', label: 'Minimum Stock', type: 'number' },
-    { value: 'purchase_price', label: 'Purchase Price', type: 'number' },
-    { value: 'selling_price', label: 'Selling Price', type: 'number' },
-    { value: 'total_sell', label: 'Total Sold', type: 'number' },
-    { value: 'profits', label: 'Profits', type: 'number' },
-    { value: 'status', label: 'Status', type: 'string' }
-  ],
-  Expense: [
-    { value: 'expense_title', label: 'Title', type: 'string' },
-    { value: 'category', label: 'Category', type: 'string' },
-    { value: 'department', label: 'Department', type: 'string' },
-    { value: 'amount', label: 'Amount', type: 'number' },
-    { value: 'expense_date', label: 'Date', type: 'date' },
-    { value: 'status', label: 'Status', type: 'string' },
-    { value: 'submitted_by_name', label: 'Submitted By', type: 'string' }
-  ],
-  Income: [
-    { value: 'income_title', label: 'Title', type: 'string' },
-    { value: 'revenue_stream', label: 'Revenue Stream', type: 'string' },
-    { value: 'amount', label: 'Amount', type: 'number' },
-    { value: 'income_date', label: 'Date', type: 'date' },
-    { value: 'payment_method', label: 'Payment Method', type: 'string' }
-  ],
-  Lead: [
-    { value: 'student_name', label: 'Student Name', type: 'string' },
-    { value: 'lead_status', label: 'Status', type: 'string' },
-    { value: 'lead_source', label: 'Source', type: 'string' },
-    { value: 'course_interest', label: 'Course Interest', type: 'string' },
-    { value: 'lead_score', label: 'Lead Score', type: 'number' }
-  ],
-  Admission: [
-    { value: 'student_name', label: 'Student Name', type: 'string' },
-    { value: 'course_type', label: 'Course Type', type: 'string' },
-    { value: 'admission_fee', label: 'Fee', type: 'number' },
-    { value: 'payment_status', label: 'Payment Status', type: 'string' },
-    { value: 'admission_date', label: 'Date', type: 'date' }
-  ],
-  Attendance: [
-    { value: 'employee_name', label: 'Employee', type: 'string' },
-    { value: 'date', label: 'Date', type: 'date' },
-    { value: 'status', label: 'Status', type: 'string' },
-    { value: 'working_hours', label: 'Working Hours', type: 'number' }
-  ]
+const ENTITY_CONFIG = {
+  Admission: {
+    label: 'Admissions',
+    icon: Users,
+    entity: Admission,
+    color: '#3B82F6',
+    amountField: 'admission_fee',
+    dateField: 'admission_date',
+    fields: [
+      { key: 'student_name', label: 'Student Name', type: 'text' },
+      { key: 'course_type', label: 'Course Type', type: 'category' },
+      { key: 'course_name', label: 'Course Name', type: 'text' },
+      { key: 'package_type', label: 'Package', type: 'category' },
+      { key: 'admission_fee', label: 'Fee Amount', type: 'currency' },
+      { key: 'payment_status', label: 'Payment Status', type: 'category' },
+      { key: 'admission_status', label: 'Status', type: 'category' },
+      { key: 'assigned_employee', label: 'Employee', type: 'text' },
+      { key: 'referral_source', label: 'Source', type: 'category' },
+      { key: 'admission_date', label: 'Admission Date', type: 'date' }
+    ]
+  },
+  Expense: {
+    label: 'Expenses',
+    icon: DollarSign,
+    entity: Expense,
+    color: '#EF4444',
+    amountField: 'amount',
+    dateField: 'expense_date',
+    fields: [
+      { key: 'expense_title', label: 'Title', type: 'text' },
+      { key: 'category', label: 'Category', type: 'category' },
+      { key: 'department', label: 'Department', type: 'category' },
+      { key: 'amount', label: 'Amount', type: 'currency' },
+      { key: 'status', label: 'Status', type: 'category' },
+      { key: 'submitted_by_name', label: 'Submitted By', type: 'text' },
+      { key: 'payment_method', label: 'Payment Method', type: 'category' },
+      { key: 'urgency', label: 'Urgency', type: 'category' },
+      { key: 'expense_date', label: 'Expense Date', type: 'date' }
+    ]
+  },
+  Income: {
+    label: 'Income',
+    icon: TrendingUp,
+    entity: Income,
+    color: '#10B981',
+    amountField: 'amount',
+    dateField: 'income_date',
+    fields: [
+      { key: 'income_title', label: 'Title', type: 'text' },
+      { key: 'revenue_stream', label: 'Revenue Stream', type: 'category' },
+      { key: 'amount', label: 'Amount', type: 'currency' },
+      { key: 'payment_method', label: 'Payment Method', type: 'category' },
+      { key: 'student_name', label: 'Student Name', type: 'text' },
+      { key: 'department', label: 'Department', type: 'category' },
+      { key: 'status', label: 'Status', type: 'category' },
+      { key: 'income_date', label: 'Income Date', type: 'date' }
+    ]
+  },
+  Lead: {
+    label: 'Leads',
+    icon: Target,
+    entity: Lead,
+    color: '#8B5CF6',
+    amountField: 'estimated_value',
+    dateField: 'created_date',
+    fields: [
+      { key: 'student_name', label: 'Name', type: 'text' },
+      { key: 'phone', label: 'Phone', type: 'text' },
+      { key: 'lead_source', label: 'Source', type: 'category' },
+      { key: 'lead_status', label: 'Status', type: 'category' },
+      { key: 'course_interest', label: 'Course Interest', type: 'category' },
+      { key: 'assigned_to', label: 'Assigned To', type: 'text' },
+      { key: 'lead_score', label: 'Score', type: 'number' },
+      { key: 'conversion_probability', label: 'Conversion %', type: 'number' },
+      { key: 'estimated_value', label: 'Estimated Value', type: 'currency' },
+      { key: 'city', label: 'City', type: 'category' }
+    ]
+  },
+  Inventory: {
+    label: 'Inventory',
+    icon: Package,
+    entity: Inventory,
+    color: '#F59E0B',
+    amountField: 'current_stock',
+    dateField: 'created_date',
+    fields: [
+      { key: 'item_name', label: 'Item Name', type: 'text' },
+      { key: 'category', label: 'Category', type: 'category' },
+      { key: 'department', label: 'Department', type: 'category' },
+      { key: 'current_stock', label: 'Current Stock', type: 'number' },
+      { key: 'minimum_stock', label: 'Min Stock', type: 'number' },
+      { key: 'purchase_price', label: 'Purchase Price', type: 'currency' },
+      { key: 'selling_price', label: 'Selling Price', type: 'currency' },
+      { key: 'total_sell', label: 'Total Sold', type: 'number' },
+      { key: 'status', label: 'Status', type: 'category' },
+      { key: 'supplier_name', label: 'Supplier', type: 'text' }
+    ]
+  },
+  Attendance: {
+    label: 'Attendance',
+    icon: Clock,
+    entity: Attendance,
+    color: '#EC4899',
+    amountField: 'working_hours',
+    dateField: 'date',
+    fields: [
+      { key: 'employee_name', label: 'Employee', type: 'text' },
+      { key: 'date', label: 'Date', type: 'date' },
+      { key: 'status', label: 'Status', type: 'category' },
+      { key: 'check_in_time', label: 'Check In', type: 'time' },
+      { key: 'check_out_time', label: 'Check Out', type: 'time' },
+      { key: 'working_hours', label: 'Working Hours', type: 'number' }
+    ]
+  }
 };
 
-const OPERATORS = {
-  string: [
-    { value: 'equals', label: 'Equals' },
-    { value: 'not_equals', label: 'Not Equals' },
-    { value: 'contains', label: 'Contains' }
-  ],
-  number: [
-    { value: 'equals', label: 'Equals' },
-    { value: 'greater_than', label: 'Greater Than' },
-    { value: 'less_than', label: 'Less Than' }
-  ],
-  date: [
-    { value: 'equals', label: 'On Date' },
-    { value: 'greater_than', label: 'After' },
-    { value: 'less_than', label: 'Before' }
-  ]
-};
+const CHART_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#F97316', '#EAB308', '#22C55E', '#14B8A6', '#06B6D4', '#3B82F6'];
 
-const AGGREGATION_TYPES = [
-  { value: 'sum', label: 'Sum' },
-  { value: 'average', label: 'Average' },
-  { value: 'count', label: 'Count' },
-  { value: 'min', label: 'Minimum' },
-  { value: 'max', label: 'Maximum' }
-];
-
-const CHART_TYPES = [
-  { value: 'table', label: 'Table', icon: TableIcon },
-  { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
-  { value: 'line', label: 'Line Chart', icon: LineChartIcon },
-  { value: 'pie', label: 'Pie Chart', icon: PieChartIcon }
-];
-
-const COLORS = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
-
-function ReportBuilderPage() {
+export default function ReportBuilder() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [savedReports, setSavedReports] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [reportName, setReportName] = useState('');
-  const [reportDescription, setReportDescription] = useState('');
-  const [targetEntity, setTargetEntity] = useState('');
-  const [selectedFields, setSelectedFields] = useState([]);
-  const [filters, setFilters] = useState([]);
-  const [groupByField, setGroupByField] = useState('');
-  const [metricField, setMetricField] = useState('');
-  const [aggregationType, setAggregationType] = useState('');
-  const [chartType, setChartType] = useState('table');
-  const [includeMovements, setIncludeMovements] = useState(false);
-  const [movementTypes, setMovementTypes] = useState(['return', 'adjustment']);
-  const [reportData, setReportData] = useState(null);
+  const [activeTab, setActiveTab] = useState('builder');
+  
+  // Report Configuration
+  const [config, setConfig] = useState({
+    entity: 'Admission',
+    selectedFields: ['student_name', 'course_type', 'admission_fee', 'payment_status'],
+    groupBy: 'course_type',
+    metric: 'count',
+    chartType: 'bar',
+    dateRange: { from: null, to: null },
+    filters: []
+  });
+
+  const [reportData, setReportData] = useState([]);
+  const [rawData, setRawData] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [savedReports, setSavedReports] = useState([]);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [reportName, setReportName] = useState('');
 
   useEffect(() => {
-    loadData();
+    loadUser();
+    loadSavedReports();
   }, []);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadUser = async () => {
     try {
-      const [user, reports] = await Promise.all([
-        User.me(),
-        CustomReport.list('-created_date', 100)
-      ]);
+      const user = await User.me();
       setCurrentUser(user);
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  };
+
+  const loadSavedReports = async () => {
+    try {
+      const reports = await CustomReport.list('-created_date', 50);
       setSavedReports(reports);
     } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading saved reports:', error);
     }
   };
 
-  const handleAddFilter = () => {
-    setFilters([...filters, { field: '', operator: 'equals', value: '' }]);
+  const entityConfig = ENTITY_CONFIG[config.entity];
+  const EntityIcon = entityConfig?.icon || Layers;
+
+  const handleFieldToggle = (fieldKey) => {
+    setConfig(prev => ({
+      ...prev,
+      selectedFields: prev.selectedFields.includes(fieldKey)
+        ? prev.selectedFields.filter(f => f !== fieldKey)
+        : [...prev.selectedFields, fieldKey]
+    }));
   };
 
-  const handleRemoveFilter = (index) => {
-    setFilters(filters.filter((_, i) => i !== index));
-  };
-
-  const handleFilterChange = (index, key, value) => {
-    const newFilters = [...filters];
-    newFilters[index][key] = value;
-    setFilters(newFilters);
-  };
-
-  const handleGenerateReport = async () => {
-    if (!targetEntity) {
-      toast.error("Please select a data source");
-      return;
-    }
-
+  const generateReport = async () => {
     setIsGenerating(true);
     try {
-      const reportConfig = {
-        target_entity: targetEntity,
-        selected_fields: selectedFields.length > 0 ? selectedFields : undefined,
-        filters: filters.filter(f => f.field && f.value),
-        group_by_field: groupByField || undefined,
-        aggregation_type: aggregationType || undefined,
-        metric_field: metricField || undefined,
-        include_movements: includeMovements,
-        movement_types: movementTypes
-      };
+      const EntityClass = entityConfig.entity;
+      let allData = await EntityClass.list('-created_date', 1000);
 
-      const response = await base44.functions.invoke('generateCustomReport', {
-        report_config: reportConfig
-      });
-
-      if (response.data.success) {
-        setReportData(response.data.data);
-        toast.success(`📊 Report generated with ${response.data.data.length} records!`);
-      } else {
-        toast.error("Failed to generate report");
+      // Apply date filter
+      if (config.dateRange.from || config.dateRange.to) {
+        allData = allData.filter(item => {
+          const itemDate = new Date(item[entityConfig.dateField] || item.created_date);
+          if (config.dateRange.from && itemDate < config.dateRange.from) return false;
+          if (config.dateRange.to && itemDate > config.dateRange.to) return false;
+          return true;
+        });
       }
+
+      setRawData(allData);
+
+      // Group and aggregate data
+      const grouped = allData.reduce((acc, record) => {
+        const key = record[config.groupBy] || 'N/A';
+        if (!acc[key]) {
+          acc[key] = { name: key, count: 0, sum: 0, records: [] };
+        }
+        acc[key].count += 1;
+        acc[key].sum += Number(record[entityConfig.amountField]) || 0;
+        acc[key].records.push(record);
+        return acc;
+      }, {});
+
+      const processedData = Object.values(grouped).map(item => ({
+        name: item.name,
+        value: config.metric === 'count' ? item.count : 
+               config.metric === 'sum' ? item.sum :
+               config.metric === 'average' ? (item.sum / item.count) : item.count,
+        count: item.count,
+        sum: item.sum
+      })).sort((a, b) => b.value - a.value);
+
+      setReportData(processedData);
+      toast.success(`Report generated with ${allData.length} records`);
     } catch (error) {
-      console.error("Report generation error:", error);
-      toast.error("Failed to generate report");
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleSaveReport = async () => {
+  const saveReport = async () => {
     if (!reportName.trim()) {
-      toast.error("Please enter a report name");
+      toast.error('Please enter a report name');
       return;
     }
 
     try {
-      const configuration = {
-        target_entity: targetEntity,
-        selected_fields: selectedFields,
-        filters,
-        group_by_field: groupByField,
-        aggregation_type: aggregationType,
-        metric_field: metricField,
-        chart_type: chartType,
-        include_movements: includeMovements,
-        movement_types: movementTypes
-      };
-
       await CustomReport.create({
         report_name: reportName,
-        description: reportDescription,
-        configuration: configuration,
-        created_by_name: currentUser.full_name
+        configuration: config,
+        created_by_name: currentUser?.full_name,
+        description: `${config.metric} of ${config.entity} grouped by ${config.groupBy}`
       });
-
-      toast.success("✅ Report saved successfully!");
+      toast.success('Report saved successfully');
+      setShowSaveDialog(false);
       setReportName('');
-      setReportDescription('');
-      loadData();
+      loadSavedReports();
     } catch (error) {
-      console.error("Error saving report:", error);
-      toast.error("Failed to save report");
+      console.error('Error saving report:', error);
+      toast.error('Failed to save report');
     }
   };
 
-  const handleLoadReport = (report) => {
-    const config = report.configuration;
-    setTargetEntity(config.target_entity || '');
-    setSelectedFields(config.selected_fields || []);
-    setFilters(config.filters || []);
-    setGroupByField(config.group_by_field || '');
-    setAggregationType(config.aggregation_type || '');
-    setMetricField(config.metric_field || '');
-    setChartType(config.chart_type || 'table');
-    setIncludeMovements(config.include_movements || false);
-    setMovementTypes(config.movement_types || ['return', 'adjustment']);
-    setReportName(report.report_name);
-    setReportDescription(report.description || '');
-    toast.info(`📋 Loaded: ${report.report_name}`);
+  const loadReport = (report) => {
+    setConfig(report.configuration);
+    setActiveTab('builder');
+    toast.success(`Loaded: ${report.report_name}`);
   };
 
-  const renderPreview = () => {
-    if (!reportData || reportData.length === 0) {
+  const deleteReport = async (reportId) => {
+    try {
+      await CustomReport.delete(reportId);
+      toast.success('Report deleted');
+      loadSavedReports();
+    } catch (error) {
+      toast.error('Failed to delete report');
+    }
+  };
+
+  const exportToCSV = () => {
+    if (rawData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const headers = config.selectedFields.map(key => 
+      entityConfig.fields.find(f => f.key === key)?.label || key
+    );
+
+    const csvContent = [
+      headers.join(','),
+      ...rawData.map(row => 
+        config.selectedFields.map(key => {
+          let value = row[key];
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${config.entity.toLowerCase()}-report-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success('Exported to CSV');
+  };
+
+  const renderChart = () => {
+    if (reportData.length === 0) {
       return (
-        <div className="text-center py-12 text-muted-foreground">
-          <Eye className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <p>No data to display. Configure and generate your report.</p>
+        <div className="flex flex-col items-center justify-center h-80 text-muted-foreground">
+          <Sparkles className="w-16 h-16 mb-4 opacity-30" />
+          <p className="text-lg font-medium">No Data Yet</p>
+          <p className="text-sm">Configure your report and click Generate</p>
         </div>
       );
     }
 
-    if (chartType === 'table') {
-      const columns = Object.keys(reportData[0]);
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                {columns.map(col => (
-                  <th key={col} className="text-left p-3 font-semibold bg-slate-50">
-                    {col}
-                  </th>
+    const chartHeight = 350;
+
+    switch (config.chartType) {
+      case 'pie':
+        return (
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <PieChart>
+              <Pie
+                data={reportData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                outerRadius={120}
+                dataKey="value"
+              >
+                {reportData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.slice(0, 50).map((row, idx) => (
-                <tr key={idx} className="border-b hover:bg-slate-50">
-                  {columns.map(col => (
-                    <td key={col} className="p-3">
-                      {typeof row[col] === 'object' && row[col] !== null
-                        ? JSON.stringify(row[col])
-                        : row[col]?.toString() || '-'}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
+              </Pie>
+              <Tooltip formatter={(value) => value.toLocaleString()} />
+            </PieChart>
+          </ResponsiveContainer>
+        );
 
-    if (chartType === 'bar' || chartType === 'line') {
-      return (
-        <ResponsiveContainer width="100%" height={400}>
-          {chartType === 'bar' ? (
-            <BarChart data={reportData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={groupByField || Object.keys(reportData[0])[0]} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey={metricField || Object.keys(reportData[0])[1]} fill="#8B5CF6" />
-            </BarChart>
-          ) : (
+      case 'line':
+        return (
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <LineChart data={reportData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={groupByField || Object.keys(reportData[0])[0]} />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value) => value.toLocaleString()} />
               <Legend />
-              <Line type="monotone" dataKey={metricField || Object.keys(reportData[0])[1]} stroke="#8B5CF6" strokeWidth={2} />
+              <Line type="monotone" dataKey="value" stroke={entityConfig.color} strokeWidth={3} dot={{ r: 5 }} />
             </LineChart>
-          )}
-        </ResponsiveContainer>
-      );
-    }
+          </ResponsiveContainer>
+        );
 
-    if (chartType === 'pie') {
-      return (
-        <ResponsiveContainer width="100%" height={400}>
-          <PieChart>
-            <Pie
-              data={reportData}
-              dataKey={metricField || Object.keys(reportData[0])[1]}
-              nameKey={groupByField || Object.keys(reportData[0])[0]}
-              cx="50%"
-              cy="50%"
-              outerRadius={120}
-              label
-            >
-              {reportData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      );
+      case 'area':
+        return (
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <AreaChart data={reportData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value) => value.toLocaleString()} />
+              <Legend />
+              <Area type="monotone" dataKey="value" stroke={entityConfig.color} fill={`${entityConfig.color}40`} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        );
+
+      default: // bar
+        return (
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart data={reportData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value) => value.toLocaleString()} />
+              <Legend />
+              <Bar dataKey="value" fill={entityConfig.color} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
     }
   };
 
-  if (isLoading) {
-    return <div className="p-6 text-foreground">Loading report builder...</div>;
-  }
-
-  const availableFields = targetEntity ? ENTITY_FIELDS[targetEntity] || [] : [];
-  const numericFields = availableFields.filter(f => f.type === 'number');
+  const renderCellValue = (value, type) => {
+    if (value === null || value === undefined) return '-';
+    switch (type) {
+      case 'currency': return `৳${Number(value).toLocaleString()}`;
+      case 'number': return Number(value).toLocaleString();
+      case 'date': 
+        try { return format(new Date(value), 'dd/MM/yyyy'); }
+        catch { return String(value); }
+      case 'category': return <Badge variant="secondary">{value}</Badge>;
+      default: return String(value);
+    }
+  };
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-4xl font-bold font-display text-gradient">Advanced Report Builder</h1>
-          <p className="text-lg text-muted-foreground mt-1">
-            Create custom reports with AI-powered insights & return/damaged product details
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg">
+              <BarChart3 className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">Report Builder</h1>
+              <p className="text-slate-600 mt-1">Create custom reports with advanced visualizations</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="px-3 py-1">
+              <Wand2 className="w-4 h-4 mr-1" />
+              Advanced Analytics
+            </Badge>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Builder Panel */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card className="premium-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Report Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Tabs defaultValue="basic">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="basic">Basic</TabsTrigger>
-                  <TabsTrigger value="advanced">Advanced</TabsTrigger>
-                </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="builder">Builder</TabsTrigger>
+            <TabsTrigger value="data">Data ({rawData.length})</TabsTrigger>
+            <TabsTrigger value="saved">Saved ({savedReports.length})</TabsTrigger>
+          </TabsList>
 
-                <TabsContent value="basic" className="space-y-4">
+          {/* Builder Tab */}
+          <TabsContent value="builder" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Configuration Panel */}
+              <Card className="lg:col-span-1 shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Settings className="w-5 h-5" />
+                    Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Data Source */}
                   <div>
-                    <Label>Report Name</Label>
-                    <Input
-                      value={reportName}
-                      onChange={(e) => setReportName(e.target.value)}
-                      placeholder="e.g., Monthly Inventory Report"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Data Source *</Label>
-                    <Select value={targetEntity} onValueChange={setTargetEntity}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select entity" />
+                    <Label className="text-xs font-medium text-slate-500">DATA SOURCE</Label>
+                    <Select value={config.entity} onValueChange={(val) => setConfig(prev => ({
+                      ...prev,
+                      entity: val,
+                      selectedFields: ENTITY_CONFIG[val].fields.slice(0, 4).map(f => f.key),
+                      groupBy: ENTITY_CONFIG[val].fields.find(f => f.type === 'category')?.key || ENTITY_CONFIG[val].fields[0].key
+                    }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {AVAILABLE_ENTITIES.map(entity => (
-                          <SelectItem key={entity.value} value={entity.value}>
-                            {entity.label}
+                        {Object.entries(ENTITY_CONFIG).map(([key, cfg]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              <cfg.icon className="w-4 h-4" style={{ color: cfg.color }} />
+                              {cfg.label}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {targetEntity === 'Inventory' && (
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <Label className="text-sm font-semibold text-blue-800">
-                          📦 Include Return & Damaged Details
-                        </Label>
-                        <Switch
-                          checked={includeMovements}
-                          onCheckedChange={setIncludeMovements}
-                        />
-                      </div>
-                      {includeMovements && (
-                        <p className="text-xs text-blue-700 mt-2">
-                          ✓ Report will include quantities and values of returned and damaged products
-                        </p>
-                      )}
-                    </div>
-                  )}
-
+                  {/* Group By */}
                   <div>
-                    <Label>Visualization Type</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {CHART_TYPES.map(type => {
-                        const Icon = type.icon;
-                        return (
-                          <Button
-                            key={type.value}
-                            variant={chartType === type.value ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setChartType(type.value)}
-                            className="justify-start"
-                          >
-                            <Icon className="w-4 h-4 mr-2" />
-                            {type.label}
+                    <Label className="text-xs font-medium text-slate-500">GROUP BY</Label>
+                    <Select value={config.groupBy} onValueChange={(val) => setConfig(prev => ({ ...prev, groupBy: val }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {entityConfig.fields.filter(f => f.type === 'category' || f.type === 'text').map(field => (
+                          <SelectItem key={field.key} value={field.key}>{field.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Metric */}
+                  <div>
+                    <Label className="text-xs font-medium text-slate-500">METRIC</Label>
+                    <Select value={config.metric} onValueChange={(val) => setConfig(prev => ({ ...prev, metric: val }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="count">Count</SelectItem>
+                        <SelectItem value="sum">Sum</SelectItem>
+                        <SelectItem value="average">Average</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Chart Type */}
+                  <div>
+                    <Label className="text-xs font-medium text-slate-500">CHART TYPE</Label>
+                    <Select value={config.chartType} onValueChange={(val) => setConfig(prev => ({ ...prev, chartType: val }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bar">Bar Chart</SelectItem>
+                        <SelectItem value="pie">Pie Chart</SelectItem>
+                        <SelectItem value="line">Line Chart</SelectItem>
+                        <SelectItem value="area">Area Chart</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Date Range */}
+                  <div>
+                    <Label className="text-xs font-medium text-slate-500">DATE RANGE</Label>
+                    <div className="grid grid-cols-1 gap-2 mt-1">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="justify-start text-left">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {config.dateRange.from ? format(config.dateRange.from, 'PP') : 'From'}
                           </Button>
-                        );
-                      })}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={config.dateRange.from}
+                            onSelect={(date) => setConfig(prev => ({ ...prev, dateRange: { ...prev.dateRange, from: date } }))}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="justify-start text-left">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {config.dateRange.to ? format(config.dateRange.to, 'PP') : 'To'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={config.dateRange.to}
+                            onSelect={(date) => setConfig(prev => ({ ...prev, dateRange: { ...prev.dateRange, to: date } }))}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
-                </TabsContent>
 
-                <TabsContent value="advanced" className="space-y-4">
-                  <div>
-                    <Label>Group By Field</Label>
-                    <Select value={groupByField} onValueChange={setGroupByField}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>None</SelectItem>
-                        {availableFields.map(field => (
-                          <SelectItem key={field.value} value={field.value}>
-                            {field.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Generate Button */}
+                  <Button onClick={generateReport} disabled={isGenerating} className="w-full bg-gradient-to-r from-indigo-600 to-violet-600">
+                    {isGenerating ? (
+                      <>Generating...</>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Generate Report
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Visualization Panel */}
+              <Card className="lg:col-span-3 shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <EntityIcon className="w-5 h-5" style={{ color: entityConfig.color }} />
+                    {entityConfig.label} Report
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={reportData.length === 0}>
+                          <Save className="w-4 h-4 mr-1" />
+                          Save
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Save Report</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <Input
+                            placeholder="Report name..."
+                            value={reportName}
+                            onChange={(e) => setReportName(e.target.value)}
+                          />
+                          <Button onClick={saveReport} className="w-full">Save Report</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" size="sm" onClick={exportToCSV} disabled={rawData.length === 0}>
+                      <FileSpreadsheet className="w-4 h-4 mr-1" />
+                      CSV
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => window.print()} disabled={reportData.length === 0}>
+                      <Printer className="w-4 h-4 mr-1" />
+                      Print
+                    </Button>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  {renderChart()}
 
-                  {groupByField && (
-                    <>
-                      <div>
-                        <Label>Metric Field</Label>
-                        <Select value={metricField} onValueChange={setMetricField}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select numeric field" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {numericFields.map(field => (
-                              <SelectItem key={field.value} value={field.value}>
-                                {field.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  {/* Summary Stats */}
+                  {reportData.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+                      <div className="bg-indigo-50 p-4 rounded-xl">
+                        <p className="text-xs text-indigo-600 font-medium">Total Records</p>
+                        <p className="text-2xl font-bold text-indigo-800">{rawData.length.toLocaleString()}</p>
                       </div>
-
-                      <div>
-                        <Label>Aggregation</Label>
-                        <Select value={aggregationType} onValueChange={setAggregationType}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select aggregation" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AGGREGATION_TYPES.map(agg => (
-                              <SelectItem key={agg.value} value={agg.value}>
-                                {agg.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="bg-emerald-50 p-4 rounded-xl">
+                        <p className="text-xs text-emerald-600 font-medium">Categories</p>
+                        <p className="text-2xl font-bold text-emerald-800">{reportData.length}</p>
                       </div>
-                    </>
-                  )}
-
-                  <div>
-                    <Label className="flex items-center justify-between mb-2">
-                      <span>Filters</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleAddFilter}
-                        className="h-6"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add
-                      </Button>
-                    </Label>
-                    <div className="space-y-2">
-                      {filters.map((filter, index) => {
-                        const fieldType = availableFields.find(f => f.value === filter.field)?.type || 'string';
-                        return (
-                          <div key={index} className="flex gap-2 items-start">
-                            <Select
-                              value={filter.field}
-                              onValueChange={(val) => handleFilterChange(index, 'field', val)}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Field" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableFields.map(field => (
-                                  <SelectItem key={field.value} value={field.value}>
-                                    {field.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Select
-                              value={filter.operator}
-                              onValueChange={(val) => handleFilterChange(index, 'operator', val)}
-                            >
-                              <SelectTrigger className="w-28">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {OPERATORS[fieldType]?.map(op => (
-                                  <SelectItem key={op.value} value={op.value}>
-                                    {op.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Input
-                              value={filter.value}
-                              onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
-                              placeholder="Value"
-                              className="flex-1"
-                            />
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFilter(index)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
+                      <div className="bg-amber-50 p-4 rounded-xl">
+                        <p className="text-xs text-amber-600 font-medium">Highest Value</p>
+                        <p className="text-2xl font-bold text-amber-800">{Math.max(...reportData.map(d => d.value)).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-violet-50 p-4 rounded-xl">
+                        <p className="text-xs text-violet-600 font-medium">Total Sum</p>
+                        <p className="text-2xl font-bold text-violet-800">{reportData.reduce((sum, d) => sum + d.sum, 0).toLocaleString()}</p>
+                      </div>
                     </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              <div className="flex gap-2 pt-4 border-t">
-                <Button
-                  onClick={handleGenerateReport}
-                  disabled={isGenerating || !targetEntity}
-                  className="flex-1 bg-violet-600 hover:bg-violet-700"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Layers className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Generate
-                    </>
                   )}
-                </Button>
-                <Button
-                  onClick={handleSaveReport}
-                  variant="outline"
-                  disabled={!reportName.trim()}
-                >
-                  <Save className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Saved Reports */}
-          <Card className="premium-card">
-            <CardHeader>
-              <CardTitle className="text-sm">Saved Reports ({savedReports.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 max-h-64 overflow-y-auto">
-              {savedReports.map(report => (
-                <div
-                  key={report.id}
-                  onClick={() => handleLoadReport(report)}
-                  className="p-3 border rounded-lg hover:bg-violet-50 cursor-pointer transition-colors"
-                >
-                  <p className="font-semibold text-sm">{report.report_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {report.description}
-                  </p>
-                  <Badge variant="outline" className="mt-1 text-xs">
-                    {report.configuration?.target_entity}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Preview Panel */}
-        <div className="lg:col-span-2">
-          <Card className="premium-card h-full">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Eye className="w-5 h-5" />
-                  Report Preview
+            {/* Field Selection */}
+            <Card className="shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Filter className="w-5 h-5" />
+                  Select Fields for Data Table
                 </CardTitle>
-                {reportData && (
-                  <Badge className="bg-green-100 text-green-800">
-                    {reportData.length} records
-                  </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {entityConfig.fields.map(field => (
+                    <div key={field.key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={field.key}
+                        checked={config.selectedFields.includes(field.key)}
+                        onCheckedChange={() => handleFieldToggle(field.key)}
+                      />
+                      <label htmlFor={field.key} className="text-sm cursor-pointer">{field.label}</label>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Data Tab */}
+          <TabsContent value="data">
+            <Card className="shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Eye className="w-5 h-5" />
+                  Data Preview ({rawData.length} records)
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={exportToCSV} disabled={rawData.length === 0}>
+                  <Download className="w-4 h-4 mr-1" />
+                  Export CSV
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {rawData.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>Generate a report to see data</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {config.selectedFields.map(key => {
+                            const field = entityConfig.fields.find(f => f.key === key);
+                            return <TableHead key={key}>{field?.label || key}</TableHead>;
+                          })}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rawData.slice(0, 100).map((row, index) => (
+                          <TableRow key={index}>
+                            {config.selectedFields.map(key => {
+                              const field = entityConfig.fields.find(f => f.key === key);
+                              return (
+                                <TableCell key={key}>
+                                  {renderCellValue(row[key], field?.type)}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {rawData.length > 100 && (
+                      <p className="text-center text-sm text-muted-foreground mt-4">
+                        Showing first 100 of {rawData.length} records. Export to view all.
+                      </p>
+                    )}
+                  </div>
                 )}
-              </div>
-            </CardHeader>
-            <CardContent className="min-h-[500px]">
-              {renderPreview()}
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Saved Reports Tab */}
+          <TabsContent value="saved">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Save className="w-5 h-5" />
+                  Saved Reports
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedReports.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>No saved reports yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {savedReports.map(report => (
+                      <div key={report.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border">
+                        <div>
+                          <h4 className="font-semibold">{report.report_name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {report.configuration?.entity} • {report.configuration?.metric} by {report.configuration?.groupBy}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => loadReport(report)}>
+                            <Play className="w-4 h-4 mr-1" />
+                            Load
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => deleteReport(report.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 }
-
-export default withPermission(ReportBuilderPage, 'reports', 'can_create');
