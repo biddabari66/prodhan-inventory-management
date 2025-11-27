@@ -1640,8 +1640,8 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </header>
 
-            {/* Main Content - Professional Spacing */}
-            <main className="main-content flex-1 overflow-y-auto p-6 lg:p-8 xl:p-10 mobile-safe-area">
+            {/* Main Content */}
+            <main className="main-content flex-1 overflow-y-auto p-6 lg:p-8">
               <ErrorBoundary>
                 <Suspense fallback={
                   <div className="text-center p-20 text-muted-foreground">
