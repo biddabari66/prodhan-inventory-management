@@ -381,6 +381,8 @@ export default function Layout({ children, currentPageName }) {
       localStorage.removeItem('user_preferences');
       localStorage.removeItem('biddabari_theme');
       localStorage.removeItem('biddabari_language');
+      localStorage.removeItem('cached_user_data');
+      localStorage.removeItem('cached_user_permissions');
 
       if (currentUser) {
         try {
