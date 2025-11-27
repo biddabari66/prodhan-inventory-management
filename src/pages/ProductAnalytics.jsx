@@ -308,7 +308,7 @@ function ProductAnalyticsDashboard() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold font-display text-gradient flex items-center gap-3 flex-wrap">
-                Product Analytics & Reports
+                Product Analytics Dashboard
                 {selectedDepartment !== 'all' && (
                   <Badge className={selectedDepartment === 'boibari' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
                     {selectedDepartment === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
