@@ -15,14 +15,14 @@ import {
 import {
   Package, DollarSign, ShoppingCart, BarChart3, Download,
   Search, Activity, PackageX, RotateCcw, ShoppingBag,
-  Loader2, BookOpen, Calendar
+  Loader2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
 import { withPermission } from '../components/common/PermissionGuard';
 
-const COLORS = ['#7C3AED', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
+const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#06B6D4', '#A855F7'];
 
 function ProductAnalyticsDashboard() {
   const [selectedProductIds, setSelectedProductIds] = useState([]);

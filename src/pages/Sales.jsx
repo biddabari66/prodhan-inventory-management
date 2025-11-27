@@ -30,7 +30,8 @@ import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader
 import OrderInvoice from '../components/invoices/OrderInvoice';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import SearchableProductSelect, { SearchableCustomerSelect } from '../components/common/SearchableProductSelect';
+import SearchableProductSelect from '../components/common/SearchableProductSelect';
+import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { withPermission } from '../components/common/PermissionGuard';
