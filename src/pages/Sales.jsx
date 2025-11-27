@@ -910,21 +910,26 @@ function SalesPage() {
       <div className="max-w-7xl mx-auto p-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold font-display text-gradient">
-              Sales Management
-            </h1>
-            {!canViewAllDepartments && (
-              <Badge className="bg-orange-100 text-orange-800 flex items-center gap-1 px-3 py-1.5">
-                <Shield className="w-4 h-4" />
-                {userDepartment === 'boibari' ? '📚 Boibari Only' : '🛒 Prodhan.com Only'}
-              </Badge>
-            )}
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-green-500/30">
+            <ShoppingCart className="w-7 h-7 text-white" />
           </div>
-          <p className="text-muted-foreground mt-1">
-            Manage customer orders and sales
-          </p>
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold text-slate-900">
+                Sales Management
+              </h1>
+              {!canViewAllDepartments && (
+                <Badge className="bg-orange-100 text-orange-800 flex items-center gap-1 px-3 py-1.5">
+                  <Shield className="w-4 h-4" />
+                  {userDepartment === 'boibari' ? '📚 Boibari Only' : '🛒 Prodhan.com Only'}
+                </Badge>
+              )}
+            </div>
+            <p className="text-slate-600 mt-1">
+              কাস্টমার অর্ডার ও বিক্রয় ব্যবস্থাপনা করুন
+            </p>
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button

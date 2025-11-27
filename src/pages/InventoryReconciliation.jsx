@@ -13,8 +13,8 @@ function InventoryReconciliationPage() {
             <Shield className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Stock Reconciliation</h1>
-            <p className="text-slate-600 mt-1 text-base">Physical count verification and system accuracy management</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stock Reconciliation</h1>
+            <p className="text-slate-600 mt-1 text-base">ফিজিক্যাল কাউন্ট যাচাইকরণ এবং সিস্টেম নির্ভুলতা ব্যবস্থাপনা</p>
           </div>
         </div>
 

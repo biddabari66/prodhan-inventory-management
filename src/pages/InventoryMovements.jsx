@@ -13,8 +13,8 @@ function InventoryMovementsPage() {
             <RotateCcw className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Stock Movements</h1>
-            <p className="text-slate-600 mt-1 text-base">Complete transaction history and movement tracking for all inventory items</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stock Movements</h1>
+            <p className="text-slate-600 mt-1 text-base">সকল ইনভেন্টরি আইটেমের সম্পূর্ণ লেনদেন ইতিহাস ও মুভমেন্ট ট্র্যাকিং</p>
           </div>
         </div>
 

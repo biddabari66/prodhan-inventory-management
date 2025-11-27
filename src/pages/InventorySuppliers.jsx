@@ -65,8 +65,8 @@ function InventorySuppliersPage() {
               <Building2 className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Supplier Management</h1>
-              <p className="text-slate-600 mt-1 text-base">Centralized vendor management and procurement relationship tracking</p>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Supplier Management</h1>
+              <p className="text-slate-600 mt-1 text-base">কেন্দ্রীভূত সরবরাহকারী ব্যবস্থাপনা এবং ক্রয় সম্পর্ক ট্র্যাকিং</p>
             </div>
           </div>
 

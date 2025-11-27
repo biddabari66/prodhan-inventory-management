@@ -86,8 +86,8 @@ function InventoryAIInsightsPage() {
               <Brain className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">AI Inventory Insights</h1>
-              <p className="text-slate-600 mt-1 text-base">Intelligent demand forecasting, predictive analytics, and automated recommendations</p>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">AI Inventory Insights</h1>
+              <p className="text-slate-600 mt-1 text-base">বুদ্ধিমান চাহিদা পূর্বাভাস, প্রেডিক্টিভ বিশ্লেষণ এবং স্বয়ংক্রিয় সুপারিশ</p>
             </div>
           </div>
 

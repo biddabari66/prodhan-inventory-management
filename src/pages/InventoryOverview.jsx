@@ -341,9 +341,9 @@ function InventoryOverviewPage() {
               <Package className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Inventory Overview</h1>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Inventory Overview</h1>
               <p className="text-slate-600 mt-1 text-base">
-                {canViewAllDepartments ? 'Comprehensive inventory management across all departments' : `${userDepartment === 'boibari' ? 'Boibari.com' : 'Prodhan.com'} inventory management`}
+                {canViewAllDepartments ? 'সকল বিভাগের সম্পূর্ণ ইনভেন্টরি ব্যবস্থাপনা' : `${userDepartment === 'boibari' ? 'বইবাড়ি.কম' : 'প্রধান.কম'} এর ইনভেন্টরি ব্যবস্থাপনা`}
               </p>
               {!canViewAllDepartments && (
                 <Badge className="bg-orange-100 text-orange-800 border border-orange-300 mt-2 flex items-center gap-1 w-fit">
