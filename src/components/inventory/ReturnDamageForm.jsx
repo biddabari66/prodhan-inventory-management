@@ -76,6 +76,48 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     }
   }, [selectedProduct, formData.condition_breakdown, formData.quantity, formData.return_type, formData.restocking_fee, isManualFinancialImpact]);
 
+  // Auto-determine action based on product condition breakdown
+  useEffect(() => {
+    if (formData.return_type === 'sales_return') {
+      const { good, fair, damaged } = formData.condition_breakdown;
+      const total = good + fair + damaged;
+      
+      if (total === 0) return;
+
+      let suggestedAction = 'restock';
+      
+      // If ALL products are good → Restock
+      if (good === total && fair === 0 && damaged === 0) {
+        suggestedAction = 'restock';
+      }
+      // If ALL products are damaged → Write-off
+      else if (damaged === total && good === 0 && fair === 0) {
+        suggestedAction = 'write_off';
+      }
+      // If has fair/minor issues (majority or significant) → Return to supplier
+      else if (fair > 0 && fair >= good) {
+        suggestedAction = 'return_to_supplier';
+      }
+      // If majority is damaged → Write-off
+      else if (damaged > good && damaged > fair) {
+        suggestedAction = 'write_off';
+      }
+      // If majority is good → Restock
+      else if (good > fair && good > damaged) {
+        suggestedAction = 'restock';
+      }
+      // Mixed with fair items → Return to supplier for inspection
+      else if (fair > 0) {
+        suggestedAction = 'return_to_supplier';
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        action: suggestedAction
+      }));
+    }
+  }, [formData.condition_breakdown, formData.return_type]);
+
   // Load initial data for editing
   useEffect(() => {
     if (initialData && inventory.length > 0) {
