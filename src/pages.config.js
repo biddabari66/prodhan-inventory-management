@@ -39,12 +39,10 @@ import EmailNotifications from './pages/EmailNotifications';
 import PerformanceHub from './pages/PerformanceHub';
 import AuditTrailViewer from './pages/AuditTrailViewer';
 import AlertsConfiguration from './pages/AlertsConfiguration';
-import CustomReports from './pages/CustomReports';
 import IncentiveManagement from './pages/IncentiveManagement';
 import SystemOptimization from './pages/SystemOptimization';
 import LeadDatabase from './pages/LeadDatabase';
 import FacebookLeadsWebhook from './pages/FacebookLeadsWebhook';
-import CustomDailyReports from './pages/CustomDailyReports';
 import ManualReporting from './pages/ManualReporting';
 import Documentation from './pages/Documentation';
 import employees from './pages/employees';
@@ -114,12 +112,10 @@ export const PAGES = {
     "PerformanceHub": PerformanceHub,
     "AuditTrailViewer": AuditTrailViewer,
     "AlertsConfiguration": AlertsConfiguration,
-    "CustomReports": CustomReports,
     "IncentiveManagement": IncentiveManagement,
     "SystemOptimization": SystemOptimization,
     "LeadDatabase": LeadDatabase,
     "FacebookLeadsWebhook": FacebookLeadsWebhook,
-    "CustomDailyReports": CustomDailyReports,
     "ManualReporting": ManualReporting,
     "Documentation": Documentation,
     "employees": employees,
