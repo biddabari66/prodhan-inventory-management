@@ -71,7 +71,9 @@ import {
   MoreHorizontal,
   Mail,
   ChevronRight,
-  ShoppingCart
+  ShoppingCart,
+  RotateCcw,
+  PackageX
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { AuditLog } from "@/entities/AuditLog";
@@ -573,6 +575,13 @@ export default function Layout({ children, currentPageName }) {
       'SubmittedReports': 'manual_reporting',
       'SendEmail': 'hr',
       'Inventory': 'inventory',
+      'InventoryOverview': 'inventory',
+      'InventoryAIInsights': 'inventory',
+      'InventoryMovements': 'inventory',
+      'InventoryReconciliation': 'inventory',
+      'InventoryReturns': 'inventory',
+      'InventorySuppliers': 'inventory',
+      'InventoryReports': 'inventory',
       'Sales': 'sales',
       'PurchaseOrders': 'purchase_orders',
       'ProductAnalytics': 'inventory',
@@ -667,10 +676,16 @@ export default function Layout({ children, currentPageName }) {
         icon: Warehouse,
         isExpandable: true,
         subItems: [
-          { label: t('Overview'), url: createPageUrl('Inventory'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory' },
-          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-orange-500', permission: 'sales' },
-          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-orange-500', permission: 'purchase_orders' },
-          { label: t('Product Analytics & Reports'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-orange-500', permission: 'inventory' }
+          { label: t('Overview'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory' },
+          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory' },
+          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory' },
+          { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory' },
+          { label: t('Returns'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory' },
+          { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory' },
+          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'inventory' },
+          { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory' },
+          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
+          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' }
         ],
         colorClass: 'text-orange-500'
       },

@@ -3,7 +3,6 @@ import Attendance from './pages/Attendance';
 import Admissions from './pages/Admissions';
 import Expenses from './pages/Expenses';
 import Incentives from './pages/Incentives';
-import Inventory from './pages/Inventory';
 import Employees from './pages/Employees';
 import Income from './pages/Income';
 import Reports from './pages/Reports';
@@ -77,7 +76,6 @@ export const PAGES = {
     "Admissions": Admissions,
     "Expenses": Expenses,
     "Incentives": Incentives,
-    "Inventory": Inventory,
     "Employees": Employees,
     "Income": Income,
     "Reports": Reports,
