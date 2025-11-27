@@ -1021,70 +1021,37 @@ export default function Layout({ children, currentPageName }) {
               background: rgba(124, 58, 237, 0.5);
             }
 
-            /* PROFESSIONAL NAVIGATION - Premium & Refined */
+            /* PROFESSIONAL FIXED SIDEBAR NAVIGATION - Clean & Enterprise */
             .nav-item {
               color: var(--neutral-600);
               position: relative;
-              transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              transition: all 0.15s ease-out;
               background: transparent;
-              border: 1px solid transparent;
-              min-height: 48px;
+              min-height: 44px;
               display: flex;
               align-items: center;
               touch-action: manipulation;
               font-weight: 500;
               letter-spacing: -0.01em;
-              border-radius: 14px;
+              border-radius: 10px;
             }
 
             @media (max-width: 1024px) {
               .nav-item {
-                min-height: 56px;
-                padding: 16px 20px;
+                min-height: 52px;
+                padding: 14px 16px;
                 font-size: 15px;
-                font-weight: 600;
+                font-weight: 500;
               }
             }
 
             .nav-item:hover {
-              color: var(--primary-indigo);
-              transform: translateX(6px);
-              background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.12) 100%);
-              border: 1px solid rgba(99, 102, 241, 0.2);
-              box-shadow: 
-                0 4px 20px -4px rgba(99, 102, 241, 0.25),
-                0 0 0 1px rgba(99, 102, 241, 0.05);
-            }
-
-            .nav-item:hover .nav-icon {
-              transform: scale(1.1);
-              filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.4));
-            }
-
-            .nav-item .nav-icon {
-              transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            }
-
-            @media (min-width: 1024px) {
-              .nav-item:hover {
-                transform: translateX(8px);
-                box-shadow: 
-                  0 8px 32px -8px rgba(99, 102, 241, 0.3),
-                  0 0 0 1px rgba(99, 102, 241, 0.08),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
-              }
+              background: rgba(99, 102, 241, 0.06);
             }
 
             .nav-item.active {
-              background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.15) 100%);
-              color: var(--primary-indigo);
+              background: rgba(99, 102, 241, 0.1);
               font-weight: 600;
-              transform: translateX(8px);
-              box-shadow: 
-                0 8px 32px -8px rgba(99, 102, 241, 0.35),
-                0 0 0 1px rgba(99, 102, 241, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-              border: 1px solid rgba(99, 102, 241, 0.25);
             }
 
             .nav-item.active::before {
@@ -1094,16 +1061,19 @@ export default function Layout({ children, currentPageName }) {
               top: 50%;
               transform: translateY(-50%);
               width: 3px;
-              height: 60%;
-              background: linear-gradient(180deg, var(--primary-indigo) 0%, var(--accent-purple) 100%);
-              border-radius: 0 6px 6px 0;
-              box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+              height: 24px;
+              background: var(--primary-indigo);
+              border-radius: 0 4px 4px 0;
             }
 
-            .nav-item.active .nav-icon {
-              color: var(--primary-indigo);
-              transform: scale(1.05);
-              filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.4));
+            /* Sub-navigation items */
+            .nav-sub-item {
+              transition: all 0.15s ease-out;
+            }
+
+            /* Collapsed sidebar item styles */
+            .nav-item-collapsed {
+              transition: all 0.15s ease-out;
             }
 
             /* PROFESSIONAL HEADER - Clean Glassmorphism */
