@@ -85,6 +85,7 @@ import SessionProvider from '../components/common/EnhancedSessionManager';
 import UniversalSearch from '../components/common/UniversalSearch';
 import { base44 } from '@/api/base44Client';
 import FastLoadingProvider from '../components/common/FastLoadingProvider';
+import { ShimmerStyles } from '../components/common/SkeletonLoaders';
 import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
 import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
 import SmartOnboarding from '../components/onboarding/SmartOnboarding';
@@ -951,9 +952,11 @@ export default function Layout({ children, currentPageName }) {
   return (
     <FastLoadingProvider>
       <SessionProvider>
+        <ShimmerStyles />
         <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans overflow-hidden">
           <Toaster richColors position="top-center" toastOptions={{
             className: 'sm:top-4 top-20',
+            duration: 3000,
           }} />
           
           <style>{`
