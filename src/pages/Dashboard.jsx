@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { User } from "@/entities/User";
 import { Admission } from "@/entities/Admission";
@@ -799,48 +798,49 @@ function DashboardComponent() {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-8 min-h-screen">
-      {/* OPTIMIZED: Simplified Dashboard Header without heavy animations */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div className="space-y-3">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-pink-500/20 flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-violet-500" />
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gradient">
-                Executive Dashboard
-              </h1>
-              <p className="text-base text-slate-600 dark:text-slate-400 mt-1">
-                Real-time overview of Bee ERP's key metrics
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <Calendar className="w-4 h-4 text-violet-500" />
-                <span className="text-sm text-violet-500 font-medium">
-                  {format(new Date(), 'EEEE, MMMM do, yyyy')}
-                </span>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/10 to-purple-50/20">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      {/* Premium Dashboard Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+        <div className="flex items-start gap-4">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 relative">
+            <Sparkles className="w-10 h-10 text-white" />
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></div>
+          </div>
+          <div>
+            <h1 className="text-5xl font-black text-slate-900 tracking-tight">
+              Executive Dashboard
+            </h1>
+            <p className="text-base text-slate-600 mt-2 font-medium">
+              Real-time business intelligence and performance metrics
+            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <Calendar className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm text-indigo-600 font-semibold">
+                {format(new Date(), 'EEEE, MMMM do, yyyy')}
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-white/20">
+        <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-slate-200 shadow-sm">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
               placeholder="Search KPIs..."
-              className="w-48 pl-10 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/80"
+              className="w-56 pl-10 bg-white border-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
               value={kpiSearch}
               onChange={(e) => setKpiSearch(e.target.value)}
             />
           </div>
+          <div className="h-8 w-px bg-slate-200"></div>
           <Button
             variant={selectedPeriod === 'weekly' ? 'default' : 'ghost'}
             onClick={() => setSelectedPeriod('weekly')}
-            className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 text-sm hover:scale-105 ${
+            className={`px-5 py-2 rounded-xl font-semibold transition-all text-sm ${
               selectedPeriod === 'weekly' ?
-                'bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow-lg' :
-                'text-muted-foreground hover:bg-white/50'
+                'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md' :
+                'text-slate-600 hover:bg-slate-100'
             }`}
           >
             Weekly
@@ -848,10 +848,10 @@ function DashboardComponent() {
           <Button
             variant={selectedPeriod === 'monthly' ? 'default' : 'ghost'}
             onClick={() => setSelectedPeriod('monthly')}
-            className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 text-sm hover:scale-105 ${
+            className={`px-5 py-2 rounded-xl font-semibold transition-all text-sm ${
               selectedPeriod === 'monthly' ?
-                'bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow-lg' :
-                'text-muted-foreground hover:bg-white/50'
+                'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md' :
+                'text-slate-600 hover:bg-slate-100'
             }`}
           >
             Monthly

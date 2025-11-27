@@ -865,74 +865,88 @@ function PurchaseOrdersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-display text-gradient">
-            Purchase Orders
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage supplier purchases and inventory restocking
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      {/* Premium Header Section */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <Package className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Purchase Orders</h1>
+            <p className="text-slate-600 mt-1 text-base">Supplier management and inventory procurement tracking</p>
+          </div>
         </div>
         <Button
           onClick={() => {
             setEditingOrder(null);
             setIsFormOpen(true);
           }}
-          className="bg-violet-600 hover:bg-violet-700"
+          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/30 px-6 py-6 text-base font-semibold"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-5 h-5 mr-2" />
           Create Purchase Order
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
-            <ShoppingCart className="w-5 h-5 text-violet-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-violet-600">{stats.totalOrders}</div>
+      {/* Enhanced Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-white border-l-4 border-l-violet-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
+                <ShoppingCart className="w-6 h-6 text-violet-600" />
+              </div>
+              <Badge className="bg-violet-100 text-violet-800 font-semibold">Total</Badge>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Purchase Orders</p>
+            <p className="text-4xl font-bold text-violet-600">{stats.totalOrders}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
-            <DollarSign className="w-5 h-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">BDT {stats.totalValue.toLocaleString()}</div>
+        <Card className="bg-white border-l-4 border-l-emerald-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+              </div>
+              <Badge className="bg-emerald-100 text-emerald-800 font-semibold">Value</Badge>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Investment</p>
+            <p className="text-4xl font-bold text-emerald-600">৳{stats.totalValue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
-            <Clock className="w-5 h-5 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">{stats.pendingOrders}</div>
+        <Card className="bg-white border-l-4 border-l-amber-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-amber-600" />
+              </div>
+              <Badge className="bg-amber-100 text-amber-800 font-semibold">Pending</Badge>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Awaiting Action</p>
+            <p className="text-4xl font-bold text-amber-600">{stats.pendingOrders}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Received</CardTitle>
-            <CheckCircle className="w-5 h-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats.receivedOrders}</div>
+        <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-blue-600" />
+              </div>
+              <Badge className="bg-blue-100 text-blue-800 font-semibold">Complete</Badge>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Received</p>
+            <p className="text-4xl font-bold text-blue-600">{stats.receivedOrders}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white border border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
@@ -975,11 +989,11 @@ function PurchaseOrdersPage() {
       </Card>
 
       {/* Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Purchase Orders ({filteredOrders.length})</CardTitle>
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+          <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>

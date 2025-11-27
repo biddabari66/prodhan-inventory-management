@@ -421,18 +421,18 @@ function UserAccessManagerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gradient flex items-center gap-3">
-              <Shield className="w-8 h-8 md:w-10 md:h-10 text-violet-600" />
-              User Access Manager
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm md:text-base">
-              Manage user roles and permissions across the ERP system
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/20">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+        {/* Premium Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">User Access Manager</h1>
+              <p className="text-slate-600 mt-1 text-base">Role-based permissions and security management</p>
+            </div>
           </div>
         </div>
 
