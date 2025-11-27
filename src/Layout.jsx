@@ -174,7 +174,7 @@ const translations = {
   }
 };
 
-const NavItem = ({ module, isMobile = false }) => {
+const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -191,16 +191,76 @@ const NavItem = ({ module, isMobile = false }) => {
     }
   }, [location.pathname, isModuleActive]);
 
+  // Collapsed sidebar - icon only with tooltip
+  if (isCollapsed && !isMobile) {
+    if (!module.isExpandable) {
+      return (
+        <div className="relative group">
+          <Link
+            to={module.url}
+            className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
+              isActive(module.url) 
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
+                : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <module.icon className={`w-5 h-5 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+          </Link>
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-[100] shadow-lg">
+            {module.label}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-slate-900 dark:border-r-slate-700"></div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative group">
+        <button
+          className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
+            isModuleActive() 
+              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
+              : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <module.icon className={`w-5 h-5 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+        </button>
+        <div className="absolute left-full ml-3 top-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
+          <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">{module.label}</span>
+          </div>
+          <div className="py-1">
+            {module.subItems?.map((subItem, index) => (
+              <Link
+                key={index}
+                to={subItem.url}
+                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                  isActive(subItem.url)
+                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <subItem.icon className={`w-4 h-4 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
+                <span>{subItem.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded sidebar - full view
   if (!module.isExpandable) {
     return (
       <Link
         to={module.url}
-        className={`nav-item group flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-500 touch-manipulation ${
+        className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
           isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
         } ${isActive(module.url) ? 'active' : ''}`}
       >
-        <module.icon className={`w-5 h-5 nav-icon transition-all duration-500 ${module.colorClass}`} />
-        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-sm'}`}>{module.label}</span>
+        <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+        <span className={`font-medium ${isMobile ? 'text-base' : 'text-sm'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
       </Link>
     );
   }
@@ -209,28 +269,31 @@ const NavItem = ({ module, isMobile = false }) => {
     <div>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl transition-all duration-500 touch-manipulation ${
+        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
           isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
         } ${isModuleActive() ? 'active' : ''}`}
       >
         <div className="flex items-center gap-3">
-          <module.icon className={`w-5 h-5 nav-icon transition-all duration-500 ${module.colorClass}`} />
-          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-sm'}`}>{module.label}</span>
+          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+          <span className={`font-medium ${isMobile ? 'text-base' : 'text-sm'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
         </div>
-        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
       </button>
 
       {isExpanded && module.subItems && (
-        <div className="ml-4 mt-2 space-y-1">
+        <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
           {module.subItems.map((subItem, index) => (
             <Link
               key={index}
               to={subItem.url}
-              className={`nav-item flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 touch-manipulation ${
-                isMobile ? 'min-h-[48px] text-sm' : 'min-h-[40px] text-xs'
-              } ${isActive(subItem.url) ? 'active' : ''}`}
+              className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                isMobile ? 'min-h-[44px] text-sm' : 'min-h-[38px] text-sm'
+              } ${isActive(subItem.url) 
+                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' 
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
             >
-              <subItem.icon className={`w-4 h-4 nav-icon transition-all duration-300 ${subItem.colorClass}`} />
+              <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
               <span>{subItem.label}</span>
             </Link>
           ))}
