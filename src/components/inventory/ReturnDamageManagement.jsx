@@ -29,9 +29,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function ReturnDamageManagement({ selectedDepartment }) {
+export default function ReturnDamageManagement({ selectedDepartment, defaultTab }) {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('returns');
+  const [activeTab, setActiveTab] = useState(defaultTab || 'returns');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formType, setFormType] = useState('return');
   const [searchQuery, setSearchQuery] = useState(''); 
@@ -62,6 +62,12 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
       setDepartmentFilter(selectedDepartment);
     }
   }, [selectedDepartment]);
+
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
 
   const departmentFilteredInventory = useMemo(() => {
     if (departmentFilter === 'all') return inventory;
@@ -529,16 +535,28 @@ export default function ReturnDamageManagement({ selectedDepartment }) {
         </Card>
       </div>
 
-      {/* Tabs for Returns vs Damages */}
+      {/* Professional Tabs for Returns vs Damages */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="returns" className="gap-2">
+        <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-slate-100 rounded-xl">
+          <TabsTrigger 
+            value="returns" 
+            className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 font-medium"
+          >
             <RotateCcw className="w-4 h-4" />
-            Returns ({returnsData.length})
+            <span>Product Returns</span>
+            <Badge variant="secondary" className="ml-1 bg-blue-100 text-blue-700">
+              {returnsData.length}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="damages" className="gap-2">
+          <TabsTrigger 
+            value="damages" 
+            className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-red-700 font-medium"
+          >
             <AlertOctagon className="w-4 h-4" />
-            Damages ({damagesData.length})
+            <span>Damaged Products</span>
+            <Badge variant="secondary" className="ml-1 bg-red-100 text-red-700">
+              {damagesData.length}
+            </Badge>
           </TabsTrigger>
         </TabsList>
 

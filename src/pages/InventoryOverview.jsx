@@ -22,15 +22,71 @@ import { withPermission } from '../components/common/PermissionGuard';
 function InventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
   const itemDepartment = item?.department || selectedDepartment;
 
+  // For Boibari or books category
   if (itemDepartment === 'boibari' || item?.category === 'books') {
     return <BookMetadataManager book={item} onUpdate={onSubmit} onClose={onCancel} />;
   }
 
+  // For Prodhan.com e-commerce
   if (itemDepartment === 'prodhan_com_e_commerce') {
     return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
   }
 
-  return null;
+  // Default: Show department selector when no department is specified
+  return <DepartmentSelector onSelect={(dept) => {
+    if (dept === 'boibari') {
+      return <BookMetadataManager book={item} onUpdate={onSubmit} onClose={onCancel} />;
+    }
+    return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
+  }} onCancel={onCancel} />;
+}
+
+function DepartmentSelector({ onSelect, onCancel }) {
+  const [selected, setSelected] = React.useState(null);
+
+  if (selected === 'boibari') {
+    return null; // Parent will re-render with BookMetadataManager
+  }
+  if (selected === 'prodhan_com_e_commerce') {
+    return null; // Parent will re-render with GeneralProductForm
+  }
+
+  return (
+    <div className="space-y-6 p-4">
+      <div className="text-center mb-6">
+        <h3 className="text-lg font-semibold text-slate-900">Select Department</h3>
+        <p className="text-sm text-slate-500">Choose which department this product belongs to</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={() => onSelect('boibari')}
+          className="p-6 rounded-xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-white hover:border-cyan-500 hover:shadow-lg transition-all group"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <BookOpen className="w-8 h-8 text-cyan-600" />
+          </div>
+          <h4 className="text-lg font-bold text-cyan-900">📚 Boibari.com</h4>
+          <p className="text-sm text-cyan-700 mt-1">Books, Publications & Educational Materials</p>
+        </button>
+
+        <button
+          onClick={() => onSelect('prodhan_com_e_commerce')}
+          className="p-6 rounded-xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white hover:border-purple-500 hover:shadow-lg transition-all group"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Package className="w-8 h-8 text-purple-600" />
+          </div>
+          <h4 className="text-lg font-bold text-purple-900">🛒 Prodhan.com</h4>
+          <p className="text-sm text-purple-700 mt-1">Electronics, Equipment & General Products</p>
+        </button>
+      </div>
+
+      <div className="flex justify-center pt-4">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+      </div>
+    </div>
+  );
 }
 
 function InventoryOverviewPage() {
@@ -494,20 +550,35 @@ function InventoryOverviewPage() {
       </div>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? 'Edit' : 'Add New'} Inventory Item
-              {selectedDepartment === 'boibari' && ' - Boibari.com (Books)'}
-              {selectedDepartment === 'prodhan_com_e_commerce' && ' - Prodhan.com (E-commerce)'}
-            </DialogTitle>
-          </DialogHeader>
-          <InventoryForm
-            item={editingItem}
-            onSubmit={handleFormSubmit}
-            onCancel={() => setIsFormOpen(false)}
-            selectedDepartment={selectedDepartment}
-          />
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+          {(editingItem || selectedDepartment === 'boibari' || selectedDepartment === 'prodhan_com_e_commerce') ? (
+            <>
+              <DialogHeader className="p-6 pb-0">
+                <DialogTitle className="flex items-center gap-3">
+                  {editingItem ? 'Edit' : 'Add New'} Inventory Item
+                  {(editingItem?.department === 'boibari' || selectedDepartment === 'boibari') && (
+                    <Badge className="bg-cyan-100 text-cyan-800">📚 Boibari.com</Badge>
+                  )}
+                  {(editingItem?.department === 'prodhan_com_e_commerce' || selectedDepartment === 'prodhan_com_e_commerce') && (
+                    <Badge className="bg-purple-100 text-purple-800">🛒 Prodhan.com</Badge>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="p-6 pt-4">
+                <InventoryForm
+                  item={editingItem}
+                  onSubmit={handleFormSubmit}
+                  onCancel={() => setIsFormOpen(false)}
+                  selectedDepartment={editingItem?.department || selectedDepartment}
+                />
+              </div>
+            </>
+          ) : (
+            <DepartmentSelector 
+              onSelect={(dept) => setSelectedDepartment(dept)}
+              onCancel={() => setIsFormOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

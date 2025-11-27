@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Calculator, Info, CheckCircle, XCircle, AlertCircle, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import SearchableProductSelect from '@/components/common/SearchableProductSelect';
 
 export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type = 'return', initialData }) {
   const [formData, setFormData] = useState(initialData || {
@@ -186,23 +187,16 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>Select Product *</Label>
-          <Select
+          <SearchableProductSelect
+            inventory={inventory}
             value={formData.inventory_item_id}
             onValueChange={handleProductChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose product..." />
-            </SelectTrigger>
-            <SelectContent>
-              {inventory.map(item => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.item_name} (Stock: {item.current_stock})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="Search by name, ISBN, SKU..."
+            showStock={true}
+            showPrice={true}
+          />
           {selectedProduct && (
-            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+            <div className="text-xs text-muted-foreground mt-2 p-2 bg-slate-50 rounded-lg space-y-0.5">
               <p>Purchase Price: ৳{selectedProduct.purchase_price?.toLocaleString()}</p>
               <p>Selling Price: ৳{selectedProduct.selling_price?.toLocaleString()}</p>
             </div>
