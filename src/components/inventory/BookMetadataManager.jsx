@@ -68,6 +68,19 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
       return;
     }
 
+    // Check for duplicate ISBN (only for new books)
+    if (!book?.id) {
+      try {
+        const existingBooks = await Inventory.filter({ isbn: formData.isbn });
+        if (existingBooks.length > 0) {
+          toast.error(`A book with ISBN "${formData.isbn}" already exists: ${existingBooks[0].item_name}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not check for duplicates:', err);
+      }
+    }
+
     // CRITICAL FIX: Ensure all numeric fields are properly converted
     const cleanedData = {
       ...formData,

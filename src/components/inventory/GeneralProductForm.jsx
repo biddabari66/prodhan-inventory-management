@@ -56,6 +56,35 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
       return;
     }
 
+    // Check for duplicate barcode (only for new products with barcode)
+    if (!product?.id && formData.barcode) {
+      try {
+        const existingProducts = await Inventory.filter({ barcode: formData.barcode });
+        if (existingProducts.length > 0) {
+          toast.error(`A product with barcode "${formData.barcode}" already exists: ${existingProducts[0].item_name}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not check for duplicates:', err);
+      }
+    }
+
+    // Check for duplicate product name in same department (only for new products)
+    if (!product?.id) {
+      try {
+        const existingProducts = await Inventory.filter({ 
+          item_name: formData.item_name, 
+          department: 'prodhan_com_e_commerce' 
+        });
+        if (existingProducts.length > 0) {
+          toast.error(`A product named "${formData.item_name}" already exists in this department`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not check for duplicates:', err);
+      }
+    }
+
     const cleanedData = {
       ...formData,
       current_stock: parseInt(formData.current_stock) || 0,
