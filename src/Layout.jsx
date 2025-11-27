@@ -1287,41 +1287,22 @@ export default function Layout({ children, currentPageName }) {
               }
             }
 
-            /* PROFESSIONAL LOGO - Subtle Animation */
-            @keyframes smooth-pulse {
-              0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-              }
-              50% {
-                transform: scale(1.02);
-                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
-              }
+            /* Clean sidebar scrollbar */
+            .sidebar::-webkit-scrollbar {
+              width: 4px;
             }
-
-            .animated-logo {
-              animation: smooth-pulse 4s ease-in-out infinite;
-              border-radius: 12px;
-              transition: all 0.3s ease;
+            
+            .sidebar::-webkit-scrollbar-track {
+              background: transparent;
             }
-
-            .animated-logo:hover {
-              transform: scale(1.08) rotate(-2deg);
-              animation-play-state: paused;
-              box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+            
+            .sidebar::-webkit-scrollbar-thumb {
+              background: rgba(148, 163, 184, 0.3);
+              border-radius: 2px;
             }
-
-            @media (max-width: 768px) {
-              @keyframes smooth-pulse {
-                0%, 100% {
-                  transform: scale(1);
-                  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
-                }
-                50% {
-                  transform: scale(1.01);
-                  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
-                }
-              }
+            
+            .sidebar::-webkit-scrollbar-thumb:hover {
+              background: rgba(148, 163, 184, 0.5);
             }
             /* PERFORMANCE: Reduce paint complexity */
             * {
