@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { BookOpen, Plus, Edit2, Trash2, Check, X } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
+import CategorySelect, { BookSubjectSelect } from './CategorySelect';
+import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
 
 /**
  * BOOK-SPECIFIC METADATA MANAGER FOR BOIBARI.COM
@@ -35,9 +36,26 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
     minimum_stock: book?.minimum_stock || 10,
     purchase_price: book?.purchase_price || 0,
     selling_price: book?.selling_price || 0,
+    supplier_id: book?.supplier_id || '',
+    supplier_name: book?.supplier_name || '',
+    alternate_suppliers: book?.alternate_suppliers || [],
+    tags: book?.tags || [],
     department: 'boibari', // Always Boibari for books
     category: 'books'
   });
+
+  const [tagInput, setTagInput] = useState('');
+
+  const addTag = () => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData({...formData, tags: [...formData.tags, tagInput.trim()]});
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tag) => {
+    setFormData({...formData, tags: formData.tags.filter(t => t !== tag)});
+  };
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -242,20 +260,13 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="subject">Subject Area</Label>
-                <Select value={formData.subject} onValueChange={(value) => setFormData({...formData, subject: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bcs">BCS</SelectItem>
-                    <SelectItem value="bank">Bank</SelectItem>
-                    <SelectItem value="primary">Primary</SelectItem>
-                    <SelectItem value="medical">Medical</SelectItem>
-                    <SelectItem value="engineering">Engineering</SelectItem>
-                    <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="skill">Skill Development</SelectItem>
-                  </SelectContent>
-                </Select>
+                <BookSubjectSelect
+                  value={formData.subject}
+                  onValueChange={(value) => setFormData({...formData, subject: value})}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manage subjects in Category Settings
+                </p>
               </div>
 
               <div>
@@ -266,6 +277,51 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                   onChange={(e) => setFormData({...formData, academic_relevance: e.target.value})}
                   placeholder="e.g., BCS-2024, HSC, University Level"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Supplier Information */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Supplier Information</h3>
+            
+            <div>
+              <Label>Primary Supplier</Label>
+              <SupplierSelect
+                value={formData.supplier_id}
+                onValueChange={(value) => setFormData({...formData, supplier_id: value})}
+                department="boibari"
+              />
+            </div>
+
+            <AlternateSuppliersManager
+              suppliers={formData.alternate_suppliers}
+              onChange={(suppliers) => setFormData({...formData, alternate_suppliers: suppliers})}
+              department="boibari"
+            />
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Tags & Keywords</h3>
+            <div>
+              <Label>Product Tags</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  placeholder="Add a tag and press Enter"
+                />
+                <Button type="button" onClick={addTag} variant="outline">Add</Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => removeTag(tag)} />
+                  </Badge>
+                ))}
               </div>
             </div>
           </div>

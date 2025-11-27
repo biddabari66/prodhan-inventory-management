@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Package, Check, X } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
+import { ProdhanCategorySelect } from './CategorySelect';
+import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
 
 /**
  * GENERAL PRODUCT FORM FOR PRODHAN.COM E-COMMERCE
@@ -24,9 +26,11 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     safety_stock: product?.safety_stock || 5,
     purchase_price: product?.purchase_price || 0,
     selling_price: product?.selling_price || 0,
+    supplier_id: product?.supplier_id || '',
     supplier_name: product?.supplier_name || '',
     supplier_contact: product?.supplier_contact || '',
     supplier_lead_time_days: product?.supplier_lead_time_days || 7,
+    alternate_suppliers: product?.alternate_suppliers || [],
     barcode: product?.barcode || '',
     description: product?.description || '',
     warehouse_location: product?.warehouse_location || { zone: '', aisle: '', shelf: '', bin: '' },
@@ -148,19 +152,13 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
 
               <div>
                 <Label htmlFor="category">Category *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="electronics">Electronics</SelectItem>
-                    <SelectItem value="accessories">Accessories</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
-                    <SelectItem value="stationery">Stationery</SelectItem>
-                    <SelectItem value="software">Software</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ProdhanCategorySelect
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({...formData, category: value})}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manage categories in Category Settings
+                </p>
               </div>
 
               <div>
@@ -287,37 +285,20 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">Supplier Information</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="supplier_name">Supplier Name</Label>
-                <Input
-                  id="supplier_name"
-                  value={formData.supplier_name}
-                  onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
-                  placeholder="Supplier/vendor name"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="supplier_contact">Supplier Contact</Label>
-                <Input
-                  id="supplier_contact"
-                  value={formData.supplier_contact}
-                  onChange={(e) => setFormData({...formData, supplier_contact: e.target.value})}
-                  placeholder="Phone/Email"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="supplier_lead_time_days">Lead Time (Days)</Label>
-                <Input
-                  id="supplier_lead_time_days"
-                  type="number"
-                  value={formData.supplier_lead_time_days}
-                  onChange={(e) => setFormData({...formData, supplier_lead_time_days: parseInt(e.target.value) || 7})}
-                />
-              </div>
+            <div>
+              <Label>Primary Supplier</Label>
+              <SupplierSelect
+                value={formData.supplier_id}
+                onValueChange={(value) => setFormData({...formData, supplier_id: value})}
+                department="prodhan_com_e_commerce"
+              />
             </div>
+
+            <AlternateSuppliersManager
+              suppliers={formData.alternate_suppliers}
+              onChange={(suppliers) => setFormData({...formData, alternate_suppliers: suppliers})}
+              department="prodhan_com_e_commerce"
+            />
           </div>
 
           {/* Physical Properties */}
