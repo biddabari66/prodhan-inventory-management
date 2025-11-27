@@ -260,7 +260,7 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
         } ${isActive(module.url) ? 'active' : ''}`}
       >
         <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-        <span className={`font-medium ${isMobile ? 'text-base' : 'text-sm'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
       </Link>
     );
   }
@@ -275,7 +275,7 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
       >
         <div className="flex items-center gap-3">
           <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          <span className={`font-medium ${isMobile ? 'text-base' : 'text-sm'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
         </div>
         <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
       </button>
@@ -287,10 +287,10 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
               key={index}
               to={subItem.url}
               className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                isMobile ? 'min-h-[44px] text-sm' : 'min-h-[38px] text-sm'
+                isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'
               } ${isActive(subItem.url) 
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' 
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' 
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
               }`}
             >
               <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
@@ -1493,7 +1493,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
           <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
-            ${isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
+            ${isSidebarOpen ? 'w-[240px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
             
             {/* Clean Sidebar Header */}
             <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
@@ -1608,7 +1608,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Main Content Area */}
           <div className={`flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950
-            ${isSidebarOpen ? 'lg:ml-[280px] ml-0' : 'lg:ml-[72px] ml-0'}
+            ${isSidebarOpen ? 'lg:ml-[240px] ml-0' : 'lg:ml-[72px] ml-0'}
           `}>
             
             {/* Professional Header */}

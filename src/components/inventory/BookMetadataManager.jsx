@@ -1,23 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Plus, Edit2, Trash2, Check, X } from 'lucide-react';
+import { BookOpen, Plus, Edit2, Trash2, Check, X, Sparkles, Loader2 } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
 import CategorySelect, { BookSubjectSelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
+import { base44 } from '@/api/base44Client';
 
 /**
  * BOOK-SPECIFIC METADATA MANAGER FOR BOIBARI.COM
  * Manages ISBN, editions, authors, academic relevance, and consignment tracking
  */
+// Helper function to detect if text contains Bengali characters
+const containsBengali = (text) => {
+  if (!text) return false;
+  const bengaliPattern = /[\u0980-\u09FF]/;
+  return bengaliPattern.test(text);
+};
+
 export default function BookMetadataManager({ book, onUpdate, onClose }) {
   const [formData, setFormData] = useState({
     item_name: book?.item_name || '',
+    english_item_name: book?.english_item_name || '',
     isbn: book?.isbn || '',
     isbn_13: book?.isbn_13 || '',
     author_name: book?.author_name || '',
@@ -45,6 +54,46 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
   });
 
   const [tagInput, setTagInput] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Auto-translate Bengali name to English
+  const translateToEnglish = useCallback(async (bengaliText) => {
+    if (!bengaliText || !containsBengali(bengaliText)) return;
+    
+    setIsTranslating(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Translate this Bengali book/product name to English. Only provide the English translation, nothing else. If it's already in English or a proper noun, keep it as is. Text: "${bengaliText}"`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            english_name: { type: "string" }
+          }
+        }
+      });
+      
+      if (response?.english_name) {
+        setFormData(prev => ({ ...prev, english_item_name: response.english_name }));
+        toast.success('English name generated automatically');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      // Silent fail - user can still manually enter
+    } finally {
+      setIsTranslating(false);
+    }
+  }, []);
+
+  // Debounced translation trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.item_name && containsBengali(formData.item_name) && !formData.english_item_name) {
+        translateToEnglish(formData.item_name);
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [formData.item_name, formData.english_item_name, translateToEnglish]);
 
   const addTag = () => {
     if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
@@ -91,7 +140,9 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
       total_page: parseInt(formData.total_page) || 0,
       royalty_rate: parseFloat(formData.royalty_rate) || 0,
       department: 'boibari', // Always Boibari for books
-      category: 'books'
+      category: 'books',
+      // Use item_name as english_item_name if not Bengali and english_item_name is empty
+      english_item_name: formData.english_item_name || (!containsBengali(formData.item_name) ? formData.item_name : '')
     };
 
     console.log('Submitting book data:', cleanedData);
@@ -147,10 +198,30 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                 <Input
                   id="item_name"
                   value={formData.item_name}
-                  onChange={(e) => setFormData({...formData, item_name: e.target.value})}
-                  placeholder="Enter book title"
+                  onChange={(e) => setFormData({...formData, item_name: e.target.value, english_item_name: ''})}
+                  placeholder="Enter book title (Bengali or English)"
                   required
                 />
+                {containsBengali(formData.item_name) && (
+                  <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Bengali detected - English name will be auto-generated
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="english_item_name" className="flex items-center gap-2">
+                  English Name
+                  {isTranslating && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                </Label>
+                <Input
+                  id="english_item_name"
+                  value={formData.english_item_name}
+                  onChange={(e) => setFormData({...formData, english_item_name: e.target.value})}
+                  placeholder="English translation (auto-generated)"
+                />
+                <p className="text-xs text-slate-500 mt-1">Used in reports and exports</p>
               </div>
 
               <div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,11 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Package, Check, X } from 'lucide-react';
+import { Package, Check, X, Sparkles, Loader2 } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
 import { ProdhanCategorySelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
+import { base44 } from '@/api/base44Client';
+
+// Helper function to detect if text contains Bengali characters
+const containsBengali = (text) => {
+  if (!text) return false;
+  const bengaliPattern = /[\u0980-\u09FF]/;
+  return bengaliPattern.test(text);
+};
 
 /**
  * GENERAL PRODUCT FORM FOR PRODHAN.COM E-COMMERCE
@@ -19,6 +27,7 @@ import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
 export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [formData, setFormData] = useState({
     item_name: product?.item_name || '',
+    english_item_name: product?.english_item_name || '',
     category: product?.category || 'electronics',
     current_stock: product?.current_stock || 0,
     minimum_stock: product?.minimum_stock || 10,
@@ -47,6 +56,45 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [seoInput, setSeoInput] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Auto-translate Bengali name to English
+  const translateToEnglish = useCallback(async (bengaliText) => {
+    if (!bengaliText || !containsBengali(bengaliText)) return;
+    
+    setIsTranslating(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Translate this Bengali product name to English. Only provide the English translation, nothing else. If it's already in English or a proper noun, keep it as is. Text: "${bengaliText}"`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            english_name: { type: "string" }
+          }
+        }
+      });
+      
+      if (response?.english_name) {
+        setFormData(prev => ({ ...prev, english_item_name: response.english_name }));
+        toast.success('English name generated automatically');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+    } finally {
+      setIsTranslating(false);
+    }
+  }, []);
+
+  // Debounced translation trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.item_name && containsBengali(formData.item_name) && !formData.english_item_name) {
+        translateToEnglish(formData.item_name);
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [formData.item_name, formData.english_item_name, translateToEnglish]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,7 +149,9 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
         height_cm: parseFloat(formData.dimensions.height_cm) || 0
       },
       department: 'prodhan_com_e_commerce',
-      category: formData.category
+      category: formData.category,
+      // Use item_name as english_item_name if not Bengali and english_item_name is empty
+      english_item_name: formData.english_item_name || (!containsBengali(formData.item_name) ? formData.item_name : '')
     };
 
     console.log('Submitting product data:', cleanedData);
@@ -173,10 +223,30 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
                 <Input
                   id="item_name"
                   value={formData.item_name}
-                  onChange={(e) => setFormData({...formData, item_name: e.target.value})}
-                  placeholder="Enter product name"
+                  onChange={(e) => setFormData({...formData, item_name: e.target.value, english_item_name: ''})}
+                  placeholder="Enter product name (Bengali or English)"
                   required
                 />
+                {containsBengali(formData.item_name) && (
+                  <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Bengali detected - English name will be auto-generated
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="english_item_name" className="flex items-center gap-2">
+                  English Name
+                  {isTranslating && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                </Label>
+                <Input
+                  id="english_item_name"
+                  value={formData.english_item_name}
+                  onChange={(e) => setFormData({...formData, english_item_name: e.target.value})}
+                  placeholder="English translation (auto-generated)"
+                />
+                <p className="text-xs text-slate-500 mt-1">Used in reports and exports</p>
               </div>
 
               <div>
