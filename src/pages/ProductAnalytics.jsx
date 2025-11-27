@@ -99,7 +99,7 @@ function ProductAnalyticsDashboard() {
   const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useQuery({
     queryKey: ['productAnalytics', selectedProductIds, startDate, selectedDepartment],
     queryFn: async () => {
-      if (selectedProductIds.length === 0) return null;
+      if (selectedProductIds.length === 0) return { success: true, data: [] };
 
       const response = await base44.functions.invoke('getProductMovementAnalytics', {
         productIds: selectedProductIds,
@@ -114,11 +114,12 @@ function ProductAnalyticsDashboard() {
         throw new Error(response.data.error || 'Failed to fetch analytics');
       }
     },
-    enabled: selectedProductIds.length > 0 && inventory.length > 0,
+    enabled: inventory.length > 0,
     staleTime: 2 * 60 * 1000,
     retry: 2,
     refetchOnMount: false,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    initialData: { success: true, data: [] }
   });
 
   const availableProducts = useMemo(() => {
