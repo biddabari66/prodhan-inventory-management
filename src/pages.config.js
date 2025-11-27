@@ -61,6 +61,13 @@ import ReportBuilder from './pages/ReportBuilder';
 import NotificationPreferences from './pages/NotificationPreferences';
 import Sales from './pages/Sales';
 import PurchaseOrders from './pages/PurchaseOrders';
+import InventoryOverview from './pages/InventoryOverview';
+import InventoryAIInsights from './pages/InventoryAIInsights';
+import InventoryMovements from './pages/InventoryMovements';
+import InventoryReconciliation from './pages/InventoryReconciliation';
+import InventoryReturns from './pages/InventoryReturns';
+import InventorySuppliers from './pages/InventorySuppliers';
+import InventoryReports from './pages/InventoryReports';
 import __Layout from './Layout.jsx';
 
 
@@ -128,6 +135,13 @@ export const PAGES = {
     "NotificationPreferences": NotificationPreferences,
     "Sales": Sales,
     "PurchaseOrders": PurchaseOrders,
+    "InventoryOverview": InventoryOverview,
+    "InventoryAIInsights": InventoryAIInsights,
+    "InventoryMovements": InventoryMovements,
+    "InventoryReconciliation": InventoryReconciliation,
+    "InventoryReturns": InventoryReturns,
+    "InventorySuppliers": InventorySuppliers,
+    "InventoryReports": InventoryReports,
 }
 
 export const pagesConfig = {
