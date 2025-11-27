@@ -981,25 +981,25 @@ export default function Layout({ children, currentPageName }) {
             .nav-item:hover {
               color: var(--current-text-primary);
               transform: translateX(3px);
-              background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
-              border: 1.5px solid rgba(99, 102, 241, 0.2);
-              box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12), inset 0 0 12px rgba(99, 102, 241, 0.05);
+              background: linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(168, 85, 247, 0.16) 100%);
+              border: 1.5px solid rgba(99, 102, 241, 0.35);
+              box-shadow: 0 3px 10px rgba(99, 102, 241, 0.18), inset 0 0 16px rgba(99, 102, 241, 0.1);
             }
 
             @media (min-width: 1024px) {
               .nav-item:hover {
                 transform: translateX(4px);
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15), inset 0 0 16px rgba(99, 102, 241, 0.06);
+                box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2), inset 0 0 20px rgba(99, 102, 241, 0.1);
               }
             }
 
             .nav-item.active {
-              background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+              background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.18) 100%);
               color: var(--primary-indigo);
               font-weight: 700;
               transform: translateX(6px);
-              box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-              border: 1.5px solid rgba(99, 102, 241, 0.3);
+              box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+              border: 1.5px solid rgba(99, 102, 241, 0.4);
             }
 
             .nav-item.active::before {
