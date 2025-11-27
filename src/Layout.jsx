@@ -1119,7 +1119,9 @@ export default function Layout({ children, currentPageName }) {
               touch-action: manipulation;
               font-weight: 500;
               letter-spacing: -0.01em;
-              border-radius: 10px;
+              border-radius: 8px;
+              border: 1px solid transparent;
+              margin-bottom: 2px;
             }
 
             @media (max-width: 1024px) {
@@ -1133,11 +1135,14 @@ export default function Layout({ children, currentPageName }) {
 
             .nav-item:hover {
               background: rgba(99, 102, 241, 0.06);
+              border-color: rgba(99, 102, 241, 0.15);
             }
 
             .nav-item.active {
               background: rgba(99, 102, 241, 0.1);
               font-weight: 600;
+              border-color: rgba(99, 102, 241, 0.3);
+              box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1);
             }
 
             .nav-item.active::before {
@@ -1150,6 +1155,16 @@ export default function Layout({ children, currentPageName }) {
               height: 24px;
               background: var(--primary-indigo);
               border-radius: 0 4px 4px 0;
+            }
+
+            /* Sub-navigation box styling */
+            .nav-sub-item {
+              border: 1px solid transparent;
+              margin-bottom: 1px;
+            }
+
+            .nav-sub-item:hover {
+              border-color: rgba(99, 102, 241, 0.15);
             }
 
             /* Sub-navigation items */
