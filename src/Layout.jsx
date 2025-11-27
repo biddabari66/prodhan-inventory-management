@@ -1541,9 +1541,9 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </aside>
 
-          {/* Main Content Area - Premium Background */}
-          <div className={`flex-1 flex flex-col transition-all duration-300 overflow-hidden pb-16 lg:pb-0 bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900
-            ${isSidebarOpen ? 'lg:ml-72 ml-0' : 'lg:ml-20 ml-0'}
+          {/* Main Content Area */}
+          <div className={`flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950
+            ${isSidebarOpen ? 'lg:ml-[280px] ml-0' : 'lg:ml-[72px] ml-0'}
           `}>
             
             {/* Professional Header with Gradient Accent */}
