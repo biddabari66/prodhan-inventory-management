@@ -76,7 +76,7 @@ function InventoryReturnsPage() {
                 <PackageX className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Returns & Damages</h1>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Returns & Damages Management</h1>
                 <p className="text-slate-500 text-sm mt-0.5">Comprehensive tracking and management</p>
               </div>
             </div>
