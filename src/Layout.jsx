@@ -1511,15 +1511,18 @@ export default function Layout({ children, currentPageName }) {
             ${isSidebarOpen ? 'w-[240px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
             
             {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
+            <div className="flex items-center justify-between h-20 px-4 border-b border-white/10 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/30">
-                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-xl shadow-black/20 border border-white/50">
+                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-8 h-8" />
                 </div>
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-lg font-bold text-white whitespace-nowrap block truncate drop-shadow-sm">
+                    <span className="text-xl font-extrabold text-white whitespace-nowrap block truncate tracking-tight" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                       Bee ERP
+                    </span>
+                    <span className="text-[10px] font-medium text-white/70 uppercase tracking-widest">
+                      Enterprise
                     </span>
                   </div>
                 )}
@@ -1543,7 +1546,7 @@ export default function Layout({ children, currentPageName }) {
               >
                 {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </Button>
-              </div>
+            </div>
 
             {/* Navigation Content */}
             <div className="flex-1 overflow-y-auto py-4 px-3">
