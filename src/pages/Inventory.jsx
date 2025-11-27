@@ -872,20 +872,20 @@ export default function InventoryPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <BarChart3 className="w-5 h-5 text-violet-600" />
-                                Product Analytics Dashboard
+                                Product Analytics & Reports Dashboard
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-muted-foreground mb-4">
-                                Deep dive into product performance, sales patterns, and inventory insights.
+                                Deep dive into product performance, sales patterns, and comprehensive inventory reporting.
                                 Select multiple products to compare and analyze trends.
                             </p>
                             <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-6 rounded-lg border-2 border-violet-200">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="font-semibold text-lg mb-2">Advanced Analytics</h3>
+                                        <h3 className="font-semibold text-lg mb-2">Advanced Analytics & Reports</h3>
                                         <p className="text-sm text-muted-foreground">
-                                            Multi-product comparison • Sales trends • Profit analysis • Inventory forecasting
+                                            Multi-product comparison • Sales trends • Profit analysis • Inventory forecasting • Comprehensive reporting
                                         </p>
                                     </div>
                                     <Button

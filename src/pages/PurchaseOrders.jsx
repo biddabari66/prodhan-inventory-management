@@ -69,7 +69,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
   }, [suppliers, formData.department]);
 
   const handleSupplierChange = (supplierId) => {
-    const supplier = suppliers.find(s => s.id === supplierId);
+    const supplier = departmentFilteredSuppliers.find(s => s.id === supplierId);
     if (supplier) {
       setFormData(prev => ({
         ...prev,
