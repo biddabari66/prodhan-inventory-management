@@ -15,16 +15,15 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     return_type: 'sales_return',
     quantity: 1,
     condition_breakdown: {
-      good: 0,
-      fair: 0,
-      damaged: 0
+      good: { quantity: 0, action: 'restock' },
+      fair: { quantity: 0, action: 'return_to_supplier' },
+      damaged: { quantity: 0, action: 'write_off' }
     },
     reason: '',
     order_number: '',
     customer_name: '',
     supplier_name: '',
     condition: type === 'return' ? 'good' : 'damaged',
-    action: 'restock',
     financial_impact: 0,
     restocking_fee: 0,
     notes: '',
@@ -37,18 +36,18 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
   // Auto-sync condition breakdown with total quantity
   useEffect(() => {
     if (formData.return_type === 'sales_return') {
-      const total = formData.condition_breakdown.good + 
-                   formData.condition_breakdown.fair + 
-                   formData.condition_breakdown.damaged;
+      const total = formData.condition_breakdown.good.quantity + 
+                   formData.condition_breakdown.fair.quantity + 
+                   formData.condition_breakdown.damaged.quantity;
       
       if (total !== formData.quantity && total === 0 && formData.quantity > 0) {
         // Initialize with all good condition
         setFormData(prev => ({
           ...prev,
           condition_breakdown: {
-            good: formData.quantity,
-            fair: 0,
-            damaged: 0
+            good: { quantity: formData.quantity, action: 'restock' },
+            fair: { quantity: 0, action: 'return_to_supplier' },
+            damaged: { quantity: 0, action: 'write_off' }
           }
         }));
       }
@@ -61,9 +60,16 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       let calculatedImpact = 0;
 
       if (formData.return_type === 'sales_return') {
-        const goodValue = formData.condition_breakdown.good * selectedProduct.selling_price;
-        const fairValue = formData.condition_breakdown.fair * selectedProduct.selling_price * 0.7;
-        const damagedValue = formData.condition_breakdown.damaged * selectedProduct.selling_price * 0.3;
+        const { good, fair, damaged } = formData.condition_breakdown;
+        
+        // Calculate based on action for each condition
+        const goodValue = good.action === 'restock' ? good.quantity * selectedProduct.selling_price : 
+                         good.action === 'return_to_supplier' ? good.quantity * selectedProduct.purchase_price * 0.8 : 0;
+        const fairValue = fair.action === 'restock' ? fair.quantity * selectedProduct.selling_price * 0.7 :
+                         fair.action === 'return_to_supplier' ? fair.quantity * selectedProduct.purchase_price * 0.5 : 0;
+        const damagedValue = damaged.action === 'write_off' ? 0 : 
+                            damaged.action === 'return_to_supplier' ? damaged.quantity * selectedProduct.purchase_price * 0.2 : 0;
+        
         calculatedImpact = goodValue + fairValue + damagedValue - (formData.restocking_fee || 0);
       } else {
         calculatedImpact = selectedProduct.purchase_price * formData.quantity - (formData.restocking_fee || 0);
@@ -75,48 +81,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       }));
     }
   }, [selectedProduct, formData.condition_breakdown, formData.quantity, formData.return_type, formData.restocking_fee, isManualFinancialImpact]);
-
-  // Auto-determine action based on product condition breakdown
-  useEffect(() => {
-    if (formData.return_type === 'sales_return') {
-      const { good, fair, damaged } = formData.condition_breakdown;
-      const total = good + fair + damaged;
-      
-      if (total === 0) return;
-
-      let suggestedAction = 'restock';
-      
-      // If ALL products are good → Restock
-      if (good === total && fair === 0 && damaged === 0) {
-        suggestedAction = 'restock';
-      }
-      // If ALL products are damaged → Write-off
-      else if (damaged === total && good === 0 && fair === 0) {
-        suggestedAction = 'write_off';
-      }
-      // If has fair/minor issues (majority or significant) → Return to supplier
-      else if (fair > 0 && fair >= good) {
-        suggestedAction = 'return_to_supplier';
-      }
-      // If majority is damaged → Write-off
-      else if (damaged > good && damaged > fair) {
-        suggestedAction = 'write_off';
-      }
-      // If majority is good → Restock
-      else if (good > fair && good > damaged) {
-        suggestedAction = 'restock';
-      }
-      // Mixed with fair items → Return to supplier for inspection
-      else if (fair > 0) {
-        suggestedAction = 'return_to_supplier';
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        action: suggestedAction
-      }));
-    }
-  }, [formData.condition_breakdown, formData.return_type]);
 
   // Load initial data for editing
   useEffect(() => {
@@ -165,9 +129,9 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     }
 
     if (formData.return_type === 'sales_return') {
-      const total = formData.condition_breakdown.good + 
-                   formData.condition_breakdown.fair + 
-                   formData.condition_breakdown.damaged;
+      const total = formData.condition_breakdown.good.quantity + 
+                   formData.condition_breakdown.fair.quantity + 
+                   formData.condition_breakdown.damaged.quantity;
       
       if (total !== formData.quantity) {
         toast.error(`Condition breakdown (${total}) must equal total quantity (${formData.quantity})`);
@@ -257,9 +221,9 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                 ...prev,
                 quantity: qty,
                 condition_breakdown: {
-                  good: qty,
-                  fair: 0,
-                  damaged: 0
+                  good: { quantity: qty, action: 'restock' },
+                  fair: { quantity: 0, action: 'return_to_supplier' },
+                  damaged: { quantity: 0, action: 'write_off' }
                 }
               }));
             }}
@@ -340,107 +304,230 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
             <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  📦 Product Condition Breakdown
-                  <Badge variant="outline">
-                    Total: {formData.condition_breakdown.good + formData.condition_breakdown.fair + formData.condition_breakdown.damaged} / {formData.quantity}
+                  📦 Product Condition & Action Breakdown
+                  <Badge variant="outline" className={
+                    (formData.condition_breakdown.good.quantity + formData.condition_breakdown.fair.quantity + formData.condition_breakdown.damaged.quantity) === formData.quantity
+                      ? 'bg-green-100 text-green-800 border-green-300'
+                      : 'bg-red-100 text-red-800 border-red-300'
+                  }>
+                    Total: {formData.condition_breakdown.good.quantity + formData.condition_breakdown.fair.quantity + formData.condition_breakdown.damaged.quantity} / {formData.quantity}
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2 p-3 bg-white rounded-lg border-2 border-green-300">
-                    <Label className="flex items-center gap-2 text-green-700 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                      Good Product
-                    </Label>
+                  {/* Good Product */}
+                  <div className="space-y-3 p-4 bg-white rounded-xl border-2 border-green-300 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2 text-green-700 font-semibold">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        Good Product
+                      </Label>
+                      <Badge className="bg-green-100 text-green-800 text-xs">100% value</Badge>
+                    </div>
                     <Input
                       type="number"
                       min="0"
                       max={formData.quantity}
-                      value={formData.condition_breakdown.good}
+                      value={formData.condition_breakdown.good.quantity}
                       onChange={(e) => setFormData({
                         ...formData,
                         condition_breakdown: {
                           ...formData.condition_breakdown,
-                          good: parseInt(e.target.value) || 0
+                          good: { ...formData.condition_breakdown.good, quantity: parseInt(e.target.value) || 0 }
                         }
                       })}
-                      className="border-green-400 text-center font-bold"
+                      className="border-green-400 text-center font-bold text-lg h-12"
                     />
-                    <p className="text-xs text-green-700">100% recovery value</p>
-                    {selectedProduct && formData.condition_breakdown.good > 0 && (
-                      <p className="text-xs font-semibold text-green-800">
-                        ৳{(formData.condition_breakdown.good * selectedProduct.selling_price).toLocaleString()}
+                    <Select 
+                      value={formData.condition_breakdown.good.action} 
+                      onValueChange={(value) => setFormData({
+                        ...formData,
+                        condition_breakdown: {
+                          ...formData.condition_breakdown,
+                          good: { ...formData.condition_breakdown.good, action: value }
+                        }
+                      })}
+                    >
+                      <SelectTrigger className="border-green-300 bg-green-50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="restock">
+                          <span className="flex items-center gap-2">
+                            <CheckCircle className="w-3 h-3 text-green-600" /> Restock
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="return_to_supplier">
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="w-3 h-3 text-orange-600" /> Return to Supplier
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedProduct && formData.condition_breakdown.good.quantity > 0 && (
+                      <p className="text-xs font-semibold text-green-800 text-center">
+                        ৳{(formData.condition_breakdown.good.quantity * selectedProduct.selling_price).toLocaleString()}
                       </p>
                     )}
                   </div>
 
-                  <div className="space-y-2 p-3 bg-white rounded-lg border-2 border-orange-300">
-                    <Label className="flex items-center gap-2 text-orange-700 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                      Fair (Minor Issues)
-                    </Label>
+                  {/* Fair Product */}
+                  <div className="space-y-3 p-4 bg-white rounded-xl border-2 border-orange-300 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2 text-orange-700 font-semibold">
+                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                        Fair (Minor Issues)
+                      </Label>
+                      <Badge className="bg-orange-100 text-orange-800 text-xs">70% value</Badge>
+                    </div>
                     <Input
                       type="number"
                       min="0"
                       max={formData.quantity}
-                      value={formData.condition_breakdown.fair}
+                      value={formData.condition_breakdown.fair.quantity}
                       onChange={(e) => setFormData({
                         ...formData,
                         condition_breakdown: {
                           ...formData.condition_breakdown,
-                          fair: parseInt(e.target.value) || 0
+                          fair: { ...formData.condition_breakdown.fair, quantity: parseInt(e.target.value) || 0 }
                         }
                       })}
-                      className="border-orange-400 text-center font-bold"
+                      className="border-orange-400 text-center font-bold text-lg h-12"
                     />
-                    <p className="text-xs text-orange-700">70% recovery value</p>
-                    {selectedProduct && formData.condition_breakdown.fair > 0 && (
-                      <p className="text-xs font-semibold text-orange-800">
-                        ৳{(formData.condition_breakdown.fair * selectedProduct.selling_price * 0.7).toLocaleString()}
+                    <Select 
+                      value={formData.condition_breakdown.fair.action} 
+                      onValueChange={(value) => setFormData({
+                        ...formData,
+                        condition_breakdown: {
+                          ...formData.condition_breakdown,
+                          fair: { ...formData.condition_breakdown.fair, action: value }
+                        }
+                      })}
+                    >
+                      <SelectTrigger className="border-orange-300 bg-orange-50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="restock">
+                          <span className="flex items-center gap-2">
+                            <CheckCircle className="w-3 h-3 text-green-600" /> Restock (Repair)
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="return_to_supplier">
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="w-3 h-3 text-orange-600" /> Return to Supplier
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="write_off">
+                          <span className="flex items-center gap-2">
+                            <XCircle className="w-3 h-3 text-red-600" /> Write-off
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedProduct && formData.condition_breakdown.fair.quantity > 0 && (
+                      <p className="text-xs font-semibold text-orange-800 text-center">
+                        ৳{(formData.condition_breakdown.fair.quantity * selectedProduct.selling_price * 0.7).toLocaleString()}
                       </p>
                     )}
                   </div>
 
-                  <div className="space-y-2 p-3 bg-white rounded-lg border-2 border-red-300">
-                    <Label className="flex items-center gap-2 text-red-700 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                      Damaged Product
-                    </Label>
+                  {/* Damaged Product */}
+                  <div className="space-y-3 p-4 bg-white rounded-xl border-2 border-red-300 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2 text-red-700 font-semibold">
+                        <XCircle className="w-4 h-4 text-red-600" />
+                        Damaged Product
+                      </Label>
+                      <Badge className="bg-red-100 text-red-800 text-xs">30% value</Badge>
+                    </div>
                     <Input
                       type="number"
                       min="0"
                       max={formData.quantity}
-                      value={formData.condition_breakdown.damaged}
+                      value={formData.condition_breakdown.damaged.quantity}
                       onChange={(e) => setFormData({
                         ...formData,
                         condition_breakdown: {
                           ...formData.condition_breakdown,
-                          damaged: parseInt(e.target.value) || 0
+                          damaged: { ...formData.condition_breakdown.damaged, quantity: parseInt(e.target.value) || 0 }
                         }
                       })}
-                      className="border-red-400 text-center font-bold"
+                      className="border-red-400 text-center font-bold text-lg h-12"
                     />
-                    <p className="text-xs text-red-700">30% recovery value</p>
-                    {selectedProduct && formData.condition_breakdown.damaged > 0 && (
-                      <p className="text-xs font-semibold text-red-800">
-                        ৳{(formData.condition_breakdown.damaged * selectedProduct.selling_price * 0.3).toLocaleString()}
+                    <Select 
+                      value={formData.condition_breakdown.damaged.action} 
+                      onValueChange={(value) => setFormData({
+                        ...formData,
+                        condition_breakdown: {
+                          ...formData.condition_breakdown,
+                          damaged: { ...formData.condition_breakdown.damaged, action: value }
+                        }
+                      })}
+                    >
+                      <SelectTrigger className="border-red-300 bg-red-50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="write_off">
+                          <span className="flex items-center gap-2">
+                            <XCircle className="w-3 h-3 text-red-600" /> Write-off (Loss)
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="return_to_supplier">
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="w-3 h-3 text-orange-600" /> Return to Supplier
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedProduct && formData.condition_breakdown.damaged.quantity > 0 && (
+                      <p className="text-xs font-semibold text-red-800 text-center">
+                        ৳{(formData.condition_breakdown.damaged.quantity * selectedProduct.selling_price * 0.3).toLocaleString()}
                       </p>
                     )}
                   </div>
                 </div>
 
+                {/* Summary */}
                 {selectedProduct && (
-                  <div className="p-3 bg-white rounded-lg border-2 border-violet-300">
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm font-semibold text-violet-800">Total Estimated Recovery:</p>
-                      <p className="text-xl font-bold text-violet-900">
-                        ৳{(
-                          formData.condition_breakdown.good * selectedProduct.selling_price +
-                          formData.condition_breakdown.fair * selectedProduct.selling_price * 0.7 +
-                          formData.condition_breakdown.damaged * selectedProduct.selling_price * 0.3
-                        ).toLocaleString()}
-                      </p>
+                  <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border-2 border-violet-300">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="text-center">
+                        <p className="text-violet-600 font-medium">Total Items</p>
+                        <p className="text-2xl font-bold text-violet-900">{formData.quantity}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-violet-600 font-medium">Actions Summary</p>
+                        <div className="flex justify-center gap-2 mt-1 flex-wrap">
+                          {formData.condition_breakdown.good.quantity > 0 && (
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              {formData.condition_breakdown.good.quantity} {formData.condition_breakdown.good.action === 'restock' ? 'Restock' : 'Return'}
+                            </Badge>
+                          )}
+                          {formData.condition_breakdown.fair.quantity > 0 && (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">
+                              {formData.condition_breakdown.fair.quantity} {formData.condition_breakdown.fair.action === 'restock' ? 'Repair' : formData.condition_breakdown.fair.action === 'return_to_supplier' ? 'Return' : 'Write-off'}
+                            </Badge>
+                          )}
+                          {formData.condition_breakdown.damaged.quantity > 0 && (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              {formData.condition_breakdown.damaged.quantity} {formData.condition_breakdown.damaged.action === 'write_off' ? 'Write-off' : 'Return'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-violet-600 font-medium">Est. Recovery Value</p>
+                        <p className="text-2xl font-bold text-violet-900">
+                          ৳{(
+                            formData.condition_breakdown.good.quantity * selectedProduct.selling_price +
+                            formData.condition_breakdown.fair.quantity * selectedProduct.selling_price * 0.7 +
+                            formData.condition_breakdown.damaged.quantity * selectedProduct.selling_price * 0.3
+                          ).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -449,52 +536,44 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
           </div>
         )}
 
-        <div>
-          <Label className="flex items-center gap-2">
-            Action
-            {formData.return_type === 'sales_return' && (
-              <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-300">
-                Auto-suggested
-              </Badge>
-            )}
-          </Label>
-          <Select value={formData.action} onValueChange={(value) => setFormData({...formData, action: value})}>
-            <SelectTrigger className={
-              formData.action === 'restock' ? 'border-green-400 bg-green-50' :
-              formData.action === 'return_to_supplier' ? 'border-orange-400 bg-orange-50' :
-              formData.action === 'write_off' ? 'border-red-400 bg-red-50' : ''
-            }>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="restock">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Restock (Add back to inventory)
-                </div>
-              </SelectItem>
-              <SelectItem value="return_to_supplier">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-orange-600" />
-                  Return to Supplier
-                </div>
-              </SelectItem>
-              <SelectItem value="write_off">
-                <div className="flex items-center gap-2">
-                  <XCircle className="w-4 h-4 text-red-600" />
-                  Write-off (Total Loss)
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          {formData.return_type === 'sales_return' && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {formData.action === 'restock' && '✓ Good products will be added back to inventory'}
-              {formData.action === 'return_to_supplier' && '⚠ Fair/minor issue products - consider supplier return or repair'}
-              {formData.action === 'write_off' && '✗ Damaged products will be written off as loss'}
-            </p>
-          )}
-        </div>
+        {/* Only show single Action field for non-sales returns or damage reports */}
+        {(formData.return_type !== 'sales_return' || type !== 'return') && (
+          <div>
+            <Label className="flex items-center gap-2">Action</Label>
+            <Select value={formData.condition_breakdown.good.action} onValueChange={(value) => setFormData({
+              ...formData,
+              condition_breakdown: {
+                good: { ...formData.condition_breakdown.good, action: value },
+                fair: { ...formData.condition_breakdown.fair, action: value },
+                damaged: { ...formData.condition_breakdown.damaged, action: value }
+              }
+            })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="restock">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    Restock (Add back to inventory)
+                  </div>
+                </SelectItem>
+                <SelectItem value="return_to_supplier">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-orange-600" />
+                    Return to Supplier
+                  </div>
+                </SelectItem>
+                <SelectItem value="write_off">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-red-600" />
+                    Write-off (Total Loss)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div>
           <Label>Incident Date *</Label>
@@ -547,7 +626,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
           )}
         </div>
 
-        {type === 'return' && formData.action === 'restock' && (
+        {type === 'return' && (formData.condition_breakdown.good.action === 'restock' || formData.condition_breakdown.fair.action === 'restock') && (
           <div>
             <Label>Restocking Fee (৳)</Label>
             <Input
