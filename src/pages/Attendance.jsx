@@ -135,8 +135,16 @@ const LocationStatus = React.memo(({ currentLocation, isLocationLoading, onRefre
   const status = getLocationStatus;
 
   return (
-    <Card className="premium-card">
-      <CardContent className="p-4 sm:p-6">
+    <Card className="bg-white border border-slate-200 shadow-md">
+      <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50 pb-4">
+        <CardTitle className="flex items-center gap-3 text-lg text-slate-900">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center">
+            <Navigation className="w-5 h-5 text-white" />
+          </div>
+          GPS Location
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             {getLocationIcon}
