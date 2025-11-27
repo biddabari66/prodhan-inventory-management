@@ -450,17 +450,50 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         )}
 
         <div>
-          <Label>Action</Label>
+          <Label className="flex items-center gap-2">
+            Action
+            {formData.return_type === 'sales_return' && (
+              <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-300">
+                Auto-suggested
+              </Badge>
+            )}
+          </Label>
           <Select value={formData.action} onValueChange={(value) => setFormData({...formData, action: value})}>
-            <SelectTrigger>
+            <SelectTrigger className={
+              formData.action === 'restock' ? 'border-green-400 bg-green-50' :
+              formData.action === 'return_to_supplier' ? 'border-orange-400 bg-orange-50' :
+              formData.action === 'write_off' ? 'border-red-400 bg-red-50' : ''
+            }>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="restock">Restock (Add back to inventory)</SelectItem>
-              <SelectItem value="return_to_supplier">Return to Supplier</SelectItem>
-              <SelectItem value="write_off">Write-off (Total Loss)</SelectItem>
+              <SelectItem value="restock">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  Restock (Add back to inventory)
+                </div>
+              </SelectItem>
+              <SelectItem value="return_to_supplier">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-orange-600" />
+                  Return to Supplier
+                </div>
+              </SelectItem>
+              <SelectItem value="write_off">
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-red-600" />
+                  Write-off (Total Loss)
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
+          {formData.return_type === 'sales_return' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {formData.action === 'restock' && '✓ Good products will be added back to inventory'}
+              {formData.action === 'return_to_supplier' && '⚠ Fair/minor issue products - consider supplier return or repair'}
+              {formData.action === 'write_off' && '✗ Damaged products will be written off as loss'}
+            </p>
+          )}
         </div>
 
         <div>
