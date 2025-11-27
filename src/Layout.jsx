@@ -16,12 +16,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuTrigger } from
+"@/components/ui/dropdown-menu";
 import {
   Dialog,
-  DialogContent
-} from "@/components/ui/dialog";
+  DialogContent } from
+"@/components/ui/dialog";
 import {
   LayoutDashboard,
   Users,
@@ -73,8 +73,8 @@ import {
   ChevronRight,
   ShoppingCart,
   RotateCcw,
-  PackageX
-} from "lucide-react";
+  PackageX } from
+"lucide-react";
 import { toast, Toaster } from "sonner";
 import { AuditLog } from "@/entities/AuditLog";
 import UserProfile from "../components/user/UserProfile";
@@ -199,30 +199,30 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
           <Link
             to={module.url}
             className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
-              isActive(module.url) 
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
-                : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
+            isActive(module.url) ?
+            'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
+            'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
+            }>
+
             <module.icon className={`w-5 h-5 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
           </Link>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-[100] shadow-lg">
             {module.label}
             <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-slate-900 dark:border-r-slate-700"></div>
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     return (
       <div className="relative group">
         <button
           className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
-            isModuleActive() 
-              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
-              : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
-          }`}
-        >
+          isModuleActive() ?
+          'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
+          'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
+          }>
+
           <module.icon className={`w-5 h-5 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
         </button>
         <div className="absolute left-full ml-3 top-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
@@ -230,24 +230,24 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
             <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">{module.label}</span>
           </div>
           <div className="py-1">
-            {module.subItems?.map((subItem, index) => (
-              <Link
-                key={index}
-                to={subItem.url}
-                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                  isActive(subItem.url)
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
+            {module.subItems?.map((subItem, index) =>
+            <Link
+              key={index}
+              to={subItem.url}
+              className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+              isActive(subItem.url) ?
+              'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' :
+              'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'}`
+              }>
+
                 <subItem.icon className={`w-4 h-4 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
                 <span>{subItem.label}</span>
               </Link>
-            ))}
+            )}
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   // Expanded sidebar - full view
@@ -256,13 +256,13 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
       <Link
         to={module.url}
         className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
-        } ${isActive(module.url) ? 'active' : ''}`}
-      >
+        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
+        isActive(module.url) ? 'active' : ''}`}>
+
         <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
         <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-      </Link>
-    );
+      </Link>);
+
   }
 
   return (
@@ -270,9 +270,9 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
-        } ${isModuleActive() ? 'active' : ''}`}
-      >
+        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
+        isModuleActive() ? 'active' : ''}`}>
+
         <div className="flex items-center gap-3">
           <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
           <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
@@ -280,27 +280,27 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
         <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
       </button>
 
-      {isExpanded && module.subItems && (
-        <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
-          {module.subItems.map((subItem, index) => (
-            <Link
-              key={index}
-              to={subItem.url}
-              className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'
-              } ${isActive(subItem.url) 
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' 
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-              }`}
-            >
+      {isExpanded && module.subItems &&
+      <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
+          {module.subItems.map((subItem, index) =>
+        <Link
+          key={index}
+          to={subItem.url}
+          className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+          isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'} ${
+          isActive(subItem.url) ?
+          'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' :
+          'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'}`
+          }>
+
               <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
               <span>{subItem.label}</span>
             </Link>
-          ))}
+        )}
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default function Layout({ children, currentPageName }) {
@@ -314,7 +314,7 @@ export default function Layout({ children, currentPageName }) {
   const [theme, setTheme] = useState('light');
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const isAuthPage = location.pathname === '/';
-  
+
   const { prefetchForRoute } = usePrefetchOnHover();
 
   // Set favicon dynamically
@@ -333,7 +333,7 @@ export default function Layout({ children, currentPageName }) {
     registerServiceWorker().then((registration) => {
       if (registration) {
         console.log('⚡ PWA enabled - Lightning-fast loading activated!');
-        
+
         // Update service worker when new version available
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
@@ -350,15 +350,15 @@ export default function Layout({ children, currentPageName }) {
           });
         });
       }
-    }).catch(error => {
+    }).catch((error) => {
       console.warn('Service Worker registration failed:', error);
     });
 
     // Preload critical fonts
     const fontLinks = [
-      'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap'
-    ];
-    fontLinks.forEach(href => {
+    'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap'];
+
+    fontLinks.forEach((href) => {
       const link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'style';
@@ -449,32 +449,32 @@ export default function Layout({ children, currentPageName }) {
 
   const loadCurrentUser = useCallback(async () => {
     setError(null);
-    
+
     // OPTIMIZATION: Try to use cached user data first for instant display
     const cachedUser = localStorage.getItem('cached_user_data');
     const cachedPermissions = localStorage.getItem('cached_user_permissions');
-    
+
     if (cachedUser) {
       try {
         const parsedUser = JSON.parse(cachedUser);
         const parsedPermissions = cachedPermissions ? JSON.parse(cachedPermissions) : {};
-        
+
         // Show cached data immediately (stale-while-revalidate pattern)
         setCurrentUser(parsedUser);
         setUserPermissions(parsedPermissions);
         setIsLoading(false); // Stop loading immediately with cached data
-        
+
         console.log('⚡ Instant load from cache:', parsedUser?.full_name);
       } catch (e) {
         console.warn('Cache parse error, falling back to server');
       }
     }
-    
+
     // Still loading if no cache
     if (!cachedUser) {
       setIsLoading(true);
     }
-    
+
     try {
       console.log('🔄 Fetching fresh user data from server...');
 
@@ -506,7 +506,7 @@ export default function Layout({ children, currentPageName }) {
 
       // Update state with fresh data
       setCurrentUser(user);
-      
+
       // Cache user data for next visit
       localStorage.setItem('cached_user_data', JSON.stringify(user));
 
@@ -685,134 +685,134 @@ export default function Layout({ children, currentPageName }) {
   // OPTIMIZED: Memoize expensive functions
   const getNavigationModules = useCallback(() => {
     const isMobile = window.innerWidth < 1024;
-    
+
     const baseModules = [
-      {
-        id: 'dashboard',
-        label: t('Dashboard'),
-        icon: LayoutDashboard,
-        url: createPageUrl('Dashboard'),
-        isExpandable: false,
-        colorClass: 'text-violet-500'
-      },
-      {
-        id: 'crm',
-        label: t('CRM & Leads'),
-        icon: Target,
-        isExpandable: true,
-        subItems: [
-          { label: t(isMobile ? 'Lead Management' : 'Lead Management'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-pink-500', permission: 'crm' },
-          { label: t(isMobile ? 'Lead Database' : 'Lead Database'), url: createPageUrl('LeadDatabase'), icon: Calendar, colorClass: 'text-pink-500', permission: 'crm' },
-          { label: t('Follow Up'), url: createPageUrl('FollowUp'), icon: UserCheck, colorClass: 'text-pink-500', permission: 'followup' },
-          { label: t('WhatsApp'), url: createPageUrl('WhatsApp'), icon: MessageSquare, colorClass: 'text-pink-500', permission: 'whatsapp' }
-        ],
-        colorClass: 'text-pink-500'
-      },
-      {
-        id: 'admissions',
-        label: t('Admissions'),
-        icon: UserCheck,
-        url: createPageUrl('Admissions'),
-        isExpandable: false,
-        colorClass: 'text-blue-500'
-      },
-      {
-        id: 'students',
-        label: t('Students'),
-        icon: Users,
-        url: createPageUrl('Students'),
-        isExpandable: false,
-        colorClass: 'text-green-500'
-      },
-      {
-        id: 'finance',
-        label: t('Finance'),
-        icon: DollarSign,
-        isExpandable: true,
-        subItems: [
-          { label: t('Income'), url: createPageUrl('Income'), icon: TrendingUp, colorClass: 'text-emerald-500', permission: 'income' },
-          { label: t('Expenses'), url: createPageUrl('Expenses'), icon: TrendingDown, colorClass: 'text-emerald-500', permission: 'expenses' },
-          { label: t('Incentives'), url: createPageUrl('Incentives'), icon: Award, colorClass: 'text-emerald-500', permission: 'incentives' },
-          { label: t(isMobile ? 'Budgeting' : 'Budgeting'), url: createPageUrl('Budget'), icon: Calculator, colorClass: 'text-emerald-500', permission: 'budget' },
-          { label: t(isMobile ? 'Payroll Report' : 'Payroll Report'), url: createPageUrl('PayrollReport'), icon: FileSignature, colorClass: 'text-emerald-500', permission: 'finance' },
-          { label: t(isMobile ? 'Finance Reports' : 'Finance Reports'), url: createPageUrl('FinanceReports'), icon: BarChart3, colorClass: 'text-emerald-500', permission: 'finance' }
-        ],
-        colorClass: 'text-emerald-500'
-      },
-      {
-        id: 'hr',
-        label: t(isMobile ? 'Human Resources' : 'Human Resources'),
-        icon: Building2,
-        isExpandable: true,
-        subItems: [
-          { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-blue-400', permission: 'employees' },
-          { label: t('Attendance'), url: createPageUrl('Attendance'), icon: Clock, colorClass: 'text-blue-400', permission: 'attendance' },
-          { label: t(isMobile ? 'My Attendance' : 'My Attendance'), url: createPageUrl('AttendanceMy'), icon: UserIcon, colorClass: 'text-blue-400', permission: 'attendance' },
-          { label: t(isMobile ? 'Performance Hub' : 'Performance Hub'), url: createPageUrl('performance-hub'), icon: Briefcase, colorClass: 'text-blue-400', permission: 'performance' },
-          { label: t(isMobile ? 'Manual Reporting' : 'Manual Reporting'), url: createPageUrl('ManualReporting'), icon: FileSignature, colorClass: 'text-blue-400', permission: 'manual_reporting' },
-          { label: t(isMobile ? 'All Submitted Reports' : 'All Submitted Reports'), url: createPageUrl('SubmittedReports'), icon: FileText, colorClass: 'text-blue-400', permission: 'manual_reporting' },
-          { label: t(isMobile ? 'Send Email' : 'Send Email'), url: createPageUrl('SendEmail'), icon: Mail, colorClass: 'text-blue-400', permission: 'hr' }
-        ],
-        colorClass: 'text-blue-400'
-      },
-      {
-        id: 'inventory',
-        label: t('Inventory'),
-        icon: Warehouse,
-        isExpandable: true,
-        subItems: [
-          // Primary Operations - Most Used
-          { label: t('Overview'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory' },
-          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
-          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
-          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory' },
-          { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory' },
-          { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory' },
-          // Master Data
-          { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory' },
-          { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory' },
-          // Analytics & Insights
-          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'inventory' },
-          { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory' },
-          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory' }
-        ],
-        colorClass: 'text-orange-500'
-      },
-      {
-        id: 'courses',
-        label: t('Courses'),
-        icon: BookOpen,
-        url: createPageUrl('Courses'),
-        isExpandable: false,
-        colorClass: 'text-cyan-500'
-      },
-      {
-        id: 'reports',
-        label: t(isMobile ? 'Data & Insights' : 'Data & Insights'),
-        icon: BarChart3,
-        isExpandable: true,
-        subItems: [
-          { label: t('Report Builder'), url: createPageUrl('ReportBuilder'), icon: Layers, colorClass: 'text-indigo-500', permission: 'reports' },
-          { label: t('Scheduled Reports'), url: createPageUrl('ScheduledReports'), icon: Clock, colorClass: 'text-violet-500', permission: 'reports' },
-          { label: t('Document Center'), url: createPageUrl('DocumentCenter'), icon: FileText, colorClass: 'text-amber-500', permission: 'reports' },
-          { label: t('Analytics'), url: createPageUrl('Reports'), icon: BarChart3, colorClass: 'text-indigo-500', permission: 'reports' }
-        ],
-        colorClass: 'text-indigo-500'
-      },
-      {
-        id: 'settings',
-        label: t(isMobile ? 'System Settings' : 'System Settings'),
-        icon: Settings,
-        isExpandable: true,
-        colorClass: 'text-gray-500',
-        subItems: [
-          { label: t(isMobile ? 'User Access Manager' : 'User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t(isMobile ? 'System Alerts' : 'System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t(isMobile ? 'Audit Trail' : 'Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }
-        ]
-      }
-    ];
+    {
+      id: 'dashboard',
+      label: t('Dashboard'),
+      icon: LayoutDashboard,
+      url: createPageUrl('Dashboard'),
+      isExpandable: false,
+      colorClass: 'text-violet-500'
+    },
+    {
+      id: 'crm',
+      label: t('CRM & Leads'),
+      icon: Target,
+      isExpandable: true,
+      subItems: [
+      { label: t(isMobile ? 'Lead Management' : 'Lead Management'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-pink-500', permission: 'crm' },
+      { label: t(isMobile ? 'Lead Database' : 'Lead Database'), url: createPageUrl('LeadDatabase'), icon: Calendar, colorClass: 'text-pink-500', permission: 'crm' },
+      { label: t('Follow Up'), url: createPageUrl('FollowUp'), icon: UserCheck, colorClass: 'text-pink-500', permission: 'followup' },
+      { label: t('WhatsApp'), url: createPageUrl('WhatsApp'), icon: MessageSquare, colorClass: 'text-pink-500', permission: 'whatsapp' }],
+
+      colorClass: 'text-pink-500'
+    },
+    {
+      id: 'admissions',
+      label: t('Admissions'),
+      icon: UserCheck,
+      url: createPageUrl('Admissions'),
+      isExpandable: false,
+      colorClass: 'text-blue-500'
+    },
+    {
+      id: 'students',
+      label: t('Students'),
+      icon: Users,
+      url: createPageUrl('Students'),
+      isExpandable: false,
+      colorClass: 'text-green-500'
+    },
+    {
+      id: 'finance',
+      label: t('Finance'),
+      icon: DollarSign,
+      isExpandable: true,
+      subItems: [
+      { label: t('Income'), url: createPageUrl('Income'), icon: TrendingUp, colorClass: 'text-emerald-500', permission: 'income' },
+      { label: t('Expenses'), url: createPageUrl('Expenses'), icon: TrendingDown, colorClass: 'text-emerald-500', permission: 'expenses' },
+      { label: t('Incentives'), url: createPageUrl('Incentives'), icon: Award, colorClass: 'text-emerald-500', permission: 'incentives' },
+      { label: t(isMobile ? 'Budgeting' : 'Budgeting'), url: createPageUrl('Budget'), icon: Calculator, colorClass: 'text-emerald-500', permission: 'budget' },
+      { label: t(isMobile ? 'Payroll Report' : 'Payroll Report'), url: createPageUrl('PayrollReport'), icon: FileSignature, colorClass: 'text-emerald-500', permission: 'finance' },
+      { label: t(isMobile ? 'Finance Reports' : 'Finance Reports'), url: createPageUrl('FinanceReports'), icon: BarChart3, colorClass: 'text-emerald-500', permission: 'finance' }],
+
+      colorClass: 'text-emerald-500'
+    },
+    {
+      id: 'hr',
+      label: t(isMobile ? 'Human Resources' : 'Human Resources'),
+      icon: Building2,
+      isExpandable: true,
+      subItems: [
+      { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-blue-400', permission: 'employees' },
+      { label: t('Attendance'), url: createPageUrl('Attendance'), icon: Clock, colorClass: 'text-blue-400', permission: 'attendance' },
+      { label: t(isMobile ? 'My Attendance' : 'My Attendance'), url: createPageUrl('AttendanceMy'), icon: UserIcon, colorClass: 'text-blue-400', permission: 'attendance' },
+      { label: t(isMobile ? 'Performance Hub' : 'Performance Hub'), url: createPageUrl('performance-hub'), icon: Briefcase, colorClass: 'text-blue-400', permission: 'performance' },
+      { label: t(isMobile ? 'Manual Reporting' : 'Manual Reporting'), url: createPageUrl('ManualReporting'), icon: FileSignature, colorClass: 'text-blue-400', permission: 'manual_reporting' },
+      { label: t(isMobile ? 'All Submitted Reports' : 'All Submitted Reports'), url: createPageUrl('SubmittedReports'), icon: FileText, colorClass: 'text-blue-400', permission: 'manual_reporting' },
+      { label: t(isMobile ? 'Send Email' : 'Send Email'), url: createPageUrl('SendEmail'), icon: Mail, colorClass: 'text-blue-400', permission: 'hr' }],
+
+      colorClass: 'text-blue-400'
+    },
+    {
+      id: 'inventory',
+      label: t('Inventory'),
+      icon: Warehouse,
+      isExpandable: true,
+      subItems: [
+      // Primary Operations - Most Used
+      { label: t('Overview'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory' },
+      { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
+      { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
+      { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory' },
+      { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory' },
+      { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory' },
+      // Master Data
+      { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory' },
+      { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory' },
+      // Analytics & Insights
+      { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'inventory' },
+      { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory' },
+      { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory' }],
+
+      colorClass: 'text-orange-500'
+    },
+    {
+      id: 'courses',
+      label: t('Courses'),
+      icon: BookOpen,
+      url: createPageUrl('Courses'),
+      isExpandable: false,
+      colorClass: 'text-cyan-500'
+    },
+    {
+      id: 'reports',
+      label: t(isMobile ? 'Data & Insights' : 'Data & Insights'),
+      icon: BarChart3,
+      isExpandable: true,
+      subItems: [
+      { label: t('Report Builder'), url: createPageUrl('ReportBuilder'), icon: Layers, colorClass: 'text-indigo-500', permission: 'reports' },
+      { label: t('Scheduled Reports'), url: createPageUrl('ScheduledReports'), icon: Clock, colorClass: 'text-violet-500', permission: 'reports' },
+      { label: t('Document Center'), url: createPageUrl('DocumentCenter'), icon: FileText, colorClass: 'text-amber-500', permission: 'reports' },
+      { label: t('Analytics'), url: createPageUrl('Reports'), icon: BarChart3, colorClass: 'text-indigo-500', permission: 'reports' }],
+
+      colorClass: 'text-indigo-500'
+    },
+    {
+      id: 'settings',
+      label: t(isMobile ? 'System Settings' : 'System Settings'),
+      icon: Settings,
+      isExpandable: true,
+      colorClass: 'text-gray-500',
+      subItems: [
+      { label: t(isMobile ? 'User Access Manager' : 'User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
+      { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-gray-500', permission: 'settings' },
+      { label: t(isMobile ? 'System Alerts' : 'System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
+      { label: t(isMobile ? 'Audit Trail' : 'Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }]
+
+    }];
+
 
     return baseModules.filter((module) => {
       if (!module.isExpandable) {
@@ -838,14 +838,14 @@ export default function Layout({ children, currentPageName }) {
       return (
         <div className="w-screen h-screen flex items-center justify-center">
           <p className="text-muted-foreground">Checking session...</p>
-        </div>
-      );
+        </div>);
+
     }
     return (
       <SessionProvider>
         {children}
-      </SessionProvider>
-    );
+      </SessionProvider>);
+
   }
 
   // OPTIMIZED: Professional skeleton loading screen that mimics the actual layout
@@ -859,12 +859,12 @@ export default function Layout({ children, currentPageName }) {
             <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
           </div>
           <div className="flex-1 p-4 space-y-2">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
+            {[...Array(8)].map((_, i) =>
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
                 <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
                 <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
               </div>
-            ))}
+            )}
           </div>
         </aside>
         
@@ -896,12 +896,12 @@ export default function Layout({ children, currentPageName }) {
               
               {/* Stats cards skeleton */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                {[...Array(4)].map((_, i) =>
+                <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
                     <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-3" />
                     <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
                   </div>
-                ))}
+                )}
               </div>
               
               {/* Table skeleton */}
@@ -910,20 +910,20 @@ export default function Layout({ children, currentPageName }) {
                   <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
                 </div>
                 <div className="p-4 space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-4">
+                  {[...Array(5)].map((_, i) =>
+                  <div key={i} className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
                       <div className="flex-1 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
                       <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
           </main>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (error) {
@@ -933,19 +933,19 @@ export default function Layout({ children, currentPageName }) {
           <h1 className="text-xl sm:text-2xl font-bold mb-2">System Error</h1>
           <p className="text-sm sm:text-base">Please refresh the page and try again.</p>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   // ENHANCED NavItem with prefetching on hover
   const EnhancedNavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     const hoverProps = module.url ? prefetchForRoute(module.url) : {};
-    
+
     return (
       <div {...hoverProps}>
         <NavItem module={module} isMobile={isMobile} isCollapsed={isCollapsed} />
-      </div>
-    );
+      </div>);
+
   };
 
   return (
@@ -953,7 +953,7 @@ export default function Layout({ children, currentPageName }) {
       <SessionProvider>
         <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans overflow-hidden">
           <Toaster richColors position="top-center" toastOptions={{
-            className: 'sm:top-4 top-20',
+            className: 'sm:top-4 top-20'
           }} />
           
           <style>{`
@@ -1498,69 +1498,66 @@ export default function Layout({ children, currentPageName }) {
           `}</style>
 
           {/* Mobile Overlay */}
-          {isSidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black/60 z-40 lg:hidden animate-in fade-in duration-300"
-              onClick={() => setIsSidebarOpen(false)}
-              style={{ backdropFilter: 'blur(4px)' }}
-            />
-          )}
+          {isSidebarOpen &&
+          <div
+            className="fixed inset-0 bg-black/60 z-40 lg:hidden animate-in fade-in duration-300"
+            onClick={() => setIsSidebarOpen(false)}
+            style={{ backdropFilter: 'blur(4px)' }} />
+
+          }
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
           <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
             ${isSidebarOpen ? 'w-[240px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
             
             {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-20 px-4 border-b border-white/10 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-500 flex items-center justify-center shadow-xl shadow-black/30 border border-white/30">
-                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-9 h-9" />
+                <div className="bg-transparent rounded-2xl w-14 h-14 from-indigo-500 via-violet-500 to-purple-500 flex items-center justify-center shadow-xl shadow-black/30 border border-white/30">
+                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-6 h-6" />
                 </div>
-                {isSidebarOpen && (
-                  <div className="min-w-0">
-                    <span className="text-lg font-bold text-white whitespace-nowrap block truncate tracking-tight" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
+                {isSidebarOpen &&
+                <div className="min-w-0">
+                    <span className="text-lg font-bold text-white whitespace-nowrap block truncate drop-shadow-sm">
                       Bee ERP
                     </span>
-                    <span className="text-[10px] font-semibold text-white/80 uppercase tracking-[0.2em]">
-                      Enterprise
-                    </span>
                   </div>
-                )}
+                }
               </Link>
-              {isSidebarOpen && (
-                <Button 
-                  onClick={() => setIsSidebarOpen(false)} 
-                  variant="ghost" 
-                  size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/20 lg:hidden h-9 w-9 p-0 touch-manipulation rounded-lg"
-                >
+              {isSidebarOpen &&
+              <Button
+                onClick={() => setIsSidebarOpen(false)}
+                variant="ghost"
+                size="sm"
+                className="text-white/80 hover:text-white hover:bg-white/20 lg:hidden h-9 w-9 p-0 touch-manipulation rounded-lg">
+
                   <X className="w-5 h-5" />
                 </Button>
-              )}
+              }
               {/* Desktop collapse toggle */}
-              <Button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-                variant="ghost" 
+              <Button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                variant="ghost"
                 size="sm"
-                className="hidden lg:flex text-white/70 hover:text-white hover:bg-white/20 h-8 w-8 p-0 touch-manipulation rounded-lg"
-              >
+                className="hidden lg:flex text-white/70 hover:text-white hover:bg-white/20 h-8 w-8 p-0 touch-manipulation rounded-lg">
+
                 {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </Button>
-            </div>
+              </div>
 
             {/* Navigation Content */}
             <div className="flex-1 overflow-y-auto py-4 px-3">
               <nav className={`space-y-1 ${!isSidebarOpen ? 'flex flex-col items-center' : ''}`}>
-                {getNavigationModules().map((mod) => (
-                  <EnhancedNavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} isCollapsed={!isSidebarOpen} />
-                ))}
+                {getNavigationModules().map((mod) =>
+                <EnhancedNavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} isCollapsed={!isSidebarOpen} />
+                )}
               </nav>
             </div>
 
             {/* User Footer */}
             <div className={`border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
-              {isSidebarOpen ? (
-                <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
+              {isSidebarOpen ?
+              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
@@ -1574,11 +1571,11 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
+                      <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1595,9 +1592,9 @@ export default function Layout({ children, currentPageName }) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
-              ) : (
-                <div className="relative group">
+                </div> :
+
+              <div className="relative group">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
@@ -1606,23 +1603,23 @@ export default function Layout({ children, currentPageName }) {
                       <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{currentUser?.display_name || currentUser?.full_name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
                     </div>
-                    <button 
-                      onClick={() => setIsProfileOpen(true)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left"
-                    >
+                    <button
+                    onClick={() => setIsProfileOpen(true)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left">
+
                       <UserIcon className="w-4 h-4" />
                       <span>Profile</span>
                     </button>
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left"
-                    >
+                    <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left">
+
                       <LogOut className="w-4 h-4" />
                       <span>Log out</span>
                     </button>
                   </div>
                 </div>
-              )}
+              }
             </div>
           </aside>
 
@@ -1638,8 +1635,8 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors h-12 w-12 lg:h-10 lg:w-10 touch-manipulation"
-                >
+                  className="text-muted-foreground hover:text-foreground transition-colors h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
+
                   {isSidebarOpen && window.innerWidth < 1024 ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </Button>
                 
@@ -1647,8 +1644,8 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex-1 max-w-xs lg:max-w-md">
                   <UniversalSearch
                     entities={{ User, Lead, Admission, Expense, Income, Inventory }}
-                    className="w-full"
-                  />
+                    className="w-full" />
+
                 </div>
               </div>
 
@@ -1658,8 +1655,8 @@ export default function Layout({ children, currentPageName }) {
                   onClick={toggleTheme}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors relative h-12 w-12 lg:h-10 lg:w-10 touch-manipulation"
-                >
+                  className="text-muted-foreground hover:text-foreground transition-colors relative h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
+
                   <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                   <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                 </Button>
@@ -1671,16 +1668,16 @@ export default function Layout({ children, currentPageName }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="premium-card z-50">
-                    <DropdownMenuItem 
-                      onClick={() => changeLanguage('en')} 
-                      className={`cursor-pointer min-h-[48px] lg:min-h-[40px] ${currentLanguage === 'en' ? 'font-bold text-primary' : ''}`}
-                    >
+                    <DropdownMenuItem
+                      onClick={() => changeLanguage('en')}
+                      className={`cursor-pointer min-h-[48px] lg:min-h-[40px] ${currentLanguage === 'en' ? 'font-bold text-primary' : ''}`}>
+
                       English
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => changeLanguage('bn')} 
-                      className={`cursor-pointer min-h-[48px] lg:min-h-[40px] ${currentLanguage === 'bn' ? 'font-bold text-primary' : ''}`}
-                    >
+                    <DropdownMenuItem
+                      onClick={() => changeLanguage('bn')}
+                      className={`cursor-pointer min-h-[48px] lg:min-h-[40px] ${currentLanguage === 'bn' ? 'font-bold text-primary' : ''}`}>
+
                       বাংলা (Bengali)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1719,16 +1716,16 @@ export default function Layout({ children, currentPageName }) {
                     <DropdownMenuSeparator className="bg-white/10" />
                     <DropdownMenuItem
                       onClick={() => setIsProfileOpen(true)}
-                      className="text-muted-foreground hover:bg-violet-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation"
-                    >
+                      className="text-muted-foreground hover:bg-violet-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
+
                       <UserIcon className="mr-3 h-4 w-4" />
                       My Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
                         to={createPageUrl("Settings")}
-                        className="flex items-center w-full text-muted-foreground hover:bg-violet-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation"
-                      >
+                        className="flex items-center w-full text-muted-foreground hover:bg-violet-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
+
                         <Settings className="mr-3 h-4 w-4" />
                         Settings
                       </Link>
@@ -1736,8 +1733,8 @@ export default function Layout({ children, currentPageName }) {
                     <DropdownMenuSeparator className="bg-white/10" />
                     <DropdownMenuItem
                       onClick={handleLogout}
-                      className="text-red-500 hover:bg-red-500/10 hover:text-red-600 m-2 rounded-lg cursor-pointer transition-colors duration-200 min-h-[52px] lg:min-h-[48px] touch-manipulation"
-                    >
+                      className="text-red-500 hover:bg-red-500/10 hover:text-red-600 m-2 rounded-lg cursor-pointer transition-colors duration-200 min-h-[52px] lg:min-h-[48px] touch-manipulation">
+
                       <LogOut className="mr-3 h-4 w-4" />
                       <span className="font-medium">Sign Out</span>
                     </DropdownMenuItem>
@@ -1750,7 +1747,7 @@ export default function Layout({ children, currentPageName }) {
             <main className="main-content flex-1 overflow-y-auto p-6 lg:p-8">
               <ErrorBoundary>
                 <Suspense fallback={
-                  <div className="text-center p-20 text-muted-foreground">
+                <div className="text-center p-20 text-muted-foreground">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
                     <p>Loading page...</p>
                   </div>
@@ -1772,40 +1769,40 @@ export default function Layout({ children, currentPageName }) {
               <UserProfile
                 user={currentUser}
                 onUpdate={refreshUserData}
-                onClose={() => setIsProfileOpen(false)}
-              />
+                onClose={() => setIsProfileOpen(false)} />
+
             </DialogContent>
           </Dialog>
 
           {/* Smart Onboarding - Shows only once */}
-          {currentUser && !isAuthPage && (
-            <SmartOnboarding 
-              user={currentUser} 
-              onComplete={() => {
-                console.log('✅ Onboarding completed');
-                toast.success('🎉 Welcome! You\'re all set to explore the ERP!');
-              }}
-            />
-          )}
+          {currentUser && !isAuthPage &&
+          <SmartOnboarding
+            user={currentUser}
+            onComplete={() => {
+              console.log('✅ Onboarding completed');
+              toast.success('🎉 Welcome! You\'re all set to explore the ERP!');
+            }} />
+
+          }
 
           {/* AI Smart Help - Contextual assistance */}
-          {currentUser && !isAuthPage && currentPageName && (
-            <SmartHelp 
-              currentPage={`/${currentPageName}`}
-              currentLanguage={currentLanguage}
-            />
-          )}
+          {currentUser && !isAuthPage && currentPageName &&
+          <SmartHelp
+            currentPage={`/${currentPageName}`}
+            currentLanguage={currentLanguage} />
+
+          }
 
           {/* Chatbot - Enhanced positioning */}
-          <Chatbot 
-            currentUser={currentUser} 
-            currentPageName={currentPageName} 
-            currentLanguage={currentLanguage} 
-          />
+          <Chatbot
+            currentUser={currentUser}
+            currentPageName={currentPageName}
+            currentLanguage={currentLanguage} />
+
           {/* PWA Installer */}
           <PWAInstaller />
         </div>
       </SessionProvider>
-    </FastLoadingProvider>
-  );
+    </FastLoadingProvider>);
+
 }
