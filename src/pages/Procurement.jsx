@@ -1133,12 +1133,36 @@ function ProcurementPage() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState([]); // For bulk actions
 
-  // Fetch current user with caching
-  const { data: currentUser } = useCachedQuery(
-    ['currentUser'],
-    () => User.me(),
-    { cacheTTL: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 }
-  );
+  // Fetch all data with standard useQuery (avoid conditional hook issues)
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => User.me(),
+    staleTime: 5 * 60 * 1000
+  });
+
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => Order.list('-order_date', 500),
+    staleTime: 1 * 60 * 1000
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => Customer.list(),
+    staleTime: 5 * 60 * 1000
+  });
+
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => Inventory.list(),
+    staleTime: 2 * 60 * 1000
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => User.list(),
+    staleTime: 5 * 60 * 1000
+  });
 
   // CRITICAL: Department-based access control
   const canViewAllDepartments = useMemo(() => {
@@ -1146,55 +1170,22 @@ function ProcurementPage() {
   }, [currentUser]);
 
   const userDepartment = useMemo(() => {
-    if (!currentUser) return 'all'; // Default until user data loads
+    if (!currentUser) return 'all';
     if (canViewAllDepartments) return 'all';
     return currentUser?.department || 'all';
   }, [currentUser, canViewAllDepartments]);
 
-  // Initialize department filter based on user's access
   const [departmentFilter, setDepartmentFilter] = useState('all');
 
-  // Set initial department filter when user data loads
   useEffect(() => {
     if (currentUser && !canViewAllDepartments && departmentFilter !== userDepartment) {
       setDepartmentFilter(userDepartment);
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
 
-
-  // Check if user is admin (this is for revenue visibility, not department access)
   const isAdmin = useMemo(() => {
     return ['admin', 'manager'].includes(currentUser?.job_role?.toLowerCase());
   }, [currentUser]);
-
-
-  // Fetch orders with caching
-  const { data: orders = [], isLoading: ordersLoading } = useCachedQuery(
-    ['orders'],
-    () => Order.list('-order_date', 500),
-    { cacheTTL: 2 * 60 * 1000, staleTime: 1 * 60 * 1000 }
-  );
-
-  // Fetch customers with caching
-  const { data: customers = [] } = useCachedQuery(
-    ['customers'],
-    () => Customer.list(),
-    { cacheTTL: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 }
-  );
-
-  // Fetch inventory with caching
-  const { data: inventory = [] } = useCachedQuery(
-    ['inventory'],
-    () => Inventory.list(),
-    { cacheTTL: 3 * 60 * 1000, staleTime: 2 * 60 * 1000 }
-  );
-
-  // Fetch users with caching
-  const { data: users = [] } = useCachedQuery(
-    ['users'],
-    () => User.list(),
-    { cacheTTL: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 }
-  );
 
   // Create order mutation with automatic inventory movement recording
   const createOrderMutation = useMutation({
