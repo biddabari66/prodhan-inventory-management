@@ -56,30 +56,33 @@ function InventorySuppliersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <header>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+        {/* Premium Header Section */}
+        <div className="flex flex-col gap-6 pb-6 border-b border-slate-200">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Building2 className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Supplier Management</h1>
+              <p className="text-slate-600 mt-1 text-base">Centralized vendor management and procurement relationship tracking</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold font-display">Supplier Management</h1>
-            <p className="text-muted-foreground">Manage suppliers, vendors, and procurement relationships</p>
-          </div>
+
+          <Card className="bg-white border border-slate-200 shadow-sm">
+            <CardContent className="p-5">
+              <DepartmentFilter
+                currentUser={currentUser}
+                selectedDepartment={selectedDepartment}
+                onDepartmentChange={setSelectedDepartment}
+              />
+            </CardContent>
+          </Card>
         </div>
 
-        <Card className="premium-card">
-          <CardContent className="p-4">
-            <DepartmentFilter
-              currentUser={currentUser}
-              selectedDepartment={selectedDepartment}
-              onDepartmentChange={setSelectedDepartment}
-            />
-          </CardContent>
-        </Card>
-      </header>
-
-      <SupplierManagement selectedDepartment={selectedDepartment} />
+        <SupplierManagement selectedDepartment={selectedDepartment} />
+      </div>
     </div>
   );
 }

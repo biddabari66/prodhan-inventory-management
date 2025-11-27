@@ -252,36 +252,39 @@ function InventoryOverviewPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <header className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center">
-                <Package className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold font-display">Inventory Overview</h1>
-                {!canViewAllDepartments && (
-                  <Badge className="bg-orange-100 text-orange-800 flex items-center gap-1 mt-1">
-                    <Shield className="w-3 h-3" />
-                    {userDepartment === 'boibari' ? '📚 Boibari Only' : '🛒 Prodhan.com Only'}
-                  </Badge>
-                )}
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+        {/* Premium Header Section */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+              <Package className="w-8 h-8 text-white" />
             </div>
-            <p className="text-muted-foreground mt-1">
-              {canViewAllDepartments ? 'Manage all inventory items across departments' : `Viewing ${userDepartment === 'boibari' ? 'Boibari.com' : 'Prodhan.com'} inventory only`}
-            </p>
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Inventory Overview</h1>
+              <p className="text-slate-600 mt-1 text-base">
+                {canViewAllDepartments ? 'Comprehensive inventory management across all departments' : `${userDepartment === 'boibari' ? 'Boibari.com' : 'Prodhan.com'} inventory management`}
+              </p>
+              {!canViewAllDepartments && (
+                <Badge className="bg-orange-100 text-orange-800 border border-orange-300 mt-2 flex items-center gap-1 w-fit">
+                  <Shield className="w-3 h-3" />
+                  {userDepartment === 'boibari' ? '📚 Boibari Access Only' : '🛒 Prodhan.com Access Only'}
+                </Badge>
+              )}
+            </div>
           </div>
-          <Button className="btn-primary" onClick={() => { setEditingItem(null); setIsFormOpen(true); }}>
-            <Plus className="w-4 h-4 mr-2"/> Add Item
+          <Button 
+            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 py-6 text-base font-semibold"
+            onClick={() => { setEditingItem(null); setIsFormOpen(true); }}
+          >
+            <Plus className="w-5 h-5 mr-2"/> Add New Item
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="premium-card">
-            <CardContent className="p-4">
+        {/* Enhanced Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+          <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
               <DepartmentFilter
                 currentUser={currentUser}
                 selectedDepartment={selectedDepartment}
@@ -290,146 +293,205 @@ function InventoryOverviewPage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total Items</p>
-              <p className="text-2xl font-bold text-blue-600">{departmentStats.total}</p>
+          <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Items</p>
+              <p className="text-3xl font-bold text-blue-600">{departmentStats.total}</p>
             </CardContent>
           </Card>
 
-          <Card className="premium-card">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Low Stock</p>
-              <p className="text-2xl font-bold text-red-600">{departmentStats.low_stock}</p>
+          <Card className="bg-white border-l-4 border-l-red-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Low Stock Alerts</p>
+              <p className="text-3xl font-bold text-red-600">{departmentStats.low_stock}</p>
             </CardContent>
           </Card>
 
-          <Card className="premium-card">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Boibari Items</p>
-              <p className="text-2xl font-bold text-cyan-600">{departmentStats.boibari}</p>
+          <Card className="bg-white border-l-4 border-l-cyan-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Boibari Items</p>
+              <p className="text-3xl font-bold text-cyan-600">{departmentStats.boibari}</p>
             </CardContent>
           </Card>
 
-          <Card className="premium-card">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Prodhan Items</p>
-              <p className="text-2xl font-bold text-purple-600">{departmentStats.prodhan}</p>
+          <Card className="bg-white border-l-4 border-l-purple-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Prodhan Items</p>
+              <p className="text-3xl font-bold text-purple-600">{departmentStats.prodhan}</p>
             </CardContent>
           </Card>
         </div>
-      </header>
 
-      <Card className="premium-card">
-        <CardContent className="p-4">
-          <SmartInventorySearch
-            value={searchTerm}
-            onChange={setSearchTerm}
-            onSearch={(term) => { setSearchTerm(term); loadUserAndInventory(); }}
-            currentUser={currentUser}
-            placeholder="🔍 Search inventory with AI suggestions..."
-          />
-        </CardContent>
-      </Card>
-
-      <InventoryImportExport inventory={filteredInventory} onImportComplete={loadUserAndInventory} />
-
-      {lowStockItems.length > 0 && (
-        <Card className="bg-red-50 border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-800 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5"/>
-              Low Stock Alerts ({lowStockItems.length} items)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-700">
-              The following items are below minimum stock level: {lowStockItems.map(i => i.item_name).join(', ')}
-            </p>
+        {/* Search Section */}
+        <Card className="bg-white border border-slate-200 shadow-sm">
+          <CardContent className="p-5">
+            <SmartInventorySearch
+              value={searchTerm}
+              onChange={setSearchTerm}
+              onSearch={(term) => { setSearchTerm(term); loadUserAndInventory(); }}
+              currentUser={currentUser}
+              placeholder="🔍 Search inventory by name, ISBN, barcode, or author..."
+            />
           </CardContent>
         </Card>
-      )}
 
-      <Card className="premium-card">
-        <CardHeader>
-          <CardTitle>All Inventory Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Returned</TableHead>
-                  <TableHead>Damaged</TableHead>
-                  <TableHead>Price (৳)</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInventory.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      No inventory items found. Add items or adjust filters.
-                    </TableCell>
+        {/* Import/Export Section */}
+        <InventoryImportExport inventory={filteredInventory} onImportComplete={loadUserAndInventory} />
+
+        {/* Low Stock Alert Banner */}
+        {lowStockItems.length > 0 && (
+          <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-red-900 flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-white"/>
+                </div>
+                Low Stock Alerts — {lowStockItems.length} Items Require Attention
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {lowStockItems.slice(0, 10).map(item => (
+                  <Badge key={item.id} variant="outline" className="bg-white text-red-700 border-red-300">
+                    {item.item_name}
+                  </Badge>
+                ))}
+                {lowStockItems.length > 10 && (
+                  <Badge variant="outline" className="bg-red-200 text-red-900 border-red-400">
+                    +{lowStockItems.length - 10} more
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Inventory Table */}
+        <Card className="bg-white border border-slate-200 shadow-sm">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+            <CardTitle className="text-xl font-semibold text-slate-900">All Inventory Items</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 border-b border-slate-200">
+                    <TableHead className="font-semibold text-slate-700">Item Name</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Category</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Department</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">Stock Level</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">Returns</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">Damages</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">Price</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">Status</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  filteredInventory.map(item => (
-                    <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50">
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {item.category === 'books' && <BookOpen className="w-4 h-4 text-cyan-500" />}
-                          {item.category !== 'books' && <Package className="w-4 h-4 text-purple-500" />}
-                          {item.item_name}
-                        </div>
-                        {item.isbn && <p className="text-xs text-muted-foreground">ISBN: {item.isbn}</p>}
-                        {item.author_name && <p className="text-xs text-muted-foreground">By: {item.author_name}</p>}
-                        {item.barcode && <p className="text-xs text-muted-foreground">SKU: {item.barcode}</p>}
-                      </TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={item.department === 'boibari' ? 'bg-cyan-100 text-cyan-800' : 'bg-purple-100 text-purple-800'}>
-                          {item.department === 'boibari' ? 'Boibari' : 'Prodhan.com'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{item.current_stock}</div>
-                        <div className="text-xs text-muted-foreground">Min: {item.minimum_stock}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-orange-600">{item.returned_qty || 0}</div>
-                        <div className="text-xs text-muted-foreground">৳{(item.returned_value || 0).toLocaleString()}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-red-600">{item.damaged_qty || 0}</div>
-                        <div className="text-xs text-muted-foreground">৳{(item.damaged_value || 0).toLocaleString()}</div>
-                      </TableCell>
-                      <TableCell>৳{item.selling_price?.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}>
-                          {item.current_stock < item.minimum_stock ? 'Low Stock' : 'In Stock'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>Edit</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(item)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredInventory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-16">
+                        <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                        <p className="text-slate-500 font-medium">No inventory items found</p>
+                        <p className="text-slate-400 text-sm mt-1">Add items or adjust your filters</p>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  ) : (
+                    filteredInventory.map((item, idx) => (
+                      <TableRow 
+                        key={item.id} 
+                        className="hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer"
+                      >
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'
+                            }`}>
+                              {item.category === 'books' ? 
+                                <BookOpen className="w-5 h-5 text-cyan-600" /> : 
+                                <Package className="w-5 h-5 text-purple-600" />
+                              }
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900">{item.item_name}</p>
+                              <div className="flex gap-2 mt-0.5">
+                                {item.isbn && <span className="text-xs text-slate-500">ISBN: {item.isbn}</span>}
+                                {item.author_name && <span className="text-xs text-slate-500">• {item.author_name}</span>}
+                                {item.barcode && <span className="text-xs text-slate-500">• SKU: {item.barcode}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-300">
+                            {item.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={item.department === 'boibari' ? 
+                            'bg-cyan-500 text-white hover:bg-cyan-600' : 
+                            'bg-purple-500 text-white hover:bg-purple-600'
+                          }>
+                            {item.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex flex-col items-center">
+                            <span className="text-lg font-bold text-slate-900">{item.current_stock}</span>
+                            <span className="text-xs text-slate-500">min: {item.minimum_stock}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="font-semibold text-orange-600">{item.returned_qty || 0}</div>
+                          <div className="text-xs text-slate-500">৳{(item.returned_value || 0).toLocaleString()}</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="font-semibold text-red-600">{item.damaged_qty || 0}</div>
+                          <div className="text-xs text-slate-500">৳{(item.damaged_value || 0).toLocaleString()}</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-semibold text-slate-900">৳{item.selling_price?.toLocaleString()}</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}
+                            className={item.current_stock < item.minimum_stock ? 
+                              'bg-red-100 text-red-800 border-red-300' : 
+                              'bg-green-100 text-green-800 border-green-300'
+                            }
+                          >
+                            {item.current_stock < item.minimum_stock ? 'Low Stock' : 'In Stock'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex gap-2 justify-center">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

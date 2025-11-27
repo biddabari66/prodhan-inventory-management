@@ -333,72 +333,79 @@ function ProductAnalyticsDashboard() {
 
   return (
     <TooltipProvider>
-      <div className="p-6 space-y-6">
-        {/* Enhanced Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold font-display text-gradient flex items-center gap-3 flex-wrap">
-                Product Analytics & Reports
-                {selectedDepartment !== 'all' && (
-                  <Badge className={selectedDepartment === 'boibari' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
-                    {selectedDepartment === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
-                  </Badge>
-                )}
-              </h1>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowInfoModal(true)}
-                className="text-violet-600 hover:text-violet-700"
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-violet-50">
+        <div className="max-w-7xl mx-auto p-8 space-y-8">
+          {/* Premium Header Section */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-600 via-fuchsia-600 to-violet-600 flex items-center justify-center shadow-lg shadow-pink-500/30">
+                <BarChart3 className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Product Analytics</h1>
+                  {selectedDepartment !== 'all' && (
+                    <Badge className={selectedDepartment === 'boibari' ? 
+                      'bg-yellow-500 text-white border-0' : 
+                      'bg-red-500 text-white border-0'
+                    }>
+                      {selectedDepartment === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'}
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInfoModal(true)}
+                    className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                  </Button>
+                </div>
+                <p className="text-slate-600 mt-1 text-base">
+                  Advanced product performance analysis with comprehensive movement tracking
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <Button 
+                onClick={handleExportExcel} 
+                variant="outline" 
+                disabled={!analyticsData}
+                className="border-slate-300 hover:border-green-500 hover:bg-green-50 px-5 py-6"
               >
-                <HelpCircle className="w-5 h-5" />
+                <Download className="w-4 h-4 mr-2" />
+                Export Excel
+              </Button>
+              <Button 
+                onClick={handleExportPDF} 
+                disabled={!analyticsData || isExporting}
+                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-5 py-6"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </>
+                )}
               </Button>
             </div>
-            <p className="text-muted-foreground mt-1">
-              Comprehensive product performance, detailed reporting with purchases, sales, returns & damages tracking
-            </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button 
-              onClick={handleExportExcel} 
-              variant="outline" 
-              disabled={!analyticsData}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export Excel
-            </Button>
-            <Button 
-              onClick={handleExportPDF} 
-              disabled={!analyticsData || isExporting}
-              className="bg-violet-600 hover:bg-violet-700 gap-2"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  Download PDF
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
 
         {/* Product Selection */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
+          <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="flex items-center justify-between text-xl">
+                <span className="flex items-center gap-3 text-slate-900">
+                  <Package className="w-5 h-5 text-violet-600" />
                   Select Products to Analyze
                 </span>
-                <Badge variant="outline">
+                <Badge className="bg-violet-100 text-violet-800 border border-violet-300 text-sm px-3 py-1">
                   {selectedProductIds.length} selected
                 </Badge>
               </CardTitle>
@@ -491,10 +498,10 @@ function ProductAnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="w-5 h-5" />
+          <Card className="bg-white border border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
+                <Filter className="w-5 h-5 text-violet-600" />
                 Analytics Settings
               </CardTitle>
             </CardHeader>
@@ -613,9 +620,9 @@ function ProductAnalyticsDashboard() {
             {/* Modern Visual Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               {/* Revenue Distribution Pie Chart */}
-              <Card className="premium-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="bg-white border border-slate-200 shadow-sm">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                  <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
                     <PieChartIcon className="w-5 h-5 text-violet-600" />
                     Revenue Distribution by Product
                   </CardTitle>
@@ -656,9 +663,9 @@ function ProductAnalyticsDashboard() {
               </Card>
 
               {/* Stock vs Sales Bar Chart */}
-              <Card className="premium-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="bg-white border border-slate-200 shadow-sm">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                  <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
                     <BarChart3 className="w-5 h-5 text-blue-600" />
                     Stock vs Sales Comparison
                   </CardTitle>
@@ -695,9 +702,9 @@ function ProductAnalyticsDashboard() {
             </div>
 
             {/* Movement Analysis Area Chart */}
-            <Card className="premium-card mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white border border-slate-200 shadow-sm mb-6">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
                   <Activity className="w-5 h-5 text-emerald-600" />
                   Movement Analysis Overview
                 </CardTitle>
@@ -746,9 +753,9 @@ function ProductAnalyticsDashboard() {
             </Card>
 
             {/* Profit Margin Analysis */}
-            <Card className="premium-card mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white border border-slate-200 shadow-sm mb-6">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
                   <TrendingUp className="w-5 h-5 text-green-600" />
                   Profit Margin Analysis
                 </CardTitle>
@@ -801,7 +808,7 @@ function ProductAnalyticsDashboard() {
 
             {/* Enhanced Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <Card className="premium-card border-l-4 border-green-500">
+              <Card className="bg-white border-l-4 border-green-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -828,7 +835,7 @@ function ProductAnalyticsDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="premium-card border-l-4 border-blue-500">
+              <Card className="bg-white border-l-4 border-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -855,7 +862,7 @@ function ProductAnalyticsDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="premium-card border-l-4 border-indigo-500">
+              <Card className="bg-white border-l-4 border-indigo-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -882,7 +889,7 @@ function ProductAnalyticsDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="premium-card border-l-4 border-orange-500">
+              <Card className="bg-white border-l-4 border-orange-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -909,7 +916,7 @@ function ProductAnalyticsDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="premium-card border-l-4 border-red-500">
+              <Card className="bg-white border-l-4 border-red-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -936,7 +943,7 @@ function ProductAnalyticsDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="premium-card border-l-4 border-purple-500">
+              <Card className="bg-white border-l-4 border-purple-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -955,29 +962,29 @@ function ProductAnalyticsDashboard() {
               </div>
 
               {/* Enhanced Table with All Movement Types */}
-              <Card>
-              <CardHeader>
-                <CardTitle>Comprehensive Product Metrics</CardTitle>
+              <Card className="bg-white border border-slate-200 shadow-sm">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="text-xl font-semibold text-slate-900">Comprehensive Product Metrics</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-2 font-semibold">Product</th>
-                        <th className="text-center py-3 px-2 font-semibold">Stock</th>
-                        <th className="text-right py-3 px-2 font-semibold">Purchased</th>
-                        <th className="text-right py-3 px-2 font-semibold">Sold</th>
-                        <th className="text-right py-3 px-2 font-semibold">Returned</th>
-                        <th className="text-right py-3 px-2 font-semibold">Damaged</th>
-                        <th className="text-right py-3 px-2 font-semibold">Revenue</th>
-                        <th className="text-right py-3 px-2 font-semibold">Margin</th>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="text-left py-4 px-4 font-semibold text-slate-700">Product</th>
+                        <th className="text-center py-4 px-4 font-semibold text-slate-700">Stock</th>
+                        <th className="text-right py-4 px-4 font-semibold text-slate-700">Purchased</th>
+                        <th className="text-right py-4 px-4 font-semibold text-slate-700">Sold</th>
+                        <th className="text-right py-4 px-4 font-semibold text-slate-700">Returned</th>
+                        <th className="text-right py-4 px-4 font-semibold text-slate-700">Damaged</th>
+                        <th className="text-right py-4 px-4 font-semibold text-slate-700">Revenue</th>
+                        <th className="text-right py-4 px-4 font-semibold text-slate-700">Margin</th>
                       </tr>
                     </thead>
                     <tbody>
                      {safeAnalyticsData.map((metric, index) => (
-                        <tr key={metric.product_id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-2">
+                        <tr key={metric.product_id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="py-4 px-4">
                             <div className="flex items-center gap-3">
                               <div 
                                 className="w-3 h-3 rounded-full" 
@@ -1041,10 +1048,10 @@ function ProductAnalyticsDashboard() {
 
             {/* Individual Product Insights - ALWAYS SHOW RETURN & DAMAGE */}
             {safeAnalyticsData.map((metric, index) => (
-              <Card key={metric.product_id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{metric.product_name}</span>
+              <Card key={metric.product_id} className="bg-white border-l-4 border-t border-r border-b border-slate-200 shadow-sm" style={{ borderLeftColor: COLORS[index % COLORS.length] }}>
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                  <CardTitle className="flex items-center justify-between text-xl">
+                    <span className="font-semibold text-slate-900">{metric.product_name}</span>
                     <Badge className={
                       metric.department === 'boibari' 
                         ? 'bg-yellow-100 text-yellow-800' 
