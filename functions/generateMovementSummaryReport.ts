@@ -1,72 +1,272 @@
-import { createClient } from 'npm:@base44/sdk@0.1.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 import 'npm:jspdf-autotable@3.8.2';
 
-const base44 = createClient({ appId: Deno.env.get('BASE44_APP_ID') });
+// Helper function to format currency
+const formatCurrency = (amount) => {
+    return `BDT ${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+// Helper to get display name (English preferred)
+const getDisplayName = (item) => {
+    return item.english_item_name || item.item_name || 'Unknown Item';
+};
+
+// Department display names
+const getDepartmentName = (dept) => {
+    const names = {
+        'boibari': 'Boibari.com - Books & Publications',
+        'prodhan_com_e_commerce': 'Prodhan.com - E-Commerce'
+    };
+    return names[dept] || dept;
+};
 
 Deno.serve(async (req) => {
     try {
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-        base44.auth.setToken(authHeader.split(' ')[1]);
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Parse request body for department filter
+        let department = 'all';
+        try {
+            const body = await req.json();
+            department = body.department || 'all';
+        } catch (e) {
+            // No body or invalid JSON, use default
+        }
 
         const [movements, inventory] = await Promise.all([
-            base44.entities.InventoryMovement.list(),
-            base44.entities.Inventory.list()
+            base44.asServiceRole.entities.InventoryMovement.list(),
+            base44.asServiceRole.entities.Inventory.list()
         ]);
 
-        const inventoryMap = new Map(inventory.map(item => [item.id, item.item_name]));
+        // Create inventory map with department info
+        const inventoryMap = new Map(inventory.map(item => [item.id, item]));
         
-        const summary = movements.reduce((acc, move) => {
-            const itemName = inventoryMap.get(move.inventory_item_id) || 'Unknown Item';
-            if (!acc[itemName]) {
-                acc[itemName] = { stock_in: 0, stock_out: 0 };
+        // Filter movements by department if specified
+        const filteredMovements = department === 'all' 
+            ? movements 
+            : movements.filter(m => {
+                const item = inventoryMap.get(m.inventory_item_id);
+                return item && item.department === department;
+            });
+
+        // Calculate summary by item
+        const summary = filteredMovements.reduce((acc, move) => {
+            const item = inventoryMap.get(move.inventory_item_id);
+            const itemName = item ? getDisplayName(item) : 'Unknown Item';
+            const itemCategory = item?.category || 'N/A';
+            
+            if (!acc[move.inventory_item_id]) {
+                acc[move.inventory_item_id] = { 
+                    name: itemName,
+                    category: itemCategory,
+                    stock_in: 0, 
+                    stock_out: 0,
+                    returns: 0,
+                    damages: 0,
+                    value_in: 0,
+                    value_out: 0,
+                    transactions: 0
+                };
             }
             
             const quantity = move.quantity || 0;
+            const value = Math.abs(move.total_value || 0);
 
-            if (quantity > 0) {
-                acc[itemName].stock_in += quantity;
+            acc[move.inventory_item_id].transactions++;
+
+            if (move.reference_type === 'return') {
+                acc[move.inventory_item_id].returns += Math.abs(quantity);
+            } else if (move.reference_type === 'damage') {
+                acc[move.inventory_item_id].damages += Math.abs(quantity);
+            } else if (quantity > 0) {
+                acc[move.inventory_item_id].stock_in += quantity;
+                acc[move.inventory_item_id].value_in += value;
             } else {
-                acc[itemName].stock_out += Math.abs(quantity);
+                acc[move.inventory_item_id].stock_out += Math.abs(quantity);
+                acc[move.inventory_item_id].value_out += value;
             }
             
             return acc;
         }, {});
 
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
         
-        doc.setFontSize(20);
-        doc.text('Inventory Movement Summary Report', 14, 22);
-        doc.setFontSize(10);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-        doc.text('This report summarizes all recorded stock movements.', 14, 35);
+        // Modern Header
+        doc.setFillColor(6, 182, 212); // Cyan
+        doc.rect(0, 0, pageWidth, 35, 'F');
         
-        const tableColumn = ["Item Name", "Total Stock In", "Total Stock Out", "Net Change"];
-        const tableRows = [];
+        // Title
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont(undefined, 'bold');
+        doc.text('INVENTORY MOVEMENT SUMMARY', 14, 18);
+        
+        // Subtitle
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
+        doc.text(deptText, 14, 28);
 
-        Object.keys(summary).forEach(itemName => {
-            const data = summary[itemName];
-            const netChange = data.stock_in - data.stock_out;
-            const itemData = [
-                itemName,
-                data.stock_in,
-                data.stock_out,
-                netChange > 0 ? `+${netChange}` : netChange
-            ];
-            tableRows.push(itemData);
+        // Report metadata
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, pageWidth - 14, 18, { align: 'right' });
+        doc.text(`Generated by: ${user.full_name || user.email}`, pageWidth - 14, 28, { align: 'right' });
+
+        doc.setTextColor(0, 0, 0);
+
+        // Calculate totals
+        const totals = Object.values(summary).reduce((acc, item) => {
+            acc.stockIn += item.stock_in;
+            acc.stockOut += item.stock_out;
+            acc.returns += item.returns;
+            acc.damages += item.damages;
+            acc.valueIn += item.value_in;
+            acc.valueOut += item.value_out;
+            acc.transactions += item.transactions;
+            return acc;
+        }, { stockIn: 0, stockOut: 0, returns: 0, damages: 0, valueIn: 0, valueOut: 0, transactions: 0 });
+
+        // Summary Box
+        doc.setFillColor(236, 254, 255); // Cyan-50
+        doc.rect(10, 42, pageWidth - 20, 25, 'F');
+        doc.setDrawColor(165, 243, 252);
+        doc.rect(10, 42, pageWidth - 20, 25, 'S');
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(14, 116, 144);
+        doc.text('MOVEMENT OVERVIEW', 14, 52);
+
+        doc.setFontSize(9);
+        const summaryY = 60;
+        const colWidth = (pageWidth - 28) / 6;
+
+        const summaryItems = [
+            { label: 'Total Transactions', value: totals.transactions.toString() },
+            { label: 'Stock In', value: `${totals.stockIn} units`, color: [16, 185, 129] },
+            { label: 'Stock Out', value: `${totals.stockOut} units`, color: [239, 68, 68] },
+            { label: 'Returns', value: `${totals.returns} units`, color: [245, 158, 11] },
+            { label: 'Damages', value: `${totals.damages} units`, color: [239, 68, 68] },
+            { label: 'Net Value Flow', value: formatCurrency(totals.valueIn - totals.valueOut) }
+        ];
+
+        summaryItems.forEach((item, index) => {
+            doc.setTextColor(51, 65, 85);
+            doc.setFont(undefined, 'bold');
+            doc.text(item.label, 14 + colWidth * index, summaryY);
+            if (item.color) {
+                doc.setTextColor(...item.color);
+            }
+            doc.setFont(undefined, 'normal');
+            doc.text(item.value, 14 + colWidth * index, summaryY + 5);
         });
 
-        doc.autoTable(tableColumn, tableRows, { startY: 45 });
+        doc.setTextColor(0, 0, 0);
+
+        // Data Table
+        const tableColumn = [
+            "Product Name", 
+            "Category",
+            "Stock In",
+            "Value In", 
+            "Stock Out",
+            "Value Out", 
+            "Returns",
+            "Damages",
+            "Net Change",
+            "Transactions"
+        ];
+        const tableRows = [];
+
+        Object.values(summary).forEach(data => {
+            const netChange = data.stock_in - data.stock_out;
+            tableRows.push([
+                data.name,
+                data.category,
+                data.stock_in,
+                formatCurrency(data.value_in),
+                data.stock_out,
+                formatCurrency(data.value_out),
+                data.returns,
+                data.damages,
+                netChange > 0 ? `+${netChange}` : netChange.toString(),
+                data.transactions
+            ]);
+        });
+
+        // Sort by transaction count (most active first)
+        tableRows.sort((a, b) => b[9] - a[9]);
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 72,
+            styles: { 
+                fontSize: 8,
+                cellPadding: 2,
+                overflow: 'linebreak'
+            },
+            headStyles: { 
+                fillColor: [6, 182, 212],
+                textColor: 255,
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            alternateRowStyles: {
+                fillColor: [236, 254, 255]
+            },
+            columnStyles: {
+                0: { cellWidth: 45 },
+                2: { halign: 'center' },
+                3: { halign: 'right' },
+                4: { halign: 'center' },
+                5: { halign: 'right' },
+                6: { halign: 'center' },
+                7: { halign: 'center' },
+                8: { halign: 'center', fontStyle: 'bold' },
+                9: { halign: 'center' }
+            },
+            didParseCell: function(data) {
+                if (data.column.index === 8 && data.section === 'body') {
+                    const value = parseInt(data.cell.raw);
+                    if (value > 0) {
+                        data.cell.styles.textColor = [16, 185, 129]; // Green
+                    } else if (value < 0) {
+                        data.cell.styles.textColor = [239, 68, 68]; // Red
+                    }
+                }
+            },
+            didDrawPage: function(data) {
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+                doc.text('Confidential - Bee ERP System', 14, pageHeight - 10);
+            }
+        });
         
         const pdfBytes = doc.output('arraybuffer');
+        const filename = department === 'all' 
+            ? 'movement_summary_report_all.pdf'
+            : `movement_summary_report_${department}.pdf`;
+
         return new Response(pdfBytes, {
             status: 200,
-            headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename=movement_summary_report.pdf' }
+            headers: { 
+                'Content-Type': 'application/pdf', 
+                'Content-Disposition': `attachment; filename=${filename}` 
+            }
         });
 
     } catch (error) {
         console.error('Error generating report:', error);
-        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        return Response.json({ error: error.message }, { status: 500 });
     }
 });
