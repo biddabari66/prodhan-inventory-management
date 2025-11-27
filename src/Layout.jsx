@@ -443,9 +443,73 @@ export default function Layout({ children, currentPageName }) {
     localStorage.setItem('biddabari_language', lng);
   };
 
-  const loadUserPermissions = useCallback(async (userId, userRole) => {
+  // Permission loading is now integrated into loadCurrentUser for better caching
+
+  const loadCurrentUser = useCallback(async () => {
+    setError(null);
+    
+    // OPTIMIZATION: Try to use cached user data first for instant display
+    const cachedUser = localStorage.getItem('cached_user_data');
+    const cachedPermissions = localStorage.getItem('cached_user_permissions');
+    
+    if (cachedUser) {
+      try {
+        const parsedUser = JSON.parse(cachedUser);
+        const parsedPermissions = cachedPermissions ? JSON.parse(cachedPermissions) : {};
+        
+        // Show cached data immediately (stale-while-revalidate pattern)
+        setCurrentUser(parsedUser);
+        setUserPermissions(parsedPermissions);
+        setIsLoading(false); // Stop loading immediately with cached data
+        
+        console.log('⚡ Instant load from cache:', parsedUser?.full_name);
+      } catch (e) {
+        console.warn('Cache parse error, falling back to server');
+      }
+    }
+    
+    // Still loading if no cache
+    if (!cachedUser) {
+      setIsLoading(true);
+    }
+    
     try {
-      const permissions = await UserPermission.filter({ user_id: userId });
+      console.log('🔄 Fetching fresh user data from server...');
+
+      let user = await User.me();
+
+      if (!user) {
+        console.warn("No user found. Redirecting to login page.");
+        localStorage.removeItem('cached_user_data');
+        localStorage.removeItem('cached_user_permissions');
+        window.location.href = '/';
+        return;
+      }
+
+      console.log('👤 User data loaded:', user?.full_name, user?.email);
+
+      if (user && !user.employee_id) {
+        try {
+          console.log("Employee ID missing, attempting to generate...");
+          const response = await base44.functions.invoke('generateEmployeeId', {});
+
+          if (response.data && response.data.employee_id) {
+            toast.success(`Employee ID generated: ${response.data.employee_id}`);
+            user = await User.me();
+          }
+        } catch (genError) {
+          console.error("Could not generate Employee ID:", genError);
+        }
+      }
+
+      // Update state with fresh data
+      setCurrentUser(user);
+      
+      // Cache user data for next visit
+      localStorage.setItem('cached_user_data', JSON.stringify(user));
+
+      // Load permissions in background
+      const permissions = await UserPermission.filter({ user_id: user.id });
       const permissionsMap = {};
 
       permissions.forEach((p) => {
@@ -459,7 +523,7 @@ export default function Layout({ children, currentPageName }) {
         };
       });
 
-      if (permissions.length === 0 && userRole === 'admin') {
+      if (permissions.length === 0 && user.job_role === 'admin') {
         const adminPermissions = {
           dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
@@ -468,7 +532,7 @@ export default function Layout({ children, currentPageName }) {
           finance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           hr: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }, // Changed from procurement
+          purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           settings: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
@@ -481,69 +545,23 @@ export default function Layout({ children, currentPageName }) {
           employees: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           performance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          manual_reporting: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }
+          manual_reporting: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }
         };
         setUserPermissions(adminPermissions);
+        localStorage.setItem('cached_user_permissions', JSON.stringify(adminPermissions));
       } else {
         setUserPermissions(permissionsMap);
+        localStorage.setItem('cached_user_permissions', JSON.stringify(permissionsMap));
       }
-
-    } catch (e) {
-      console.error("Error loading permissions:", e);
-      setUserPermissions({ dashboard: { can_view: true } });
-    }
-  }, []);
-
-  const loadCurrentUser = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      console.log('🔄 Loading user data from server...');
-
-      let user = await User.me();
-
-      if (!user) {
-        console.warn("No user found. Redirecting to login page.");
-        window.location.href = '/';
-        return;
-      }
-
-      console.log('👤 User data loaded:', user?.full_name, user?.email);
-
-      if (user && !user.employee_id) {
-        try {
-          console.log("Employee ID missing, attempting to generate...");
-          toast.info("Your Employee ID is being generated...");
-          const response = await base44.functions.invoke('generateEmployeeId', {});
-
-          if (response.data && response.data.employee_id) {
-            toast.success(`Your new Employee ID has been generated: ${response.data.employee_id}`);
-            user = await User.me();
-            console.log('🔄 User data refreshed after Employee ID generation');
-          } else {
-            console.warn("Employee ID generation returned unexpected response:", response.data);
-            toast.warning("Employee ID generation completed but please refresh to see updates.");
-          }
-        } catch (genError) {
-          console.error("Could not generate Employee ID:", genError);
-
-          if (genError.message && genError.message.includes('Unauthorized')) {
-            toast.error("Permission denied for Employee ID generation. Please contact support.");
-          } else {
-            toast.error("Could not automatically generate an Employee ID. Please contact support.");
-          }
-        }
-      }
-
-      console.log('✅ Setting current user state');
-      setCurrentUser(user);
-
-      await loadUserPermissions(user.id, user.job_role);
 
     } catch (e) {
       console.error("❌ Error loading user:", e);
       if (e && (e.status === 401 || e.message && (e.message.includes('Unauthorized') || e.message.includes('JWT') || e.message.includes('access token')))) {
-        toast.error("Your session has expired or you are not logged in. Please log in again.");
+        localStorage.removeItem('cached_user_data');
+        localStorage.removeItem('cached_user_permissions');
+        toast.error("Session expired. Please log in again.");
         window.location.href = '/';
       } else {
         setError(e);
@@ -551,7 +569,7 @@ export default function Layout({ children, currentPageName }) {
     } finally {
       setIsLoading(false);
     }
-  }, [loadUserPermissions, setCurrentUser, setIsLoading, setError]);
+  }, [setCurrentUser, setIsLoading, setError, setUserPermissions]);
 
   useEffect(() => {
     if (isAuthPage) {
@@ -741,17 +759,20 @@ export default function Layout({ children, currentPageName }) {
         icon: Warehouse,
         isExpandable: true,
         subItems: [
+          // Primary Operations - Most Used
           { label: t('Overview'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory' },
-          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory' },
+          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
+          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
           { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory' },
+          { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory' },
           { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory' },
-          { label: t('Returns'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory' },
+          // Master Data
           { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory' },
           { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory' },
+          // Analytics & Insights
           { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'inventory' },
           { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory' },
-          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
-          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' }
+          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory' }
         ],
         colorClass: 'text-orange-500'
       },
@@ -825,16 +846,79 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // OPTIMIZED: Simplified loading screen
+  // OPTIMIZED: Professional skeleton loading screen that mimics the actual layout
   if (isLoading) {
     return (
-      <div className="w-screen h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-center space-y-4">
-          <img src={NEW_LOGO_URL} alt="Bee ERP Logo" className="h-16 w-16 mx-auto rounded-2xl opacity-80 animate-pulse" />
-          <div className="space-y-2">
-            <h1 className="text-xl font-bold text-violet-600 dark:text-violet-400">Bee ERP</h1>
-            <p className="text-sm text-muted-foreground">Loading...</p>
+      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+        {/* Skeleton Sidebar */}
+        <aside className="hidden lg:flex w-[280px] h-full flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-3 h-16 px-4 border-b border-slate-200 dark:border-slate-800">
+            <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+            <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
           </div>
+          <div className="flex-1 p-4 space-y-2">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
+                <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+              </div>
+            ))}
+          </div>
+        </aside>
+        
+        {/* Skeleton Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Skeleton Header */}
+          <header className="h-16 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+              <div className="w-48 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
+            </div>
+          </header>
+          
+          {/* Skeleton Content Area */}
+          <main className="flex-1 p-6 lg:p-8 overflow-hidden">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Title skeleton */}
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 animate-pulse" />
+                <div className="space-y-2">
+                  <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+                  <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                </div>
+              </div>
+              
+              {/* Stats cards skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-3" />
+                    <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Table skeleton */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                </div>
+                <div className="p-4 space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                      <div className="flex-1 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
+                      <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
       </div>
     );
