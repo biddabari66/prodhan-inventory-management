@@ -852,12 +852,12 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // ENHANCED NavItem with prefetching on hover
-  const EnhancedNavItem = ({ module, isMobile = false }) => {
+  const EnhancedNavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     const hoverProps = module.url ? prefetchForRoute(module.url) : {};
     
     return (
       <div {...hoverProps}>
-        <NavItem module={module} isMobile={isMobile} />
+        <NavItem module={module} isMobile={isMobile} isCollapsed={isCollapsed} />
       </div>
     );
   };
