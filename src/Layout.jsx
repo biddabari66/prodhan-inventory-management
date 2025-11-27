@@ -1076,19 +1076,17 @@ export default function Layout({ children, currentPageName }) {
               transition: all 0.15s ease-out;
             }
 
-            /* PROFESSIONAL HEADER - Clean Glassmorphism */
+            /* PROFESSIONAL HEADER - Clean & Minimal */
             .header {
-              background: rgba(255, 255, 255, 0.85);
-              backdrop-filter: blur(24px) saturate(180%);
-              -webkit-backdrop-filter: blur(24px) saturate(180%);
+              background: rgba(255, 255, 255, 0.95);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
               border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(99, 102, 241, 0.06);
             }
 
             .dark .header {
-              background: rgba(30, 41, 59, 0.85);
+              background: rgba(15, 23, 42, 0.95);
               border-bottom: 1px solid rgba(51, 65, 85, 0.8);
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
             }
 
             @media (max-width: 768px) {
