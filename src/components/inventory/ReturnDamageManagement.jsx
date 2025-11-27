@@ -413,14 +413,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             className="bg-blue-600 hover:bg-blue-700 shadow-sm"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
-            Record Return
-          </Button>
-          <Button 
-            onClick={() => handleOpenForm('damage')} 
-            className="bg-red-600 hover:bg-red-700 shadow-sm"
-          >
-            <AlertOctagon className="w-4 h-4 mr-2" />
-            Record Damage
+            Record Return / Damage
           </Button>
         </div>
       </div>
