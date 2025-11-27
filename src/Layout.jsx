@@ -804,45 +804,97 @@ export default function Layout({ children, currentPageName }) {
           }} />
           
           <style>{`
-            /* OPTIMIZED MOBILE-FIRST CSS - Production Ready with SIMPLIFIED LOADING */
-            @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+            /* PROFESSIONAL UI DESIGN SYSTEM - Expert Color Palette & Typography */
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap');
 
             :root {
-              --violet-primary: #7C3AED;
-              --emerald-primary: #10B981;
-              --orange-primary: #FB923C;
-              --blue-primary: #60A5FA;
-              --magenta-primary: #EC4899;
-              --indigo-primary: #6366F1;
-              --sky-primary: #0EA5E9;
+              /* Professional Color Palette - Vibrant yet Trustworthy */
+              --primary-violet: #6366F1;
+              --primary-indigo: #4F46E5;
+              --accent-emerald: #10B981;
+              --accent-cyan: #06B6D4;
+              --accent-orange: #F97316;
+              --accent-pink: #EC4899;
+              --accent-purple: #A855F7;
+              --accent-amber: #F59E0B;
+              --accent-rose: #F43F5E;
+              --accent-teal: #14B8A6;
               
-              --text-light: #1E293B;
-              --card-light: rgba(255, 255, 255, 0.90);
-              --card-border-light: rgba(139, 92, 246, 0.1);
+              --neutral-50: #F8FAFC;
+              --neutral-100: #F1F5F9;
+              --neutral-200: #E2E8F0;
+              --neutral-300: #CBD5E1;
+              --neutral-600: #475569;
+              --neutral-700: #334155;
+              --neutral-800: #1E293B;
+              --neutral-900: #0F172A;
               
-              --text-dark: #F8FAFC;
-              --card-dark: rgba(30, 41, 59, 0.90);
-              --card-border-dark: rgba(139, 92, 246, 0.2);
+              /* Light Mode */
+              --bg-primary: #FFFFFF;
+              --bg-secondary: #F8FAFC;
+              --bg-accent: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%);
+              --text-primary: #0F172A;
+              --text-secondary: #475569;
+              --card-bg: #FFFFFF;
+              --card-border: #E2E8F0;
+              --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+              --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
+              --shadow-lg: 0 12px 32px 0 rgba(0, 0, 0, 0.12);
+              
+              /* Dark Mode */
+              --text-dark-primary: #F8FAFC;
+              --text-dark-secondary: #CBD5E1;
+              --card-dark-bg: #1E293B;
+              --card-dark-border: #334155;
             }
 
             .light {
-              --text-primary: var(--text-light);
-              --card-bg: var(--card-light);
-              --card-border: var(--card-border-light);
+              --current-bg-primary: var(--bg-primary);
+              --current-bg-secondary: var(--bg-secondary);
+              --current-text-primary: var(--text-primary);
+              --current-text-secondary: var(--text-secondary);
+              --current-card-bg: var(--card-bg);
+              --current-card-border: var(--card-border);
             }
 
             .dark {
-              --text-primary: var(--text-dark);
-              --card-bg: var(--card-dark);
-              --card-border: var(--card-border-dark);
+              --current-bg-primary: var(--neutral-900);
+              --current-bg-secondary: var(--neutral-800);
+              --current-text-primary: var(--text-dark-primary);
+              --current-text-secondary: var(--text-dark-secondary);
+              --current-card-bg: var(--card-dark-bg);
+              --current-card-border: var(--card-dark-border);
             }
 
             body {
-              color: var(--text-primary);
-              font-family: 'Inter', sans-serif;
+              color: var(--current-text-primary);
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
               font-weight: 400;
+              -webkit-font-smoothing: antialiased;
+              -moz-osx-font-smoothing: grayscale;
               -webkit-overflow-scrolling: touch;
               overflow-x: hidden;
+              background: var(--current-bg-secondary);
+            }
+
+            /* Professional Typography */
+            h1, h2, h3, h4, h5, h6 {
+              font-family: 'Outfit', 'Inter', sans-serif;
+              font-weight: 700;
+              letter-spacing: -0.02em;
+              color: var(--current-text-primary);
+            }
+
+            .font-display {
+              font-family: 'Outfit', sans-serif;
+            }
+
+            /* Modern Text Gradient */
+            .text-gradient {
+              background: linear-gradient(135deg, var(--primary-indigo) 0%, var(--accent-purple) 50%, var(--accent-pink) 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
             }
 
             /* MOBILE-FIRST TOUCH OPTIMIZATIONS */
@@ -902,105 +954,136 @@ export default function Layout({ children, currentPageName }) {
               background: rgba(124, 58, 237, 0.5);
             }
 
-            /* MOBILE-OPTIMIZED NAVIGATION */
+            /* PROFESSIONAL NAVIGATION - Clean & Modern */
             .nav-item {
-              color: #64748B;
+              color: var(--neutral-600);
               position: relative;
-              transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
               background: transparent;
-              border: 1px solid transparent;
+              border: 1.5px solid transparent;
               min-height: 48px;
               display: flex;
               align-items: center;
               touch-action: manipulation;
+              font-weight: 500;
+              letter-spacing: -0.01em;
             }
 
             @media (max-width: 1024px) {
               .nav-item {
                 min-height: 56px;
                 padding: 16px 20px;
-                font-size: 16px;
-                font-weight: 500;
+                font-size: 15px;
+                font-weight: 600;
               }
             }
 
             .nav-item:hover {
-              color: var(--text-primary);
-              transform: translateX(4px);
-              background: rgba(124, 58, 237, 0.06);
-              border: 1px solid rgba(124, 58, 237, 0.12);
-              box-shadow: 0 2px 12px rgba(124, 58, 237, 0.12);
+              color: var(--current-text-primary);
+              transform: translateX(3px);
+              background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
+              border: 1.5px solid rgba(99, 102, 241, 0.2);
+              box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12), inset 0 0 12px rgba(99, 102, 241, 0.05);
             }
 
             @media (min-width: 1024px) {
               .nav-item:hover {
-                transform: translateX(6px) translateY(-1px);
-                box-shadow: 0 4px 16px rgba(124, 58, 237, 0.12);
+                transform: translateX(4px);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15), inset 0 0 16px rgba(99, 102, 241, 0.06);
               }
             }
 
             .nav-item.active {
-              background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(236, 72, 153, 0.1));
-              color: var(--text-primary);
-              font-weight: 600;
-              transform: translateX(8px) scale(1.01);
-              box-shadow: 0 4px 20px rgba(124, 58, 237, 0.25);
-              border: 1px solid rgba(124, 58, 237, 0.25);
+              background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+              color: var(--primary-indigo);
+              font-weight: 700;
+              transform: translateX(6px);
+              box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+              border: 1.5px solid rgba(99, 102, 241, 0.3);
+            }
+
+            .nav-item.active::before {
+              content: '';
+              position: absolute;
+              left: 0;
+              top: 50%;
+              transform: translateY(-50%);
+              width: 4px;
+              height: 70%;
+              background: linear-gradient(180deg, var(--primary-indigo) 0%, var(--accent-purple) 100%);
+              border-radius: 0 4px 4px 0;
             }
 
             .nav-item.active .nav-icon {
-              filter: drop-shadow(0 0 6px currentColor);
-              transform: scale(1.1);
+              color: var(--primary-indigo);
+              filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
             }
 
-            /* MOBILE-FIRST HEADER */
+            /* PROFESSIONAL HEADER - Clean Glassmorphism */
             .header {
-              background: var(--card-bg);
-              backdrop-filter: blur(20px);
-              -webkit-backdrop-filter: blur(20px);
-              border-bottom: 1px solid var(--card-border);
-              box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+              background: rgba(255, 255, 255, 0.85);
+              backdrop-filter: blur(24px) saturate(180%);
+              -webkit-backdrop-filter: blur(24px) saturate(180%);
+              border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(99, 102, 241, 0.06);
+            }
+
+            .dark .header {
+              background: rgba(30, 41, 59, 0.85);
+              border-bottom: 1px solid rgba(51, 65, 85, 0.8);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
             }
 
             @media (max-width: 768px) {
               .header {
                 padding: 12px 16px;
                 min-height: 64px;
-                backdrop-filter: blur(15px);
-                -webkit-backdrop-filter: blur(15px);
               }
             }
 
-            /* MOBILE-OPTIMIZED CARDS */
+            /* MODERN CARD DESIGN - Professional & Vibrant */
             .premium-card {
-              background: var(--card-bg);
-              backdrop-filter: blur(15px);
-              -webkit-backdrop-filter: blur(15px);
-              border: 1px solid var(--card-border);
-              border-radius: 16px;
-              box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-              transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+              background: var(--current-card-bg);
+              border: 1.5px solid var(--current-card-border);
+              border-radius: 20px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 16px rgba(0, 0, 0, 0.06);
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
               position: relative;
               overflow: hidden;
             }
 
+            .premium-card::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 3px;
+              background: linear-gradient(90deg, var(--primary-indigo), var(--accent-purple), var(--accent-pink));
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+
+            .premium-card:hover::before {
+              opacity: 1;
+            }
+
             @media (min-width: 768px) {
               .premium-card {
-                border-radius: 20px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+                border-radius: 24px;
               }
             }
 
             .premium-card:hover {
               transform: translateY(-2px);
-              box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
-              border: 1px solid rgba(124, 58, 237, 0.15);
+              box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+              border-color: rgba(99, 102, 241, 0.25);
             }
 
             @media (min-width: 1024px) {
               .premium-card:hover {
-                transform: translateY(-4px) scale(1.01);
-                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+                transform: translateY(-4px);
+                box-shadow: 0 16px 48px rgba(99, 102, 241, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
               }
             }
 
@@ -1149,37 +1232,39 @@ export default function Layout({ children, currentPageName }) {
               }
             }
 
-            /* SIMPLIFIED & OPTIMIZED LOGO ANIMATION - MUCH FASTER */
-            @keyframes gentle-float {
+            /* PROFESSIONAL LOGO - Subtle Animation */
+            @keyframes smooth-pulse {
               0%, 100% {
-                transform: translateY(0) scale(1);
-                filter: drop-shadow(0 2px 8px rgba(124, 58, 237, 0.2));
+                transform: scale(1);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
               }
               50% {
-                transform: translateY(-2px) scale(1.01);
-                filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.3));
+                transform: scale(1.02);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
               }
             }
 
             .animated-logo {
-              animation: gentle-float 3s ease-in-out infinite;
-              will-change: transform;
+              animation: smooth-pulse 4s ease-in-out infinite;
+              border-radius: 12px;
+              transition: all 0.3s ease;
             }
 
             .animated-logo:hover {
-              transform: scale(1.05);
+              transform: scale(1.08) rotate(-2deg);
               animation-play-state: paused;
+              box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
             }
 
             @media (max-width: 768px) {
-              @keyframes gentle-float {
+              @keyframes smooth-pulse {
                 0%, 100% {
-                  transform: translateY(0);
-                  filter: drop-shadow(0 1px 6px rgba(124, 58, 237, 0.2));
+                  transform: scale(1);
+                  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
                 }
                 50% {
-                  transform: translateY(-1px);
-                  filter: drop-shadow(0 3px 10px rgba(124, 58, 237, 0.25));
+                  transform: scale(1.01);
+                  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
                 }
               }
             }
@@ -1207,14 +1292,71 @@ export default function Layout({ children, currentPageName }) {
               contain: layout style paint;
             }
 
-            /* Faster fade-in animation */
-            @keyframes quickFadeIn {
-              from { opacity: 0; transform: translateY(4px); }
-              to { opacity: 1; transform: translateY(0); }
+            /* Smooth Page Transitions */
+            @keyframes smoothFadeIn {
+              from { 
+                opacity: 0; 
+                transform: translateY(8px) scale(0.98);
+              }
+              to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1);
+              }
             }
 
             .fade-in {
-              animation: quickFadeIn 0.2s ease-out;
+              animation: smoothFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Professional Button Styles */
+            .btn-primary {
+              background: linear-gradient(135deg, var(--primary-indigo) 0%, var(--accent-purple) 100%);
+              color: white;
+              font-weight: 600;
+              box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+              transition: all 0.3s ease;
+            }
+
+            .btn-primary:hover {
+              box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+              transform: translateY(-2px);
+            }
+
+            /* Modern Badge Styles */
+            .badge-modern {
+              font-weight: 600;
+              font-size: 0.75rem;
+              padding: 0.375rem 0.75rem;
+              border-radius: 9999px;
+              letter-spacing: 0.025em;
+            }
+
+            /* Enhanced Focus States */
+            *:focus-visible {
+              outline: 2px solid var(--primary-indigo);
+              outline-offset: 3px;
+              border-radius: 8px;
+            }
+
+            /* Smooth Scrollbars - Professional Look */
+            ::-webkit-scrollbar {
+              width: 10px;
+              height: 10px;
+            }
+
+            ::-webkit-scrollbar-track {
+              background: var(--neutral-100);
+              border-radius: 10px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+              background: linear-gradient(180deg, var(--primary-indigo), var(--accent-purple));
+              border-radius: 10px;
+              border: 2px solid var(--neutral-100);
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+              background: linear-gradient(180deg, var(--accent-purple), var(--accent-pink));
             }
           `}</style>
 
@@ -1227,20 +1369,23 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          {/* Enhanced Mobile-First Sidebar */}
-          <aside className={`sidebar fixed top-0 left-0 h-full overflow-y-auto z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300
+          {/* Professional Sidebar - Modern Gradient Background */}
+          <aside className={`sidebar fixed top-0 left-0 h-full overflow-y-auto z-50 flex flex-col bg-gradient-to-b from-white via-slate-50/50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-r border-slate-200/80 dark:border-slate-700 transition-all duration-300 shadow-xl
             ${isSidebarOpen ? 'w-80 lg:w-72 translate-x-0' : 'w-80 lg:w-20 -translate-x-full lg:translate-x-0'}`}>
             
-            {/* Enhanced Header */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-900 dark:to-slate-800 p-4 sidebar-header flex items-center justify-between h-16 lg:h-20 border-b border-slate-200 dark:border-slate-800">
+            {/* Premium Sidebar Header */}
+            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-5 sidebar-header flex items-center justify-between h-20 lg:h-24 border-b-4 border-white/20 shadow-lg">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <img src={NEW_LOGO_URL} alt="Bee ERP Logo" className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg flex-shrink-0 animated-logo" />
+                <div className="relative">
+                  <img src={NEW_LOGO_URL} alt="Bee ERP Logo" className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex-shrink-0 animated-logo border-2 border-white/30" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></div>
+                </div>
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-lg lg:text-xl font-bold font-display bg-gradient-to-r from-fuchsia-600 to-violet-600 bg-clip-text text-transparent whitespace-nowrap block truncate">
+                    <span className="text-xl lg:text-2xl font-black font-display text-white whitespace-nowrap block truncate tracking-tight">
                       Bee ERP
                     </span>
-                    <span className="text-xs text-muted-foreground hidden lg:block">Business Management</span>
+                    <span className="text-xs text-white/80 hidden lg:block font-medium">Business Intelligence Platform</span>
                   </div>
                 )}
               </Link>
@@ -1249,7 +1394,7 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setIsSidebarOpen(false)} 
                   variant="ghost" 
                   size="sm"
-                  className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 lg:hidden h-10 w-10 p-0 touch-manipulation"
+                  className="text-white/80 hover:text-white hover:bg-white/20 lg:hidden h-10 w-10 p-0 touch-manipulation rounded-xl"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -1266,19 +1411,23 @@ export default function Layout({ children, currentPageName }) {
               </nav>
             </div>
 
-            {/* Enhanced Footer - Mobile Optimized */}
+            {/* Premium User Footer */}
             {isSidebarOpen && (
-              <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-                <div className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-xl flex items-center justify-between touch-manipulation">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-gradient-to-tr from-violet-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg lg:text-xl flex-shrink-0">
-                      {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
+              <div className="p-4 border-t border-slate-200/50 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
+                <div className="relative bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-md border border-slate-200/60 dark:border-slate-700 flex items-center justify-between touch-manipulation group hover:shadow-lg transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="flex items-center gap-3 min-w-0 relative z-10">
+                    <div className="relative">
+                      <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-lg">
+                        {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white"></div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm lg:text-base font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      <p className="text-sm lg:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
                         {currentUser?.display_name || currentUser?.full_name}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
                         {currentUser?.designation}
                       </p>
                     </div>
@@ -1311,13 +1460,13 @@ export default function Layout({ children, currentPageName }) {
             )}
           </aside>
 
-          {/* Main Content Area */}
-          <div className={`flex-1 flex flex-col transition-all duration-300 overflow-hidden pb-16 lg:pb-0
+          {/* Main Content Area - Premium Background */}
+          <div className={`flex-1 flex flex-col transition-all duration-300 overflow-hidden pb-16 lg:pb-0 bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900
             ${isSidebarOpen ? 'lg:ml-72 ml-0' : 'lg:ml-20 ml-0'}
           `}>
             
-            {/* Enhanced Mobile-First Header */}
-            <header className="header h-16 px-4 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 mobile-safe-area">
+            {/* Professional Header with Gradient Accent */}
+            <header className="header h-18 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 mobile-safe-area">
               <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
                 <Button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -1431,8 +1580,8 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </header>
 
-            {/* Main Content - Mobile Optimized */}
-            <main className="main-content flex-1 overflow-y-auto p-4 lg:p-6 xl:p-8 mobile-safe-area">
+            {/* Main Content - Professional Spacing */}
+            <main className="main-content flex-1 overflow-y-auto p-6 lg:p-8 xl:p-10 mobile-safe-area">
               <ErrorBoundary>
                 <Suspense fallback={
                   <div className="text-center p-20 text-muted-foreground">
