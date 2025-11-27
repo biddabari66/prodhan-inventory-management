@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Inventory } from '@/entities/Inventory';
 import { InventoryMovement } from '@/entities/InventoryMovement';
 import { User } from '@/entities/User';
@@ -6,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, AlertTriangle, BookOpen, Package, Trash2, Shield, RefreshCw } from 'lucide-react';
+import { Plus, AlertTriangle, BookOpen, Package, Trash2, Shield, RefreshCw, Filter, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';
 import BookMetadataManager from '../components/inventory/BookMetadataManager';
 import GeneralProductForm from '../components/inventory/GeneralProductForm';
@@ -102,6 +104,20 @@ function InventoryOverviewPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Fetch categories for filtering
+  const { data: categories = [] } = useQuery({
+    queryKey: ['product-categories', selectedDepartment],
+    queryFn: async () => {
+      const allCategories = await base44.entities.ProductCategory.list('sort_order');
+      if (selectedDepartment === 'all') return allCategories.filter(c => c.is_active);
+      return allCategories.filter(cat => 
+        cat.is_active &&
+        (cat.department === selectedDepartment || cat.department === 'both')
+      );
+    },
+  });
 
   const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
                                  currentUser?.job_role === 'admin' ||
@@ -122,7 +138,7 @@ function InventoryOverviewPage() {
 
   useEffect(() => {
     filterInventory();
-  }, [inventory, inventoryWithMovements, selectedDepartment, searchTerm, currentUser]);
+  }, [inventory, inventoryWithMovements, selectedDepartment, searchTerm, currentUser, categoryFilter]);
 
   const loadUserAndInventory = async () => {
     setIsLoading(true);
@@ -220,6 +236,14 @@ function InventoryOverviewPage() {
         item.category?.toLowerCase().includes(query) ||
         item.isbn?.toLowerCase().includes(query) ||
         item.author_name?.toLowerCase().includes(query)
+      );
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(item => 
+        item.category?.toLowerCase() === categoryFilter.toLowerCase() ||
+        item.subject?.toLowerCase() === categoryFilter.toLowerCase()
       );
     }
 
@@ -378,9 +402,9 @@ function InventoryOverviewPage() {
           </Card>
         </div>
 
-        {/* Search Section */}
+        {/* Search & Category Filter Section */}
         <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardContent className="p-5">
+          <CardContent className="p-5 space-y-4">
             <SmartInventorySearch
               value={searchTerm}
               onChange={setSearchTerm}
@@ -388,6 +412,53 @@ function InventoryOverviewPage() {
               currentUser={currentUser}
               placeholder="🔍 Search inventory by name, ISBN, barcode, or author..."
             />
+            
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Filter className="w-4 h-4" />
+                  <span className="font-medium">Filter by Category:</span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant={categoryFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCategoryFilter('all')}
+                    className={categoryFilter === 'all' ? 'bg-violet-600' : ''}
+                  >
+                    All
+                  </Button>
+                  {categories.map(cat => (
+                    <Button
+                      key={cat.id}
+                      variant={categoryFilter === cat.slug ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCategoryFilter(cat.slug)}
+                      className="gap-2"
+                      style={categoryFilter === cat.slug ? { backgroundColor: cat.color } : {}}
+                    >
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.name}
+                    </Button>
+                  ))}
+                </div>
+                {categoryFilter !== 'all' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCategoryFilter('all')}
+                    className="text-slate-500"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
