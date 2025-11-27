@@ -1513,15 +1513,15 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-20 px-4 border-b border-white/10 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-xl shadow-black/20 border border-white/50">
-                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-8 h-8" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-500 flex items-center justify-center shadow-xl shadow-black/30 border border-white/30">
+                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-9 h-9" />
                 </div>
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-xl font-extrabold text-white whitespace-nowrap block truncate tracking-tight" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                    <span className="text-[22px] font-black text-white whitespace-nowrap block truncate tracking-tight" style={{ fontFamily: 'Outfit, sans-serif', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
                       Bee ERP
                     </span>
-                    <span className="text-[10px] font-medium text-white/70 uppercase tracking-widest">
+                    <span className="text-[10px] font-semibold text-white/80 uppercase tracking-[0.2em]">
                       Enterprise
                     </span>
                   </div>
