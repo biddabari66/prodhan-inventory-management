@@ -132,8 +132,8 @@ function InventoryReportsPage() {
             <FileText className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">ইনভেন্টরি রিপোর্টস</h1>
-            <p className="text-slate-500 text-sm">ইনভেন্টরি ডেটার জন্য PDF রিপোর্ট তৈরি করুন</p>
+            <h1 className="text-2xl font-bold text-slate-900">Inventory Reports</h1>
+            <p className="text-slate-500 text-sm">Generate PDF reports for inventory data</p>
           </div>
         </div>
 
@@ -142,24 +142,24 @@ function InventoryReportsPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <Label className="text-xs text-slate-600 font-medium">বিভাগ</Label>
+                <Label className="text-xs text-slate-600 font-medium">Department</Label>
                 <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">সকল বিভাগ</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
                     <SelectItem value="boibari">
-                      <span className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> 📚 বইবাড়ি</span>
+                      <span className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> 📚 Boibari.com</span>
                     </SelectItem>
                     <SelectItem value="prodhan_com_e_commerce">
-                      <span className="flex items-center gap-2"><ShoppingCart className="w-3 h-3" /> 🛒 প্রধান.কম</span>
+                      <span className="flex items-center gap-2"><ShoppingCart className="w-3 h-3" /> 🛒 Prodhan.com</span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs text-slate-600 font-medium">শুরুর তারিখ</Label>
+                <Label className="text-xs text-slate-600 font-medium">Start Date</Label>
                 <Input 
                   type="date" 
                   value={startDate} 
@@ -168,7 +168,7 @@ function InventoryReportsPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-600 font-medium">শেষ তারিখ</Label>
+                <Label className="text-xs text-slate-600 font-medium">End Date</Label>
                 <Input 
                   type="date" 
                   value={endDate} 
@@ -177,13 +177,13 @@ function InventoryReportsPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-600 font-medium">ক্যাটাগরি</Label>
+                <Label className="text-xs text-slate-600 font-medium">Category</Label>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="ক্যাটাগরি নির্বাচন করুন" />
+                    <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">সকল ক্যাটাগরি</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {filteredCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.name}>
                         {cat.name}
@@ -197,11 +197,11 @@ function InventoryReportsPage() {
               <div className={`mt-3 p-2.5 rounded-lg text-xs font-medium flex items-center gap-2 ${
                 selectedDepartment === 'boibari' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' : 'bg-purple-50 text-purple-700 border border-purple-200'
               }`}>
-                <span>ফিল্টার করা হচ্ছে:</span>
+                <span>Filtering:</span>
                 <Badge className={selectedDepartment === 'boibari' ? 'bg-cyan-100 text-cyan-800' : 'bg-purple-100 text-purple-800'}>
-                  {selectedDepartment === 'boibari' ? '📚 বইবাড়ি.কম' : '🛒 প্রধান.কম'}
+                  {selectedDepartment === 'boibari' ? '📚 Boibari.com' : '🛒 Prodhan.com'}
                 </Badge>
-                <span className="text-slate-500">({filteredCategories.length} ক্যাটাগরি)</span>
+                <span className="text-slate-500">({filteredCategories.length} categories)</span>
               </div>
             )}
           </CardContent>
@@ -210,14 +210,14 @@ function InventoryReportsPage() {
         {/* Stock Reports */}
         <Card className="bg-white border border-slate-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-800">স্টক রিপোর্টস</CardTitle>
+            <CardTitle className="text-base font-semibold text-slate-800">Stock Reports</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <ReportButton 
                 type="valuation" 
                 icon={FileText} 
-                title="স্টক মূল্যায়ন" 
+                title="Stock Valuation" 
                 color="text-violet-600"
                 bgColor="bg-violet-50"
                 hoverBorder="violet-400"
@@ -225,7 +225,7 @@ function InventoryReportsPage() {
               <ReportButton 
                 type="low_stock" 
                 icon={TrendingDown} 
-                title="কম স্টক সতর্কতা" 
+                title="Low Stock Alert" 
                 color="text-red-600"
                 bgColor="bg-red-50"
                 hoverBorder="red-400"
@@ -233,7 +233,7 @@ function InventoryReportsPage() {
               <ReportButton 
                 type="movement_summary" 
                 icon={RotateCcw} 
-                title="মুভমেন্ট সারাংশ" 
+                title="Movement Summary" 
                 color="text-cyan-600"
                 bgColor="bg-cyan-50"
                 hoverBorder="cyan-400"
@@ -245,14 +245,14 @@ function InventoryReportsPage() {
         {/* Sales & Loss Reports */}
         <Card className="bg-white border border-slate-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-800">বিক্রয় ও ক্ষতি রিপোর্টস</CardTitle>
+            <CardTitle className="text-base font-semibold text-slate-800">Sales & Loss Reports</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <ReportButton 
                 type="sales" 
                 icon={ShoppingBag} 
-                title="বিক্রয় রিপোর্ট" 
+                title="Sales Report" 
                 color="text-green-600"
                 bgColor="bg-green-50"
                 hoverBorder="green-400"
@@ -260,7 +260,7 @@ function InventoryReportsPage() {
               <ReportButton 
                 type="damaged" 
                 icon={PackageX} 
-                title="ক্ষতিগ্রস্ত রিপোর্ট" 
+                title="Damaged Report" 
                 color="text-orange-600"
                 bgColor="bg-orange-50"
                 hoverBorder="orange-400"
