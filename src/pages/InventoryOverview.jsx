@@ -106,6 +106,13 @@ function InventoryOverviewPage() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
+                                 currentUser?.job_role === 'admin' ||
+                                 currentUser?.job_role === 'inventory_manager';
+
+  const userDepartment = canViewAllDepartments ? 'all' : (currentUser?.department || 'all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+
   // Fetch categories for filtering
   const { data: categories = [] } = useQuery({
     queryKey: ['product-categories', selectedDepartment],
@@ -118,13 +125,6 @@ function InventoryOverviewPage() {
       );
     },
   });
-
-  const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
-                                 currentUser?.job_role === 'admin' ||
-                                 currentUser?.job_role === 'inventory_manager';
-
-  const userDepartment = canViewAllDepartments ? 'all' : (currentUser?.department || 'all');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
 
   useEffect(() => {
     if (currentUser && !canViewAllDepartments) {
