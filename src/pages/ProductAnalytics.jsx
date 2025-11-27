@@ -579,6 +579,195 @@ function ProductAnalyticsDashboard() {
         {/* Analytics Display */}
         {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && !analyticsLoading && (
           <>
+            {/* Modern Visual Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Revenue Distribution Pie Chart */}
+              <Card className="premium-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChartIcon className="w-5 h-5 text-violet-600" />
+                    Revenue Distribution by Product
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={analyticsData.data.map((m, i) => ({
+                            name: m.product_name?.substring(0, 20) + (m.product_name?.length > 20 ? '...' : ''),
+                            value: m.totalRevenue || 0,
+                            fill: COLORS[i % COLORS.length]
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          outerRadius={100}
+                          innerRadius={40}
+                          dataKey="value"
+                          animationBegin={0}
+                          animationDuration={800}
+                        >
+                          {analyticsData.data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip 
+                          formatter={(value) => [`৳${value.toLocaleString()}`, 'Revenue']}
+                          contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stock vs Sales Bar Chart */}
+              <Card className="premium-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    Stock vs Sales Comparison
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={analyticsData.data.slice(0, 8).map((m, i) => ({
+                          name: m.product_name?.substring(0, 12) + (m.product_name?.length > 12 ? '...' : ''),
+                          stock: m.current_stock || 0,
+                          sold: m.totalSold || 0,
+                          purchased: m.totalPurchasedQty || 0,
+                          fill: COLORS[i % COLORS.length]
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
+                        <ChartTooltip 
+                          contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                        />
+                        <Legend />
+                        <Bar dataKey="stock" fill="#7C3AED" name="Current Stock" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="sold" fill="#10B981" name="Units Sold" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="purchased" fill="#3B82F6" name="Purchased" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Movement Analysis Area Chart */}
+            <Card className="premium-card mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-emerald-600" />
+                  Movement Analysis Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={analyticsData.data.map((m, i) => ({
+                        name: m.product_name?.substring(0, 15) + (m.product_name?.length > 15 ? '...' : ''),
+                        revenue: m.totalRevenue || 0,
+                        purchases: m.totalPurchasedValue || 0,
+                        losses: m.totalLossValue || 0
+                      }))}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                        </linearGradient>
+                        <linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                        </linearGradient>
+                        <linearGradient id="colorLosses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis tickFormatter={(value) => `৳${(value/1000).toFixed(0)}k`} />
+                      <ChartTooltip 
+                        formatter={(value) => [`৳${value.toLocaleString()}`, '']}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                      />
+                      <Legend />
+                      <Area type="monotone" dataKey="revenue" stroke="#10B981" fillOpacity={1} fill="url(#colorRevenue)" name="Revenue" />
+                      <Area type="monotone" dataKey="purchases" stroke="#3B82F6" fillOpacity={1} fill="url(#colorPurchases)" name="Purchases" />
+                      <Area type="monotone" dataKey="losses" stroke="#EF4444" fillOpacity={1} fill="url(#colorLosses)" name="Losses" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Profit Margin Analysis */}
+            <Card className="premium-card mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  Profit Margin Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={analyticsData.data.map((m) => ({
+                        name: m.product_name?.substring(0, 15) + (m.product_name?.length > 15 ? '...' : ''),
+                        margin: m.profitMargin || 0,
+                        fill: m.profitMargin > 30 ? '#10B981' : m.profitMargin > 15 ? '#F59E0B' : '#EF4444'
+                      }))}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis unit="%" domain={[0, 100]} />
+                      <ChartTooltip 
+                        formatter={(value) => [`${value.toFixed(1)}%`, 'Margin']}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                      />
+                      <Bar dataKey="margin" name="Profit Margin" radius={[8, 8, 0, 0]}>
+                        {analyticsData.data.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.profitMargin > 30 ? '#10B981' : entry.profitMargin > 15 ? '#F59E0B' : '#EF4444'} 
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-center gap-6 mt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-xs text-muted-foreground">High (&gt;30%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <span className="text-xs text-muted-foreground">Medium (15-30%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span className="text-xs text-muted-foreground">Low (&lt;15%)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Enhanced Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card className="premium-card border-l-4 border-green-500">

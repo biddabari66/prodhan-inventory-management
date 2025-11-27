@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Inventory } from '@/entities/Inventory';
 import { InventoryMovement } from '@/entities/InventoryMovement'; // NEW IMPORT
@@ -637,28 +636,67 @@ export default function InventoryPage() {
             </header>
 
             <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="ai-insights">
-                        <Brain className="w-4 h-4 mr-2" />
-                        AI Insights
-                    </TabsTrigger>
-                    <TabsTrigger value="movements">Movements</TabsTrigger>
-                    <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
-                    <TabsTrigger value="returns">
-                        <PackageX className="w-4 h-4 mr-2" />
-                        Returns
-                    </TabsTrigger>
-                    <TabsTrigger value="suppliers">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Suppliers
-                    </TabsTrigger>
-                    <TabsTrigger value="analytics">
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        Analytics
-                    </TabsTrigger>
-                    <TabsTrigger value="reports">Reports</TabsTrigger>
-                </TabsList>
+                {/* Enhanced Modern Tab Navigation */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-slate-200/50 mb-6">
+                    <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 gap-1 bg-transparent h-auto p-0">
+                        <TabsTrigger 
+                            value="overview" 
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-orange-50"
+                        >
+                            <Package className="w-4 h-4" />
+                            <span className="hidden sm:inline">Overview</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="ai-insights"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-violet-50"
+                        >
+                            <Brain className="w-4 h-4" />
+                            <span className="hidden sm:inline">AI Insights</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="movements"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-blue-50"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            <span className="hidden sm:inline">Movements</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="reconciliation"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-emerald-50"
+                        >
+                            <Shield className="w-4 h-4" />
+                            <span className="hidden sm:inline">Reconciliation</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="returns"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-amber-50"
+                        >
+                            <PackageX className="w-4 h-4" />
+                            <span className="hidden sm:inline">Returns</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="suppliers"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-indigo-50"
+                        >
+                            <Building2 className="w-4 h-4" />
+                            <span className="hidden sm:inline">Suppliers</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="analytics"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-pink-50"
+                        >
+                            <BarChart3 className="w-4 h-4" />
+                            <span className="hidden sm:inline">Analytics</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="reports"
+                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-600 data-[state=active]:to-gray-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-3 px-4 transition-all duration-300 font-medium flex items-center gap-2 hover:bg-slate-50"
+                        >
+                            <FileText className="w-4 h-4" />
+                            <span className="hidden sm:inline">Reports</span>
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
                 <TabsContent value="overview" className="mt-6 space-y-6">
                     {/* Enhanced Search with AI Suggestions */}

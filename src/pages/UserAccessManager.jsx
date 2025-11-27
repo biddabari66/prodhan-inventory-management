@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from '@/entities/User';
 import { UserPermission } from '@/entities/UserPermission';
@@ -50,6 +49,9 @@ const ROLE_PERMISSIONS = {
     email: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
     procurement: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
     courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     standard_reports: { can_view: true, can_export: true },
@@ -84,6 +86,9 @@ const ROLE_PERMISSIONS = {
     email: { can_view: true, can_create: true, can_edit: true, can_export: true },
     inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    sales: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
     procurement: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
     courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     user_access_manager: { can_view: true, can_create: true, can_edit: true },
@@ -174,6 +179,9 @@ const ROLE_PERMISSIONS = {
     dashboard: { can_view: true, can_export: true },
     inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
     procurement: { can_view: true, can_create: true, can_edit: true, can_export: true },
     expenses: { can_view: true, can_create: true, can_export: true },
     reports: { can_view: true, can_create: true, can_export: true }
@@ -182,6 +190,9 @@ const ROLE_PERMISSIONS = {
     dashboard: { can_view: true },
     inventory: { can_view: true, can_create: true, can_edit: true, can_export: true },
     purchase: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    sales: { can_view: true, can_export: true },
+    product_analytics: { can_view: true },
     procurement: { can_view: true, can_create: true, can_edit: true, can_export: true },
     expenses: { can_view: true, can_create: true },
     my_time: { can_view: true, can_create: true, can_edit: true }
