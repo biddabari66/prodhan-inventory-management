@@ -30,7 +30,7 @@ import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader
 import OrderInvoice from '../components/invoices/OrderInvoice';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import SearchableProductSelect from '../components/common/SearchableProductSelect';
+import SearchableProductSelect, { SearchableCustomerSelect } from '../components/common/SearchableProductSelect';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { withPermission } from '../components/common/PermissionGuard';
@@ -196,25 +196,14 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Select Existing Customer (Optional)</Label>
-              <Select
-                value={formData.customer_id}
-                onValueChange={(value) => setFormData({...formData, customer_id: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose customer..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.customer_name} - {customer.customer_phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Select Existing Customer (Optional)</Label>
+            <SearchableCustomerSelect
+              customers={customers}
+              value={formData.customer_id}
+              onValueChange={(value) => setFormData({...formData, customer_id: value})}
+              placeholder="Search customers by name, phone, or email..."
+            />
           </div>
 
           <Separator />
@@ -279,9 +268,9 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
                 </span>
               </Label>
               <SearchableProductSelect
-                products={departmentFilteredInventory}
+                inventory={departmentFilteredInventory}
                 value={selectedInventoryItem}
-                onChange={setSelectedInventoryItem}
+                onValueChange={setSelectedInventoryItem}
                 placeholder="Search by name, ISBN, barcode..."
                 disabled={departmentFilteredInventory.length === 0}
               />
@@ -637,7 +626,13 @@ function SalesPage() {
       let customerId = orderData.customer_id;
 
       if (!customerId) {
-        const existingCustomer = customers.find(c => c.customer_phone === orderData.customer_phone);
+        // Check for duplicates by phone or email
+        const existingByPhone = customers.find(c => c.customer_phone === orderData.customer_phone);
+        const existingByEmail = orderData.customer_email 
+          ? customers.find(c => c.customer_email === orderData.customer_email)
+          : null;
+
+        const existingCustomer = existingByPhone || existingByEmail;
 
         if (existingCustomer) {
           customerId = existingCustomer.id;
@@ -645,6 +640,7 @@ function SalesPage() {
             total_orders: (existingCustomer.total_orders || 0) + 1,
             total_spent: (existingCustomer.total_spent || 0) + orderData.total_amount
           });
+          toast.info(`Using existing customer: ${existingCustomer.customer_name}`);
         } else {
           const newCustomer = await Customer.create({
             customer_name: orderData.customer_name,

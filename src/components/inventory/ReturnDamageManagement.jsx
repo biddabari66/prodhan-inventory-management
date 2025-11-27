@@ -399,138 +399,91 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Header with Department Filter */}
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <PackageX className="w-6 h-6 text-red-600" />
-              Return & Damage Management
-            </h2>
-            <p className="text-muted-foreground">Track product returns, damages, and write-offs</p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => handleOpenForm('return')} variant="outline" className="gap-2">
-              <RotateCcw className="w-4 h-4" />
-              Record Return
-            </Button>
-            <Button onClick={() => handleOpenForm('damage')} variant="outline" className="gap-2 text-red-600">
-              <AlertOctagon className="w-4 h-4" />
-              Record Damage
-            </Button>
-          </div>
+      {/* Professional Action Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Transaction Records
+          </h2>
+          <p className="text-sm text-slate-500">Detailed tracking and management</p>
         </div>
-
-        {/* Department Filter Row */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-medium">Department Filter:</Label>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="boibari">📚 Boibari Only</SelectItem>
-                  <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com Only</SelectItem>
-                </SelectContent>
-              </Select>
-              {departmentFilter !== 'all' && (
-                <Badge className={
-                  departmentFilter === 'boibari' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                }>
-                  Showing: {departmentFilter === 'boibari' ? '📚 Boibari.com' : '🛒 Prodhan.com'}
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => handleOpenForm('return')} 
+            className="bg-blue-600 hover:bg-blue-700 shadow-sm"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Record Return
+          </Button>
+          <Button 
+            onClick={() => handleOpenForm('damage')} 
+            className="bg-red-600 hover:bg-red-700 shadow-sm"
+          >
+            <AlertOctagon className="w-4 h-4 mr-2" />
+            Record Damage
+          </Button>
+        </div>
       </div>
 
-      {/* Department Filter Info Banner */}
-      {departmentFilter !== 'all' && (
-        <Card className={`border-2 ${
-          departmentFilter === 'boibari' ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'
-        }`}>
-          <CardContent className="p-4">
-            <p className="text-sm font-medium flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              Viewing returns & damages for: <strong>
-                {departmentFilter === 'boibari' ? '📚 Boibari.com (Books)' : '🛒 Prodhan.com (E-commerce)'}
-              </strong>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDepartmentFilter('all')}
-                className="ml-auto"
-              >
-                Clear Filter
-              </Button>
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="premium-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Returns</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.returnCount}</p>
+      {/* Professional Statistics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <RotateCcw className="w-5 h-5 text-blue-600" />
               </div>
-              <RotateCcw className="w-8 h-8 text-blue-500 opacity-50" />
             </div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Total Returns</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.returnCount}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Return Value</p>
-                <p className="text-2xl font-bold text-blue-600">৳{stats.returnValue.toLocaleString()}</p>
+        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-600" />
               </div>
-              <DollarSign className="w-8 h-8 text-blue-500 opacity-50" />
             </div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Return Value</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">৳{stats.returnValue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Damages</p>
-                <p className="text-2xl font-bold text-red-600">{stats.damageCount}</p>
+        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                <AlertOctagon className="w-5 h-5 text-red-600" />
               </div>
-              <AlertOctagon className="w-8 h-8 text-red-500 opacity-50" />
             </div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Total Damages</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{stats.damageCount}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Damage Loss</p>
-                <p className="text-2xl font-bold text-red-600">৳{stats.damageValue.toLocaleString()}</p>
+        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
               </div>
-              <TrendingDown className="w-8 h-8 text-red-500 opacity-50" />
             </div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Damage Loss</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">৳{stats.damageValue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-2 border-orange-200 bg-orange-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Loss</p>
-                <p className="text-2xl font-bold text-orange-600">৳{stats.totalLoss.toLocaleString()}</p>
+        <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50 hover:shadow-lg transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-white" />
               </div>
-              <AlertTriangle className="w-8 h-8 text-orange-500 opacity-50" />
             </div>
+            <p className="text-xs text-orange-700 uppercase tracking-wide font-semibold">Total Loss</p>
+            <p className="text-2xl font-bold text-orange-600 mt-1">৳{stats.totalLoss.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>
@@ -561,12 +514,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         </TabsList>
 
         <TabsContent value="returns" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Returns History</CardTitle>
+          <Card className="border border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-lg font-semibold text-slate-900">Product Returns History</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
@@ -655,18 +609,20 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                     })
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="damages" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Damaged Products History</CardTitle>
+          <Card className="border border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-lg font-semibold text-slate-900">Damaged Products History</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
@@ -739,8 +695,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                       );
                     })
                   )}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
