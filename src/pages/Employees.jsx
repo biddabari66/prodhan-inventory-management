@@ -372,23 +372,34 @@ export default function Employees() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
         <div className="max-w-7xl mx-auto p-8 space-y-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
-          <div className="h-40 bg-muted rounded mt-6"></div>
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
+            <div className="h-40 bg-muted rounded mt-6"></div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Employee Management</h1>
-          <p className="text-muted-foreground mt-1">Manage employee data, roles, and permissions.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <Users className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Employee Management</h1>
+            <p className="text-slate-600 mt-1 text-base">Comprehensive workforce management and HR operations</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={exportEmployeesToCSV} variant="outline">
+        <div className="flex gap-3">
+          <Button 
+            onClick={exportEmployeesToCSV} 
+            variant="outline"
+            className="border-slate-300 hover:border-green-500 hover:bg-green-50 px-5 py-6"
+          >
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
@@ -399,8 +410,8 @@ export default function Employees() {
               }
           }}>
             <DialogTrigger asChild>
-              <Button className="btn-primary">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg shadow-blue-500/30 px-6 py-6 text-base font-semibold">
+                <Plus className="w-5 h-5 mr-2" />
                 Add Employee
               </Button>
             </DialogTrigger>
@@ -427,10 +438,10 @@ export default function Employees() {
       <EmployeeImportExport onImportComplete={loadData} />
 
       {/* Filters Card */}
-      <Card className="premium-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+          <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-900">
+            <Filter className="w-5 h-5 text-blue-600" />
             Filters & Search
           </CardTitle>
         </CardHeader>
@@ -485,11 +496,12 @@ export default function Employees() {
       </Card>
 
       {/* Employee Directory */}
-      <Card className="premium-card">
-        <CardHeader>
-          <CardTitle>Employee Directory ({filteredEmployees.length})</CardTitle>
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+          <CardTitle className="text-xl font-semibold text-slate-900">Employee Directory ({filteredEmployees.length})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -578,6 +590,7 @@ export default function Employees() {
               })}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -598,6 +611,7 @@ export default function Employees() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }
