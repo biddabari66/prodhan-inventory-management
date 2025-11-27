@@ -5,16 +5,20 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Calculator, Info } from 'lucide-react';
+import { Calculator, Info, CheckCircle, XCircle, AlertCircle, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type = 'return', initialData }) {
   const [formData, setFormData] = useState(initialData || {
     inventory_item_id: '',
-    return_type: 'sales_return', // purchase_return or sales_return
+    return_type: 'sales_return',
     quantity: 1,
-    good_condition_qty: 0,
-    damaged_qty: 0,
+    condition_breakdown: {
+      good: 0,
+      fair: 0,
+      damaged: 0
+    },
     reason: '',
     order_number: '',
     customer_name: '',
@@ -29,36 +33,48 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isManualFinancialImpact, setIsManualFinancialImpact] = useState(false);
-  const [usePartialReturn, setUsePartialReturn] = useState(false);
 
-  // Auto-sync partial quantities with total
+  // Auto-sync condition breakdown with total quantity
   useEffect(() => {
-    if (usePartialReturn) {
-      const good = parseInt(formData.good_condition_qty) || 0;
-      const damaged = parseInt(formData.damaged_qty) || 0;
-      const total = good + damaged;
-      if (total !== parseInt(formData.quantity)) {
+    if (formData.return_type === 'sales_return') {
+      const total = formData.condition_breakdown.good + 
+                   formData.condition_breakdown.fair + 
+                   formData.condition_breakdown.damaged;
+      
+      if (total !== formData.quantity && total === 0 && formData.quantity > 0) {
+        // Initialize with all good condition
         setFormData(prev => ({
           ...prev,
-          quantity: total
+          condition_breakdown: {
+            good: formData.quantity,
+            fair: 0,
+            damaged: 0
+          }
         }));
       }
     }
-  }, [formData.good_condition_qty, formData.damaged_qty, usePartialReturn]);
+  }, [formData.quantity, formData.return_type]);
 
-  // Auto-calculate financial impact when product or quantity changes
+  // Auto-calculate financial impact with condition breakdown
   useEffect(() => {
-    if (selectedProduct && formData.quantity && !isManualFinancialImpact) {
-      const priceToUse = formData.return_type === 'purchase_return' 
-        ? selectedProduct.purchase_price 
-        : selectedProduct.selling_price;
-      const calculatedImpact = priceToUse * parseInt(formData.quantity);
+    if (selectedProduct && !isManualFinancialImpact) {
+      let calculatedImpact = 0;
+
+      if (formData.return_type === 'sales_return') {
+        const goodValue = formData.condition_breakdown.good * selectedProduct.selling_price;
+        const fairValue = formData.condition_breakdown.fair * selectedProduct.selling_price * 0.7;
+        const damagedValue = formData.condition_breakdown.damaged * selectedProduct.selling_price * 0.3;
+        calculatedImpact = goodValue + fairValue + damagedValue - (formData.restocking_fee || 0);
+      } else {
+        calculatedImpact = selectedProduct.purchase_price * formData.quantity - (formData.restocking_fee || 0);
+      }
+
       setFormData(prev => ({
         ...prev,
         financial_impact: calculatedImpact
       }));
     }
-  }, [selectedProduct, formData.quantity, formData.return_type, isManualFinancialImpact]);
+  }, [selectedProduct, formData.condition_breakdown, formData.quantity, formData.return_type, formData.restocking_fee, isManualFinancialImpact]);
 
   // Load initial data for editing
   useEffect(() => {
@@ -94,30 +110,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
   };
 
   const resetToAutoCalculate = () => {
-    if (selectedProduct && formData.quantity) {
-      const priceToUse = formData.return_type === 'purchase_return' 
-        ? selectedProduct.purchase_price 
-        : selectedProduct.selling_price;
-      const calculatedImpact = priceToUse * parseInt(formData.quantity);
-      setFormData(prev => ({
-        ...prev,
-        financial_impact: calculatedImpact
-      }));
-      setIsManualFinancialImpact(false);
-      toast.success('Financial impact auto-calculated');
-    }
-  };
-
-  const handlePartialReturnToggle = () => {
-    setUsePartialReturn(!usePartialReturn);
-    if (!usePartialReturn) {
-      // Initialize partial quantities
-      setFormData(prev => ({
-        ...prev,
-        good_condition_qty: prev.quantity,
-        damaged_qty: 0
-      }));
-    }
+    setIsManualFinancialImpact(false);
+    toast.success('Financial impact will auto-calculate');
   };
 
   const handleSubmit = (e) => {
@@ -128,11 +122,13 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       return;
     }
 
-    if (usePartialReturn) {
-      const good = parseInt(formData.good_condition_qty) || 0;
-      const damaged = parseInt(formData.damaged_qty) || 0;
-      if (good + damaged !== parseInt(formData.quantity)) {
-        toast.error('Good condition + Damaged quantities must equal Total quantity');
+    if (formData.return_type === 'sales_return') {
+      const total = formData.condition_breakdown.good + 
+                   formData.condition_breakdown.fair + 
+                   formData.condition_breakdown.damaged;
+      
+      if (total !== formData.quantity) {
+        toast.error(`Condition breakdown (${total}) must equal total quantity (${formData.quantity})`);
         return;
       }
     }
@@ -141,11 +137,9 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       ...formData,
       type,
       quantity: parseInt(formData.quantity),
-      good_condition_qty: parseInt(formData.good_condition_qty) || 0,
-      damaged_qty: parseInt(formData.damaged_qty) || 0,
+      condition_breakdown: formData.return_type === 'sales_return' ? formData.condition_breakdown : null,
       financial_impact: parseFloat(formData.financial_impact),
-      restocking_fee: parseFloat(formData.restocking_fee),
-      use_partial_return: usePartialReturn
+      restocking_fee: parseFloat(formData.restocking_fee || 0)
     });
   };
 
@@ -210,74 +204,26 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         </div>
 
         <div>
-          <Label className="flex items-center justify-between">
-            <span>Total Quantity *</span>
-            {type === 'return' && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handlePartialReturnToggle}
-                className={`h-6 text-xs ${usePartialReturn ? 'text-green-600' : 'text-gray-500'}`}
-              >
-                {usePartialReturn ? '✓ Partial Return' : 'Enable Partial'}
-              </Button>
-            )}
-          </Label>
+          <Label>Total Quantity *</Label>
           <Input
             type="number"
             min="1"
             value={formData.quantity}
             onChange={(e) => {
-              const value = e.target.value;
-              setFormData(prev => ({...prev, quantity: value}));
-              if (usePartialReturn) {
-                setFormData(prev => ({
-                  ...prev,
-                  good_condition_qty: value,
-                  damaged_qty: 0
-                }));
-              }
+              const qty = parseInt(e.target.value) || 0;
+              setFormData(prev => ({
+                ...prev,
+                quantity: qty,
+                condition_breakdown: {
+                  good: qty,
+                  fair: 0,
+                  damaged: 0
+                }
+              }));
             }}
-            disabled={usePartialReturn}
             required
           />
         </div>
-
-        {usePartialReturn && type === 'return' && (
-          <>
-            <div className="md:col-span-2 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
-              <Label className="text-sm font-semibold mb-3 block text-amber-800">
-                Partial Return Breakdown
-              </Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs">Good Condition (Restock)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.good_condition_qty}
-                    onChange={(e) => setFormData({...formData, good_condition_qty: e.target.value})}
-                    className="bg-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Damaged (Write-off)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.damaged_qty}
-                    onChange={(e) => setFormData({...formData, damaged_qty: e.target.value})}
-                    className="bg-white"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-amber-700 mt-2">
-                Total: {parseInt(formData.good_condition_qty || 0) + parseInt(formData.damaged_qty || 0)} / {formData.quantity}
-              </p>
-            </div>
-          </>
-        )}
 
         {type === 'return' && formData.return_type === 'sales_return' && (
           <>
@@ -346,20 +292,120 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
           </Select>
         </div>
 
-        <div>
-          <Label>Condition</Label>
-          <Select value={formData.condition} onValueChange={(value) => setFormData({...formData, condition: value})}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="good">Good (Resellable)</SelectItem>
-              <SelectItem value="fair">Fair (Minor Issues)</SelectItem>
-              <SelectItem value="damaged">Damaged (Not Resellable)</SelectItem>
-              <SelectItem value="destroyed">Destroyed (Write-off)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Condition Breakdown for Sales Returns */}
+        {formData.return_type === 'sales_return' && type === 'return' && (
+          <div className="md:col-span-2">
+            <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  📦 Product Condition Breakdown
+                  <Badge variant="outline">
+                    Total: {formData.condition_breakdown.good + formData.condition_breakdown.fair + formData.condition_breakdown.damaged} / {formData.quantity}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2 p-3 bg-white rounded-lg border-2 border-green-300">
+                    <Label className="flex items-center gap-2 text-green-700 font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Good Product
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={formData.quantity}
+                      value={formData.condition_breakdown.good}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        condition_breakdown: {
+                          ...formData.condition_breakdown,
+                          good: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      className="border-green-400 text-center font-bold"
+                    />
+                    <p className="text-xs text-green-700">100% recovery value</p>
+                    {selectedProduct && formData.condition_breakdown.good > 0 && (
+                      <p className="text-xs font-semibold text-green-800">
+                        ৳{(formData.condition_breakdown.good * selectedProduct.selling_price).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 p-3 bg-white rounded-lg border-2 border-orange-300">
+                    <Label className="flex items-center gap-2 text-orange-700 font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                      Fair (Minor Issues)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={formData.quantity}
+                      value={formData.condition_breakdown.fair}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        condition_breakdown: {
+                          ...formData.condition_breakdown,
+                          fair: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      className="border-orange-400 text-center font-bold"
+                    />
+                    <p className="text-xs text-orange-700">70% recovery value</p>
+                    {selectedProduct && formData.condition_breakdown.fair > 0 && (
+                      <p className="text-xs font-semibold text-orange-800">
+                        ৳{(formData.condition_breakdown.fair * selectedProduct.selling_price * 0.7).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 p-3 bg-white rounded-lg border-2 border-red-300">
+                    <Label className="flex items-center gap-2 text-red-700 font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      Damaged Product
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={formData.quantity}
+                      value={formData.condition_breakdown.damaged}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        condition_breakdown: {
+                          ...formData.condition_breakdown,
+                          damaged: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      className="border-red-400 text-center font-bold"
+                    />
+                    <p className="text-xs text-red-700">30% recovery value</p>
+                    {selectedProduct && formData.condition_breakdown.damaged > 0 && (
+                      <p className="text-xs font-semibold text-red-800">
+                        ৳{(formData.condition_breakdown.damaged * selectedProduct.selling_price * 0.3).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {selectedProduct && (
+                  <div className="p-3 bg-white rounded-lg border-2 border-violet-300">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-semibold text-violet-800">Total Estimated Recovery:</p>
+                      <p className="text-xl font-bold text-violet-900">
+                        ৳{(
+                          formData.condition_breakdown.good * selectedProduct.selling_price +
+                          formData.condition_breakdown.fair * selectedProduct.selling_price * 0.7 +
+                          formData.condition_breakdown.damaged * selectedProduct.selling_price * 0.3
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div>
           <Label>Action</Label>
@@ -411,7 +457,9 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
             <div className="flex items-center gap-1 mt-1">
               <Info className="w-3 h-3 text-blue-500" />
               <p className="text-xs text-blue-600">
-                Auto-calculated: ৳{formData.return_type === 'purchase_return' ? selectedProduct.purchase_price : selectedProduct.selling_price} × {formData.quantity} = ৳{formData.financial_impact.toLocaleString()}
+                {formData.return_type === 'sales_return' 
+                  ? 'Auto-calculated from condition breakdown' 
+                  : `Auto-calculated: ৳${selectedProduct.purchase_price} × ${formData.quantity}`}
               </p>
             </div>
           )}
