@@ -1,148 +1,174 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { User } from '@/entities/User';
-import { Admission } from '@/entities/Admission';
-import { Lead } from '@/entities/Lead';
-import { Expense } from '@/entities/Expense';
-import { Income } from '@/entities/Income';
-import { Inventory } from '@/entities/Inventory';
-import { Attendance } from '@/entities/Attendance';
-import { Task } from '@/entities/Task';
-import { Course } from '@/entities/Course';
-import { Order } from '@/entities/Order';
-import { Customer } from '@/entities/Customer';
+import { base44 } from '@/api/base44Client';
 
 /**
- * EXPERT DATA PREFETCHER
- * Intelligently prefetches data in the background for instant page loads
+ * EXPERT DATA PREFETCHER V2
+ * Aggressive background prefetching with smart cache management
  */
 
+// Optimized prefetch configs with smaller initial loads
 const PREFETCH_QUERIES = {
   users: {
     queryKey: ['users'],
-    queryFn: () => User.list(),
+    queryFn: () => base44.entities.User.list('-created_date', 50),
     staleTime: 5 * 60 * 1000,
   },
   currentUser: {
     queryKey: ['currentUser'],
-    queryFn: () => User.me(),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => base44.auth.me(),
+    staleTime: 10 * 60 * 1000,
   },
   admissions: {
     queryKey: ['admissions'],
-    queryFn: () => Admission.list('-admission_date', 500),
+    queryFn: () => base44.entities.Admission.list('-admission_date', 100),
     staleTime: 3 * 60 * 1000,
   },
   leads: {
     queryKey: ['leads'],
-    queryFn: () => Lead.list('-created_date', 500),
+    queryFn: () => base44.entities.Lead.list('-created_date', 100),
     staleTime: 2 * 60 * 1000,
   },
   expenses: {
     queryKey: ['expenses'],
-    queryFn: () => Expense.list('-expense_date', 200),
+    queryFn: () => base44.entities.Expense.list('-expense_date', 50),
     staleTime: 3 * 60 * 1000,
   },
   incomes: {
     queryKey: ['incomes'],
-    queryFn: () => Income.list('-income_date', 200),
+    queryFn: () => base44.entities.Income.list('-income_date', 50),
     staleTime: 3 * 60 * 1000,
   },
   inventory: {
     queryKey: ['inventory'],
-    queryFn: () => Inventory.list(),
+    queryFn: () => base44.entities.Inventory.list('-updated_date', 200),
     staleTime: 5 * 60 * 1000,
   },
   attendance: {
     queryKey: ['attendance'],
-    queryFn: () => Attendance.list('-date', 100),
+    queryFn: () => base44.entities.Attendance.list('-date', 50),
     staleTime: 2 * 60 * 1000,
   },
   tasks: {
     queryKey: ['tasks'],
-    queryFn: () => Task.list('-created_date', 100),
+    queryFn: () => base44.entities.Task.list('-created_date', 50),
     staleTime: 3 * 60 * 1000,
-  },
-  courses: {
-    queryKey: ['courses'],
-    queryFn: () => Course.list('-created_date', 500),
-    staleTime: 10 * 60 * 1000, // Courses change less frequently
   },
   orders: {
     queryKey: ['orders'],
-    queryFn: () => Order.list('-order_date', 500),
+    queryFn: () => base44.entities.Order.list('-order_date', 100),
     staleTime: 2 * 60 * 1000,
   },
   customers: {
     queryKey: ['customers'],
-    queryFn: () => Customer.list(),
+    queryFn: () => base44.entities.Customer.list('-created_date', 100),
     staleTime: 5 * 60 * 1000,
+  },
+  suppliers: {
+    queryKey: ['suppliers'],
+    queryFn: () => base44.entities.Supplier.list(),
+    staleTime: 10 * 60 * 1000,
   },
 };
 
+// Track prefetched keys to avoid duplicate fetches
+const prefetchedKeys = new Set();
+
 export const usePrefetchData = (dataKeys = []) => {
   const queryClient = useQueryClient();
+  const prefetchedRef = useRef(new Set());
 
   useEffect(() => {
-    // Use requestIdleCallback for non-blocking prefetch
-    if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(() => {
-        prefetchInBackground(dataKeys, queryClient);
-      }, { timeout: 2000 });
-    } else {
-      setTimeout(() => {
-        prefetchInBackground(dataKeys, queryClient);
-      }, 500);
-    }
+    const keysToFetch = dataKeys.filter(k => !prefetchedRef.current.has(k));
+    if (keysToFetch.length === 0) return;
+
+    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 100));
+    
+    idleCallback(() => {
+      keysToFetch.forEach(key => {
+        const config = PREFETCH_QUERIES[key];
+        if (config && !prefetchedKeys.has(key)) {
+          prefetchedKeys.add(key);
+          prefetchedRef.current.add(key);
+          
+          queryClient.prefetchQuery({
+            queryKey: config.queryKey,
+            queryFn: config.queryFn,
+            staleTime: config.staleTime,
+          }).catch(() => {
+            prefetchedKeys.delete(key);
+          });
+        }
+      });
+    }, { timeout: 3000 });
   }, [dataKeys.join(','), queryClient]);
 };
 
-const prefetchInBackground = async (dataKeys, queryClient) => {
-  console.log('🔮 Prefetching data:', dataKeys);
-  
-  for (const key of dataKeys) {
-    const queryConfig = PREFETCH_QUERIES[key];
-    
-    if (queryConfig) {
-      try {
-        await queryClient.prefetchQuery({
-          queryKey: queryConfig.queryKey,
-          queryFn: queryConfig.queryFn,
-          staleTime: queryConfig.staleTime,
-        });
-        console.log(`✅ Prefetched: ${key}`);
-      } catch (error) {
-        console.warn(`⚠️ Prefetch failed for ${key}:`, error.message);
-      }
-    }
-  }
-};
-
-// Hook to prefetch on link hover
+// Hook to prefetch on link hover with debouncing
 export const usePrefetchOnHover = () => {
   const queryClient = useQueryClient();
+  const timeoutRef = useRef(null);
 
-  const prefetchForRoute = (pathname) => {
-    const routeDataMap = {
-      '/Dashboard': ['users', 'admissions', 'leads', 'expenses', 'incomes'],
-      '/Attendance': ['currentUser', 'attendance'],
-      '/CRM': ['leads', 'users'],
-      '/Inventory': ['inventory'],
-      '/Admissions': ['admissions', 'users'],
-      '/Expenses': ['expenses', 'users'],
-      '/Income': ['incomes', 'users'],
-      '/Procurement': ['orders', 'customers', 'inventory'],
-      '/Courses': ['courses', 'users'],
+  const prefetchForRoute = useCallback((pathname) => {
+    // Return props to attach to link elements
+    return {
+      onMouseEnter: () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        
+        timeoutRef.current = setTimeout(() => {
+          const routeDataMap = {
+            '/Dashboard': ['admissions', 'leads'],
+            '/Attendance': ['attendance'],
+            '/CRM': ['leads'],
+            '/InventoryOverview': ['inventory'],
+            '/Admissions': ['admissions'],
+            '/Expenses': ['expenses'],
+            '/Income': ['incomes'],
+            '/Sales': ['orders', 'customers'],
+            '/PurchaseOrders': ['inventory', 'suppliers'],
+          };
+
+          const dataKeys = routeDataMap[pathname] || [];
+          
+          dataKeys.forEach(key => {
+            const config = PREFETCH_QUERIES[key];
+            if (config && !prefetchedKeys.has(key)) {
+              prefetchedKeys.add(key);
+              queryClient.prefetchQuery({
+                queryKey: config.queryKey,
+                queryFn: config.queryFn,
+                staleTime: config.staleTime,
+              }).catch(() => prefetchedKeys.delete(key));
+            }
+          });
+        }, 150);
+      },
+      onMouseLeave: () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      }
     };
-
-    const dataKeys = routeDataMap[pathname] || [];
-    
-    if (dataKeys.length > 0) {
-      prefetchInBackground(dataKeys, queryClient);
-    }
-  };
+  }, [queryClient]);
 
   return { prefetchForRoute };
+};
+
+// Batch prefetch for critical data on app startup
+export const prefetchCriticalData = async (queryClient) => {
+  const criticalKeys = ['currentUser'];
+  
+  await Promise.allSettled(
+    criticalKeys.map(key => {
+      const config = PREFETCH_QUERIES[key];
+      if (config) {
+        return queryClient.prefetchQuery({
+          queryKey: config.queryKey,
+          queryFn: config.queryFn,
+          staleTime: config.staleTime,
+        });
+      }
+      return Promise.resolve();
+    })
+  );
 };
 
 export default usePrefetchData;

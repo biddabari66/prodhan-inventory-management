@@ -1,155 +1,142 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Loader2, Zap } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 
 /**
- * EXPERT FAST LOADING PROVIDER
- * Implements route-based prefetching, optimistic navigation, and loading states
+ * EXPERT FAST LOADING PROVIDER V2
+ * Implements aggressive prefetching, instant navigation, and smart caching
  */
 
-// Prefetch map - define which data to prefetch for each route
-const PREFETCH_MAP = {
-  '/Dashboard': ['users', 'admissions', 'leads', 'expenses', 'incomes'],
-  '/Attendance': ['currentUser', 'todayAttendance', 'attendanceSettings'],
-  '/CRM': ['leads', 'users'],
-  '/Inventory': ['inventory', 'suppliers'],
-  '/Admissions': ['admissions', 'employees'],
-  '/Expenses': ['expenses', 'users'],
-  '/Income': ['incomes', 'users'],
-  '/Procurement': ['orders', 'customers', 'inventory'],
+// Prefetch map with actual entity fetchers
+const PREFETCH_CONFIG = {
+  '/Dashboard': [
+    { key: ['dashboard-stats'], fn: () => Promise.all([
+      base44.entities.Admission.list('-admission_date', 100),
+      base44.entities.Lead.list('-created_date', 100),
+    ])},
+  ],
+  '/Attendance': [
+    { key: ['attendance'], fn: () => base44.entities.Attendance.list('-date', 50) },
+  ],
+  '/CRM': [
+    { key: ['leads'], fn: () => base44.entities.Lead.list('-created_date', 200) },
+  ],
+  '/InventoryOverview': [
+    { key: ['inventory'], fn: () => base44.entities.Inventory.list() },
+  ],
+  '/Sales': [
+    { key: ['orders'], fn: () => base44.entities.Order.list('-order_date', 100) },
+    { key: ['customers'], fn: () => base44.entities.Customer.list() },
+  ],
+  '/PurchaseOrders': [
+    { key: ['purchaseOrders'], fn: () => base44.entities.PurchaseOrder.list('-created_date', 100) },
+    { key: ['inventory'], fn: () => base44.entities.Inventory.list() },
+  ],
+  '/Admissions': [
+    { key: ['admissions'], fn: () => base44.entities.Admission.list('-admission_date', 200) },
+  ],
+  '/Expenses': [
+    { key: ['expenses'], fn: () => base44.entities.Expense.list('-expense_date', 100) },
+  ],
+  '/Income': [
+    { key: ['incomes'], fn: () => base44.entities.Income.list('-income_date', 100) },
+  ],
 };
 
-// Route transition animations
-const RouteTransition = ({ children, isLoading }) => {
-  const [shouldRender, setShouldRender] = useState(true);
+// Lightweight transition - no blocking loader
+const FastTransition = memo(({ children }) => {
+  return <div className="animate-in fade-in duration-150">{children}</div>;
+});
 
-  useEffect(() => {
-    if (isLoading) {
-      setShouldRender(false);
-      const timer = setTimeout(() => setShouldRender(true), 50);
-      return () => clearTimeout(timer);
-    } else {
-      setShouldRender(true);
-    }
-  }, [isLoading]);
-
-  if (!shouldRender) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <Loader2 className="w-12 h-12 text-violet-600 animate-spin mx-auto" />
-            <Zap className="w-6 h-6 text-yellow-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-violet-600">Loading...</p>
-            <p className="text-xs text-muted-foreground">Optimized for speed ⚡</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-};
+FastTransition.displayName = 'FastTransition';
 
 export default function FastLoadingProvider({ children }) {
   const location = useLocation();
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [isPrefetching, setIsPrefetching] = useState(false);
+  const queryClient = useQueryClient();
+  const [prefetchedRoutes, setPrefetchedRoutes] = useState(new Set());
 
-  // Prefetch data on route change
-  useEffect(() => {
-    const routeData = PREFETCH_MAP[location.pathname];
+  // Prefetch route data with actual queries
+  const prefetchRoute = useCallback(async (pathname) => {
+    if (prefetchedRoutes.has(pathname)) return;
     
-    if (routeData && routeData.length > 0) {
-      prefetchRouteData(routeData);
-    }
-  }, [location.pathname]);
+    const config = PREFETCH_CONFIG[pathname];
+    if (!config) return;
 
-  // Smooth route transitions
+    console.log(`⚡ Prefetching: ${pathname}`);
+    
+    try {
+      await Promise.all(
+        config.map(({ key, fn }) => 
+          queryClient.prefetchQuery({
+            queryKey: key,
+            queryFn: fn,
+            staleTime: 3 * 60 * 1000, // 3 minutes
+          })
+        )
+      );
+      setPrefetchedRoutes(prev => new Set([...prev, pathname]));
+      console.log(`✅ Prefetched: ${pathname}`);
+    } catch (e) {
+      console.warn(`⚠️ Prefetch failed for ${pathname}`);
+    }
+  }, [queryClient, prefetchedRoutes]);
+
+  // Prefetch current route on mount/change
   useEffect(() => {
-    setIsNavigating(true);
-    const timer = setTimeout(() => setIsNavigating(false), 100);
-    return () => clearTimeout(timer);
-  }, [location.pathname]);
+    prefetchRoute(location.pathname);
+  }, [location.pathname, prefetchRoute]);
 
   // Prefetch on link hover (intelligent preloading)
   useEffect(() => {
+    let hoverTimeout;
+    
     const handleLinkHover = (e) => {
       const link = e.target.closest('a');
-      if (link && link.href && link.href.includes(window.location.origin)) {
-        const path = new URL(link.href).pathname;
-        const routeData = PREFETCH_MAP[path];
-        
-        if (routeData && !isPrefetching) {
-          setIsPrefetching(true);
-          prefetchRouteData(routeData).finally(() => {
-            setTimeout(() => setIsPrefetching(false), 1000);
-          });
-        }
+      if (!link?.href?.includes(window.location.origin)) return;
+      
+      const path = new URL(link.href).pathname;
+      if (PREFETCH_CONFIG[path] && !prefetchedRoutes.has(path)) {
+        // Small delay to avoid prefetching on accidental hovers
+        hoverTimeout = setTimeout(() => prefetchRoute(path), 100);
       }
     };
 
-    document.addEventListener('mouseover', handleLinkHover);
-    return () => document.removeEventListener('mouseover', handleLinkHover);
-  }, [isPrefetching]);
+    const handleLinkLeave = () => {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+    };
 
-  // Enable performance monitoring
+    document.addEventListener('mouseover', handleLinkHover, { passive: true });
+    document.addEventListener('mouseout', handleLinkLeave, { passive: true });
+    
+    return () => {
+      document.removeEventListener('mouseover', handleLinkHover);
+      document.removeEventListener('mouseout', handleLinkLeave);
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+    };
+  }, [prefetchRoute, prefetchedRoutes]);
+
+  // Prefetch adjacent routes for instant navigation
   useEffect(() => {
-    // Report Web Vitals
-    if ('web-vital' in window) {
-      // Custom web vitals reporting could go here
-    }
+    const adjacentRoutes = {
+      '/Dashboard': ['/Attendance', '/CRM', '/InventoryOverview'],
+      '/InventoryOverview': ['/Sales', '/PurchaseOrders'],
+      '/Sales': ['/InventoryOverview', '/PurchaseOrders'],
+    };
 
-    // Report navigation timing
-    if (window.performance && window.performance.timing) {
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          const perfData = window.performance.timing;
-          const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
-          const connectTime = perfData.responseEnd - perfData.requestStart;
-          
-          console.log(`📊 Performance Metrics:
-            - Page Load: ${pageLoadTime}ms
-            - Network: ${connectTime}ms
-            - DOM Ready: ${perfData.domContentLoadedEventEnd - perfData.navigationStart}ms
-          `);
-
-          // Log slow pages for optimization
-          if (pageLoadTime > 3000) {
-            console.warn(`⚠️ Slow page load detected: ${pageLoadTime}ms`);
-          }
-        }, 0);
+    const routes = adjacentRoutes[location.pathname];
+    if (routes) {
+      // Prefetch after a short delay using idle time
+      const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+      idleCallback(() => {
+        routes.forEach(route => prefetchRoute(route));
       });
     }
-  }, []);
+  }, [location.pathname, prefetchRoute]);
 
   return (
-    <RouteTransition isLoading={isNavigating}>
+    <FastTransition>
       {children}
-    </RouteTransition>
+    </FastTransition>
   );
-}
-
-// Prefetch route data function
-async function prefetchRouteData(dataKeys) {
-  console.log(`🔮 Prefetching data for route:`, dataKeys);
-  
-  // Use requestIdleCallback for non-blocking prefetch
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => {
-      dataKeys.forEach(key => {
-        // Trigger prefetch (implementation depends on your data layer)
-        console.log(`📦 Prefetching: ${key}`);
-      });
-    });
-  } else {
-    // Fallback for browsers without requestIdleCallback
-    setTimeout(() => {
-      dataKeys.forEach(key => {
-        console.log(`📦 Prefetching: ${key}`);
-      });
-    }, 100);
-  }
 }
