@@ -96,30 +96,37 @@ function ProductAnalyticsDashboard() {
     return subDays(new Date(), parseInt(dateRange)).toISOString();
   }, [dateRange]);
 
-  const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useQuery({
+  const { data: analyticsData = { success: true, data: [] }, isLoading: analyticsLoading, error: analyticsError } = useQuery({
     queryKey: ['productAnalytics', selectedProductIds, startDate, selectedDepartment],
     queryFn: async () => {
-      if (selectedProductIds.length === 0) return { success: true, data: [] };
+      if (!selectedProductIds || selectedProductIds.length === 0) {
+        return { success: true, data: [] };
+      }
 
-      const response = await base44.functions.invoke('getProductMovementAnalytics', {
-        productIds: selectedProductIds,
-        startDate: startDate,
-        endDate: new Date().toISOString(),
-        department: selectedDepartment
-      });
+      try {
+        const response = await base44.functions.invoke('getProductMovementAnalytics', {
+          productIds: selectedProductIds,
+          startDate: startDate,
+          endDate: new Date().toISOString(),
+          department: selectedDepartment
+        });
 
-      if (response.data.success) {
-        return response.data;
-      } else {
-        throw new Error(response.data.error || 'Failed to fetch analytics');
+        if (response?.data?.success) {
+          return response.data;
+        } else {
+          console.warn('Analytics response issue:', response?.data);
+          return { success: true, data: [] };
+        }
+      } catch (error) {
+        console.error('Analytics fetch error:', error);
+        return { success: true, data: [] };
       }
     },
-    enabled: inventory.length > 0,
+    enabled: Array.isArray(inventory) && inventory.length > 0 && selectedProductIds.length > 0,
     staleTime: 2 * 60 * 1000,
-    retry: 2,
+    retry: 1,
     refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    initialData: { success: true, data: [] }
+    refetchOnWindowFocus: false
   });
 
   const availableProducts = useMemo(() => {
@@ -163,7 +170,7 @@ function ProductAnalyticsDashboard() {
   }, [analyticsData, dateRange]);
 
   const handleExportPDF = async () => {
-    if (selectedProducts.length === 0 || !analyticsData) {
+    if (selectedProducts.length === 0 || safeAnalyticsData.length === 0) {
       toast.error('Please select products first');
       return;
     }
@@ -173,7 +180,7 @@ function ProductAnalyticsDashboard() {
 
     try {
       const { data } = await base44.functions.invoke('generateProductAnalyticsReport', {
-        productMetrics: analyticsData.data,
+        productMetrics: safeAnalyticsData,
         dateRange: dateRange,
         department: selectedDepartment
       });
@@ -198,12 +205,12 @@ function ProductAnalyticsDashboard() {
   };
 
   const handleExportExcel = () => {
-    if (!analyticsData?.data || selectedProducts.length === 0) {
+    if (safeAnalyticsData.length === 0 || selectedProducts.length === 0) {
       toast.error('Please select products first');
       return;
     }
 
-    const exportData = analyticsData.data.map(metric => ({
+    const exportData = safeAnalyticsData.map(metric => ({
       'Product Name': metric.product_name,
       'Department': metric.department === 'boibari' ? 'Boibari' : 'Prodhan.com',
       'Category': metric.category,
@@ -260,7 +267,7 @@ function ProductAnalyticsDashboard() {
     }
   };
 
-  if (inventoryLoading || !inventory || inventory.length === 0) {
+  if (inventoryLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
@@ -271,8 +278,29 @@ function ProductAnalyticsDashboard() {
     );
   }
 
+  if (!inventory || inventory.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Package className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
+          <div>
+            <h3 className="text-xl font-semibold">No Inventory Items Found</h3>
+            <p className="text-muted-foreground mt-2">
+              Add products to your inventory first to view analytics
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Safe analytics data extraction
+  const safeAnalyticsData = useMemo(() => {
+    return analyticsData?.data && Array.isArray(analyticsData.data) ? analyticsData.data : [];
+  }, [analyticsData]);
+
   const aggregateStats = useMemo(() => {
-    if (!analyticsData?.data || !Array.isArray(analyticsData.data) || analyticsData.data.length === 0) {
+    if (safeAnalyticsData.length === 0) {
       return {
         totalRevenue: 0,
         totalSold: 0,
@@ -288,18 +316,18 @@ function ProductAnalyticsDashboard() {
     }
 
     return {
-      totalRevenue: analyticsData.data.reduce((sum, m) => sum + (m.totalRevenue || 0), 0),
-      totalSold: analyticsData.data.reduce((sum, m) => sum + (m.totalSold || 0), 0),
-      totalPurchased: analyticsData.data.reduce((sum, m) => sum + (m.totalPurchasedQty || 0), 0),
-      totalPurchasedValue: analyticsData.data.reduce((sum, m) => sum + (m.totalPurchasedValue || 0), 0),
-      totalReturned: analyticsData.data.reduce((sum, m) => sum + (m.totalReturnedQty || 0), 0),
-      totalReturnedValue: analyticsData.data.reduce((sum, m) => sum + (m.totalReturnedValue || 0), 0),
-      totalDamaged: analyticsData.data.reduce((sum, m) => sum + (m.totalDamagedQty || 0), 0),
-      totalDamagedValue: analyticsData.data.reduce((sum, m) => sum + (m.totalDamagedValue || 0), 0),
-      totalStockValue: analyticsData.data.reduce((sum, m) => sum + (m.stockValue || 0), 0),
-      totalOrders: analyticsData.data.reduce((sum, m) => sum + (m.totalOrders || 0), 0)
+      totalRevenue: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalRevenue || 0), 0),
+      totalSold: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalSold || 0), 0),
+      totalPurchased: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalPurchasedQty || 0), 0),
+      totalPurchasedValue: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalPurchasedValue || 0), 0),
+      totalReturned: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalReturnedQty || 0), 0),
+      totalReturnedValue: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalReturnedValue || 0), 0),
+      totalDamaged: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalDamagedQty || 0), 0),
+      totalDamagedValue: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalDamagedValue || 0), 0),
+      totalStockValue: safeAnalyticsData.reduce((sum, m) => sum + (m?.stockValue || 0), 0),
+      totalOrders: safeAnalyticsData.reduce((sum, m) => sum + (m?.totalOrders || 0), 0)
     };
-  }, [analyticsData]);
+  }, [safeAnalyticsData]);
 
   return (
     <TooltipProvider>
@@ -578,7 +606,7 @@ function ProductAnalyticsDashboard() {
         )}
 
         {/* Analytics Display */}
-        {analyticsData?.data && Array.isArray(analyticsData.data) && analyticsData.data.length > 0 && !analyticsLoading && (
+        {safeAnalyticsData.length > 0 && !analyticsLoading && (
           <>
             {/* Modern Visual Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -595,9 +623,9 @@ function ProductAnalyticsDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={analyticsData.data.map((m, i) => ({
-                            name: m.product_name?.substring(0, 20) + (m.product_name?.length > 20 ? '...' : ''),
-                            value: m.totalRevenue || 0,
+                          data={safeAnalyticsData.map((m, i) => ({
+                            name: m?.product_name?.substring(0, 20) + (m?.product_name?.length > 20 ? '...' : ''),
+                            value: m?.totalRevenue || 0,
                             fill: COLORS[i % COLORS.length]
                           }))}
                           cx="50%"
@@ -610,7 +638,7 @@ function ProductAnalyticsDashboard() {
                           animationBegin={0}
                           animationDuration={800}
                         >
-                          {analyticsData.data.map((entry, index) => (
+                          {safeAnalyticsData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -637,11 +665,11 @@ function ProductAnalyticsDashboard() {
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
-                        data={analyticsData.data.slice(0, 8).map((m, i) => ({
-                          name: m.product_name?.substring(0, 12) + (m.product_name?.length > 12 ? '...' : ''),
-                          stock: m.current_stock || 0,
-                          sold: m.totalSold || 0,
-                          purchased: m.totalPurchasedQty || 0,
+                        data={safeAnalyticsData.slice(0, 8).map((m, i) => ({
+                          name: m?.product_name?.substring(0, 12) + (m?.product_name?.length > 12 ? '...' : ''),
+                          stock: m?.current_stock || 0,
+                          sold: m?.totalSold || 0,
+                          purchased: m?.totalPurchasedQty || 0,
                           fill: COLORS[i % COLORS.length]
                         }))}
                         layout="vertical"
@@ -676,11 +704,11 @@ function ProductAnalyticsDashboard() {
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={analyticsData.data.map((m, i) => ({
-                        name: m.product_name?.substring(0, 15) + (m.product_name?.length > 15 ? '...' : ''),
-                        revenue: m.totalRevenue || 0,
-                        purchases: m.totalPurchasedValue || 0,
-                        losses: m.totalLossValue || 0
+                      data={safeAnalyticsData.map((m, i) => ({
+                        name: m?.product_name?.substring(0, 15) + (m?.product_name?.length > 15 ? '...' : ''),
+                        revenue: m?.totalRevenue || 0,
+                        purchases: m?.totalPurchasedValue || 0,
+                        losses: m?.totalLossValue || 0
                       }))}
                       margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
@@ -727,10 +755,10 @@ function ProductAnalyticsDashboard() {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={analyticsData.data.map((m) => ({
-                        name: m.product_name?.substring(0, 15) + (m.product_name?.length > 15 ? '...' : ''),
-                        margin: m.profitMargin || 0,
-                        fill: m.profitMargin > 30 ? '#10B981' : m.profitMargin > 15 ? '#F59E0B' : '#EF4444'
+                      data={safeAnalyticsData.map((m) => ({
+                        name: m?.product_name?.substring(0, 15) + (m?.product_name?.length > 15 ? '...' : ''),
+                        margin: m?.profitMargin || 0,
+                        fill: (m?.profitMargin || 0) > 30 ? '#10B981' : (m?.profitMargin || 0) > 15 ? '#F59E0B' : '#EF4444'
                       }))}
                       margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                     >
@@ -742,10 +770,10 @@ function ProductAnalyticsDashboard() {
                         contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
                       />
                       <Bar dataKey="margin" name="Profit Margin" radius={[8, 8, 0, 0]}>
-                        {analyticsData.data.map((entry, index) => (
+                        {safeAnalyticsData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={entry.profitMargin > 30 ? '#10B981' : entry.profitMargin > 15 ? '#F59E0B' : '#EF4444'} 
+                            fill={(entry?.profitMargin || 0) > 30 ? '#10B981' : (entry?.profitMargin || 0) > 15 ? '#F59E0B' : '#EF4444'} 
                           />
                         ))}
                       </Bar>
@@ -945,7 +973,7 @@ function ProductAnalyticsDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                     {(analyticsData?.data || []).map((metric, index) => (
+                     {safeAnalyticsData.map((metric, index) => (
                         <tr key={metric.product_id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-2">
                             <div className="flex items-center gap-3">
@@ -1010,7 +1038,7 @@ function ProductAnalyticsDashboard() {
             </Card>
 
             {/* Individual Product Insights - ALWAYS SHOW RETURN & DAMAGE */}
-            {(analyticsData?.data || []).map((metric, index) => (
+            {safeAnalyticsData.map((metric, index) => (
               <Card key={metric.product_id} className="border-l-4" style={{ borderColor: COLORS[index % COLORS.length] }}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
