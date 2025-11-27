@@ -1518,7 +1518,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-[22px] font-black text-white whitespace-nowrap block truncate tracking-tight" style={{ fontFamily: 'Outfit, sans-serif', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                    <span className="text-lg font-bold text-white whitespace-nowrap block truncate tracking-tight" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
                       Bee ERP
                     </span>
                     <span className="text-[10px] font-semibold text-white/80 uppercase tracking-[0.2em]">
