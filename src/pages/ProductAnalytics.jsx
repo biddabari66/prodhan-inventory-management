@@ -1198,8 +1198,9 @@ function ProductAnalyticsDashboard() {
           </>
         )}
 
-        {/* Info Modal */}
-        <MetricsInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
+          {/* Info Modal */}
+          <MetricsInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
+        </div>
       </div>
     </TooltipProvider>
   );
