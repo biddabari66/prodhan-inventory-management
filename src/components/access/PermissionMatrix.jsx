@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard, Target, UserCheck, Users, Warehouse, Package, BookOpen, BarChart3,
   Phone, MessageSquare, TrendingUp, TrendingDown, Award, Calculator, Clock, Briefcase, FileSignature,
-  Calendar, UserIcon, FileText, Plus, Shield, Link2, Bell, Mail, ShoppingCart
+  Calendar, UserIcon, FileText, Plus, Shield, Link2, Bell, Mail, ShoppingCart, RotateCcw, PackageX,
+  Building2, Sparkles, Layers
 } from 'lucide-react';
 
 const MODULES = [
@@ -30,11 +31,18 @@ const MODULES = [
   { id: 'reports', name: 'Manual Reporting', icon: FileSignature, category: 'HR' },
   { id: 'all_reports', name: 'All Submitted Reports', icon: FileText, category: 'HR' },
   { id: 'email', name: 'Email', icon: Mail, category: 'HR' },
-  { id: 'inventory', name: 'Inventory Overview', icon: Warehouse, category: 'Inventory' },
+  { id: 'inventory_overview', name: 'Inventory Overview', icon: Warehouse, category: 'Inventory' },
   { id: 'sales', name: 'Sales Orders', icon: ShoppingCart, category: 'Inventory' },
   { id: 'purchase_orders', name: 'Purchase Orders', icon: Package, category: 'Inventory' },
+  { id: 'inventory_movements', name: 'Stock Movements', icon: RotateCcw, category: 'Inventory' },
+  { id: 'inventory_returns', name: 'Returns & Damages', icon: PackageX, category: 'Inventory' },
+  { id: 'inventory_reconciliation', name: 'Reconciliation', icon: Shield, category: 'Inventory' },
+  { id: 'inventory_suppliers', name: 'Suppliers', icon: Building2, category: 'Inventory' },
+  { id: 'inventory', name: 'Categories', icon: Layers, category: 'Inventory' },
   { id: 'product_analytics', name: 'Product Analytics', icon: BarChart3, category: 'Inventory' },
-  { id: 'purchase', name: 'Procurement', icon: ShoppingCart, category: 'Inventory' },
+  { id: 'inventory_reports', name: 'Inventory Reports', icon: FileText, category: 'Inventory' },
+  { id: 'inventory_ai_insights', name: 'AI Insights', icon: Sparkles, category: 'Inventory' },
+  { id: 'purchase', name: 'Procurement', icon: Package, category: 'Inventory' },
   { id: 'standard_reports', name: 'Standard Reports', icon: BarChart3, category: 'Analytics' },
   { id: 'custom_reports', name: 'Custom Reports', icon: Plus, category: 'Analytics' },
   { id: 'daily_reports', name: 'Daily Reports', icon: Calendar, category: 'Analytics' },
