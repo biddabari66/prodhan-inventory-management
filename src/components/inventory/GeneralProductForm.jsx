@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Package, Check, X, Sparkles, Loader2, Link2, Wand2 } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
+import { ProductCategory } from '@/entities/ProductCategory';
 import { toast } from 'sonner';
 import { ProdhanCategorySelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
@@ -225,14 +226,15 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
 
 Extract the following product information:
 1. Product name (full product title)
-2. Category (e.g., Electronics, Fashion, Books, Home & Kitchen, etc.)
-3. Selling price (numeric value only, no currency symbols)
-4. Product description (detailed description)
-5. Weight in kg (if available)
-6. Dimensions in cm (length, width, height if available)
-7. Relevant tags/keywords (3-5 tags that describe the product)
+2. Category (e.g., Electronics & Gadgets, Fashion & Apparel, Books & Media, Home & Kitchen, Sports & Outdoors, etc.)
+3. SKU/Product ID/Model Number (look for SKU, Product ID, Model Number, or Item Number)
+4. Selling price (numeric value only, no currency symbols - if multiple prices, use the main selling price)
+5. Product description (detailed description)
+6. Weight in kg (if available)
+7. Dimensions in cm (length, width, height if available)
+8. Relevant tags/keywords (3-5 tags that describe the product)
 
-Be thorough and extract as much information as possible from the page content, meta tags, and structured data.
+Be thorough and extract as much information as possible from the page content, meta tags, product specifications, and structured data.
 
 Return ONLY valid JSON with no additional text.`,
         add_context_from_internet: true,
@@ -241,6 +243,7 @@ Return ONLY valid JSON with no additional text.`,
           properties: {
             product_name: { type: "string" },
             category: { type: "string" },
+            sku: { type: "string" },
             selling_price: { type: "number" },
             description: { type: "string" },
             weight_kg: { type: "number" },
@@ -272,8 +275,38 @@ Return ONLY valid JSON with no additional text.`,
           }
         }
         
+        // Auto-create category if it doesn't exist
         if (response.category) {
-          updates.category = response.category.toLowerCase().replace(/\s+/g, '_');
+          const categoryName = response.category;
+          const categorySlug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+          
+          try {
+            // Check if category exists
+            const existingCategories = await ProductCategory.filter({ name: categoryName, department: 'prodhan_com_e_commerce' });
+            
+            if (existingCategories.length === 0) {
+              // Create new category
+              await ProductCategory.create({
+                name: categoryName,
+                slug: categorySlug,
+                department: 'prodhan_com_e_commerce',
+                type: 'product',
+                description: `Auto-generated category for ${categoryName}`,
+                color: '#8B5CF6',
+                sort_order: 999,
+                is_active: true
+              });
+              toast.success(`✨ Created new category: ${categoryName}`);
+            }
+            updates.category = categoryName;
+          } catch (error) {
+            console.error('Category creation error:', error);
+            updates.category = categoryName;
+          }
+        }
+        
+        if (response.sku) {
+          updates.barcode = response.sku;
         }
         
         if (response.selling_price && response.selling_price > 0) {
@@ -301,7 +334,7 @@ Return ONLY valid JSON with no additional text.`,
         }
 
         setFormData(prev => ({ ...prev, ...updates }));
-        toast.success(`✨ Extracted: ${response.product_name}`);
+        toast.success(`✨ Extracted: ${response.product_name}${response.sku ? ` (SKU: ${response.sku})` : ''}`);
         setProductUrl('');
       } else {
         toast.error('Could not extract product details. Try a different URL.');
