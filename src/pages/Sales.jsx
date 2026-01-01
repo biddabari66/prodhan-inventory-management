@@ -720,15 +720,38 @@ function SalesPage() {
     },
   });
 
-  // Status update mutation
+  // Status update mutation with Adprofit sync
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+      
+      // Auto-sync to Adprofit when status becomes "delivered"
+      if (newStatus === 'delivered') {
+        try {
+          const syncResponse = await base44.functions.invoke('syncToAdprofit', { 
+            order_id: orderId 
+          });
+          
+          if (syncResponse.data?.success) {
+            toast.success(`✅ Order delivered & synced to Adprofit! (${syncResponse.data.synced_items}/${syncResponse.data.total_items} products)`);
+          } else if (syncResponse.data?.partial) {
+            toast.warning(`⚠️ Order delivered but partial sync to Adprofit (${syncResponse.data.synced_items}/${syncResponse.data.total_items} products)`);
+          } else {
+            toast.error('Order delivered but Adprofit sync failed. Check sync settings.');
+          }
+        } catch (syncError) {
+          console.error('Adprofit sync error:', syncError);
+          toast.warning('Order delivered successfully, but Adprofit sync failed');
+        }
+      }
+      
       return updatedOrder;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      toast.success('Order status updated!');
+      if (variables.newStatus !== 'delivered') {
+        toast.success('Order status updated!');
+      }
     },
     onError: (error) => {
       toast.error('Failed to update order status: ' + error.message);
