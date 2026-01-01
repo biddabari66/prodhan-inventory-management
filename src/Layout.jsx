@@ -1514,17 +1514,17 @@ export default function Layout({ children, currentPageName }) {
             ${isSidebarOpen ? 'w-[240px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
             
             {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-20 px-4 border-b border-white/10 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600">
+            <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
               <Link to={createPageUrl('Dashboard')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-500 flex items-center justify-center shadow-xl shadow-black/30 border border-white/30">
-                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-9 h-9" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+                  <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen && (
                   <div className="min-w-0">
-                    <span className="text-lg font-bold text-white whitespace-nowrap block truncate tracking-tight" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
+                    <span className="text-[17px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
                       Bee ERP
                     </span>
-                    <span className="text-[10px] font-semibold text-white/80 uppercase tracking-[0.2em]">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Enterprise
                     </span>
                   </div>
@@ -1535,9 +1535,9 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setIsSidebarOpen(false)} 
                   variant="ghost" 
                   size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/20 lg:hidden h-9 w-9 p-0 touch-manipulation rounded-lg"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-8 w-8 p-0 touch-manipulation rounded-lg"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </Button>
               )}
               {/* Desktop collapse toggle */}
@@ -1545,9 +1545,9 @@ export default function Layout({ children, currentPageName }) {
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
                 variant="ghost" 
                 size="sm"
-                className="hidden lg:flex text-white/70 hover:text-white hover:bg-white/20 h-8 w-8 p-0 touch-manipulation rounded-lg"
+                className="hidden lg:flex text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 h-7 w-7 p-0 touch-manipulation rounded-lg"
               >
-                {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                {isSidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </Button>
             </div>
 
