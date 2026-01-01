@@ -87,4 +87,4 @@ function InventorySuppliersPage() {
   );
 }
 
-export default withPermission(InventorySuppliersPage, 'inventory', 'can_view');
+export default withPermission(InventorySuppliersPage, 'inventory_suppliers', 'can_view');

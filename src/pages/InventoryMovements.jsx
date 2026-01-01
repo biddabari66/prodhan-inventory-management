@@ -24,4 +24,4 @@ function InventoryMovementsPage() {
   );
 }
 
-export default withPermission(InventoryMovementsPage, 'inventory', 'can_view');
+export default withPermission(InventoryMovementsPage, 'inventory_movements', 'can_view');

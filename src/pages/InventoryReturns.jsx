@@ -232,4 +232,4 @@ function InventoryReturnsPage() {
   );
 }
 
-export default withPermission(InventoryReturnsPage, 'inventory', 'can_view');
+export default withPermission(InventoryReturnsPage, 'inventory_returns', 'can_view');

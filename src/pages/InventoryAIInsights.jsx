@@ -108,4 +108,4 @@ function InventoryAIInsightsPage() {
   );
 }
 
-export default withPermission(InventoryAIInsightsPage, 'inventory', 'can_view');
+export default withPermission(InventoryAIInsightsPage, 'inventory_ai_insights', 'can_view');

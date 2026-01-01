@@ -273,4 +273,4 @@ function InventoryReportsPage() {
   );
 }
 
-export default withPermission(InventoryReportsPage, 'inventory', 'can_view');
+export default withPermission(InventoryReportsPage, 'inventory_reports', 'can_view');

@@ -676,4 +676,4 @@ function InventoryOverviewPage() {
   );
 }
 
-export default withPermission(InventoryOverviewPage, 'inventory', 'can_view');
+export default withPermission(InventoryOverviewPage, 'inventory_overview', 'can_view');

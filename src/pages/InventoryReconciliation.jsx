@@ -24,4 +24,4 @@ function InventoryReconciliationPage() {
   );
 }
 
-export default withPermission(InventoryReconciliationPage, 'inventory', 'can_edit');
+export default withPermission(InventoryReconciliationPage, 'inventory_reconciliation', 'can_edit');

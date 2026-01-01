@@ -44,4 +44,4 @@ function CategorySettingsPage() {
   );
 }
 
-export default withPermission(CategorySettingsPage, 'inventory', 'can_edit');
+export default withPermission(CategorySettingsPage, 'inventory_overview', 'can_edit');
