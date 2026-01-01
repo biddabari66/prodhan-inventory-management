@@ -6,7 +6,19 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  * 
  * Triggered when order status changes to "delivered"
  * Creates sales records in Adprofit with product_id mapping
+ * Uses Asia/Dhaka (BDT) timezone for all dates
  */
+
+// Convert date to Bangladesh (Dhaka) timezone
+const toBDTDate = (date) => {
+  const d = date ? new Date(date) : new Date();
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dhaka',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+};
 
 Deno.serve(async (req) => {
   console.log('🚀 Adprofit sync function called');
@@ -151,9 +163,9 @@ Deno.serve(async (req) => {
 
     console.log(`📊 Sync complete: ${syncResults.length} success, ${errors.length} failed`);
 
-    // Update order sync status
+    // Update order sync status (using BDT timezone)
     const updateData = {
-      adprofit_sync_date: new Date().toISOString()
+      adprofit_sync_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
     };
 
     if (errors.length === 0) {
