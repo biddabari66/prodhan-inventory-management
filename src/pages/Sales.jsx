@@ -720,15 +720,39 @@ function SalesPage() {
     },
   });
 
-  // Status update mutation
+  // Status update mutation with Adprofit sync
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+      
+      // Auto-sync to Adprofit when order is delivered
+      if (newStatus === 'delivered') {
+        try {
+          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
+          
+          if (syncResponse.data?.success) {
+            const { synced_items, failed_items } = syncResponse.data;
+            if (failed_items > 0) {
+              toast.warning(`⚠️ Order delivered & partially synced to Adprofit (${synced_items}/${synced_items + failed_items} items)`);
+            } else {
+              toast.success(`✅ Order delivered & synced to Adprofit (${synced_items} items)!`);
+            }
+          } else {
+            toast.warning('Order delivered but Adprofit sync failed. Check order details.');
+          }
+        } catch (syncError) {
+          console.error('Adprofit sync error:', syncError);
+          toast.warning('Order delivered but Adprofit sync failed');
+        }
+      }
+      
       return updatedOrder;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      toast.success('Order status updated!');
+      if (variables.newStatus !== 'delivered') {
+        toast.success('Order status updated!');
+      }
     },
     onError: (error) => {
       toast.error('Failed to update order status: ' + error.message);
@@ -1177,8 +1201,16 @@ function SalesPage() {
                           onCheckedChange={() => toggleOrderSelection(order.id)}
                         />
                       </TableCell>
-                      <TableCell className="font-mono font-semibold text-violet-600">
-                        {order.order_number}
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
+                          {order.adprofit_synced && (
+                            <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Adprofit ✓
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {format(new Date(order.order_date), 'dd MMM yyyy')}
@@ -1211,21 +1243,48 @@ function SalesPage() {
                         {getStatusBadge(order.order_status)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewInvoice(order)}>
-                              <FileText className="w-4 h-4 mr-2" />
-                              View Invoice
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditOrder(order)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit Order
-                            </DropdownMenuItem>
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="ghost" size="sm">
+                             <MoreVertical className="w-4 h-4" />
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="end">
+                           <DropdownMenuItem onClick={() => handleViewInvoice(order)}>
+                             <FileText className="w-4 h-4 mr-2" />
+                             View Invoice
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleEditOrder(order)}>
+                             <Edit className="w-4 h-4 mr-2" />
+                             Edit Order
+                           </DropdownMenuItem>
+
+                           {order.order_status === 'delivered' && !order.adprofit_synced && (
+                             <DropdownMenuItem onClick={async () => {
+                               toast.info('Syncing to Adprofit...');
+                               try {
+                                 const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
+                                 if (response.data?.success) {
+                                   queryClient.invalidateQueries(['orders']);
+                                   toast.success('✅ Synced to Adprofit successfully!');
+                                 } else {
+                                   toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
+                                 }
+                               } catch (error) {
+                                 toast.error('Sync failed: ' + error.message);
+                               }
+                             }}>
+                               <Send className="w-4 h-4 mr-2 text-blue-600" />
+                               Sync to Adprofit
+                             </DropdownMenuItem>
+                           )}
+
+                           {order.order_status === 'delivered' && order.adprofit_synced && (
+                             <DropdownMenuItem disabled>
+                               <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                               Synced to Adprofit ✓
+                             </DropdownMenuItem>
+                           )}
 
                             {order.order_status === 'pending' && (
                               <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
