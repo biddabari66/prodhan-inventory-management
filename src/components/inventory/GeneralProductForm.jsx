@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Package, Check, X, Sparkles, Loader2 } from 'lucide-react';
+import { Package, Check, X, Sparkles, Loader2, Link2, Wand2 } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
 import { ProdhanCategorySelect } from './CategorySelect';
@@ -57,6 +57,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [tagInput, setTagInput] = useState('');
   const [seoInput, setSeoInput] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
+  const [productUrl, setProductUrl] = useState('');
+  const [isExtracting, setIsExtracting] = useState(false);
 
   // Auto-translate Bengali name to English
   const translateToEnglish = useCallback(async (bengaliText) => {
@@ -202,6 +204,72 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     setFormData({...formData, seo_keywords: formData.seo_keywords.filter(k => k !== keyword)});
   };
 
+  // Extract product details from URL
+  const extractFromUrl = async () => {
+    if (!productUrl.trim()) {
+      toast.error('Please enter a product page URL');
+      return;
+    }
+
+    if (!productUrl.startsWith('http://') && !productUrl.startsWith('https://')) {
+      toast.error('Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+
+    setIsExtracting(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Extract product details from this e-commerce page. Extract: product name, category, price (selling price), description, weight, dimensions, tags/keywords. If information is not available, use null.
+
+Return in this exact format:`,
+        add_context_from_internet: true,
+        file_urls: [productUrl],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            product_name: { type: "string" },
+            category: { type: "string" },
+            selling_price: { type: "number" },
+            description: { type: "string" },
+            weight_kg: { type: "number" },
+            dimensions: {
+              type: "object",
+              properties: {
+                length_cm: { type: "number" },
+                width_cm: { type: "number" },
+                height_cm: { type: "number" }
+              }
+            },
+            tags: { type: "array", items: { type: "string" } }
+          }
+        }
+      });
+
+      if (response) {
+        // Auto-fill form with extracted data
+        const updates = {};
+        if (response.product_name) updates.item_name = response.product_name;
+        if (response.category) updates.category = response.category;
+        if (response.selling_price) updates.selling_price = response.selling_price;
+        if (response.description) updates.description = response.description;
+        if (response.weight_kg) updates.weight_kg = response.weight_kg;
+        if (response.dimensions) updates.dimensions = { ...formData.dimensions, ...response.dimensions };
+        if (response.tags && response.tags.length > 0) updates.tags = response.tags.slice(0, 10);
+
+        setFormData(prev => ({ ...prev, ...updates }));
+        toast.success('✨ Product details extracted successfully!');
+        setProductUrl('');
+      } else {
+        toast.error('Could not extract product details from the URL');
+      }
+    } catch (error) {
+      console.error('Extraction error:', error);
+      toast.error('Failed to extract details: ' + error.message);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   return (
     <Card className="premium-card">
       <CardHeader>
@@ -213,6 +281,47 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* AI URL Extractor */}
+          <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border-2 border-violet-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Wand2 className="w-5 h-5 text-violet-600" />
+              <h3 className="font-semibold text-violet-900">AI Product URL Extractor</h3>
+              <Badge className="bg-violet-600 text-white">Smart</Badge>
+            </div>
+            <p className="text-xs text-slate-600 mb-3">
+              Paste any product page URL and AI will automatically extract all details
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input
+                  value={productUrl}
+                  onChange={(e) => setProductUrl(e.target.value)}
+                  placeholder="https://example.com/product/wireless-mouse"
+                  className="bg-white"
+                  disabled={isExtracting}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={extractFromUrl}
+                disabled={isExtracting || !productUrl.trim()}
+                className="bg-violet-600 hover:bg-violet-700"
+              >
+                {isExtracting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Extracting...
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Extract Details
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">Basic Information</h3>
