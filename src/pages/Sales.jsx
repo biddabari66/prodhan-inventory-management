@@ -720,10 +720,27 @@ function SalesPage() {
     },
   });
 
-  // Status update mutation
+  // Status update mutation with Adprofit sync
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+      
+      // Sync to Adprofit when status becomes "delivered"
+      if (newStatus === 'delivered') {
+        try {
+          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
+          
+          if (syncResponse.data?.success) {
+            toast.success(`✅ Order synced to Adprofit: ${syncResponse.data.items_synced} item(s)`);
+          } else if (syncResponse.data?.message?.includes('already synced')) {
+            toast.info('Order already synced to Adprofit');
+          }
+        } catch (syncError) {
+          console.error('Adprofit sync failed:', syncError);
+          toast.warning(`⚠️ Order delivered but sync failed: ${syncError.message}`);
+        }
+      }
+      
       return updatedOrder;
     },
     onSuccess: () => {
@@ -764,8 +781,23 @@ function SalesPage() {
         await Promise.all(selectedOrderIds.map(id => 
           Order.update(id, { order_status: action })
         ));
+        
+        // Sync to Adprofit if delivered
+        if (action === 'delivered') {
+          const syncPromises = selectedOrderIds.map(async (id) => {
+            try {
+              await base44.functions.invoke('syncToAdprofit', { order_id: id });
+            } catch (err) {
+              console.error(`Sync failed for order ${id}:`, err);
+            }
+          });
+          await Promise.allSettled(syncPromises);
+          toast.success(`${selectedOrderIds.length} order(s) delivered & synced to Adprofit`);
+        } else {
+          toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
+        }
+        
         queryClient.invalidateQueries(['orders']);
-        toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
         setSelectedOrderIds([]);
       } catch (error) {
         toast.error('Failed to update orders: ' + error.message);
