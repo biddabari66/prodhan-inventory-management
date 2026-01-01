@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
           erp_product_id: inventoryItem.barcode,
           quantity: item.quantity,
           sale_price: item.unit_price,
-          date: order.actual_delivery_date || new Date().toISOString().split('T')[0],
+          date: toBDTDate(order.actual_delivery_date),
           customer_name: order.customer_name
         };
 
