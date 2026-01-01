@@ -66,32 +66,27 @@ const DEPARTMENT_CONFIG = {
         borderColor: 'border-purple-200',
         defaultCategory: 'e-commerce',
         templateHeaders: [
-            'Product Name', 'Category', 'SKU', 'Current Stock', 'Min Stock',
-            'Cost Price', 'Selling Price', 'Sold Qty', 'Revenue',
-            'Supplier', 'Weight (kg)', 'Dimensions', 'Tags', 'Report Date'
+            'Product Name', 'Category', 'Current Stock', 'Selling Price', 'Description'
         ],
         sampleRow: [
-            'Wireless Mouse', 'Electronics & Gadgets', 'WM-001', '50', '10',
-            '800', '1200', '30', '12000',
-            'Tech Supplier Ltd', '0.15', '10x6x4 cm', 'wireless,mouse,computer', new Date().toISOString().slice(0, 10)
+            'Wireless Mouse', 'Electronics & Gadgets', '50', '1200', 'High-quality wireless mouse with ergonomic design'
         ],
-        // Extended mapping for Prodhan.com (e-commerce focus)
+        // Simplified mapping for Prodhan.com (dynamic import - essential fields only)
         fieldMapping: {
-            'item_name': ['Product Name', 'Item Name', 'Name', 'Title', 'Product Title', 'পণ্যের নাম'],
-            'category': ['Category', 'Type', 'Product Category', 'ক্যাটাগরি'],
-            'barcode': ['SKU', 'Barcode', 'Product Code', 'Item Code', 'এসকেইউ'],
-            'current_stock': ['Current Stock', 'Stock', 'Quantity', 'Available Stock', 'Qty', 'স্টক'],
-            'minimum_stock': ['Min Stock', 'Minimum Stock', 'Reorder Level', 'Low Stock Alert', 'সর্বনিম্ন'],
-            'purchase_price': ['Cost Price', 'Purchase Price', 'Buy Price', 'Cost', 'Buying Price', 'ক্রয়মূল্য'],
-            'selling_price': ['Selling Price', 'Sale Price', 'Price', 'MRP', 'Retail Price', 'বিক্রয়মূল্য'],
-            'total_sell': ['Sold Qty', 'Total Sell', 'Units Sold', 'Sold', 'Total Sales', 'বিক্রিত'],
-            'profits': ['Revenue', 'Profits', 'Total Profit', 'Earnings', 'আয়'],
+            'item_name': ['Product Name', 'Item Name', 'Name', 'Title', 'Product Title', 'Product', 'পণ্যের নাম', 'পণ্য'],
+            'category': ['Category', 'Type', 'Product Category', 'Product Type', 'ক্যাটাগরি', 'বিভাগ'],
+            'current_stock': ['Current Stock', 'Stock', 'Quantity', 'Available Stock', 'Qty', 'Available', 'স্টক', 'মজুদ'],
+            'selling_price': ['Selling Price', 'Sale Price', 'Price', 'MRP', 'Retail Price', 'Cost', 'বিক্রয়মূল্য', 'দাম'],
+            'description': ['Description', 'Details', 'Notes', 'Product Details', 'Info', 'বিবরণ'],
+            'barcode': ['SKU', 'Barcode', 'Product Code', 'Item Code', 'Code', 'এসকেইউ'],
+            'minimum_stock': ['Min Stock', 'Minimum Stock', 'Reorder Level', 'Low Stock Alert', 'Minimum', 'সর্বনিম্ন'],
+            'purchase_price': ['Cost Price', 'Purchase Price', 'Buy Price', 'Buying Price', 'ক্রয়মূল্য'],
+            'total_sell': ['Sold Qty', 'Total Sell', 'Units Sold', 'Sold', 'Total Sales', 'Sales', 'বিক্রিত'],
+            'profits': ['Revenue', 'Profits', 'Total Profit', 'Earnings', 'Profit', 'আয়'],
             'supplier_name': ['Supplier', 'Vendor', 'Supplier Name', 'সরবরাহকারী'],
             'weight_kg': ['Weight (kg)', 'Weight', 'ওজন'],
             'dimensions': ['Dimensions', 'Size', 'মাপ'],
             'tags': ['Tags', 'Keywords', 'Labels', 'ট্যাগ'],
-            'last_reported_date': ['Report Date', 'Date', 'report_date', 'তারিখ'],
-            'description': ['Description', 'Details', 'Notes', 'বিবরণ'],
             'location': ['Location', 'Warehouse', 'Storage', 'অবস্থান'],
             'status': ['Status', 'Availability', 'স্ট্যাটাস']
         }
@@ -318,7 +313,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                             department: selectedDepartment,
                             subject: mappedRowData.subject || 'general',
                             current_stock: parseInt(mappedRowData.current_stock) || 0,
-                            minimum_stock: parseInt(mappedRowData.minimum_stock) || 0,
+                            minimum_stock: parseInt(mappedRowData.minimum_stock) || 10,
                             purchase_price: parseFloat(mappedRowData.purchase_price) || 0,
                             selling_price: parseFloat(mappedRowData.selling_price) || 0,
                             profits: newProfits,
@@ -467,18 +462,9 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                 return [
                     item.item_name,
                     item.category,
-                    item.barcode,
                     item.current_stock,
-                    item.minimum_stock,
-                    item.purchase_price,
                     item.selling_price,
-                    item.total_sell,
-                    item.profits,
-                    item.supplier_name,
-                    item.weight_kg || '',
-                    '',
-                    item.tags?.join(',') || '',
-                    item.last_reported_date || ''
+                    item.description || ''
                 ];
             }
         });
