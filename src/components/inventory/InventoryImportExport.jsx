@@ -27,7 +27,7 @@ const DEPARTMENT_CONFIG = {
             'Author Name', 'Publisher', 'Edition', 'Total Page', 'ISBN', 'Report Date'
         ],
         sampleRow: [
-            'Advanced Physics', 'books', 'bcs', '150', '20',
+            'Advanced Physics', 'BCS Preparation', 'bcs', '150', '20',
             '350', '550', '150', '30000',
             'Dr. Rahman', 'Biddabari Publication', '3rd', '450', '978-984-123-456-7', new Date().toISOString().slice(0, 10)
         ],
@@ -71,7 +71,7 @@ const DEPARTMENT_CONFIG = {
             'Supplier', 'Weight (kg)', 'Dimensions', 'Tags', 'Report Date'
         ],
         sampleRow: [
-            'Wireless Mouse', 'electronics', 'WM-001', '50', '10',
+            'Wireless Mouse', 'Electronics & Gadgets', 'WM-001', '50', '10',
             '800', '1200', '30', '12000',
             'Tech Supplier Ltd', '0.15', '10x6x4 cm', 'wireless,mouse,computer', new Date().toISOString().slice(0, 10)
         ],
@@ -309,9 +309,12 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                             }
                         }
 
+                        // Auto-create category if it doesn't exist (supports dynamic categories)
+                        const categoryName = mappedRowData.category?.trim();
+                        
                         const itemData = {
                             item_name: mappedRowData.item_name,
-                            category: mappedRowData.category || deptConfig.defaultCategory,
+                            category: categoryName || deptConfig.defaultCategory,
                             department: selectedDepartment,
                             subject: mappedRowData.subject || 'general',
                             current_stock: parseInt(mappedRowData.current_stock) || 0,
@@ -572,6 +575,8 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                                             <ul className="list-disc list-inside space-y-1 mt-2">
                                                 <li>Upload any CSV - columns are auto-detected</li>
                                                 <li>Supports Bengali & English headers</li>
+                                                <li><strong>Categories auto-created</strong> from your Excel</li>
+                                                <li>Multiple products per category supported</li>
                                                 <li>Fuzzy matching for similar column names</li>
                                                 <li>Review mapping before importing</li>
                                             </ul>
