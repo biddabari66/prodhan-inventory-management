@@ -73,10 +73,18 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Prepare Adprofit payload
+        // Prepare Adprofit payload - using SKU (barcode) as product_id
+        if (!inventoryItem.barcode) {
+          errors.push({
+            item_name: item.item_name,
+            error: 'Product missing SKU/barcode - cannot sync to Adprofit'
+          });
+          continue;
+        }
+
         const adprofitPayload = {
           erp_sale_id: `${order.order_number}-${item.inventory_id}`, // Unique per item
-          erp_product_id: inventoryItem.barcode || inventoryItem.isbn || item.inventory_id, // Use barcode/ISBN as product ID
+          erp_product_id: inventoryItem.barcode, // SKU/barcode as required by Adprofit
           quantity: item.quantity,
           sale_price: item.unit_price,
           date: order.actual_delivery_date || new Date().toISOString().split('T')[0],
