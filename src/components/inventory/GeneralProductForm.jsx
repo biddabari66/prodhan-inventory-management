@@ -217,13 +217,25 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     }
 
     setIsExtracting(true);
+    const loadingToast = toast.loading('🔍 Analyzing product page...');
+    
     try {
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract product details from this e-commerce page. Extract: product name, category, price (selling price), description, weight, dimensions, tags/keywords. If information is not available, use null.
+        prompt: `Analyze this product page URL: ${productUrl}
 
-Return in this exact format:`,
+Extract the following product information:
+1. Product name (full product title)
+2. Category (e.g., Electronics, Fashion, Books, Home & Kitchen, etc.)
+3. Selling price (numeric value only, no currency symbols)
+4. Product description (detailed description)
+5. Weight in kg (if available)
+6. Dimensions in cm (length, width, height if available)
+7. Relevant tags/keywords (3-5 tags that describe the product)
+
+Be thorough and extract as much information as possible from the page content, meta tags, and structured data.
+
+Return ONLY valid JSON with no additional text.`,
         add_context_from_internet: true,
-        file_urls: [productUrl],
         response_json_schema: {
           type: "object",
           properties: {
@@ -241,30 +253,63 @@ Return in this exact format:`,
               }
             },
             tags: { type: "array", items: { type: "string" } }
-          }
+          },
+          required: ["product_name"]
         }
       });
 
-      if (response) {
+      toast.dismiss(loadingToast);
+
+      if (response && response.product_name) {
         // Auto-fill form with extracted data
         const updates = {};
-        if (response.product_name) updates.item_name = response.product_name;
-        if (response.category) updates.category = response.category;
-        if (response.selling_price) updates.selling_price = response.selling_price;
-        if (response.description) updates.description = response.description;
-        if (response.weight_kg) updates.weight_kg = response.weight_kg;
-        if (response.dimensions) updates.dimensions = { ...formData.dimensions, ...response.dimensions };
-        if (response.tags && response.tags.length > 0) updates.tags = response.tags.slice(0, 10);
+        
+        if (response.product_name) {
+          updates.item_name = response.product_name;
+          // Auto-translate if needed
+          if (!containsBengali(response.product_name)) {
+            updates.english_item_name = response.product_name;
+          }
+        }
+        
+        if (response.category) {
+          updates.category = response.category.toLowerCase().replace(/\s+/g, '_');
+        }
+        
+        if (response.selling_price && response.selling_price > 0) {
+          updates.selling_price = response.selling_price;
+        }
+        
+        if (response.description) {
+          updates.description = response.description;
+        }
+        
+        if (response.weight_kg && response.weight_kg > 0) {
+          updates.weight_kg = response.weight_kg;
+        }
+        
+        if (response.dimensions) {
+          const newDimensions = { ...formData.dimensions };
+          if (response.dimensions.length_cm) newDimensions.length_cm = response.dimensions.length_cm;
+          if (response.dimensions.width_cm) newDimensions.width_cm = response.dimensions.width_cm;
+          if (response.dimensions.height_cm) newDimensions.height_cm = response.dimensions.height_cm;
+          updates.dimensions = newDimensions;
+        }
+        
+        if (response.tags && Array.isArray(response.tags) && response.tags.length > 0) {
+          updates.tags = response.tags.slice(0, 10);
+        }
 
         setFormData(prev => ({ ...prev, ...updates }));
-        toast.success('✨ Product details extracted successfully!');
+        toast.success(`✨ Extracted: ${response.product_name}`);
         setProductUrl('');
       } else {
-        toast.error('Could not extract product details from the URL');
+        toast.error('Could not extract product details. Try a different URL.');
       }
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error('Extraction error:', error);
-      toast.error('Failed to extract details: ' + error.message);
+      toast.error('Failed to extract: ' + (error.message || 'Unknown error'));
     } finally {
       setIsExtracting(false);
     }
