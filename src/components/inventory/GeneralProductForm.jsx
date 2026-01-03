@@ -494,7 +494,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="current_stock">Current Stock *</Label>
                 <Input
                   id="current_stock"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.current_stock}
                   onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value) || 0})}
                   required
@@ -505,7 +506,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="minimum_stock">Minimum Stock *</Label>
                 <Input
                   id="minimum_stock"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.minimum_stock}
                   onChange={(e) => setFormData({...formData, minimum_stock: parseInt(e.target.value) || 0})}
                   required
@@ -516,7 +518,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="reorder_point">Reorder Point</Label>
                 <Input
                   id="reorder_point"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.reorder_point}
                   onChange={(e) => setFormData({...formData, reorder_point: parseInt(e.target.value) || 0})}
                 />
@@ -526,7 +529,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="safety_stock">Safety Stock</Label>
                 <Input
                   id="safety_stock"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.safety_stock}
                   onChange={(e) => setFormData({...formData, safety_stock: parseInt(e.target.value) || 0})}
                 />
@@ -536,8 +540,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="purchase_price">Purchase Price (৳) *</Label>
                 <Input
                   id="purchase_price"
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.purchase_price}
                   onChange={(e) => setFormData({...formData, purchase_price: parseFloat(e.target.value) || 0})}
                   required
@@ -548,8 +552,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="selling_price">Selling Price (৳) *</Label>
                 <Input
                   id="selling_price"
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.selling_price}
                   onChange={(e) => setFormData({...formData, selling_price: parseFloat(e.target.value) || 0})}
                   required
@@ -596,8 +600,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="weight_kg">Weight (kg)</Label>
                 <Input
                   id="weight_kg"
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.weight_kg}
                   onChange={(e) => setFormData({...formData, weight_kg: parseFloat(e.target.value) || 0})}
                 />
@@ -607,8 +611,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="length_cm">Length (cm)</Label>
                 <Input
                   id="length_cm"
-                  type="number"
-                  step="0.1"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.dimensions.length_cm}
                   onChange={(e) => setFormData({...formData, dimensions: {...formData.dimensions, length_cm: parseFloat(e.target.value) || 0}})}
                 />
@@ -618,8 +622,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="width_cm">Width (cm)</Label>
                 <Input
                   id="width_cm"
-                  type="number"
-                  step="0.1"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.dimensions.width_cm}
                   onChange={(e) => setFormData({...formData, dimensions: {...formData.dimensions, width_cm: parseFloat(e.target.value) || 0}})}
                 />
@@ -629,8 +633,8 @@ Return ONLY valid JSON with no additional text.`,
                 <Label htmlFor="height_cm">Height (cm)</Label>
                 <Input
                   id="height_cm"
-                  type="number"
-                  step="0.1"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.dimensions.height_cm}
                   onChange={(e) => setFormData({...formData, dimensions: {...formData.dimensions, height_cm: parseFloat(e.target.value) || 0}})}
                 />

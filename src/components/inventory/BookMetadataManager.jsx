@@ -292,7 +292,8 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                 <Label htmlFor="total_page">Total Pages</Label>
                 <Input
                   id="total_page"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.total_page}
                   onChange={(e) => setFormData({...formData, total_page: parseInt(e.target.value) || 0})}
                 />
@@ -441,8 +442,8 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                   <Label htmlFor="royalty_rate">Royalty Rate (%)</Label>
                   <Input
                     id="royalty_rate"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.royalty_rate}
                     onChange={(e) => setFormData({...formData, royalty_rate: parseFloat(e.target.value) || 0})}
                   />
@@ -460,7 +461,8 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                 <Label htmlFor="current_stock">Current Stock</Label>
                 <Input
                   id="current_stock"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.current_stock}
                   onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value) || 0})}
                 />
@@ -470,7 +472,8 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                 <Label htmlFor="minimum_stock">Minimum Stock</Label>
                 <Input
                   id="minimum_stock"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={formData.minimum_stock}
                   onChange={(e) => setFormData({...formData, minimum_stock: parseInt(e.target.value) || 0})}
                 />
@@ -480,8 +483,8 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                 <Label htmlFor="purchase_price">Purchase Price (৳)</Label>
                 <Input
                   id="purchase_price"
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.purchase_price}
                   onChange={(e) => setFormData({...formData, purchase_price: parseFloat(e.target.value) || 0})}
                 />
@@ -491,8 +494,8 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
                 <Label htmlFor="selling_price">Selling Price (৳)</Label>
                 <Input
                   id="selling_price"
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.selling_price}
                   onChange={(e) => setFormData({...formData, selling_price: parseFloat(e.target.value) || 0})}
                 />

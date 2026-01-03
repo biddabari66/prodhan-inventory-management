@@ -279,8 +279,8 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
             <div>
               <Label>Quantity</Label>
               <Input
-                type="number"
-                min="1"
+                type="text"
+                inputMode="numeric"
                 value={itemQuantity}
                 onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
               />
@@ -288,8 +288,8 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
             <div>
               <Label>Discount (BDT)</Label>
               <Input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={itemDiscount}
                 onChange={(e) => setItemDiscount(parseFloat(e.target.value) || 0)}
               />
@@ -484,8 +484,8 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
             <div>
               <Label>Regular Discount (BDT)</Label>
               <Input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.discount_amount}
                 onChange={(e) => setFormData({...formData, discount_amount: parseFloat(e.target.value) || 0})}
                 placeholder="0"
@@ -494,8 +494,8 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
             <div>
               <Label>Coupon Discount (BDT)</Label>
               <Input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.coupon_discount}
                 onChange={(e) => setFormData({...formData, coupon_discount: parseFloat(e.target.value) || 0})}
                 placeholder="0"
@@ -504,8 +504,8 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
             <div>
               <Label>Shipping Cost (BDT)</Label>
               <Input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.shipping_cost}
                 onChange={(e) => setFormData({...formData, shipping_cost: parseFloat(e.target.value) || 0})}
               />
