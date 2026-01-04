@@ -8,18 +8,33 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { 
   FileText, TrendingDown, RotateCcw, RefreshCw, 
-  BookOpen, ShoppingCart, ShoppingBag, PackageX
+  BookOpen, ShoppingCart, ShoppingBag, PackageX, TrendingUp, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { withPermission } from '../components/common/PermissionGuard';
-import { format, subDays } from 'date-fns';
+
+// BDT timezone helpers
+const toBDTDate = (date = new Date()) => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dhaka',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+};
+
+const get30DaysAgo = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 30);
+  return toBDTDate(date);
+};
 
 function InventoryReportsPage() {
   const [reportGenerating, setReportGenerating] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(get30DaysAgo());
+  const [endDate, setEndDate] = useState(toBDTDate());
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Fetch categories dynamically
@@ -39,57 +54,52 @@ function InventoryReportsPage() {
   const handleGenerateReport = async (reportType) => {
     setReportGenerating(reportType);
     try {
-      let response;
-      let filename;
+      // Fetch real-time data
+      toast.info('Fetching latest data...');
+      const [orders, inventory, movements] = await Promise.all([
+        base44.entities.Order.list('-order_date'),
+        base44.entities.Inventory.list(),
+        base44.entities.InventoryMovement.list('-movement_date', 10000)
+      ]);
+
       const requestBody = { 
+        reportType,
         department: selectedDepartment,
-        startDate: startDate,
-        endDate: endDate,
-        category: selectedCategory
+        dateFrom: startDate,
+        dateTo: endDate,
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        orders,
+        inventory,
+        movements
       };
 
-      switch (reportType) {
-        case 'valuation':
-          response = await base44.functions.invoke('generateStockValuationReport', requestBody);
-          filename = `stock_valuation_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-          break;
-        case 'low_stock':
-          response = await base44.functions.invoke('generateLowStockReport', requestBody);
-          filename = `low_stock_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-          break;
-        case 'movement_summary':
-          response = await base44.functions.invoke('generateMovementSummaryReport', requestBody);
-          filename = `movement_summary_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-          break;
-        case 'sales':
-          response = await base44.functions.invoke('generateInventorySalesReport', requestBody);
-          filename = `sales_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-          break;
-        case 'damaged':
-          response = await base44.functions.invoke('generateInventoryDamagedReport', requestBody);
-          filename = `damaged_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-          break;
-        default:
-          throw new Error('Invalid report type');
-      }
+      toast.info('Generating report...');
+      const response = await base44.functions.invoke('generateInventorySalesReport', requestBody);
 
-      if (response.data) {
-        const blob = new Blob([response.data], { type: 'application/pdf' });
+      if (response.data?.pdfBase64) {
+        // Decode base64 to blob
+        const binaryString = atob(response.data.pdfBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = `${reportType}_${toBDTDate()}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
-        toast.success('Report downloaded!');
+        toast.success('✅ Report downloaded with real-time data!');
       } else {
-        throw new Error('Failed to generate report');
+        throw new Error('No PDF data received');
       }
     } catch (error) {
       console.error(`Error generating ${reportType} report:`, error);
-      toast.error(error.message || 'Error generating report');
+      toast.error(`Error: ${error.message || 'Failed to generate report'}`);
     } finally {
       setReportGenerating(null);
     }
@@ -133,7 +143,7 @@ function InventoryReportsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Inventory Reports</h1>
-            <p className="text-slate-500 text-sm">Generate PDF reports for inventory data</p>
+            <p className="text-slate-500 text-sm">Generate PDF reports with real-time data (BDT timezone)</p>
           </div>
         </div>
 
@@ -149,17 +159,13 @@ function InventoryReportsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="boibari">
-                      <span className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> 📚 Boibari.com</span>
-                    </SelectItem>
-                    <SelectItem value="prodhan_com_e_commerce">
-                      <span className="flex items-center gap-2"><ShoppingCart className="w-3 h-3" /> 🛒 Prodhan.com</span>
-                    </SelectItem>
+                    <SelectItem value="boibari">📚 Boibari.com</SelectItem>
+                    <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs text-slate-600 font-medium">Start Date</Label>
+                <Label className="text-xs text-slate-600 font-medium">Start Date (BDT)</Label>
                 <Input 
                   type="date" 
                   value={startDate} 
@@ -168,7 +174,7 @@ function InventoryReportsPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-600 font-medium">End Date</Label>
+                <Label className="text-xs text-slate-600 font-medium">End Date (BDT)</Label>
                 <Input 
                   type="date" 
                   value={endDate} 
@@ -215,7 +221,7 @@ function InventoryReportsPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <ReportButton 
-                type="valuation" 
+                type="stock_valuation" 
                 icon={FileText} 
                 title="Stock Valuation" 
                 color="text-violet-600"
@@ -248,19 +254,43 @@ function InventoryReportsPage() {
             <CardTitle className="text-base font-semibold text-slate-800">Sales & Loss Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <ReportButton 
-                type="sales" 
+                type="sales_summary" 
                 icon={ShoppingBag} 
-                title="Sales Report" 
+                title="Sales Summary" 
                 color="text-green-600"
                 bgColor="bg-green-50"
                 hoverBorder="green-400"
               />
               <ReportButton 
-                type="damaged" 
+                type="top_selling" 
+                icon={TrendingUp} 
+                title="Top Selling" 
+                color="text-amber-600"
+                bgColor="bg-amber-50"
+                hoverBorder="amber-400"
+              />
+              <ReportButton 
+                type="profit_analysis" 
+                icon={BarChart3} 
+                title="Profit Analysis" 
+                color="text-emerald-600"
+                bgColor="bg-emerald-50"
+                hoverBorder="emerald-400"
+              />
+              <ReportButton 
+                type="damaged_products" 
                 icon={PackageX} 
-                title="Damaged Report" 
+                title="Damaged Products" 
+                color="text-red-600"
+                bgColor="bg-red-50"
+                hoverBorder="red-400"
+              />
+              <ReportButton 
+                type="returned_products" 
+                icon={RotateCcw} 
+                title="Returned Products" 
                 color="text-orange-600"
                 bgColor="bg-orange-50"
                 hoverBorder="orange-400"
