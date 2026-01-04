@@ -1125,10 +1125,19 @@ function SalesPage() {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => handleBulkAction('shipped')}
+                  className="text-cyan-600 hover:bg-cyan-50"
+                >
+                  <Truck className="w-4 h-4 mr-1" />
+                  Ship All
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleBulkAction('delivered')}
                   className="text-green-600 hover:bg-green-50"
                 >
-                  <Truck className="w-4 h-4 mr-1" />
+                  <CheckCircle className="w-4 h-4 mr-1" />
                   Mark Delivered
                 </Button>
                 <Button
