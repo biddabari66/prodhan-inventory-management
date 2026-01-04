@@ -10,6 +10,7 @@ import Budget from './pages/Budget';
 import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
 import Courses from './pages/Courses';
+import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
 import Dashboard from './pages/Dashboard';
 import DocumentCenter from './pages/DocumentCenter';
@@ -69,7 +70,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import CustomerManagement from './pages/CustomerManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -86,6 +86,7 @@ export const PAGES = {
     "CRM": CRM,
     "CategorySettings": CategorySettings,
     "Courses": Courses,
+    "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
     "Dashboard": Dashboard,
     "DocumentCenter": DocumentCenter,
@@ -145,7 +146,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "CustomerManagement": CustomerManagement,
 }
 
 export const pagesConfig = {

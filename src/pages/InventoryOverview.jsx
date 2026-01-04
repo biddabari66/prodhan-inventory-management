@@ -147,17 +147,24 @@ function InventoryOverviewPage() {
 
   const loadTodaySales = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
       const allOrders = await base44.entities.Order.list();
       
-      const todayDeliveredOrders = allOrders.filter(order => {
-        if (order.order_status !== 'delivered') return false;
-        const deliveryDate = order.actual_delivery_date?.split('T')[0];
-        return deliveryDate === today;
+      // Count orders created today with confirmed status or later
+      const todayOrders = allOrders.filter(order => {
+        const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: 'Asia/Dhaka' 
+        }).format(new Date(order.order_date || order.created_date));
+        
+        if (orderDateBDT !== todayBDT) return false;
+        
+        // Include confirmed, processing, packed, shipped, out_for_delivery, delivered
+        const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+        return validStatuses.includes(order.order_status);
       });
 
       const salesMap = {};
-      todayDeliveredOrders.forEach(order => {
+      todayOrders.forEach(order => {
         (order.order_items || []).forEach(item => {
           if (!salesMap[item.inventory_id]) {
             salesMap[item.inventory_id] = 0;
