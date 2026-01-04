@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Package, Check, X, Sparkles, Loader2, Link2, Wand2 } from 'lucide-react';
+import { Package, Check, X, Sparkles, Loader2, Link2, Wand2, Palette, Plus, AlertCircle } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { ProductCategory } from '@/entities/ProductCategory';
 import { toast } from 'sonner';
@@ -51,7 +51,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     tags: product?.tags || [],
     seo_keywords: product?.seo_keywords || [],
     department: 'prodhan_com_e_commerce',
-    status: product?.status || 'active'
+    status: product?.status || 'active',
+    color_variants: product?.color_variants || []
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +61,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [productUrl, setProductUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [colorName, setColorName] = useState('');
+  const [colorQuantity, setColorQuantity] = useState(0);
 
   // Auto-translate Bengali name to English
   const translateToEnglish = useCallback(async (bengaliText) => {
@@ -105,6 +108,15 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     if (!formData.item_name) {
       toast.error('Product name is required');
       return;
+    }
+
+    // Validate color variants if present
+    if (formData.color_variants?.length > 0) {
+      const totalColorStock = formData.color_variants.reduce((sum, v) => sum + v.quantity, 0);
+      if (totalColorStock !== formData.current_stock) {
+        toast.error(`Color quantities (${totalColorStock}) must equal total stock (${formData.current_stock})`);
+        return;
+      }
     }
 
     // Check for duplicate barcode (only for new products with barcode)
@@ -491,7 +503,14 @@ Return ONLY valid JSON with no additional text.`,
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="current_stock">Current Stock *</Label>
+                <Label htmlFor="current_stock">
+                  Current Stock *
+                  {formData.color_variants?.length > 0 && (
+                    <span className="text-xs text-slate-500 ml-2">
+                      (Total of colors: {formData.color_variants.reduce((sum, v) => sum + v.quantity, 0)})
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="current_stock"
                   type="text"
@@ -500,6 +519,12 @@ Return ONLY valid JSON with no additional text.`,
                   onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value) || 0})}
                   required
                 />
+                {formData.color_variants?.length > 0 && formData.color_variants.reduce((sum, v) => sum + v.quantity, 0) !== formData.current_stock && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Color quantities must equal total stock
+                  </p>
+                )}
               </div>
 
               <div>
@@ -569,6 +594,125 @@ Return ONLY valid JSON with no additional text.`,
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Color Variants Management */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
+              <Palette className="w-5 h-5 text-purple-600" />
+              Color Variants (Optional)
+            </h3>
+            
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-xs text-purple-800">
+                <strong>Track by color:</strong> If this product comes in different colors, add them here. 
+                The sum of all color quantities must equal your total stock ({formData.current_stock} units).
+              </p>
+            </div>
+
+            {/* Add Color Form */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+              <div>
+                <Label className="text-xs font-semibold">Color Name</Label>
+                <Input
+                  value={colorName}
+                  onChange={(e) => setColorName(e.target.value)}
+                  placeholder="e.g., Red, Blue, Black, White"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Quantity</Label>
+                <Input
+                  type="number"
+                  value={colorQuantity}
+                  onChange={(e) => setColorQuantity(parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (!colorName.trim()) {
+                      toast.error('Enter color name');
+                      return;
+                    }
+                    if (colorQuantity <= 0) {
+                      toast.error('Quantity must be greater than 0');
+                      return;
+                    }
+                    
+                    const existingColor = formData.color_variants?.find(v => v.color.toLowerCase() === colorName.toLowerCase());
+                    if (existingColor) {
+                      toast.error('This color already exists');
+                      return;
+                    }
+
+                    setFormData({
+                      ...formData,
+                      color_variants: [...(formData.color_variants || []), { color: colorName.trim(), quantity: colorQuantity }]
+                    });
+                    setColorName('');
+                    setColorQuantity(0);
+                    toast.success(`Added ${colorName} variant (${colorQuantity} units)`);
+                  }}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Color
+                </Button>
+              </div>
+            </div>
+
+            {/* Color Variants Display */}
+            {formData.color_variants?.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Color Breakdown</Label>
+                  <Badge variant="outline" className={
+                    formData.color_variants.reduce((sum, v) => sum + v.quantity, 0) === formData.current_stock
+                      ? 'bg-green-50 text-green-700 border-green-300'
+                      : 'bg-red-50 text-red-700 border-red-300'
+                  }>
+                    {formData.color_variants.reduce((sum, v) => sum + v.quantity, 0)} / {formData.current_stock} units
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {formData.color_variants.map((variant, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-slate-200 hover:border-purple-300 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-purple-300 flex items-center justify-center">
+                          <Palette className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm text-slate-900">{variant.color}</p>
+                          <p className="text-xs text-slate-500">{variant.quantity} units in stock</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            color_variants: formData.color_variants.filter((_, i) => i !== index)
+                          });
+                          toast.info(`Removed ${variant.color}`);
+                        }}
+                        className="hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Supplier Information */}
