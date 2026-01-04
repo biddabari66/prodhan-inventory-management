@@ -136,6 +136,13 @@ function InventoryOverviewPage() {
   useEffect(() => {
     loadUserAndInventory();
     loadTodaySales();
+    
+    // Real-time refresh every 30 seconds
+    const interval = setInterval(() => {
+      loadTodaySales();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadTodaySales = async () => {

@@ -69,6 +69,7 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
+import CustomerManagement from './pages/CustomerManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -144,6 +145,7 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
+    "CustomerManagement": CustomerManagement,
 }
 
 export const pagesConfig = {
