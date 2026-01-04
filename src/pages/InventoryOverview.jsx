@@ -105,6 +105,7 @@ function InventoryOverviewPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [todaySalesData, setTodaySalesData] = useState({});
 
   const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
                                  currentUser?.job_role === 'admin' ||
@@ -134,7 +135,35 @@ function InventoryOverviewPage() {
 
   useEffect(() => {
     loadUserAndInventory();
+    loadTodaySales();
   }, []);
+
+  const loadTodaySales = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const allOrders = await base44.entities.Order.list();
+      
+      const todayDeliveredOrders = allOrders.filter(order => {
+        if (order.order_status !== 'delivered') return false;
+        const deliveryDate = order.actual_delivery_date?.split('T')[0];
+        return deliveryDate === today;
+      });
+
+      const salesMap = {};
+      todayDeliveredOrders.forEach(order => {
+        (order.order_items || []).forEach(item => {
+          if (!salesMap[item.inventory_id]) {
+            salesMap[item.inventory_id] = 0;
+          }
+          salesMap[item.inventory_id] += item.quantity || 0;
+        });
+      });
+
+      setTodaySalesData(salesMap);
+    } catch (error) {
+      console.error('Error loading today sales:', error);
+    }
+  };
 
   useEffect(() => {
     filterInventory();
@@ -274,6 +303,7 @@ function InventoryOverviewPage() {
       setIsFormOpen(false);
       setEditingItem(null);
       await loadUserAndInventory();
+      await loadTodaySales();
     } catch (error) {
       console.error('Error saving inventory:', error);
       toast.error(`Failed to save inventory item: ${error.message}`);
@@ -307,6 +337,7 @@ function InventoryOverviewPage() {
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
       await loadUserAndInventory();
+      await loadTodaySales();
     } catch (error) {
       console.error('Error deleting item:', error);
       toast.error(`Failed to delete item: ${error.message}`);
@@ -510,6 +541,7 @@ function InventoryOverviewPage() {
                     <TableHead className="font-semibold text-slate-700 text-right">Returns</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Damages</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Price</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">Today's Sales</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-center">Status</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-center">Actions</TableHead>
                   </TableRow>
@@ -517,7 +549,7 @@ function InventoryOverviewPage() {
                 <TableBody>
                   {filteredInventory.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-16">
+                      <TableCell colSpan={10} className="text-center py-16">
                         <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No inventory items found</p>
                         <p className="text-slate-400 text-sm mt-1">Add items or adjust your filters</p>
@@ -578,6 +610,11 @@ function InventoryOverviewPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="font-semibold text-slate-900">৳{item.selling_price?.toLocaleString()}</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={todaySalesData[item.id] > 0 ? 'bg-green-100 text-green-800 font-semibold' : 'bg-slate-100 text-slate-600'}>
+                            {todaySalesData[item.id] || 0} units
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge 
