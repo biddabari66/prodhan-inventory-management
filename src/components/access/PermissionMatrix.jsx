@@ -33,6 +33,7 @@ const MODULES = [
   { id: 'email', name: 'Email', icon: Mail, category: 'HR' },
   { id: 'inventory_overview', name: 'Inventory Overview', icon: Warehouse, category: 'Inventory' },
   { id: 'sales', name: 'Sales Orders', icon: ShoppingCart, category: 'Inventory' },
+  { id: 'customer_management', name: 'Customer Management', icon: Users, category: 'Inventory' },
   { id: 'purchase_orders', name: 'Purchase Orders', icon: Package, category: 'Inventory' },
   { id: 'inventory_movements', name: 'Stock Movements', icon: RotateCcw, category: 'Inventory' },
   { id: 'inventory_returns', name: 'Returns & Damages', icon: PackageX, category: 'Inventory' },
