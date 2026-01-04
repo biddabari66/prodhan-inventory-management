@@ -1229,9 +1229,22 @@ function SalesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {order.order_items?.length || 0} items
-                        </Badge>
+                        <div className="max-w-xs">
+                          {order.order_items && order.order_items.length > 0 ? (
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-800 truncate">
+                                {order.order_items[0].item_name}
+                              </p>
+                              {order.order_items.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{order.order_items.length - 1} more
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 text-sm">No items</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         BDT {order.total_amount?.toLocaleString()}
