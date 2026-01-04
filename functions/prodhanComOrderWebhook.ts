@@ -56,15 +56,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const payload = await req.json();
 
-    // SECURITY: Verify webhook secret
-    const WEBHOOK_SECRET = Deno.env.get('PRODHAN_WEBHOOK_SECRET') || 'default_secret_123';
-    if (payload.webhook_secret !== WEBHOOK_SECRET) {
-      console.error('Invalid webhook secret');
-      return Response.json(
-        { success: false, error: 'Unauthorized - Invalid webhook secret' },
-        { status: 401 }
-      );
-    }
+    // No authentication required - open endpoint for Prodhan.com integration
 
     console.log('📦 Received order from Prodhan.com:', payload.order_number);
 
