@@ -47,6 +47,7 @@ import Performance from './pages/Performance';
 import PerformanceHub from './pages/PerformanceHub';
 import Permissions from './pages/Permissions';
 import Procurement from './pages/Procurement';
+import ProdhanComIntegration from './pages/ProdhanComIntegration';
 import ProductAnalytics from './pages/ProductAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
@@ -70,7 +71,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import ProdhanComIntegration from './pages/ProdhanComIntegration';
 import __Layout from './Layout.jsx';
 
 
@@ -124,6 +124,7 @@ export const PAGES = {
     "PerformanceHub": PerformanceHub,
     "Permissions": Permissions,
     "Procurement": Procurement,
+    "ProdhanComIntegration": ProdhanComIntegration,
     "ProductAnalytics": ProductAnalytics,
     "PurchaseOrders": PurchaseOrders,
     "ReportBuilder": ReportBuilder,
@@ -147,7 +148,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "ProdhanComIntegration": ProdhanComIntegration,
 }
 
 export const pagesConfig = {
