@@ -151,7 +151,7 @@ export default function SearchableProductSelect({
                   </div>
                   <div className="text-right ml-2 flex-shrink-0">
                     <p className="text-sm font-semibold text-violet-600">
-                      ৳{item.purchase_price?.toLocaleString()}
+                      ৳{item.selling_price?.toLocaleString() || 0}
                     </p>
                   </div>
                 </div>
