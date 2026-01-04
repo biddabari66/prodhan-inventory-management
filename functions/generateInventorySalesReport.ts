@@ -66,7 +66,9 @@ Deno.serve(async (req) => {
     const inventoryIds = new Set(filteredInventory.map(i => i.id));
 
     // Filter orders by date range (BDT timezone) and status
-    let filteredOrders = orders.filter(o => o.order_status !== 'cancelled');
+    // Count confirmed, processing, packed, shipped, out_for_delivery, delivered as valid sales
+    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+    let filteredOrders = orders.filter(o => validStatuses.includes(o.order_status));
     if (dateFrom) {
       filteredOrders = filteredOrders.filter(o => {
         const orderDate = toBDTDate(o.order_date || o.created_date);
