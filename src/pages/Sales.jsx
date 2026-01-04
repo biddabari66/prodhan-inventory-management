@@ -1229,16 +1229,16 @@ function SalesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-xs">
+                        <div className="max-w-[200px]">
                           {order.order_items && order.order_items.length > 0 ? (
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium text-slate-800 truncate">
-                                {order.order_items[0].item_name}
+                            <div className="text-sm">
+                              <p className="font-medium text-slate-800 truncate">
+                                {order.order_items[0].item_name.substring(0, 25)}
+                                {order.order_items[0].item_name.length > 25 ? '...' : ''}
+                                <span className="text-violet-600 font-semibold ml-1">(×{order.order_items[0].quantity})</span>
                               </p>
                               {order.order_items.length > 1 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{order.order_items.length - 1} more
-                                </Badge>
+                                <p className="text-xs text-slate-500 mt-0.5">+{order.order_items.length - 1} more items</p>
                               )}
                             </div>
                           ) : (
