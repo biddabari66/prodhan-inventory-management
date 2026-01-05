@@ -22,73 +22,8 @@ import { base44 } from '@/api/base44Client';
 import { withPermission } from '../components/common/PermissionGuard';
 
 function InventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
-  const itemDepartment = item?.department || selectedDepartment;
-
-  // For Boibari or books category
-  if (itemDepartment === 'boibari' || item?.category === 'books') {
-    return <BookMetadataManager book={item} onUpdate={onSubmit} onClose={onCancel} />;
-  }
-
-  // For Prodhan.com e-commerce
-  if (itemDepartment === 'prodhan_com_e_commerce') {
-    return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
-  }
-
-  // Default: Show department selector when no department is specified
-  return <DepartmentSelector onSelect={(dept) => {
-    if (dept === 'boibari') {
-      return <BookMetadataManager book={item} onUpdate={onSubmit} onClose={onCancel} />;
-    }
-    return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
-  }} onCancel={onCancel} />;
-}
-
-function DepartmentSelector({ onSelect, onCancel }) {
-  const [selected, setSelected] = React.useState(null);
-
-  if (selected === 'boibari') {
-    return null; // Parent will re-render with BookMetadataManager
-  }
-  if (selected === 'prodhan_com_e_commerce') {
-    return null; // Parent will re-render with GeneralProductForm
-  }
-
-  return (
-    <div className="space-y-6 p-4">
-      <div className="text-center mb-6">
-        <h3 className="text-lg font-semibold text-slate-900">Select Department</h3>
-        <p className="text-sm text-slate-500">Choose which department this product belongs to</p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => onSelect('boibari')}
-          className="p-6 rounded-xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-white hover:border-cyan-500 hover:shadow-lg transition-all group"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <BookOpen className="w-8 h-8 text-cyan-600" />
-          </div>
-          <h4 className="text-lg font-bold text-cyan-900">📚 Boibari.com</h4>
-          <p className="text-sm text-cyan-700 mt-1">Books, Publications & Educational Materials</p>
-        </button>
-
-        <button
-          onClick={() => onSelect('prodhan_com_e_commerce')}
-          className="p-6 rounded-xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white hover:border-purple-500 hover:shadow-lg transition-all group"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Package className="w-8 h-8 text-purple-600" />
-          </div>
-          <h4 className="text-lg font-bold text-purple-900">🛒 Prodhan.com</h4>
-          <p className="text-sm text-purple-700 mt-1">Electronics, Equipment & General Products</p>
-        </button>
-      </div>
-
-      <div className="flex justify-center pt-4">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-      </div>
-    </div>
-  );
+  // Always use General Product Form for Prodhan.com
+  return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
 }
 
 function InventoryOverviewPage() {
@@ -107,12 +42,7 @@ function InventoryOverviewPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [todaySalesData, setTodaySalesData] = useState({});
 
-  const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
-                                 currentUser?.job_role === 'admin' ||
-                                 currentUser?.job_role === 'inventory_manager';
-
-  const userDepartment = canViewAllDepartments ? 'all' : (currentUser?.department || 'all');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('prodhan_com_e_commerce');
 
   // Fetch categories for filtering
   const { data: categories = [] } = useQuery({
@@ -127,11 +57,7 @@ function InventoryOverviewPage() {
     },
   });
 
-  useEffect(() => {
-    if (currentUser && !canViewAllDepartments) {
-      setSelectedDepartment(userDepartment);
-    }
-  }, [currentUser, canViewAllDepartments, userDepartment]);
+
 
   useEffect(() => {
     loadUserAndInventory();
@@ -266,11 +192,8 @@ function InventoryOverviewPage() {
 
     let filtered = inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory;
 
-    if (!canViewAllDepartments) {
-      filtered = filtered.filter(item => item.department === userDepartment);
-    } else if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(item => item.department === selectedDepartment);
-    }
+    // Only show Prodhan.com items
+    filtered = filtered.filter(item => item.department === 'prodhan_com_e_commerce');
 
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
@@ -302,17 +225,12 @@ function InventoryOverviewPage() {
     }
 
     try {
-      if (!canViewAllDepartments && data.department !== userDepartment) {
-        toast.error('You can only manage items from your department');
-        return;
-      }
-
       if (editingItem) {
         await Inventory.update(editingItem.id, data);
-        toast.success('Inventory item updated successfully');
+        toast.success('Product updated successfully');
       } else {
         await Inventory.create(data);
-        toast.success('Inventory item added successfully');
+        toast.success('Product added successfully');
       }
       setIsFormOpen(false);
       setEditingItem(null);
@@ -320,24 +238,16 @@ function InventoryOverviewPage() {
       await loadTodaySales();
     } catch (error) {
       console.error('Error saving inventory:', error);
-      toast.error(`Failed to save inventory item: ${error.message}`);
+      toast.error(`Failed to save product: ${error.message}`);
     }
   };
 
   const handleEdit = (item) => {
-    if (!canViewAllDepartments && item.department !== userDepartment) {
-      toast.error('You cannot edit items from other departments');
-      return;
-    }
     setEditingItem(item);
     setIsFormOpen(true);
   };
 
   const handleDeleteClick = (item) => {
-    if (!canViewAllDepartments && item.department !== userDepartment) {
-      toast.error('You cannot delete items from other departments');
-      return;
-    }
     setItemToDelete(item);
     setDeleteConfirmOpen(true);
   };
@@ -363,9 +273,7 @@ function InventoryOverviewPage() {
   const departmentStats = {
     total: filteredInventory.length,
     low_stock: lowStockItems.length,
-    total_value: filteredInventory.reduce((sum, item) => sum + (item.current_stock * item.purchase_price || 0), 0),
-    boibari: inventory.filter(i => i.department === 'boibari').length,
-    prodhan: inventory.filter(i => i.department === 'prodhan_com_e_commerce').length
+    total_value: filteredInventory.reduce((sum, item) => sum + (item.current_stock * item.purchase_price || 0), 0)
   };
 
   if (isLoading) {
@@ -388,14 +296,8 @@ function InventoryOverviewPage() {
             <div>
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Inventory Overview</h1>
               <p className="text-slate-600 mt-1 text-base">
-                {canViewAllDepartments ? 'সকল বিভাগের সম্পূর্ণ ইনভেন্টরি ব্যবস্থাপনা' : `${userDepartment === 'boibari' ? 'বইবাড়ি.কম' : 'প্রধান.কম'} এর ইনভেন্টরি ব্যবস্থাপনা`}
+                Prodhan.com E-commerce Inventory Management
               </p>
-              {!canViewAllDepartments && (
-                <Badge className="bg-orange-100 text-orange-800 border border-orange-300 mt-2 flex items-center gap-1 w-fit">
-                  <Shield className="w-3 h-3" />
-                  {userDepartment === 'boibari' ? '📚 Boibari Access Only' : '🛒 Prodhan.com Access Only'}
-                </Badge>
-              )}
             </div>
           </div>
           <Button 
@@ -407,20 +309,10 @@ function InventoryOverviewPage() {
         </div>
 
         {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-          <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <DepartmentFilter
-                currentUser={currentUser}
-                selectedDepartment={selectedDepartment}
-                onDepartmentChange={setSelectedDepartment}
-              />
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Items</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Products</p>
               <p className="text-3xl font-bold text-blue-600">{departmentStats.total}</p>
             </CardContent>
           </Card>
@@ -432,17 +324,10 @@ function InventoryOverviewPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-l-4 border-l-cyan-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Boibari Items</p>
-              <p className="text-3xl font-bold text-cyan-600">{departmentStats.boibari}</p>
-            </CardContent>
-          </Card>
-
           <Card className="bg-white border-l-4 border-l-purple-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Prodhan Items</p>
-              <p className="text-3xl font-bold text-purple-600">{departmentStats.prodhan}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Value</p>
+              <p className="text-3xl font-bold text-purple-600">৳{departmentStats.total_value.toLocaleString()}</p>
             </CardContent>
           </Card>
         </div>
@@ -550,7 +435,6 @@ function InventoryOverviewPage() {
                   <TableRow className="bg-slate-50 border-b border-slate-200">
                     <TableHead className="font-semibold text-slate-700">Item Name</TableHead>
                     <TableHead className="font-semibold text-slate-700">Category</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Department</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-center">Stock Level</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Returns</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Damages</TableHead>
@@ -598,14 +482,6 @@ function InventoryOverviewPage() {
                         <TableCell>
                           <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-300">
                             {item.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={item.department === 'boibari' ? 
-                            'bg-cyan-500 text-white hover:bg-cyan-600' : 
-                            'bg-purple-500 text-white hover:bg-purple-600'
-                          }>
-                            {item.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
@@ -673,34 +549,20 @@ function InventoryOverviewPage() {
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-          {(editingItem || selectedDepartment === 'boibari' || selectedDepartment === 'prodhan_com_e_commerce') ? (
-            <>
-              <DialogHeader className="p-6 pb-0">
-                <DialogTitle className="flex items-center gap-3">
-                  {editingItem ? 'Edit' : 'Add New'} Inventory Item
-                  {(editingItem?.department === 'boibari' || selectedDepartment === 'boibari') && (
-                    <Badge className="bg-cyan-100 text-cyan-800">📚 Boibari.com</Badge>
-                  )}
-                  {(editingItem?.department === 'prodhan_com_e_commerce' || selectedDepartment === 'prodhan_com_e_commerce') && (
-                    <Badge className="bg-purple-100 text-purple-800">🛒 Prodhan.com</Badge>
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="p-6 pt-4">
-                <InventoryForm
-                  item={editingItem}
-                  onSubmit={handleFormSubmit}
-                  onCancel={() => setIsFormOpen(false)}
-                  selectedDepartment={editingItem?.department || selectedDepartment}
-                />
-              </div>
-            </>
-          ) : (
-            <DepartmentSelector 
-              onSelect={(dept) => setSelectedDepartment(dept)}
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="flex items-center gap-3">
+              {editingItem ? 'Edit' : 'Add New'} Product
+              <Badge className="bg-purple-100 text-purple-800">🛒 Prodhan.com</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 pt-4">
+            <InventoryForm
+              item={editingItem}
+              onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
+              selectedDepartment="prodhan_com_e_commerce"
             />
-          )}
+          </div>
         </DialogContent>
       </Dialog>
 
