@@ -26,11 +26,100 @@ const toBDTDateTime = (date) => {
   }).format(d);
 };
 
-const formatCurrency = (amount) => `৳${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (amount) => `BDT ${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatNumber = (num) => (num || 0).toLocaleString('en-US');
 const getDisplayName = (item) => item.english_item_name || item.item_name || 'Unknown Item';
 const getDepartmentName = (dept) => {
-  const names = { 'boibari': 'Boibari.com', 'prodhan_com_e_commerce': 'Prodhan.com' };
-  return names[dept] || dept;
+  const names = { 'boibari': 'Boibari.com (Books)', 'prodhan_com_e_commerce': 'Prodhan.com (E-commerce)' };
+  return names[dept] || dept || 'All Departments';
+};
+
+// Professional header with company branding
+const addProfessionalHeader = (doc, title, subtitle, color, user, department, dateFrom, dateTo) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Background gradient effect
+  doc.setFillColor(color.r, color.g, color.b);
+  doc.rect(0, 0, pageWidth, 42, 'F');
+  
+  // Decorative line
+  doc.setFillColor(255, 255, 255);
+  doc.setGlobalAlpha && doc.setGlobalAlpha(0.1);
+  doc.rect(0, 38, pageWidth, 4, 'F');
+  
+  // Title
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont(undefined, 'bold');
+  doc.text(title, 14, 18);
+  
+  // Subtitle
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
+  const dateText = dateFrom && dateTo ? `Period: ${dateFrom} to ${dateTo}` : 'All Time Data';
+  doc.text(`${deptText} | ${dateText}`, 14, 28);
+  
+  // Company info on right
+  doc.setFontSize(9);
+  doc.text('BEE ERP - Inventory Management', pageWidth - 14, 15, { align: 'right' });
+  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 23, { align: 'right' });
+  doc.text(`By: ${user?.full_name || user?.email || 'System'}`, pageWidth - 14, 31, { align: 'right' });
+  
+  doc.setTextColor(0, 0, 0);
+  return 50; // Return starting Y position for content
+};
+
+// Professional summary box
+const addSummaryBox = (doc, startY, items, bgColor) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const boxHeight = 28;
+  
+  // Background
+  doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+  doc.roundedRect(14, startY, pageWidth - 28, boxHeight, 3, 3, 'F');
+  
+  // Border
+  doc.setDrawColor(bgColor.r - 30, bgColor.g - 30, bgColor.b - 30);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(14, startY, pageWidth - 28, boxHeight, 3, 3, 'S');
+  
+  // Content
+  const colWidth = (pageWidth - 36) / items.length;
+  items.forEach((item, i) => {
+    const x = 20 + (colWidth * i);
+    
+    // Label
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont(undefined, 'normal');
+    doc.text(item.label.toUpperCase(), x, startY + 10);
+    
+    // Value
+    doc.setFontSize(13);
+    doc.setTextColor(30, 30, 30);
+    doc.setFont(undefined, 'bold');
+    doc.text(item.value, x, startY + 21);
+  });
+  
+  doc.setTextColor(0, 0, 0);
+  return startY + boxHeight + 8;
+};
+
+// Add footer to all pages
+const addFooter = (doc) => {
+  const pageCount = doc.internal.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('BEE ERP - Confidential Business Document', 14, pageHeight - 10);
+    doc.text('Generated in BDT Timezone (UTC+6)', pageWidth - 14, pageHeight - 10, { align: 'right' });
+  }
 };
 
 Deno.serve(async (req) => {
@@ -66,7 +155,6 @@ Deno.serve(async (req) => {
     const inventoryIds = new Set(filteredInventory.map(i => i.id));
 
     // Filter orders by date range (BDT timezone) and status
-    // Count confirmed, processing, packed, shipped, out_for_delivery, delivered as valid sales
     const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
     let filteredOrders = orders.filter(o => validStatuses.includes(o.order_status));
     if (dateFrom) {
@@ -87,9 +175,9 @@ Deno.serve(async (req) => {
     if (reportType === 'sales_summary') {
       doc = generateSalesSummaryReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
     } else if (reportType === 'stock_valuation') {
-      doc = generateStockValuationReport(filteredInventory, department, user);
+      doc = generateStockValuationReport(filteredInventory, department, dateFrom, dateTo, user);
     } else if (reportType === 'low_stock') {
-      doc = generateLowStockReport(filteredInventory, department, user);
+      doc = generateLowStockReport(filteredInventory, department, dateFrom, dateTo, user);
     } else if (reportType === 'top_selling') {
       doc = generateTopSellingReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
     } else if (reportType === 'profit_analysis') {
@@ -98,10 +186,13 @@ Deno.serve(async (req) => {
       doc = generateDamagedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
     } else if (reportType === 'returned_products') {
       doc = generateReturnedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
+    } else if (reportType === 'movement_summary') {
+      doc = generateMovementSummaryReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
     } else {
       return Response.json({ error: 'Invalid report type' }, { status: 400 });
     }
 
+    addFooter(doc);
     const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(doc.output('arraybuffer'))));
     return Response.json({ pdfBase64 });
 
@@ -114,260 +205,286 @@ Deno.serve(async (req) => {
 function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user) {
   const doc = new jsPDF('landscape');
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
 
-  // Calculate sales metrics
+  // Calculate sales metrics accurately
   const salesByProduct = {};
+  let totalOrders = new Set();
+  
   orders.forEach(order => {
     const orderItems = order.order_items || [];
     const orderItemsCount = orderItems.length;
-    const orderDiscount = order.discount_amount || 0;
-    const orderDelivery = order.shipping_cost || order.delivery_cost || 0;
-
+    const orderDiscount = (order.discount_amount || 0) + (order.coupon_discount || 0);
+    
     orderItems.forEach(item => {
       if (!inventoryIds.has(item.inventory_id)) return;
       const invItem = inventoryMap.get(item.inventory_id);
       if (!invItem) return;
 
       const qty = item.quantity || 0;
-      const sellingPrice = invItem.selling_price || 0;
+      const unitPrice = item.unit_price || invItem.selling_price || 0;
       const purchasePrice = invItem.purchase_price || 0;
-      const grossSales = qty * sellingPrice;
+      const itemSubtotal = item.subtotal || (qty * unitPrice);
       const itemDiscountShare = orderItemsCount > 0 ? (orderDiscount / orderItemsCount) : 0;
-      const itemDeliveryShare = orderItemsCount > 0 ? (orderDelivery / orderItemsCount) : 0;
-      const totalSales = grossSales - itemDiscountShare - itemDeliveryShare;
-      const profit = totalSales - (qty * purchasePrice);
+      const netSales = itemSubtotal - itemDiscountShare;
+      const cost = qty * purchasePrice;
+      const profit = netSales - cost;
 
       if (!salesByProduct[item.inventory_id]) {
-        salesByProduct[item.inventory_id] = { qty: 0, totalSales: 0, orders: 0, profit: 0 };
+        salesByProduct[item.inventory_id] = { qty: 0, grossSales: 0, netSales: 0, profit: 0, cost: 0, orderIds: new Set() };
       }
       salesByProduct[item.inventory_id].qty += qty;
-      salesByProduct[item.inventory_id].totalSales += totalSales;
+      salesByProduct[item.inventory_id].grossSales += itemSubtotal;
+      salesByProduct[item.inventory_id].netSales += netSales;
       salesByProduct[item.inventory_id].profit += profit;
-      salesByProduct[item.inventory_id].orders += 1;
+      salesByProduct[item.inventory_id].cost += cost;
+      salesByProduct[item.inventory_id].orderIds.add(order.id);
+      totalOrders.add(order.id);
     });
   });
 
   const salesData = inventory.map(item => {
-    const sales = salesByProduct[item.id] || { qty: 0, totalSales: 0, orders: 0, profit: 0 };
-    const profitMargin = sales.totalSales > 0 ? (sales.profit / sales.totalSales) * 100 : 0;
+    const sales = salesByProduct[item.id] || { qty: 0, grossSales: 0, netSales: 0, profit: 0, cost: 0, orderIds: new Set() };
+    const profitMargin = sales.netSales > 0 ? (sales.profit / sales.netSales) * 100 : 0;
     return {
       name: getDisplayName(item),
       category: item.category || 'N/A',
       department: item.department,
       unitsSold: sales.qty,
-      totalSales: sales.totalSales,
-      orders: sales.orders,
+      grossSales: sales.grossSales,
+      netSales: sales.netSales,
+      cost: sales.cost,
       profit: sales.profit,
-      profitMargin: profitMargin
+      profitMargin,
+      orders: sales.orderIds.size
     };
-  }).filter(d => d.unitsSold > 0).sort((a, b) => b.totalSales - a.totalSales);
+  }).filter(d => d.unitsSold > 0).sort((a, b) => b.netSales - a.netSales);
 
   const totals = salesData.reduce((acc, d) => ({
     unitsSold: acc.unitsSold + d.unitsSold,
-    totalSales: acc.totalSales + d.totalSales,
-    profit: acc.profit + d.profit,
-    orders: acc.orders + d.orders
-  }), { unitsSold: 0, totalSales: 0, profit: 0, orders: 0 });
+    grossSales: acc.grossSales + d.grossSales,
+    netSales: acc.netSales + d.netSales,
+    cost: acc.cost + d.cost,
+    profit: acc.profit + d.profit
+  }), { unitsSold: 0, grossSales: 0, netSales: 0, cost: 0, profit: 0 });
+
+  const avgMargin = totals.netSales > 0 ? ((totals.profit / totals.netSales) * 100).toFixed(1) : '0.0';
 
   // Header
-  doc.setFillColor(16, 185, 129);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('SALES SUMMARY REPORT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  const dateText = dateFrom && dateTo ? `${dateFrom} - ${dateTo}` : 'All Time';
-  doc.text(`${deptText} | ${dateText}`, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
-  doc.text(`By: ${user.full_name || user.email}`, pageWidth - 14, 28, { align: 'right' });
+  let startY = addProfessionalHeader(doc, 'SALES SUMMARY REPORT', 'Complete Sales Analysis', { r: 16, g: 185, b: 129 }, user, department, dateFrom, dateTo);
 
-  doc.setTextColor(0, 0, 0);
-
-  // Summary Box
-  doc.setFillColor(240, 253, 244);
-  doc.rect(10, 42, pageWidth - 20, 25, 'F');
-  doc.setDrawColor(187, 247, 208);
-  doc.rect(10, 42, pageWidth - 20, 25, 'S');
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(20, 83, 45);
-  doc.text('SALES SUMMARY', 14, 52);
-
-  const summaryY = 60;
-  const colW = (pageWidth - 28) / 4;
-  const summaryItems = [
-    { label: 'Total Units Sold', value: totals.unitsSold.toLocaleString() },
-    { label: 'Total Sales', value: formatCurrency(totals.totalSales) },
+  // Summary
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Total Orders', value: formatNumber(totalOrders.size) },
+    { label: 'Units Sold', value: formatNumber(totals.unitsSold) },
+    { label: 'Gross Sales', value: formatCurrency(totals.grossSales) },
+    { label: 'Net Sales', value: formatCurrency(totals.netSales) },
     { label: 'Total Profit', value: formatCurrency(totals.profit) },
-    { label: 'Total Orders', value: totals.orders.toLocaleString() }
-  ];
-  doc.setFontSize(9);
-  summaryItems.forEach((item, i) => {
-    doc.setTextColor(51, 65, 85);
-    doc.setFont(undefined, 'bold');
-    doc.text(item.label, 14 + colW * i, summaryY);
-    doc.setTextColor(16, 185, 129);
-    doc.setFont(undefined, 'normal');
-    doc.text(item.value, 14 + colW * i, summaryY + 5);
-  });
-
-  doc.setTextColor(0, 0, 0);
+    { label: 'Avg Margin', value: `${avgMargin}%` }
+  ], { r: 220, g: 252, b: 231 });
 
   // Table
   if (salesData.length > 0) {
-    const tableColumns = ['Product Name', 'Category', 'Dept', 'Units', 'Sales', 'Profit', 'Margin %', 'Orders'];
-    const tableRows = salesData.map(d => [
-      d.name.substring(0, 35) + (d.name.length > 35 ? '...' : ''),
-      d.category,
-      d.department === 'boibari' ? 'Boibari' : 'Prodhan',
-      d.unitsSold,
-      formatCurrency(d.totalSales),
-      formatCurrency(d.profit),
-      d.profitMargin.toFixed(1) + '%',
-      d.orders
-    ]);
-
     doc.autoTable({
-      head: [tableColumns],
-      body: tableRows,
-      startY: 72,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', halign: 'center' },
-      alternateRowStyles: { fillColor: [240, 253, 244] },
+      head: [['#', 'Product Name', 'Category', 'Qty Sold', 'Gross Sales', 'Net Sales', 'Cost', 'Profit', 'Margin', 'Orders']],
+      body: salesData.map((d, idx) => [
+        idx + 1,
+        d.name.substring(0, 32) + (d.name.length > 32 ? '...' : ''),
+        d.category.substring(0, 15),
+        formatNumber(d.unitsSold),
+        formatCurrency(d.grossSales),
+        formatCurrency(d.netSales),
+        formatCurrency(d.cost),
+        formatCurrency(d.profit),
+        d.profitMargin.toFixed(1) + '%',
+        d.orders
+      ]),
+      startY: startY,
+      styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8 },
+      alternateRowStyles: { fillColor: [245, 250, 245] },
       columnStyles: {
-        0: { cellWidth: 60 },
-        3: { halign: 'center' },
-        4: { halign: 'right' },
-        5: { halign: 'right' },
-        6: { halign: 'center' },
-        7: { halign: 'center' }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 25 },
+        3: { halign: 'right', cellWidth: 18 },
+        4: { halign: 'right', cellWidth: 28 },
+        5: { halign: 'right', cellWidth: 28 },
+        6: { halign: 'right', cellWidth: 25 },
+        7: { halign: 'right', cellWidth: 25 },
+        8: { halign: 'center', cellWidth: 18 },
+        9: { halign: 'center', cellWidth: 15 }
+      },
+      didDrawPage: (data) => {
+        // Add header on each page
+        if (data.pageNumber > 1) {
+          doc.setFillColor(16, 185, 129);
+          doc.rect(0, 0, pageWidth, 15, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.text('SALES SUMMARY REPORT (Continued)', 14, 10);
+          doc.setTextColor(0, 0, 0);
+        }
       }
     });
+
+    // Grand totals row
+    const finalY = doc.lastAutoTable.finalY + 5;
+    doc.setFillColor(16, 185, 129);
+    doc.rect(14, finalY, pageWidth - 28, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('GRAND TOTALS:', 20, finalY + 7);
+    doc.text(`Units: ${formatNumber(totals.unitsSold)}`, 70, finalY + 7);
+    doc.text(`Gross: ${formatCurrency(totals.grossSales)}`, 115, finalY + 7);
+    doc.text(`Net: ${formatCurrency(totals.netSales)}`, 165, finalY + 7);
+    doc.text(`Profit: ${formatCurrency(totals.profit)}`, 210, finalY + 7);
+    doc.text(`Margin: ${avgMargin}%`, 255, finalY + 7);
   } else {
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setTextColor(107, 114, 128);
-    doc.text('No sales data found for the selected period.', pageWidth / 2, 90, { align: 'center' });
+    doc.text('No sales data found for the selected period and filters.', pageWidth / 2, startY + 30, { align: 'center' });
   }
 
   return doc;
 }
 
-function generateStockValuationReport(inventory, department, user) {
+function generateStockValuationReport(inventory, department, dateFrom, dateTo, user) {
   const doc = new jsPDF('landscape');
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  const totalValue = inventory.reduce((sum, i) => sum + (i.current_stock * i.purchase_price || 0), 0);
-  const totalItems = inventory.length;
+  const totalPurchaseValue = inventory.reduce((sum, i) => sum + ((i.current_stock || 0) * (i.purchase_price || 0)), 0);
+  const totalSellingValue = inventory.reduce((sum, i) => sum + ((i.current_stock || 0) * (i.selling_price || 0)), 0);
   const totalUnits = inventory.reduce((sum, i) => sum + (i.current_stock || 0), 0);
+  const potentialProfit = totalSellingValue - totalPurchaseValue;
+  const avgMargin = totalSellingValue > 0 ? ((potentialProfit / totalSellingValue) * 100).toFixed(1) : '0.0';
 
-  // Header
-  doc.setFillColor(99, 102, 241);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('STOCK VALUATION REPORT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  doc.text(deptText, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
-  doc.text(`By: ${user.full_name || user.email}`, pageWidth - 14, 28, { align: 'right' });
+  let startY = addProfessionalHeader(doc, 'STOCK VALUATION REPORT', 'Current Inventory Value Analysis', { r: 99, g: 102, b: 241 }, user, department, dateFrom, dateTo);
 
-  doc.setTextColor(0, 0, 0);
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Total SKUs', value: formatNumber(inventory.length) },
+    { label: 'Total Units', value: formatNumber(totalUnits) },
+    { label: 'Cost Value', value: formatCurrency(totalPurchaseValue) },
+    { label: 'Retail Value', value: formatCurrency(totalSellingValue) },
+    { label: 'Potential Profit', value: formatCurrency(potentialProfit) },
+    { label: 'Avg Margin', value: `${avgMargin}%` }
+  ], { r: 238, g: 242, b: 255 });
 
-  // Summary
-  doc.setFillColor(238, 242, 255);
-  doc.rect(10, 42, pageWidth - 20, 20, 'F');
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Total Stock Value: ${formatCurrency(totalValue)}`, 14, 52);
-  doc.text(`Total Items: ${totalItems}`, 100, 52);
-  doc.text(`Total Units: ${totalUnits}`, 180, 52);
-
-  // Table
-  const tableColumns = ['Product Name', 'Category', 'Stock', 'Purchase Price', 'Selling Price', 'Stock Value'];
-  const tableRows = inventory.map(i => [
-    getDisplayName(i).substring(0, 40),
-    i.category || 'N/A',
-    i.current_stock || 0,
-    formatCurrency(i.purchase_price),
-    formatCurrency(i.selling_price),
-    formatCurrency((i.current_stock || 0) * (i.purchase_price || 0))
-  ]);
+  // Sort by value descending
+  const sortedInventory = [...inventory].sort((a, b) => 
+    ((b.current_stock || 0) * (b.purchase_price || 0)) - ((a.current_stock || 0) * (a.purchase_price || 0))
+  );
 
   doc.autoTable({
-    head: [tableColumns],
-    body: tableRows,
-    startY: 68,
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [238, 242, 255] },
+    head: [['#', 'Product Name', 'Category', 'Stock', 'Purchase Price', 'Selling Price', 'Cost Value', 'Retail Value', 'Potential Profit']],
+    body: sortedInventory.map((i, idx) => {
+      const costVal = (i.current_stock || 0) * (i.purchase_price || 0);
+      const retailVal = (i.current_stock || 0) * (i.selling_price || 0);
+      return [
+        idx + 1,
+        getDisplayName(i).substring(0, 35),
+        i.category || 'N/A',
+        formatNumber(i.current_stock || 0),
+        formatCurrency(i.purchase_price || 0),
+        formatCurrency(i.selling_price || 0),
+        formatCurrency(costVal),
+        formatCurrency(retailVal),
+        formatCurrency(retailVal - costVal)
+      ];
+    }),
+    startY: startY,
+    styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.1 },
+    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8 },
+    alternateRowStyles: { fillColor: [245, 245, 255] },
     columnStyles: {
-      2: { halign: 'center' },
-      3: { halign: 'right' },
-      4: { halign: 'right' },
-      5: { halign: 'right' }
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 60 },
+      2: { cellWidth: 25 },
+      3: { halign: 'center', cellWidth: 18 },
+      4: { halign: 'right', cellWidth: 28 },
+      5: { halign: 'right', cellWidth: 28 },
+      6: { halign: 'right', cellWidth: 30 },
+      7: { halign: 'right', cellWidth: 30 },
+      8: { halign: 'right', cellWidth: 30 }
     }
   });
 
   return doc;
 }
 
-function generateLowStockReport(inventory, department, user) {
+function generateLowStockReport(inventory, department, dateFrom, dateTo, user) {
   const doc = new jsPDF('portrait');
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  const lowStockItems = inventory.filter(i => i.current_stock < i.minimum_stock).sort((a, b) => a.current_stock - b.current_stock);
+  const lowStockItems = inventory.filter(i => (i.current_stock || 0) <= (i.minimum_stock || 10))
+    .sort((a, b) => (a.current_stock || 0) - (b.current_stock || 0));
+  
+  const criticalItems = lowStockItems.filter(i => (i.current_stock || 0) === 0);
+  const warningItems = lowStockItems.filter(i => (i.current_stock || 0) > 0);
+  const totalShortage = lowStockItems.reduce((sum, i) => sum + Math.max(0, (i.minimum_stock || 10) - (i.current_stock || 0)), 0);
+  const restockValue = lowStockItems.reduce((sum, i) => {
+    const shortage = Math.max(0, (i.minimum_stock || 10) - (i.current_stock || 0));
+    return sum + (shortage * (i.purchase_price || 0));
+  }, 0);
 
-  // Header
-  doc.setFillColor(239, 68, 68);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('LOW STOCK ALERT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  doc.text(deptText, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
-  doc.text(`By: ${user.full_name || user.email}`, pageWidth - 14, 28, { align: 'right' });
+  let startY = addProfessionalHeader(doc, 'LOW STOCK ALERT', 'Inventory Replenishment Report', { r: 239, g: 68, b: 68 }, user, department, dateFrom, dateTo);
 
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(12);
-  doc.text(`${lowStockItems.length} items below minimum stock level`, 14, 48);
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Critical (0 Stock)', value: formatNumber(criticalItems.length) },
+    { label: 'Warning Items', value: formatNumber(warningItems.length) },
+    { label: 'Total Shortage', value: formatNumber(totalShortage) + ' units' },
+    { label: 'Restock Cost', value: formatCurrency(restockValue) }
+  ], { r: 254, g: 242, b: 242 });
 
-  // Table
-  const tableColumns = ['Product', 'Category', 'Current', 'Minimum', 'Shortage'];
-  const tableRows = lowStockItems.map(i => [
-    getDisplayName(i).substring(0, 35),
-    i.category || 'N/A',
-    i.current_stock || 0,
-    i.minimum_stock || 0,
-    (i.minimum_stock - i.current_stock) || 0
-  ]);
-
-  doc.autoTable({
-    head: [tableColumns],
-    body: tableRows,
-    startY: 55,
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [254, 242, 242] },
-    columnStyles: {
-      2: { halign: 'center' },
-      3: { halign: 'center' },
-      4: { halign: 'center', textColor: [220, 38, 38] }
-    }
-  });
+  if (lowStockItems.length > 0) {
+    doc.autoTable({
+      head: [['#', 'Product Name', 'Category', 'Current', 'Minimum', 'Shortage', 'Restock Cost', 'Status']],
+      body: lowStockItems.map((i, idx) => {
+        const shortage = Math.max(0, (i.minimum_stock || 10) - (i.current_stock || 0));
+        const restockCost = shortage * (i.purchase_price || 0);
+        const status = (i.current_stock || 0) === 0 ? 'CRITICAL' : 'WARNING';
+        return [
+          idx + 1,
+          getDisplayName(i).substring(0, 30),
+          i.category || 'N/A',
+          formatNumber(i.current_stock || 0),
+          formatNumber(i.minimum_stock || 10),
+          formatNumber(shortage),
+          formatCurrency(restockCost),
+          status
+        ];
+      }),
+      startY: startY,
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [255, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 18 },
+        4: { halign: 'center', cellWidth: 18 },
+        5: { halign: 'center', cellWidth: 18, textColor: [220, 38, 38] },
+        6: { halign: 'right', cellWidth: 28 },
+        7: { halign: 'center', cellWidth: 20 }
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 7 && data.section === 'body') {
+          if (data.cell.raw === 'CRITICAL') {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = 'bold';
+          } else {
+            data.cell.styles.textColor = [234, 179, 8];
+          }
+        }
+      }
+    });
+  } else {
+    doc.setFontSize(14);
+    doc.setTextColor(34, 197, 94);
+    doc.text('All items are adequately stocked!', pageWidth / 2, startY + 40, { align: 'center' });
+  }
 
   return doc;
 }
@@ -380,57 +497,71 @@ function generateTopSellingReport(inventory, orders, inventoryMap, inventoryIds,
   orders.forEach(order => {
     (order.order_items || []).forEach(item => {
       if (!inventoryIds.has(item.inventory_id)) return;
-      if (!salesByProduct[item.inventory_id]) salesByProduct[item.inventory_id] = 0;
-      salesByProduct[item.inventory_id] += item.quantity || 0;
+      const invItem = inventoryMap.get(item.inventory_id);
+      if (!invItem) return;
+      
+      if (!salesByProduct[item.inventory_id]) {
+        salesByProduct[item.inventory_id] = { qty: 0, revenue: 0, orders: new Set() };
+      }
+      salesByProduct[item.inventory_id].qty += item.quantity || 0;
+      salesByProduct[item.inventory_id].revenue += (item.quantity || 0) * (item.unit_price || invItem.selling_price || 0);
+      salesByProduct[item.inventory_id].orders.add(order.id);
     });
   });
 
   const topProducts = inventory
-    .map(i => ({ ...i, soldQty: salesByProduct[i.id] || 0 }))
+    .map(i => ({ 
+      ...i, 
+      soldQty: salesByProduct[i.id]?.qty || 0,
+      revenue: salesByProduct[i.id]?.revenue || 0,
+      orderCount: salesByProduct[i.id]?.orders?.size || 0
+    }))
     .filter(i => i.soldQty > 0)
     .sort((a, b) => b.soldQty - a.soldQty)
-    .slice(0, 20);
+    .slice(0, 25);
 
-  // Header
-  doc.setFillColor(251, 191, 36);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('TOP SELLING PRODUCTS', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  const dateText = dateFrom && dateTo ? `${dateFrom} - ${dateTo}` : 'All Time';
-  doc.text(`${deptText} | ${dateText}`, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
+  const totalQty = topProducts.reduce((sum, p) => sum + p.soldQty, 0);
+  const totalRevenue = topProducts.reduce((sum, p) => sum + p.revenue, 0);
 
-  doc.setTextColor(0, 0, 0);
+  let startY = addProfessionalHeader(doc, 'TOP SELLING PRODUCTS', 'Best Performers Analysis', { r: 251, g: 191, b: 36 }, user, department, dateFrom, dateTo);
 
-  // Table
-  const tableColumns = ['#', 'Product Name', 'Category', 'Units Sold', 'Revenue'];
-  const tableRows = topProducts.map((p, idx) => [
-    idx + 1,
-    getDisplayName(p).substring(0, 35),
-    p.category || 'N/A',
-    p.soldQty,
-    formatCurrency(p.soldQty * (p.selling_price || 0))
-  ]);
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Top Products', value: formatNumber(topProducts.length) },
+    { label: 'Total Units Sold', value: formatNumber(totalQty) },
+    { label: 'Total Revenue', value: formatCurrency(totalRevenue) }
+  ], { r: 254, g: 249, b: 195 });
 
-  doc.autoTable({
-    head: [tableColumns],
-    body: tableRows,
-    startY: 42,
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [251, 191, 36], textColor: 0, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [254, 243, 199] },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 10 },
-      3: { halign: 'center' },
-      4: { halign: 'right' }
-    }
-  });
+  if (topProducts.length > 0) {
+    doc.autoTable({
+      head: [['Rank', 'Product Name', 'Category', 'Units Sold', 'Revenue', 'Orders', '% of Total']],
+      body: topProducts.map((p, idx) => [
+        `#${idx + 1}`,
+        getDisplayName(p).substring(0, 32),
+        p.category || 'N/A',
+        formatNumber(p.soldQty),
+        formatCurrency(p.revenue),
+        formatNumber(p.orderCount),
+        totalQty > 0 ? ((p.soldQty / totalQty) * 100).toFixed(1) + '%' : '0%'
+      ]),
+      startY: startY,
+      styles: { fontSize: 8.5, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [251, 191, 36], textColor: 30, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [255, 251, 235] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15, fontStyle: 'bold' },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 28 },
+        3: { halign: 'center', cellWidth: 22 },
+        4: { halign: 'right', cellWidth: 30 },
+        5: { halign: 'center', cellWidth: 18 },
+        6: { halign: 'center', cellWidth: 20 }
+      }
+    });
+  } else {
+    doc.setFontSize(12);
+    doc.setTextColor(107, 114, 128);
+    doc.text('No sales data found for the selected period.', pageWidth / 2, startY + 40, { align: 'center' });
+  }
 
   return doc;
 }
@@ -445,82 +576,107 @@ function generateProfitAnalysisReport(inventory, orders, inventoryMap, inventory
       if (!inventoryIds.has(item.inventory_id)) return;
       const invItem = inventoryMap.get(item.inventory_id);
       if (!invItem) return;
+      
       const qty = item.quantity || 0;
-      const revenue = qty * (invItem.selling_price || 0);
-      const cost = qty * (invItem.purchase_price || 0);
+      const unitPrice = item.unit_price || invItem.selling_price || 0;
+      const purchasePrice = invItem.purchase_price || 0;
+      const revenue = qty * unitPrice;
+      const cost = qty * purchasePrice;
       const profit = revenue - cost;
-      if (!profitByProduct[item.inventory_id]) profitByProduct[item.inventory_id] = { profit: 0, revenue: 0 };
-      profitByProduct[item.inventory_id].profit += profit;
+      
+      if (!profitByProduct[item.inventory_id]) {
+        profitByProduct[item.inventory_id] = { revenue: 0, cost: 0, profit: 0, qty: 0 };
+      }
       profitByProduct[item.inventory_id].revenue += revenue;
+      profitByProduct[item.inventory_id].cost += cost;
+      profitByProduct[item.inventory_id].profit += profit;
+      profitByProduct[item.inventory_id].qty += qty;
     });
   });
 
   const profitData = inventory
     .map(i => {
-      const data = profitByProduct[i.id] || { profit: 0, revenue: 0 };
+      const data = profitByProduct[i.id] || { revenue: 0, cost: 0, profit: 0, qty: 0 };
       return {
         name: getDisplayName(i),
         category: i.category,
-        profit: data.profit,
+        qty: data.qty,
         revenue: data.revenue,
-        margin: data.revenue > 0 ? (data.profit / data.revenue) * 100 : 0
+        cost: data.cost,
+        profit: data.profit,
+        margin: data.revenue > 0 ? (data.profit / data.revenue) * 100 : 0,
+        perUnit: data.qty > 0 ? data.profit / data.qty : 0
       };
     })
-    .filter(d => d.profit !== 0)
+    .filter(d => d.qty > 0)
     .sort((a, b) => b.profit - a.profit);
 
-  const totalProfit = profitData.reduce((sum, d) => sum + d.profit, 0);
-  const totalRevenue = profitData.reduce((sum, d) => sum + d.revenue, 0);
+  const totals = profitData.reduce((acc, d) => ({
+    revenue: acc.revenue + d.revenue,
+    cost: acc.cost + d.cost,
+    profit: acc.profit + d.profit,
+    qty: acc.qty + d.qty
+  }), { revenue: 0, cost: 0, profit: 0, qty: 0 });
 
-  // Header
-  doc.setFillColor(34, 197, 94);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('PROFIT ANALYSIS REPORT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  const dateText = dateFrom && dateTo ? `${dateFrom} - ${dateTo}` : 'All Time';
-  doc.text(`${deptText} | ${dateText}`, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
+  const avgMargin = totals.revenue > 0 ? ((totals.profit / totals.revenue) * 100).toFixed(1) : '0.0';
 
-  doc.setTextColor(0, 0, 0);
+  let startY = addProfessionalHeader(doc, 'PROFIT ANALYSIS REPORT', 'Profitability & Margin Analysis', { r: 34, g: 197, b: 94 }, user, department, dateFrom, dateTo);
 
-  // Summary
-  doc.setFillColor(220, 252, 231);
-  doc.rect(10, 42, pageWidth - 20, 20, 'F');
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Total Profit: ${formatCurrency(totalProfit)}`, 14, 52);
-  doc.text(`Total Revenue: ${formatCurrency(totalRevenue)}`, 100, 52);
-  doc.text(`Profit Margin: ${totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}%`, 200, 52);
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Total Products', value: formatNumber(profitData.length) },
+    { label: 'Units Sold', value: formatNumber(totals.qty) },
+    { label: 'Total Revenue', value: formatCurrency(totals.revenue) },
+    { label: 'Total Cost', value: formatCurrency(totals.cost) },
+    { label: 'Total Profit', value: formatCurrency(totals.profit) },
+    { label: 'Avg Margin', value: `${avgMargin}%` }
+  ], { r: 220, g: 252, b: 231 });
 
-  // Table
-  const tableColumns = ['Product', 'Category', 'Revenue', 'Profit', 'Margin %'];
-  const tableRows = profitData.map(d => [
-    d.name.substring(0, 45),
-    d.category || 'N/A',
-    formatCurrency(d.revenue),
-    formatCurrency(d.profit),
-    d.margin.toFixed(1) + '%'
-  ]);
-
-  doc.autoTable({
-    head: [tableColumns],
-    body: tableRows,
-    startY: 68,
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [220, 252, 231] },
-    columnStyles: {
-      2: { halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'center' }
-    }
-  });
+  if (profitData.length > 0) {
+    doc.autoTable({
+      head: [['#', 'Product Name', 'Category', 'Qty', 'Revenue', 'Cost', 'Profit', 'Margin %', 'Profit/Unit']],
+      body: profitData.map((d, idx) => [
+        idx + 1,
+        d.name.substring(0, 38),
+        d.category || 'N/A',
+        formatNumber(d.qty),
+        formatCurrency(d.revenue),
+        formatCurrency(d.cost),
+        formatCurrency(d.profit),
+        d.margin.toFixed(1) + '%',
+        formatCurrency(d.perUnit)
+      ]),
+      startY: startY,
+      styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8 },
+      alternateRowStyles: { fillColor: [240, 253, 244] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 65 },
+        2: { cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 18 },
+        4: { halign: 'right', cellWidth: 30 },
+        5: { halign: 'right', cellWidth: 30 },
+        6: { halign: 'right', cellWidth: 30 },
+        7: { halign: 'center', cellWidth: 20 },
+        8: { halign: 'right', cellWidth: 28 }
+      },
+      didParseCell: (data) => {
+        // Color code profit column
+        if (data.column.index === 6 && data.section === 'body') {
+          const profit = profitData[data.row.index]?.profit || 0;
+          if (profit < 0) {
+            data.cell.styles.textColor = [220, 38, 38];
+          } else {
+            data.cell.styles.textColor = [22, 163, 74];
+          }
+        }
+      }
+    });
+  } else {
+    doc.setFontSize(12);
+    doc.setTextColor(107, 114, 128);
+    doc.text('No profit data found for the selected period.', pageWidth / 2, startY + 40, { align: 'center' });
+  }
 
   return doc;
 }
@@ -529,7 +685,9 @@ function generateDamagedReport(inventory, movements, inventoryIds, department, d
   const doc = new jsPDF('portrait');
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  let damagedMovements = movements.filter(m => m.reference_type === 'damage' && inventoryIds.has(m.inventory_item_id));
+  let damagedMovements = movements.filter(m => 
+    m.reference_type === 'damage' && inventoryIds.has(m.inventory_item_id)
+  );
   if (dateFrom) damagedMovements = damagedMovements.filter(m => toBDTDate(m.movement_date) >= dateFrom);
   if (dateTo) damagedMovements = damagedMovements.filter(m => toBDTDate(m.movement_date) <= dateTo);
 
@@ -538,63 +696,58 @@ function generateDamagedReport(inventory, movements, inventoryIds, department, d
     const item = inventoryMap.get(m.inventory_item_id);
     return {
       name: item ? getDisplayName(item) : 'Unknown',
+      category: item?.category || 'N/A',
       qty: Math.abs(m.quantity || 0),
       value: Math.abs(m.total_value || 0),
       date: toBDTDate(m.movement_date),
-      reason: m.notes || 'N/A'
+      reason: m.notes || 'Not specified'
     };
   }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const totalQty = damagedData.reduce((sum, d) => sum + d.qty, 0);
   const totalValue = damagedData.reduce((sum, d) => sum + d.value, 0);
+  const uniqueProducts = new Set(damagedData.map(d => d.name)).size;
 
-  // Header
-  doc.setFillColor(239, 68, 68);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('DAMAGED PRODUCTS REPORT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  const dateText = dateFrom && dateTo ? `${dateFrom} - ${dateTo}` : 'All Time';
-  doc.text(`${deptText} | ${dateText}`, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
+  let startY = addProfessionalHeader(doc, 'DAMAGED PRODUCTS REPORT', 'Inventory Loss Analysis', { r: 239, g: 68, b: 68 }, user, department, dateFrom, dateTo);
 
-  doc.setTextColor(0, 0, 0);
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Damage Incidents', value: formatNumber(damagedData.length) },
+    { label: 'Affected Products', value: formatNumber(uniqueProducts) },
+    { label: 'Total Units Lost', value: formatNumber(totalQty) },
+    { label: 'Total Loss Value', value: formatCurrency(totalValue) }
+  ], { r: 254, g: 242, b: 242 });
 
-  // Summary
-  doc.setFillColor(254, 242, 242);
-  doc.rect(10, 42, pageWidth - 20, 20, 'F');
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Total Damaged Units: ${totalQty}`, 14, 52);
-  doc.text(`Total Loss: ${formatCurrency(totalValue)}`, 100, 52);
-
-  // Table
-  const tableColumns = ['Product', 'Qty', 'Loss', 'Date', 'Reason'];
-  const tableRows = damagedData.map(d => [
-    d.name.substring(0, 30),
-    d.qty,
-    formatCurrency(d.value),
-    d.date,
-    d.reason.substring(0, 25)
-  ]);
-
-  doc.autoTable({
-    head: [tableColumns],
-    body: tableRows,
-    startY: 68,
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [254, 242, 242] },
-    columnStyles: {
-      1: { halign: 'center' },
-      2: { halign: 'right' }
-    }
-  });
+  if (damagedData.length > 0) {
+    doc.autoTable({
+      head: [['#', 'Product Name', 'Category', 'Qty', 'Loss Value', 'Date', 'Reason']],
+      body: damagedData.map((d, idx) => [
+        idx + 1,
+        d.name.substring(0, 28),
+        d.category.substring(0, 15),
+        formatNumber(d.qty),
+        formatCurrency(d.value),
+        d.date,
+        d.reason.substring(0, 22)
+      ]),
+      startY: startY,
+      styles: { fontSize: 8.5, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [255, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 15 },
+        4: { halign: 'right', cellWidth: 28 },
+        5: { halign: 'center', cellWidth: 25 },
+        6: { cellWidth: 40 }
+      }
+    });
+  } else {
+    doc.setFontSize(14);
+    doc.setTextColor(34, 197, 94);
+    doc.text('No damaged products recorded in this period.', pageWidth / 2, startY + 40, { align: 'center' });
+  }
 
   return doc;
 }
@@ -603,7 +756,9 @@ function generateReturnedReport(inventory, movements, inventoryIds, department, 
   const doc = new jsPDF('portrait');
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  let returnedMovements = movements.filter(m => m.movement_type === 'return' && inventoryIds.has(m.inventory_item_id));
+  let returnedMovements = movements.filter(m => 
+    m.movement_type === 'return' && inventoryIds.has(m.inventory_item_id)
+  );
   if (dateFrom) returnedMovements = returnedMovements.filter(m => toBDTDate(m.movement_date) >= dateFrom);
   if (dateTo) returnedMovements = returnedMovements.filter(m => toBDTDate(m.movement_date) <= dateTo);
 
@@ -612,63 +767,170 @@ function generateReturnedReport(inventory, movements, inventoryIds, department, 
     const item = inventoryMap.get(m.inventory_item_id);
     return {
       name: item ? getDisplayName(item) : 'Unknown',
+      category: item?.category || 'N/A',
       qty: Math.abs(m.quantity || 0),
       value: Math.abs(m.total_value || 0),
       date: toBDTDate(m.movement_date),
-      reason: m.notes || 'N/A'
+      reason: m.notes || 'Not specified'
     };
   }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const totalQty = returnedData.reduce((sum, d) => sum + d.qty, 0);
   const totalValue = returnedData.reduce((sum, d) => sum + d.value, 0);
+  const uniqueProducts = new Set(returnedData.map(d => d.name)).size;
 
-  // Header
-  doc.setFillColor(249, 115, 22);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('RETURNED PRODUCTS REPORT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  const dateText = dateFrom && dateTo ? `${dateFrom} - ${dateTo}` : 'All Time';
-  doc.text(`${deptText} | ${dateText}`, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
+  let startY = addProfessionalHeader(doc, 'RETURNED PRODUCTS REPORT', 'Customer Returns Analysis', { r: 249, g: 115, b: 22 }, user, department, dateFrom, dateTo);
 
-  doc.setTextColor(0, 0, 0);
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Return Incidents', value: formatNumber(returnedData.length) },
+    { label: 'Affected Products', value: formatNumber(uniqueProducts) },
+    { label: 'Total Units Returned', value: formatNumber(totalQty) },
+    { label: 'Total Value', value: formatCurrency(totalValue) }
+  ], { r: 255, g: 237, b: 213 });
 
-  // Summary
-  doc.setFillColor(255, 237, 213);
-  doc.rect(10, 42, pageWidth - 20, 20, 'F');
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Total Returned Units: ${totalQty}`, 14, 52);
-  doc.text(`Total Value: ${formatCurrency(totalValue)}`, 100, 52);
+  if (returnedData.length > 0) {
+    doc.autoTable({
+      head: [['#', 'Product Name', 'Category', 'Qty', 'Value', 'Date', 'Reason']],
+      body: returnedData.map((d, idx) => [
+        idx + 1,
+        d.name.substring(0, 28),
+        d.category.substring(0, 15),
+        formatNumber(d.qty),
+        formatCurrency(d.value),
+        d.date,
+        d.reason.substring(0, 22)
+      ]),
+      startY: startY,
+      styles: { fontSize: 8.5, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [255, 247, 237] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 15 },
+        4: { halign: 'right', cellWidth: 28 },
+        5: { halign: 'center', cellWidth: 25 },
+        6: { cellWidth: 40 }
+      }
+    });
+  } else {
+    doc.setFontSize(14);
+    doc.setTextColor(34, 197, 94);
+    doc.text('No product returns recorded in this period.', pageWidth / 2, startY + 40, { align: 'center' });
+  }
 
-  // Table
-  const tableColumns = ['Product', 'Qty', 'Value', 'Date', 'Reason'];
-  const tableRows = returnedData.map(d => [
-    d.name.substring(0, 30),
-    d.qty,
-    formatCurrency(d.value),
-    d.date,
-    d.reason.substring(0, 25)
-  ]);
+  return doc;
+}
 
-  doc.autoTable({
-    head: [tableColumns],
-    body: tableRows,
-    startY: 68,
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [255, 237, 213] },
-    columnStyles: {
-      1: { halign: 'center' },
-      2: { halign: 'right' }
+function generateMovementSummaryReport(inventory, movements, inventoryIds, department, dateFrom, dateTo, user) {
+  const doc = new jsPDF('landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Filter movements by date and inventory
+  let filteredMovements = movements.filter(m => inventoryIds.has(m.inventory_item_id));
+  if (dateFrom) filteredMovements = filteredMovements.filter(m => toBDTDate(m.movement_date) >= dateFrom);
+  if (dateTo) filteredMovements = filteredMovements.filter(m => toBDTDate(m.movement_date) <= dateTo);
+
+  // Aggregate by product
+  const inventoryMap = new Map(inventory.map(i => [i.id, i]));
+  const movementByProduct = {};
+  
+  filteredMovements.forEach(m => {
+    const id = m.inventory_item_id;
+    if (!movementByProduct[id]) {
+      movementByProduct[id] = { stockIn: 0, stockOut: 0, sales: 0, returns: 0, adjustments: 0, damages: 0 };
+    }
+    const qty = Math.abs(m.quantity || 0);
+    
+    if (m.movement_type === 'stock_in' || m.movement_type === 'purchase') {
+      movementByProduct[id].stockIn += qty;
+    } else if (m.movement_type === 'stock_out' || m.movement_type === 'sale') {
+      movementByProduct[id].stockOut += qty;
+      movementByProduct[id].sales += qty;
+    } else if (m.movement_type === 'return') {
+      movementByProduct[id].returns += qty;
+    } else if (m.movement_type === 'adjustment') {
+      movementByProduct[id].adjustments += m.quantity || 0;
+    } else if (m.reference_type === 'damage') {
+      movementByProduct[id].damages += qty;
     }
   });
+
+  const movementData = inventory.map(i => {
+    const mov = movementByProduct[i.id] || { stockIn: 0, stockOut: 0, sales: 0, returns: 0, adjustments: 0, damages: 0 };
+    const netChange = mov.stockIn - mov.stockOut + mov.returns + mov.adjustments - mov.damages;
+    return {
+      name: getDisplayName(i),
+      category: i.category || 'N/A',
+      currentStock: i.current_stock || 0,
+      ...mov,
+      netChange
+    };
+  }).filter(d => d.stockIn > 0 || d.stockOut > 0 || d.returns > 0 || d.damages > 0).sort((a, b) => b.stockOut - a.stockOut);
+
+  const totals = movementData.reduce((acc, d) => ({
+    stockIn: acc.stockIn + d.stockIn,
+    stockOut: acc.stockOut + d.stockOut,
+    sales: acc.sales + d.sales,
+    returns: acc.returns + d.returns,
+    damages: acc.damages + d.damages
+  }), { stockIn: 0, stockOut: 0, sales: 0, returns: 0, damages: 0 });
+
+  let startY = addProfessionalHeader(doc, 'MOVEMENT SUMMARY REPORT', 'Stock Flow Analysis', { r: 6, g: 182, b: 212 }, user, department, dateFrom, dateTo);
+
+  startY = addSummaryBox(doc, startY, [
+    { label: 'Products Tracked', value: formatNumber(movementData.length) },
+    { label: 'Total Stock In', value: formatNumber(totals.stockIn) },
+    { label: 'Total Stock Out', value: formatNumber(totals.stockOut) },
+    { label: 'Total Returns', value: formatNumber(totals.returns) },
+    { label: 'Total Damaged', value: formatNumber(totals.damages) }
+  ], { r: 224, g: 247, b: 250 });
+
+  if (movementData.length > 0) {
+    doc.autoTable({
+      head: [['#', 'Product Name', 'Category', 'Current', 'Stock In', 'Stock Out', 'Sales', 'Returns', 'Damages', 'Net Change']],
+      body: movementData.map((d, idx) => [
+        idx + 1,
+        d.name.substring(0, 32),
+        d.category.substring(0, 15),
+        formatNumber(d.currentStock),
+        formatNumber(d.stockIn),
+        formatNumber(d.stockOut),
+        formatNumber(d.sales),
+        formatNumber(d.returns),
+        formatNumber(d.damages),
+        (d.netChange >= 0 ? '+' : '') + formatNumber(d.netChange)
+      ]),
+      startY: startY,
+      styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.1 },
+      headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8 },
+      alternateRowStyles: { fillColor: [240, 249, 255] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 18 },
+        4: { halign: 'center', cellWidth: 20, textColor: [22, 163, 74] },
+        5: { halign: 'center', cellWidth: 20, textColor: [220, 38, 38] },
+        6: { halign: 'center', cellWidth: 18 },
+        7: { halign: 'center', cellWidth: 18 },
+        8: { halign: 'center', cellWidth: 18, textColor: [220, 38, 38] },
+        9: { halign: 'center', cellWidth: 22 }
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 9 && data.section === 'body') {
+          const netChange = movementData[data.row.index]?.netChange || 0;
+          data.cell.styles.textColor = netChange >= 0 ? [22, 163, 74] : [220, 38, 38];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+  } else {
+    doc.setFontSize(12);
+    doc.setTextColor(107, 114, 128);
+    doc.text('No movement data found for the selected period.', pageWidth / 2, startY + 40, { align: 'center' });
+  }
 
   return doc;
 }
