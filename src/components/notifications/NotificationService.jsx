@@ -521,7 +521,7 @@ export const NotificationService = {
         }
       }
     });
-  }
+  },
 
   /**
    * Profile Change Notification - Auto-email for important profile updates
