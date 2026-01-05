@@ -29,8 +29,7 @@ const toBDTDateTime = (date) => {
 const formatCurrency = (amount) => `৳${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const getDisplayName = (item) => item.english_item_name || item.item_name || 'Unknown Item';
 const getDepartmentName = (dept) => {
-  const names = { 'boibari': 'Boibari.com', 'prodhan_com_e_commerce': 'Prodhan.com' };
-  return names[dept] || dept;
+  return 'Prodhan.com E-commerce';
 };
 
 Deno.serve(async (req) => {
