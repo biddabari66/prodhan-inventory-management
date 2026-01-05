@@ -95,6 +95,15 @@ import PWAInstaller from '../components/common/PWAInstaller';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
+// Redirect to Inventory Overview if on removed pages
+useEffect(() => {
+  const removedPages = ['Dashboard', 'CRM', 'LeadDatabase', 'FollowUp', 'WhatsApp', 'Admissions', 'Students', 'Income', 'Expenses', 'Incentives', 'Budget', 'PayrollReport', 'FinanceReports', 'Employees', 'Attendance', 'AttendanceMy', 'performance-hub', 'ManualReporting', 'SubmittedReports', 'SendEmail', 'Courses', 'ReportBuilder', 'ScheduledReports', 'DocumentCenter', 'Reports'];
+  const currentPage = location.pathname.split('/').pop();
+  if (removedPages.includes(currentPage)) {
+    window.location.href = createPageUrl('InventoryOverview');
+  }
+}, [location.pathname]);
+
 // Enhanced translations with mobile-friendly labels
 const translations = {
   en: {
@@ -689,74 +698,6 @@ export default function Layout({ children, currentPageName }) {
     
     const baseModules = [
       {
-        id: 'dashboard',
-        label: t('Dashboard'),
-        icon: LayoutDashboard,
-        url: createPageUrl('Dashboard'),
-        isExpandable: false,
-        colorClass: 'text-violet-500'
-      },
-      {
-        id: 'crm',
-        label: t('CRM & Leads'),
-        icon: Target,
-        isExpandable: true,
-        subItems: [
-          { label: t(isMobile ? 'Lead Management' : 'Lead Management'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-pink-500', permission: 'crm' },
-          { label: t(isMobile ? 'Lead Database' : 'Lead Database'), url: createPageUrl('LeadDatabase'), icon: Calendar, colorClass: 'text-pink-500', permission: 'crm' },
-          { label: t('Follow Up'), url: createPageUrl('FollowUp'), icon: UserCheck, colorClass: 'text-pink-500', permission: 'followup' },
-          { label: t('WhatsApp'), url: createPageUrl('WhatsApp'), icon: MessageSquare, colorClass: 'text-pink-500', permission: 'whatsapp' }
-        ],
-        colorClass: 'text-pink-500'
-      },
-      {
-        id: 'admissions',
-        label: t('Admissions'),
-        icon: UserCheck,
-        url: createPageUrl('Admissions'),
-        isExpandable: false,
-        colorClass: 'text-blue-500'
-      },
-      {
-        id: 'students',
-        label: t('Students'),
-        icon: Users,
-        url: createPageUrl('Students'),
-        isExpandable: false,
-        colorClass: 'text-green-500'
-      },
-      {
-        id: 'finance',
-        label: t('Finance'),
-        icon: DollarSign,
-        isExpandable: true,
-        subItems: [
-          { label: t('Income'), url: createPageUrl('Income'), icon: TrendingUp, colorClass: 'text-emerald-500', permission: 'income' },
-          { label: t('Expenses'), url: createPageUrl('Expenses'), icon: TrendingDown, colorClass: 'text-emerald-500', permission: 'expenses' },
-          { label: t('Incentives'), url: createPageUrl('Incentives'), icon: Award, colorClass: 'text-emerald-500', permission: 'incentives' },
-          { label: t(isMobile ? 'Budgeting' : 'Budgeting'), url: createPageUrl('Budget'), icon: Calculator, colorClass: 'text-emerald-500', permission: 'budget' },
-          { label: t(isMobile ? 'Payroll Report' : 'Payroll Report'), url: createPageUrl('PayrollReport'), icon: FileSignature, colorClass: 'text-emerald-500', permission: 'finance' },
-          { label: t(isMobile ? 'Finance Reports' : 'Finance Reports'), url: createPageUrl('FinanceReports'), icon: BarChart3, colorClass: 'text-emerald-500', permission: 'finance' }
-        ],
-        colorClass: 'text-emerald-500'
-      },
-      {
-        id: 'hr',
-        label: t(isMobile ? 'Human Resources' : 'Human Resources'),
-        icon: Building2,
-        isExpandable: true,
-        subItems: [
-          { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-blue-400', permission: 'employees' },
-          { label: t('Attendance'), url: createPageUrl('Attendance'), icon: Clock, colorClass: 'text-blue-400', permission: 'attendance' },
-          { label: t(isMobile ? 'My Attendance' : 'My Attendance'), url: createPageUrl('AttendanceMy'), icon: UserIcon, colorClass: 'text-blue-400', permission: 'attendance' },
-          { label: t(isMobile ? 'Performance Hub' : 'Performance Hub'), url: createPageUrl('performance-hub'), icon: Briefcase, colorClass: 'text-blue-400', permission: 'performance' },
-          { label: t(isMobile ? 'Manual Reporting' : 'Manual Reporting'), url: createPageUrl('ManualReporting'), icon: FileSignature, colorClass: 'text-blue-400', permission: 'manual_reporting' },
-          { label: t(isMobile ? 'All Submitted Reports' : 'All Submitted Reports'), url: createPageUrl('SubmittedReports'), icon: FileText, colorClass: 'text-blue-400', permission: 'manual_reporting' },
-          { label: t(isMobile ? 'Send Email' : 'Send Email'), url: createPageUrl('SendEmail'), icon: Mail, colorClass: 'text-blue-400', permission: 'hr' }
-        ],
-        colorClass: 'text-blue-400'
-      },
-      {
         id: 'inventory',
         label: t('Inventory'),
         icon: Warehouse,
@@ -764,10 +705,10 @@ export default function Layout({ children, currentPageName }) {
         subItems: [
           // Primary Operations - Most Used
           { label: t('Overview'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory_overview' },
-          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
+          { label: t('Sales Orders'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
           { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-blue-500', permission: 'customer_management' },
           { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
-          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory_movements' },
+          { label: t('Stock Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory_movements' },
           { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory_returns' },
           { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
           // Master Data
@@ -775,44 +716,23 @@ export default function Layout({ children, currentPageName }) {
           { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory' },
           { label: t('Prodhan.com API'), url: createPageUrl('ProdhanComIntegration'), icon: Globe, colorClass: 'text-purple-500', permission: 'integrations' },
           // Analytics & Insights
-          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'product_analytics' },
+          { label: t('Product Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'product_analytics' },
           { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
           { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' }
         ],
         colorClass: 'text-orange-500'
       },
       {
-        id: 'courses',
-        label: t('Courses'),
-        icon: BookOpen,
-        url: createPageUrl('Courses'),
-        isExpandable: false,
-        colorClass: 'text-cyan-500'
-      },
-      {
-        id: 'reports',
-        label: t(isMobile ? 'Data & Insights' : 'Data & Insights'),
-        icon: BarChart3,
-        isExpandable: true,
-        subItems: [
-          { label: t('Report Builder'), url: createPageUrl('ReportBuilder'), icon: Layers, colorClass: 'text-indigo-500', permission: 'reports' },
-          { label: t('Scheduled Reports'), url: createPageUrl('ScheduledReports'), icon: Clock, colorClass: 'text-violet-500', permission: 'reports' },
-          { label: t('Document Center'), url: createPageUrl('DocumentCenter'), icon: FileText, colorClass: 'text-amber-500', permission: 'reports' },
-          { label: t('Analytics'), url: createPageUrl('Reports'), icon: BarChart3, colorClass: 'text-indigo-500', permission: 'reports' }
-        ],
-        colorClass: 'text-indigo-500'
-      },
-      {
         id: 'settings',
-        label: t(isMobile ? 'System Settings' : 'System Settings'),
+        label: t('Settings'),
         icon: Settings,
         isExpandable: true,
         colorClass: 'text-gray-500',
         subItems: [
-          { label: t(isMobile ? 'User Access Manager' : 'User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
+          { label: t('User Management'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
           { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t(isMobile ? 'System Alerts' : 'System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t(isMobile ? 'Audit Trail' : 'Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }
+          { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
+          { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }
         ]
       }
     ];
@@ -1524,10 +1444,10 @@ export default function Layout({ children, currentPageName }) {
                 {isSidebarOpen && (
                   <div className="min-w-0">
                     <span className="text-[17px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      Bee ERP
+                      Inventory Pro
                     </span>
                     <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Enterprise
+                      Smart System
                     </span>
                   </div>
                 )}
@@ -1610,6 +1530,7 @@ export default function Layout({ children, currentPageName }) {
                     <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
                       <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{currentUser?.display_name || currentUser?.full_name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
+                      <p className="text-xs text-violet-600 dark:text-violet-400 mt-1">{currentUser?.job_role || 'User'}</p>
                     </div>
                     <button 
                       onClick={() => setIsProfileOpen(true)}
