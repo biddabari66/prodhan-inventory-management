@@ -582,8 +582,8 @@ export default function Layout({ children, currentPageName }) {
           const user = await User.me();
           if (user) {
             setCurrentUser(user);
-            console.log("Logged in user found on auth page. Redirecting to Attendance.");
-            window.location.href = createPageUrl('Attendance');
+            console.log("Logged in user found on auth page. Redirecting to Inventory Overview.");
+            window.location.href = createPageUrl('InventoryOverview');
           } else {
             console.log("No active session on auth page. Rendering login/auth content.");
           }
@@ -689,74 +689,6 @@ export default function Layout({ children, currentPageName }) {
     
     const baseModules = [
       {
-        id: 'dashboard',
-        label: t('Dashboard'),
-        icon: LayoutDashboard,
-        url: createPageUrl('Dashboard'),
-        isExpandable: false,
-        colorClass: 'text-violet-500'
-      },
-      {
-        id: 'crm',
-        label: t('CRM & Leads'),
-        icon: Target,
-        isExpandable: true,
-        subItems: [
-          { label: t(isMobile ? 'Lead Management' : 'Lead Management'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-pink-500', permission: 'crm' },
-          { label: t(isMobile ? 'Lead Database' : 'Lead Database'), url: createPageUrl('LeadDatabase'), icon: Calendar, colorClass: 'text-pink-500', permission: 'crm' },
-          { label: t('Follow Up'), url: createPageUrl('FollowUp'), icon: UserCheck, colorClass: 'text-pink-500', permission: 'followup' },
-          { label: t('WhatsApp'), url: createPageUrl('WhatsApp'), icon: MessageSquare, colorClass: 'text-pink-500', permission: 'whatsapp' }
-        ],
-        colorClass: 'text-pink-500'
-      },
-      {
-        id: 'admissions',
-        label: t('Admissions'),
-        icon: UserCheck,
-        url: createPageUrl('Admissions'),
-        isExpandable: false,
-        colorClass: 'text-blue-500'
-      },
-      {
-        id: 'students',
-        label: t('Students'),
-        icon: Users,
-        url: createPageUrl('Students'),
-        isExpandable: false,
-        colorClass: 'text-green-500'
-      },
-      {
-        id: 'finance',
-        label: t('Finance'),
-        icon: DollarSign,
-        isExpandable: true,
-        subItems: [
-          { label: t('Income'), url: createPageUrl('Income'), icon: TrendingUp, colorClass: 'text-emerald-500', permission: 'income' },
-          { label: t('Expenses'), url: createPageUrl('Expenses'), icon: TrendingDown, colorClass: 'text-emerald-500', permission: 'expenses' },
-          { label: t('Incentives'), url: createPageUrl('Incentives'), icon: Award, colorClass: 'text-emerald-500', permission: 'incentives' },
-          { label: t(isMobile ? 'Budgeting' : 'Budgeting'), url: createPageUrl('Budget'), icon: Calculator, colorClass: 'text-emerald-500', permission: 'budget' },
-          { label: t(isMobile ? 'Payroll Report' : 'Payroll Report'), url: createPageUrl('PayrollReport'), icon: FileSignature, colorClass: 'text-emerald-500', permission: 'finance' },
-          { label: t(isMobile ? 'Finance Reports' : 'Finance Reports'), url: createPageUrl('FinanceReports'), icon: BarChart3, colorClass: 'text-emerald-500', permission: 'finance' }
-        ],
-        colorClass: 'text-emerald-500'
-      },
-      {
-        id: 'hr',
-        label: t(isMobile ? 'Human Resources' : 'Human Resources'),
-        icon: Building2,
-        isExpandable: true,
-        subItems: [
-          { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-blue-400', permission: 'employees' },
-          { label: t('Attendance'), url: createPageUrl('Attendance'), icon: Clock, colorClass: 'text-blue-400', permission: 'attendance' },
-          { label: t(isMobile ? 'My Attendance' : 'My Attendance'), url: createPageUrl('AttendanceMy'), icon: UserIcon, colorClass: 'text-blue-400', permission: 'attendance' },
-          { label: t(isMobile ? 'Performance Hub' : 'Performance Hub'), url: createPageUrl('performance-hub'), icon: Briefcase, colorClass: 'text-blue-400', permission: 'performance' },
-          { label: t(isMobile ? 'Manual Reporting' : 'Manual Reporting'), url: createPageUrl('ManualReporting'), icon: FileSignature, colorClass: 'text-blue-400', permission: 'manual_reporting' },
-          { label: t(isMobile ? 'All Submitted Reports' : 'All Submitted Reports'), url: createPageUrl('SubmittedReports'), icon: FileText, colorClass: 'text-blue-400', permission: 'manual_reporting' },
-          { label: t(isMobile ? 'Send Email' : 'Send Email'), url: createPageUrl('SendEmail'), icon: Mail, colorClass: 'text-blue-400', permission: 'hr' }
-        ],
-        colorClass: 'text-blue-400'
-      },
-      {
         id: 'inventory',
         label: t('Inventory'),
         icon: Warehouse,
@@ -780,27 +712,6 @@ export default function Layout({ children, currentPageName }) {
           { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' }
         ],
         colorClass: 'text-orange-500'
-      },
-      {
-        id: 'courses',
-        label: t('Courses'),
-        icon: BookOpen,
-        url: createPageUrl('Courses'),
-        isExpandable: false,
-        colorClass: 'text-cyan-500'
-      },
-      {
-        id: 'reports',
-        label: t(isMobile ? 'Data & Insights' : 'Data & Insights'),
-        icon: BarChart3,
-        isExpandable: true,
-        subItems: [
-          { label: t('Report Builder'), url: createPageUrl('ReportBuilder'), icon: Layers, colorClass: 'text-indigo-500', permission: 'reports' },
-          { label: t('Scheduled Reports'), url: createPageUrl('ScheduledReports'), icon: Clock, colorClass: 'text-violet-500', permission: 'reports' },
-          { label: t('Document Center'), url: createPageUrl('DocumentCenter'), icon: FileText, colorClass: 'text-amber-500', permission: 'reports' },
-          { label: t('Analytics'), url: createPageUrl('Reports'), icon: BarChart3, colorClass: 'text-indigo-500', permission: 'reports' }
-        ],
-        colorClass: 'text-indigo-500'
       },
       {
         id: 'settings',

@@ -8,7 +8,6 @@ import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
 import Budget from './pages/Budget';
 import CRM from './pages/CRM';
-import CategorySettings from './pages/CategorySettings';
 import Courses from './pages/Courses';
 import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
@@ -33,7 +32,6 @@ import InventoryAIInsights from './pages/InventoryAIInsights';
 import InventoryMovements from './pages/InventoryMovements';
 import InventoryOverview from './pages/InventoryOverview';
 import InventoryReconciliation from './pages/InventoryReconciliation';
-import InventoryReports from './pages/InventoryReports';
 import InventoryReturns from './pages/InventoryReturns';
 import InventorySuppliers from './pages/InventorySuppliers';
 import KPIDashboard from './pages/KPIDashboard';
@@ -47,7 +45,6 @@ import Performance from './pages/Performance';
 import PerformanceHub from './pages/PerformanceHub';
 import Permissions from './pages/Permissions';
 import Procurement from './pages/Procurement';
-import ProdhanComIntegration from './pages/ProdhanComIntegration';
 import ProductAnalytics from './pages/ProductAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
@@ -71,6 +68,9 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
+import CategorySettings from './pages/CategorySettings';
+import ProdhanComIntegration from './pages/ProdhanComIntegration';
+import InventoryReports from './pages/InventoryReports';
 import __Layout from './Layout.jsx';
 
 
@@ -85,7 +85,6 @@ export const PAGES = {
     "Auth": Auth,
     "Budget": Budget,
     "CRM": CRM,
-    "CategorySettings": CategorySettings,
     "Courses": Courses,
     "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
@@ -110,7 +109,6 @@ export const PAGES = {
     "InventoryMovements": InventoryMovements,
     "InventoryOverview": InventoryOverview,
     "InventoryReconciliation": InventoryReconciliation,
-    "InventoryReports": InventoryReports,
     "InventoryReturns": InventoryReturns,
     "InventorySuppliers": InventorySuppliers,
     "KPIDashboard": KPIDashboard,
@@ -124,7 +122,6 @@ export const PAGES = {
     "PerformanceHub": PerformanceHub,
     "Permissions": Permissions,
     "Procurement": Procurement,
-    "ProdhanComIntegration": ProdhanComIntegration,
     "ProductAnalytics": ProductAnalytics,
     "PurchaseOrders": PurchaseOrders,
     "ReportBuilder": ReportBuilder,
@@ -148,6 +145,9 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
+    "CategorySettings": CategorySettings,
+    "ProdhanComIntegration": ProdhanComIntegration,
+    "InventoryReports": InventoryReports,
 }
 
 export const pagesConfig = {
