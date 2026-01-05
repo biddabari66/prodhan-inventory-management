@@ -772,8 +772,6 @@ export default function Layout({ children, currentPageName }) {
           { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
           // Master Data
           { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory_suppliers' },
-          { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory' },
-          { label: t('Prodhan.com API'), url: createPageUrl('ProdhanComIntegration'), icon: Globe, colorClass: 'text-purple-500', permission: 'integrations' },
           // Analytics & Insights
           { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'product_analytics' },
           { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
