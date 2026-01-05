@@ -8,7 +8,6 @@ import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
 import Budget from './pages/Budget';
 import CRM from './pages/CRM';
-import CategorySettings from './pages/CategorySettings';
 import Courses from './pages/Courses';
 import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
@@ -47,7 +46,6 @@ import Performance from './pages/Performance';
 import PerformanceHub from './pages/PerformanceHub';
 import Permissions from './pages/Permissions';
 import Procurement from './pages/Procurement';
-import ProdhanComIntegration from './pages/ProdhanComIntegration';
 import ProductAnalytics from './pages/ProductAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
@@ -85,7 +83,6 @@ export const PAGES = {
     "Auth": Auth,
     "Budget": Budget,
     "CRM": CRM,
-    "CategorySettings": CategorySettings,
     "Courses": Courses,
     "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
@@ -124,7 +121,6 @@ export const PAGES = {
     "PerformanceHub": PerformanceHub,
     "Permissions": Permissions,
     "Procurement": Procurement,
-    "ProdhanComIntegration": ProdhanComIntegration,
     "ProductAnalytics": ProductAnalytics,
     "PurchaseOrders": PurchaseOrders,
     "ReportBuilder": ReportBuilder,
