@@ -1189,7 +1189,7 @@ function SalesPage() {
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
+                  <TableHead>Options</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
