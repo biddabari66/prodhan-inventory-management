@@ -884,19 +884,45 @@ function SalesPage() {
     return filtered;
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment]);
 
-  // Calculate stats
+  // Calculate stats - overall and today's
   const stats = useMemo(() => {
+    const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+    
+    const todayOrders = filteredOrders.filter(order => {
+      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
+        timeZone: 'Asia/Dhaka' 
+      }).format(new Date(order.order_date || order.created_date));
+      return orderDateBDT === todayBDT;
+    });
+
     const totalOrders = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
     const confirmedOrders = filteredOrders.filter(o => o.order_status === 'confirmed').length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
+    const deliveredOrders = filteredOrders.filter(o => o.order_status === 'delivered').length;
+    const returnedOrders = filteredOrders.filter(o => o.order_status === 'returned').length;
     const totalProductQuantity = filteredOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
       return sum + orderTotal;
     }, 0);
 
-    return { totalOrders, totalRevenue, pendingOrders, confirmedOrders, shippedOrders, totalProductQuantity };
+    // Today's stats
+    const todayStats = {
+      orders: todayOrders.length,
+      revenue: todayOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
+      pending: todayOrders.filter(o => o.order_status === 'pending').length,
+      confirmed: todayOrders.filter(o => o.order_status === 'confirmed').length,
+      shipped: todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length,
+      delivered: todayOrders.filter(o => o.order_status === 'delivered').length,
+      returned: todayOrders.filter(o => o.order_status === 'returned').length,
+      productQty: todayOrders.reduce((sum, o) => {
+        const orderTotal = (o.order_items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
+        return sum + orderTotal;
+      }, 0)
+    };
+
+    return { totalOrders, totalRevenue, pendingOrders, confirmedOrders, shippedOrders, deliveredOrders, returnedOrders, totalProductQuantity, todayStats };
   }, [filteredOrders]);
 
   const getStatusBadge = (status) => {
@@ -1089,67 +1115,161 @@ function SalesPage() {
         </div>
       </div>
 
-      {/* Stats Cards - Only Requested */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="bg-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-5 pb-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-emerald-600" />
+      {/* Main Stats Cards with Today's Data */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Total Orders */}
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-emerald-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
-            <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
+              <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-emerald-50 border border-emerald-200 h-16">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-700">Today's Orders</span>
+              <span className="text-2xl font-bold text-emerald-600">{stats.todayStats.orders}</span>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-5 pb-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-600" />
+        {/* Total Product Qty */}
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-indigo-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pending Orders</p>
-            <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
+              <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-indigo-50 border border-indigo-200 h-16">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-indigo-700">Today's Qty</span>
+              <span className="text-2xl font-bold text-indigo-600">{stats.todayStats.productQty}</span>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-5 pb-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-blue-600" />
+        {/* Total Returns */}
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                  <RotateCcw className="w-5 h-5 text-orange-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Confirmed Orders</p>
-            <p className="text-3xl font-bold text-blue-600">{stats.confirmedOrders}</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Returns</p>
+              <p className="text-3xl font-bold text-orange-600">{stats.returnedOrders}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-orange-50 border border-orange-200 h-16">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-orange-700">Today's Returns</span>
+              <span className="text-2xl font-bold text-orange-600">{stats.todayStats.returned}</span>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-        <Card className="bg-white border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-5 pb-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                <Truck className="w-5 h-5 text-purple-600" />
+      {/* Secondary Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pending</p>
+                  <p className="text-2xl font-bold text-amber-600">{stats.pendingOrders}</p>
+                </div>
               </div>
-            </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Shipped Orders</p>
-            <p className="text-3xl font-bold text-purple-600">{stats.shippedOrders}</p>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <Card className="bg-amber-50 border border-amber-200 h-12">
+            <CardContent className="p-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-amber-700">Today</span>
+              <span className="text-xl font-bold text-amber-600">{stats.todayStats.pending}</span>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="bg-white border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-5 pb-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                <Package className="w-5 h-5 text-indigo-600" />
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Confirmed</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.confirmedOrders}</p>
+                </div>
               </div>
-            </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
-            <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <Card className="bg-blue-50 border border-blue-200 h-12">
+            <CardContent className="p-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-blue-700">Today</span>
+              <span className="text-xl font-bold text-blue-600">{stats.todayStats.confirmed}</span>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <Truck className="w-4 h-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Shipped</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats.shippedOrders}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-purple-50 border border-purple-200 h-12">
+            <CardContent className="p-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-purple-700">Today</span>
+              <span className="text-xl font-bold text-purple-600">{stats.todayStats.shipped}</span>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-2">
+          <Card className="bg-white border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Delivered</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.deliveredOrders}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-green-50 border border-green-200 h-12">
+            <CardContent className="p-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-green-700">Today</span>
+              <span className="text-xl font-bold text-green-600">{stats.todayStats.delivered}</span>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
 
@@ -1245,7 +1365,8 @@ function SalesPage() {
                   <TableHead>Order #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Items</TableHead>
+                  <TableHead>Product Names</TableHead>
+                  <TableHead className="text-center">Quantities</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
@@ -1297,22 +1418,33 @@ function SalesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[200px]">
+                        <div className="max-w-[250px]">
                           {order.order_items && order.order_items.length > 0 ? (
-                            <div className="text-sm">
-                              <p className="font-medium text-slate-800 truncate">
-                                {order.order_items[0].item_name.substring(0, 25)}
-                                {order.order_items[0].item_name.length > 25 ? '...' : ''}
-                                <span className="text-violet-600 font-semibold ml-1">(×{order.order_items[0].quantity})</span>
-                              </p>
-                              {order.order_items.length > 1 && (
-                                <p className="text-xs text-slate-500 mt-0.5">+{order.order_items.length - 1} more items</p>
-                              )}
+                            <div className="text-xs space-y-1">
+                              {order.order_items.map((item, idx) => (
+                                <p key={idx} className="font-medium text-slate-800 truncate">
+                                  {item.item_name.substring(0, 35)}
+                                  {item.item_name.length > 35 ? '...' : ''}
+                                </p>
+                              ))}
                             </div>
                           ) : (
                             <span className="text-slate-500 text-sm">No items</span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {order.order_items && order.order_items.length > 0 ? (
+                          <div className="space-y-1">
+                            {order.order_items.map((item, idx) => (
+                              <p key={idx} className="font-bold text-violet-600 text-sm">
+                                ×{item.quantity}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         BDT {order.total_amount?.toLocaleString()}

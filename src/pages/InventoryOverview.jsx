@@ -285,23 +285,11 @@ function InventoryOverviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
-        {/* Premium Header Section */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-              <Package className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Inventory Overview</h1>
-              <p className="text-slate-600 mt-1 text-base">
-                Prodhan.com E-commerce Inventory Management
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex justify-end">
           <Button 
-            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 py-6 text-base font-semibold"
+            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 h-10 font-semibold"
             onClick={() => { setEditingItem(null); setIsFormOpen(true); }}
           >
             <Plus className="w-5 h-5 mr-2"/> Add New Item

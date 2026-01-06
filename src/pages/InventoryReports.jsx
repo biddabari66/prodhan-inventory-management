@@ -132,18 +132,8 @@ function InventoryReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-200">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-            <FileText className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Inventory Reports</h1>
-            <p className="text-slate-500 text-sm">Generate PDF reports with real-time data (BDT timezone)</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-4">
 
         {/* Filters */}
         <Card className="bg-white border border-slate-200">
@@ -230,7 +220,53 @@ function InventoryReportsPage() {
             <CardTitle className="text-base font-semibold text-slate-800">Sales & Loss Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button
+                onClick={async () => {
+                  setReportGenerating('sales_manager');
+                  try {
+                    toast.info('Generating Sales Manager Report...');
+                    const response = await base44.functions.invoke('generateSalesManagerReport', {});
+                    if (response.data?.pdfBase64) {
+                      const binaryString = atob(response.data.pdfBase64);
+                      const bytes = new Uint8Array(binaryString.length);
+                      for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                      }
+                      const blob = new Blob([bytes], { type: 'application/pdf' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `sales_manager_report_${toBDTDate()}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      a.remove();
+                      toast.success('✅ Sales Manager Report downloaded!');
+                    }
+                  } catch (error) {
+                    toast.error('Failed to generate report: ' + error.message);
+                  } finally {
+                    setReportGenerating(null);
+                  }
+                }}
+                disabled={!!reportGenerating}
+                className="group h-36 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 hover:bg-violet-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md"
+              >
+                {reportGenerating === 'sales_manager' ? (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
+                    <p className="text-xs text-slate-500 mt-2">Generating...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full p-4">
+                    <div className="w-12 h-12 rounded-lg bg-violet-50 flex items-center justify-center mb-2">
+                      <BarChart3 className="w-6 h-6 text-violet-600" />
+                    </div>
+                    <p className="font-semibold text-slate-800 text-sm">Sales Manager Report</p>
+                  </div>
+                )}
+              </button>
               <ReportButton 
                 type="sales_summary" 
                 icon={ShoppingBag} 
