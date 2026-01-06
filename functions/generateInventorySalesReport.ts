@@ -83,22 +83,27 @@ Deno.serve(async (req) => {
 
     // Generate report based on type
     let doc;
-    if (reportType === 'sales_summary') {
-      doc = generateSalesSummaryReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
-    } else if (reportType === 'stock_valuation') {
-      doc = generateStockValuationReport(filteredInventory, department, user);
-    } else if (reportType === 'low_stock') {
-      doc = generateLowStockReport(filteredInventory, department, user);
-    } else if (reportType === 'top_selling') {
-      doc = generateTopSellingReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
-    } else if (reportType === 'profit_analysis') {
-      doc = generateProfitAnalysisReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
-    } else if (reportType === 'damaged_products') {
-      doc = generateDamagedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
-    } else if (reportType === 'returned_products') {
-      doc = generateReturnedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
-    } else {
-      return Response.json({ error: 'Invalid report type' }, { status: 400 });
+    try {
+      if (reportType === 'sales_summary') {
+        doc = generateSalesSummaryReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'stock_valuation') {
+        doc = generateStockValuationReport(filteredInventory, department, user);
+      } else if (reportType === 'low_stock') {
+        doc = generateLowStockReport(filteredInventory, department, user);
+      } else if (reportType === 'top_selling') {
+        doc = generateTopSellingReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'profit_analysis') {
+        doc = generateProfitAnalysisReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'damaged_products') {
+        doc = generateDamagedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'returned_products') {
+        doc = generateReturnedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
+      } else {
+        return Response.json({ error: 'Invalid report type' }, { status: 400 });
+      }
+    } catch (reportError) {
+      console.error('Report generation error:', reportError);
+      return Response.json({ error: `Report generation failed: ${reportError.message}`, stack: reportError.stack }, { status: 500 });
     }
 
     const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(doc.output('arraybuffer'))));

@@ -25,7 +25,7 @@ const isSuperAdmin = (user) => {
 
 // Check if user can view sensitive financial data
 const canViewFinancialData = (user) => {
-  return isSuperAdmin(user) || user?.can_view_financial_data === true;
+  return isSuperAdmin(user) || user?.job_role === 'admin' || user?.role === 'admin' || user?.can_view_financial_data === true;
 };
 
 /**
