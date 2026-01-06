@@ -854,7 +854,7 @@ export default function Layout({ children, currentPageName }) {
           
           <style>{`
             /* PROFESSIONAL UI DESIGN SYSTEM - Expert Color Palette & Typography */
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
             :root {
               /* Professional Color Palette - Vibrant yet Trustworthy */
@@ -917,7 +917,7 @@ export default function Layout({ children, currentPageName }) {
 
             body {
               color: var(--current-text-primary);
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              font-family: 'Anek Bangla', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
               font-weight: 400;
               -webkit-font-smoothing: antialiased;
               -moz-osx-font-smoothing: grayscale;
@@ -928,14 +928,14 @@ export default function Layout({ children, currentPageName }) {
 
             /* Professional Typography */
             h1, h2, h3, h4, h5, h6 {
-              font-family: 'Outfit', 'Inter', sans-serif;
+              font-family: 'Anek Bangla', 'Inter', sans-serif;
               font-weight: 700;
               letter-spacing: -0.02em;
               color: var(--current-text-primary);
             }
 
             .font-display {
-              font-family: 'Outfit', sans-serif;
+              font-family: 'Anek Bangla', sans-serif;
             }
 
             /* Modern Text Gradient */
