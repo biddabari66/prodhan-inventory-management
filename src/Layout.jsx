@@ -251,17 +251,56 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     );
   }
 
-  // Simple navigation item - no expansion
+  // Expanded sidebar - full view
+  if (!module.isExpandable) {
+    return (
+      <Link
+        to={module.url}
+        className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+          isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
+        } ${isActive(module.url) ? 'active' : ''}`}
+      >
+        <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      to={module.url}
-      className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
-      } ${isActive(module.url) ? 'active' : ''}`}
-    >
-      <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-      <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-    </Link>
+    <div>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+          isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
+        } ${isModuleActive() ? 'active' : ''}`}
+      >
+        <div className="flex items-center gap-3">
+          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      {isExpanded && module.subItems && (
+        <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
+          {module.subItems.map((subItem, index) => (
+            <Link
+              key={index}
+              to={subItem.url}
+              className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'
+              } ${isActive(subItem.url) 
+                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' 
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+              }`}
+            >
+              <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
+              <span>{subItem.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -652,27 +691,62 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
     
     const baseModules = [
-      { id: 'pim', label: 'PIM', url: createPageUrl('InventoryOverview'), icon: Warehouse, isExpandable: false, colorClass: 'text-orange-500', permission: 'inventory_overview' },
-      { id: 'sales', label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, isExpandable: false, colorClass: 'text-green-500', permission: 'sales' },
-      { id: 'customers', label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, isExpandable: false, colorClass: 'text-blue-500', permission: 'customer_management' },
-      { id: 'purchase_orders', label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, isExpandable: false, colorClass: 'text-purple-500', permission: 'purchase_orders' },
-      { id: 'movements', label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, isExpandable: false, colorClass: 'text-blue-500', permission: 'inventory_movements' },
-      { id: 'returns', label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, isExpandable: false, colorClass: 'text-amber-500', permission: 'inventory_returns' },
-      { id: 'reconciliation', label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, isExpandable: false, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
-      { id: 'suppliers', label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, isExpandable: false, colorClass: 'text-indigo-500', permission: 'inventory_suppliers' },
-      { id: 'categories', label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, isExpandable: false, colorClass: 'text-cyan-500', permission: 'inventory_categories' },
-      { id: 'analytics', label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, isExpandable: false, colorClass: 'text-pink-500', permission: 'product_analytics' },
-      { id: 'reports', label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, isExpandable: false, colorClass: 'text-slate-600', permission: 'inventory_reports' },
-      { id: 'ai_insights', label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, isExpandable: false, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' },
-      { id: 'financial_reports', label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, isExpandable: false, colorClass: 'text-green-600', permission: 'financial_analytics' },
-      { id: 'user_access', label: t('User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' },
-      { id: 'integrations', label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' },
-      { id: 'alerts', label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' },
-      { id: 'audit', label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' }
+      {
+        id: 'inventory',
+        label: t('Inventory'),
+        icon: Warehouse,
+        isExpandable: true,
+        subItems: [
+          // Primary Operations - Most Used
+          { label: t('Overview'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory_overview' },
+          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
+          { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-blue-500', permission: 'customer_management' },
+          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
+          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory_movements' },
+          { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory_returns' },
+          { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
+          // Master Data
+          { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory_suppliers' },
+          { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory_categories' },
+          // Analytics & Insights
+          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'product_analytics' },
+          { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
+          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' },
+          { label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, colorClass: 'text-green-600', permission: 'financial_analytics' }
+        ],
+        colorClass: 'text-orange-500'
+      },
+      {
+        id: 'settings',
+        label: t(isMobile ? 'System Settings' : 'System Settings'),
+        icon: Settings,
+        isExpandable: true,
+        colorClass: 'text-gray-500',
+        subItems: [
+          { label: t(isMobile ? 'User Access Manager' : 'User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
+          { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-gray-500', permission: 'settings' },
+          { label: t(isMobile ? 'System Alerts' : 'System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
+          { label: t(isMobile ? 'Audit Trail' : 'Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }
+        ]
+      }
     ];
 
     return baseModules.filter((module) => {
-      return hasPermission(module.permission || module.id);
+      if (!module.isExpandable) {
+        return hasPermission(module.id);
+      }
+
+      if (module.isExpandable && module.subItems) {
+        const filteredSubItems = module.subItems.filter((subItem) => {
+          const permissionKey = subItem.permission || getPermissionKey(subItem.url.split('/').pop().split('?')[0]);
+          return hasPermission(permissionKey);
+        });
+
+        module.subItems = filteredSubItems;
+        return filteredSubItems.length > 0;
+      }
+
+      return false;
     });
   }, [currentUser, userPermissions, currentLanguage, t, createPageUrl, hasPermission, getPermissionKey]);
 
@@ -1364,10 +1438,10 @@ export default function Layout({ children, currentPageName }) {
                 {isSidebarOpen && (
                   <div className="min-w-0">
                     <span className="text-[15px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      PIM
+                      Prodhan Inventory
                     </span>
                     <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Prodhan Inventory
+                      System
                     </span>
                   </div>
                 )}
