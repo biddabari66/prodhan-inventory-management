@@ -19,241 +19,94 @@ import PermissionMatrix from '../components/access/PermissionMatrix';
 import DepartmentSelect from '../components/common/DepartmentSelect';
 import { withPermission } from '../components/common/PermissionGuard';
 
-// ENHANCED ROLE-BASED PERMISSIONS SYSTEM
+// INVENTORY-FOCUSED PERMISSIONS SYSTEM
 // Source of truth for default permissions per role
 const ROLE_PERMISSIONS = {
   super_admin: {
     // Super Admin has UNRESTRICTED access to everything
-    dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    lead_database: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    followup: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    whatsapp: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    admissions: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    students: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    income: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    expenses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    incentives: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    budget: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    payroll_report: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true, can_view_sensitive_finance: true },
-    finance_reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true, can_view_sensitive_finance: true },
-    financial_analytics: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    revenue_reports: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    profit_reports: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    employees: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    my_time: { can_view: true, can_create: true, can_edit: true },
-    performance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    all_reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    email: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_ai_insights: { can_view: true, can_export: true },
-    inventory_reports: { can_view: true, can_export: true },
-    product_analytics: { can_view: true, can_export: true },
-    financial_analytics: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    procurement: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    standard_reports: { can_view: true, can_export: true },
-    custom_reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    daily_reports: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
+    inventory_reports: { can_view: true, can_export: true },
+    inventory_ai_insights: { can_view: true, can_export: true },
+    financial_analytics: { can_view: true, can_export: true, can_view_sensitive_finance: true },
     user_access_manager: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     integrations: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     system_alerts: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     audit_trail: { can_view: true, can_export: true }
   },
   admin: {
-    // Admin has extensive access but NO sensitive financial data visibility by default
-    dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    lead_database: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    followup: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    whatsapp: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    admissions: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-    students: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    income: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_export: true },
-    expenses: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_approve: true, can_export: true },
-    incentives: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    budget: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_export: true },
-    payroll_report: { can_view: true, can_export: true },
-    finance_reports: { can_view: true, can_export: true },
-    employees: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_export: true },
-    attendance: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_export: true },
-    my_time: { can_view: true, can_create: true, can_edit: true },
-    performance: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    all_reports: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    email: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    // Admin has extensive access to all inventory modules
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_ai_insights: { can_view: true, can_export: true },
-    inventory_reports: { can_view: true, can_export: true },
-    product_analytics: { can_view: true, can_export: true },
-    purchase: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    sales: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    customer_management: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    procurement: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
+    inventory_reports: { can_view: true, can_export: true },
+    inventory_ai_insights: { can_view: true, can_export: true },
+    financial_analytics: { can_view: true, can_export: true },
     user_access_manager: { can_view: true, can_create: true, can_edit: true },
     integrations: { can_view: true, can_create: true, can_edit: true },
     system_alerts: { can_view: true, can_create: true, can_edit: true },
     audit_trail: { can_view: true, can_export: true }
   },
-  finance_head: {
-    dashboard: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    income: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    expenses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    budget: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true, can_view_sensitive_finance: true },
-    payroll_report: { can_view: true, can_create: true, can_edit: true, can_export: true, can_view_sensitive_finance: true },
-    finance_reports: { can_view: true, can_create: true, can_edit: true, can_export: true, can_view_sensitive_finance: true },
-    financial_analytics: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    revenue_reports: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    profit_reports: { can_view: true, can_export: true, can_view_sensitive_finance: true },
-    purchase: { can_view: true, can_approve: true, can_export: true },
-    incentives: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true }
-  },
-  accountant: {
-    dashboard: { can_view: true },
-    income: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    expenses: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    budget: { can_view: true, can_export: true },
-    payroll_report: { can_view: true, can_export: true },
-    finance_reports: { can_view: true, can_create: true, can_export: true },
-    purchase: { can_view: true, can_export: true }
-  },
-  hr_manager: {
-    dashboard: { can_view: true, can_export: true },
-    employees: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_export: true },
-    attendance: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    my_time: { can_view: true, can_create: true, can_edit: true },
-    performance: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    all_reports: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    email: { can_view: true, can_create: true, can_export: true },
-    payroll_report: { can_view: true, can_export: true },
-    incentives: { can_view: true, can_create: true, can_edit: true, can_export: true }
-  },
-  hr_executive: {
-    dashboard: { can_view: true },
-    employees: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    attendance: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    my_time: { can_view: true, can_create: true, can_edit: true },
-    performance: { can_view: true, can_create: true, can_export: true },
-    email: { can_view: true, can_create: true }
-  },
-  sales_manager: {
-    dashboard: { can_view: true, can_export: true },
-    crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    lead_database: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    followup: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    admissions: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    students: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    courses: { can_view: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_export: true }
-  },
-  sales_executive: {
-    dashboard: { can_view: true },
-    crm: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    lead_database: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    followup: { can_view: true, can_create: true, can_edit: true },
-    admissions: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    students: { can_view: true, can_create: true, can_export: true },
-    my_time: { can_view: true, can_create: true, can_edit: true }
-  },
-  marketing_manager: {
-    dashboard: { can_view: true, can_export: true },
-    crm: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    lead_database: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    whatsapp: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    email: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    courses: { can_view: true, can_export: true },
-    expenses: { can_view: true, can_create: true, can_export: true },
-    budget: { can_view: true, can_export: true }
-  },
-  marketing_executive: {
-    dashboard: { can_view: true },
-    crm: { can_view: true, can_create: true, can_edit: true },
-    lead_database: { can_view: true, can_create: true, can_edit: true },
-    whatsapp: { can_view: true, can_create: true },
-    email: { can_view: true, can_create: true },
-    my_time: { can_view: true, can_create: true, can_edit: true }
-  },
   inventory_manager: {
-    dashboard: { can_view: true, can_export: true },
-    inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    inventory_ai_insights: { can_view: true, can_export: true },
-    inventory_reports: { can_view: true, can_export: true },
-    product_analytics: { can_view: true, can_export: true },
-    purchase: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    procurement: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    expenses: { can_view: true, can_create: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_export: true }
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
+    inventory_reports: { can_view: true, can_export: true },
+    inventory_ai_insights: { can_view: true, can_export: true },
+    financial_analytics: { can_view: true, can_export: true }
   },
   procurement_officer: {
-    dashboard: { can_view: true },
-    inventory: { can_view: true, can_create: true, can_edit: true, can_export: true },
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory_ai_insights: { can_view: true, can_export: true },
-    inventory_reports: { can_view: true, can_export: true },
-    product_analytics: { can_view: true, can_export: true },
-    purchase: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_export: true },
     sales: { can_view: true, can_export: true },
-    procurement: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    expenses: { can_view: true, can_create: true },
-    my_time: { can_view: true, can_create: true, can_edit: true }
+    customer_management: { can_view: true, can_export: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
+    inventory_reports: { can_view: true, can_export: true }
   },
-  department_head: {
-    dashboard: { can_view: true, can_export: true },
-    crm: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    employees: { can_view: true, can_export: true },
-    attendance: { can_view: true, can_export: true },
-    performance: { can_view: true, can_approve: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    all_reports: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
-    budget: { can_view: true, can_export: true },
-    expenses: { can_view: true, can_create: true, can_approve: true, can_export: true }
+  sales_staff: {
+    inventory_overview: { can_view: true },
+    sales: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    customer_management: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_reports: { can_view: true, can_export: true }
   },
-  manager: {
-    dashboard: { can_view: true, can_export: true },
-    employees: { can_view: true },
-    attendance: { can_view: true, can_export: true },
-    performance: { can_view: true, can_export: true },
-    reports: { can_view: true, can_create: true, can_export: true },
-    my_time: { can_view: true, can_create: true, can_edit: true }
+  warehouse_staff: {
+    inventory_overview: { can_view: true },
+    inventory_movements: { can_view: true, can_create: true, can_export: true },
+    inventory_returns: { can_view: true, can_create: true, can_export: true },
+    inventory_reconciliation: { can_view: true, can_create: true, can_export: true },
+    purchase_orders: { can_view: true, can_export: true }
   },
-  employee: {
-    dashboard: { can_view: true },
-    my_time: { can_view: true, can_create: true, can_edit: true },
-    reports: { can_view: true, can_create: true },
-    courses: { can_view: true }
+  viewer: {
+    inventory_overview: { can_view: true },
+    sales: { can_view: true },
+    customer_management: { can_view: true },
+    inventory_reports: { can_view: true, can_export: true }
   }
 };
 
@@ -475,14 +328,14 @@ function UserAccessManagerPage() {
             <div className="flex items-start gap-3">
               <Crown className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-semibold text-amber-900 mb-1">Super Admin Role</h3>
+                <h3 className="font-semibold text-amber-900 mb-1">Role-Based Access Control</h3>
                 <p className="text-sm text-amber-800">
-                  Super Admin has <strong>unrestricted access</strong> to all modules including sensitive financial data (revenue, profits, aggregate income).
-                  Only Super Admins can view total revenue, profit margins, and financial analytics. Regular admins cannot access this data.
+                  Control user access to inventory modules. <strong>Super Admin</strong> has unrestricted access to all inventory and financial features.
+                  <strong> Admin</strong> has full inventory management without sensitive financial data access.
                 </p>
                 <div className="mt-2 p-2 bg-white rounded border border-amber-200">
                   <p className="text-xs text-amber-700 font-medium">
-                    💡 Tip: Assign Super Admin role only to C-level executives and finance heads who need full financial visibility.
+                    💡 Roles: Super Admin (full) → Admin → Inventory Manager → Procurement Officer → Sales/Warehouse Staff → Viewer
                   </p>
                 </div>
               </div>
@@ -539,23 +392,15 @@ function UserAccessManagerPage() {
                         <SelectItem value="super_admin" disabled={!canManageSuperAdmin}>
                           <span className="flex items-center gap-2">
                             <Crown className="w-4 h-4 text-amber-600" />
-                            Super Admin (Full Financial Access)
+                            Super Admin (Full Access)
                           </span>
                         </SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="finance_head">Finance Head</SelectItem>
-                        <SelectItem value="accountant">Accountant</SelectItem>
-                        <SelectItem value="hr_manager">HR Manager</SelectItem>
-                        <SelectItem value="hr_executive">HR Executive</SelectItem>
-                        <SelectItem value="sales_manager">Sales Manager</SelectItem>
-                        <SelectItem value="sales_executive">Sales Executive</SelectItem>
-                        <SelectItem value="marketing_manager">Marketing Manager</SelectItem>
-                        <SelectItem value="marketing_executive">Marketing Executive</SelectItem>
                         <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
                         <SelectItem value="procurement_officer">Procurement Officer</SelectItem>
-                        <SelectItem value="department_head">Department Head</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="sales_staff">Sales Staff</SelectItem>
+                        <SelectItem value="warehouse_staff">Warehouse Staff</SelectItem>
+                        <SelectItem value="viewer">Viewer (Read Only)</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
@@ -570,13 +415,13 @@ function UserAccessManagerPage() {
                   </div>
 
                   {/* Financial Access Warning */}
-                  {selectedEmployee.job_role !== 'super_admin' && selectedEmployee.job_role !== 'finance_head' && (
+                  {selectedEmployee.job_role !== 'super_admin' && (
                     <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div className="text-xs text-amber-800">
                           <strong>Financial Data Restricted:</strong> This user cannot view aggregate revenue, profit, or sensitive financial metrics.
-                          Only Super Admin and Finance Head roles have this access.
+                          Only Super Admin role has this access.
                         </div>
                       </div>
                     </div>
