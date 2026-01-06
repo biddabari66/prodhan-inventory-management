@@ -1029,7 +1029,22 @@ function PurchaseOrdersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{order.order_items?.length || 0} items</Badge>
+                        <div className="max-w-[200px]">
+                          {order.order_items && order.order_items.length > 0 ? (
+                            <div className="text-sm">
+                              <p className="font-medium text-slate-800 truncate">
+                                {order.order_items[0].item_name.substring(0, 25)}
+                                {order.order_items[0].item_name.length > 25 ? '...' : ''}
+                                <span className="text-violet-600 font-semibold ml-1">(×{order.order_items[0].quantity_ordered})</span>
+                              </p>
+                              {order.order_items.length > 1 && (
+                                <p className="text-xs text-slate-500 mt-0.5">+{order.order_items.length - 1} more</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 text-sm">No items</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         BDT {order.total_amount?.toLocaleString()}
