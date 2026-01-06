@@ -1033,7 +1033,7 @@ function SalesPage() {
       {/* Filters */}
       <Card className="bg-white border border-slate-200 shadow-sm">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="lg:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -1046,23 +1046,22 @@ function SalesPage() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Select
-                value={departmentFilter}
-                onValueChange={handleDepartmentFilterChange}
-                disabled={!canViewAllDepartments}
-              >
-                <SelectTrigger className={!canViewAllDepartments ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}>
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {canViewAllDepartments && (
-                    <SelectItem value="all">All Departments</SelectItem>
-                  )}
-                  <SelectItem value="boibari">📚 Boibari</SelectItem>
-                  <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
-                </SelectContent>
-              </Select>
+            <div>
+              <Label className="text-xs text-slate-600 mb-1">Date From</Label>
+              <Input
+                type="date"
+                value={dateRange.from || ''}
+                onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-slate-600 mb-1">Date To</Label>
+              <Input
+                type="date"
+                value={dateRange.to || ''}
+                onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+              />
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
