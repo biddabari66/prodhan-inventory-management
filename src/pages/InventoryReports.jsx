@@ -32,7 +32,6 @@ const get30DaysAgo = () => {
 
 function InventoryReportsPage() {
   const [reportGenerating, setReportGenerating] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [startDate, setStartDate] = useState(get30DaysAgo());
   const [endDate, setEndDate] = useState(toBDTDate());
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -43,13 +42,12 @@ function InventoryReportsPage() {
     queryFn: () => base44.entities.ProductCategory.list(),
   });
 
-  // Filter categories based on selected department
+  // Filter categories for Prodhan.com only
   const filteredCategories = useMemo(() => {
-    if (selectedDepartment === 'all') return categories;
     return categories.filter(cat => 
-      cat.department === selectedDepartment || cat.department === 'both'
+      cat.department === 'prodhan_com_e_commerce'
     );
-  }, [categories, selectedDepartment]);
+  }, [categories]);
 
   const handleGenerateReport = async (reportType) => {
     setReportGenerating(reportType);
@@ -64,7 +62,7 @@ function InventoryReportsPage() {
 
       const requestBody = { 
         reportType,
-        department: selectedDepartment,
+        department: 'prodhan_com_e_commerce',
         dateFrom: startDate,
         dateTo: endDate,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
@@ -150,20 +148,8 @@ function InventoryReportsPage() {
         {/* Filters */}
         <Card className="bg-white border border-slate-200">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label className="text-xs text-slate-600 font-medium">Department</Label>
-                <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="boibari">📚 Boibari.com</SelectItem>
-                    <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
               <div>
                 <Label className="text-xs text-slate-600 font-medium">Start Date (BDT)</Label>
                 <Input 
@@ -199,17 +185,7 @@ function InventoryReportsPage() {
                 </Select>
               </div>
             </div>
-            {selectedDepartment !== 'all' && (
-              <div className={`mt-3 p-2.5 rounded-lg text-xs font-medium flex items-center gap-2 ${
-                selectedDepartment === 'boibari' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' : 'bg-purple-50 text-purple-700 border border-purple-200'
-              }`}>
-                <span>Filtering:</span>
-                <Badge className={selectedDepartment === 'boibari' ? 'bg-cyan-100 text-cyan-800' : 'bg-purple-100 text-purple-800'}>
-                  {selectedDepartment === 'boibari' ? '📚 Boibari.com' : '🛒 Prodhan.com'}
-                </Badge>
-                <span className="text-slate-500">({filteredCategories.length} categories)</span>
-              </div>
-            )}
+
           </CardContent>
         </Card>
 
@@ -254,7 +230,7 @@ function InventoryReportsPage() {
             <CardTitle className="text-base font-semibold text-slate-800">Sales & Loss Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <ReportButton 
                 type="sales_summary" 
                 icon={ShoppingBag} 
@@ -262,22 +238,6 @@ function InventoryReportsPage() {
                 color="text-green-600"
                 bgColor="bg-green-50"
                 hoverBorder="green-400"
-              />
-              <ReportButton 
-                type="top_selling" 
-                icon={TrendingUp} 
-                title="Top Selling" 
-                color="text-amber-600"
-                bgColor="bg-amber-50"
-                hoverBorder="amber-400"
-              />
-              <ReportButton 
-                type="profit_analysis" 
-                icon={BarChart3} 
-                title="Profit Analysis" 
-                color="text-emerald-600"
-                bgColor="bg-emerald-50"
-                hoverBorder="emerald-400"
               />
               <ReportButton 
                 type="damaged_products" 

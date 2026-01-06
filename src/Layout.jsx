@@ -550,7 +550,10 @@ export default function Layout({ children, currentPageName }) {
           performance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           manual_reporting: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }
+          purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          financial_analytics: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }
         };
         setUserPermissions(adminPermissions);
         localStorage.setItem('cached_user_permissions', JSON.stringify(adminPermissions));
