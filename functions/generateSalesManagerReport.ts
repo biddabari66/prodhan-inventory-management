@@ -66,10 +66,12 @@ Deno.serve(async (req) => {
           const invItem = inventoryMap.get(item.inventory_id);
           productBreakdown[item.inventory_id] = {
             name: invItem ? getDisplayName(invItem) : item.item_name,
-            qty: 0
+            qty: 0,
+            orders: 0
           };
         }
         productBreakdown[item.inventory_id].qty += item.quantity || 0;
+        productBreakdown[item.inventory_id].orders += 1;
       });
     });
 
@@ -171,14 +173,18 @@ Deno.serve(async (req) => {
 
     if (topProducts.length > 0) {
       doc.autoTable({
-        head: [['Product Name', 'Quantity Sold']],
-        body: topProducts.map(p => [p.name.substring(0, 55), p.qty.toString()]),
+        head: [['Product Name', 'Quantity Sold', 'Product-Based Orders']],
+        body: topProducts.map(p => [p.name.substring(0, 55), p.qty.toString(), p.orders.toString()]),
         startY: productY + 6,
         theme: 'grid',
         styles: { fontSize: 9, cellPadding: 3.5, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: { 0: { cellWidth: 130 }, 1: { halign: 'center', fontStyle: 'bold', cellWidth: 50, textColor: [139, 92, 246] } },
+        columnStyles: { 
+          0: { cellWidth: 100 }, 
+          1: { halign: 'center', fontStyle: 'bold', cellWidth: 40, textColor: [139, 92, 246] },
+          2: { halign: 'center', fontStyle: 'bold', cellWidth: 40, textColor: [59, 130, 246] }
+        },
         margin: { left: 16, right: 16 }
       });
     } else {
