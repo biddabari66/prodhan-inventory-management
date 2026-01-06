@@ -252,19 +252,12 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
 
   // Summary Cards
   const cardY = 60;
-  const cardWidth = (pageWidth - 50) / 4;
+  const cardWidth = (pageWidth - 40) / 3;
   const cardHeight = 30;
   
   createSummaryCard(doc, 16, cardY, cardWidth, cardHeight, 'UNITS SOLD', totals.unitsSold.toLocaleString(), [59, 130, 246]);
-  createSummaryCard(doc, 16 + cardWidth + 6, cardY, cardWidth, cardHeight, 'TOTAL REVENUE', formatCurrency(totals.totalSales), [16, 185, 129]);
-  createSummaryCard(doc, 16 + (cardWidth + 6) * 2, cardY, cardWidth, cardHeight, 'TOTAL PROFIT', formatCurrency(totals.profit), [168, 85, 247]);
-  createSummaryCard(doc, 16 + (cardWidth + 6) * 3, cardY, cardWidth, cardHeight, 'ORDERS', totals.orders.toLocaleString(), [249, 115, 22]);
-
-  // Profit margin indicator
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Overall Profit Margin: ${totalMargin.toFixed(2)}%`, pageWidth / 2, cardY + cardHeight + 12, { align: 'center' });
+  createSummaryCard(doc, 16 + cardWidth + 12, cardY, cardWidth, cardHeight, 'TOTAL REVENUE', formatCurrency(totals.totalSales), [16, 185, 129]);
+  createSummaryCard(doc, 16 + (cardWidth + 12) * 2, cardY, cardWidth, cardHeight, 'ORDERS', totals.orders.toLocaleString(), [249, 115, 22]);
 
   // Professional Table
   if (salesData.length > 0) {

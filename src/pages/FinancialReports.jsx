@@ -247,4 +247,4 @@ function FinancialReportsPage() {
   );
 }
 
-export default withPermission(FinancialReportsPage, 'financial_analytics', 'can_view', true);
+export default withPermission(FinancialReportsPage, 'financial_analytics', 'can_view');
