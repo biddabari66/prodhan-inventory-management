@@ -49,12 +49,12 @@ function InventoryOverviewPage() {
     queryKey: ['product-categories', selectedDepartment],
     queryFn: async () => {
       const allCategories = await base44.entities.ProductCategory.list('sort_order');
-      if (selectedDepartment === 'all') return allCategories.filter(c => c.is_active);
-      return allCategories.filter(cat => 
-        cat.is_active &&
-        (cat.department === selectedDepartment || cat.department === 'both')
+      if (selectedDepartment === 'all') return allCategories.filter((c) => c.is_active);
+      return allCategories.filter((cat) =>
+      cat.is_active && (
+      cat.department === selectedDepartment || cat.department === 'both')
       );
-    },
+    }
   });
 
 
@@ -62,12 +62,12 @@ function InventoryOverviewPage() {
   useEffect(() => {
     loadUserAndInventory();
     loadTodaySales();
-    
+
     // Real-time refresh every 30 seconds
     const interval = setInterval(() => {
       loadTodaySales();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -75,23 +75,23 @@ function InventoryOverviewPage() {
     try {
       const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
       const allOrders = await base44.entities.Order.list();
-      
+
       // Count orders created today with confirmed status or later
-      const todayOrders = allOrders.filter(order => {
-        const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
-          timeZone: 'Asia/Dhaka' 
+      const todayOrders = allOrders.filter((order) => {
+        const orderDateBDT = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Dhaka'
         }).format(new Date(order.order_date || order.created_date));
-        
+
         if (orderDateBDT !== todayBDT) return false;
-        
+
         // Include confirmed, processing, packed, shipped, out_for_delivery, delivered
         const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
         return validStatuses.includes(order.order_status);
       });
 
       const salesMap = {};
-      todayOrders.forEach(order => {
-        (order.order_items || []).forEach(item => {
+      todayOrders.forEach((order) => {
+        (order.order_items || []).forEach((item) => {
           if (!salesMap[item.inventory_id]) {
             salesMap[item.inventory_id] = 0;
           }
@@ -122,10 +122,10 @@ function InventoryOverviewPage() {
 
         setTimeout(async () => {
           const [user, data, movements] = await Promise.all([
-            User.me(),
-            Inventory.list(),
-            base44.entities.InventoryMovement.list('-movement_date', 1000)
-          ]);
+          User.me(),
+          Inventory.list(),
+          base44.entities.InventoryMovement.list('-movement_date', 1000)]
+          );
           setCurrentUser(user);
           setInventory(data);
           enrichInventoryWithMovements(data, movements);
@@ -134,10 +134,10 @@ function InventoryOverviewPage() {
         }, 0);
       } else {
         const [user, data, movements] = await Promise.all([
-          User.me(),
-          Inventory.list(),
-          base44.entities.InventoryMovement.list('-movement_date', 1000)
-        ]);
+        User.me(),
+        Inventory.list(),
+        base44.entities.InventoryMovement.list('-movement_date', 1000)]
+        );
         setCurrentUser(user);
         setInventory(data);
         enrichInventoryWithMovements(data, movements);
@@ -154,8 +154,8 @@ function InventoryOverviewPage() {
 
   const enrichInventoryWithMovements = (inventoryData, movements) => {
     const movementsByItem = {};
-    
-    movements.forEach(m => {
+
+    movements.forEach((m) => {
       if (!movementsByItem[m.inventory_item_id]) {
         movementsByItem[m.inventory_item_id] = {
           total_returned_qty: 0,
@@ -166,7 +166,7 @@ function InventoryOverviewPage() {
       }
 
       const movementData = movementsByItem[m.inventory_item_id];
-      
+
       if (m.movement_type === 'return') {
         movementData.total_returned_qty += Math.abs(m.quantity || 0);
         movementData.total_returned_value += Math.abs(m.total_value || 0);
@@ -176,7 +176,7 @@ function InventoryOverviewPage() {
       }
     });
 
-    const enriched = inventoryData.map(item => ({
+    const enriched = inventoryData.map((item) => ({
       ...item,
       returned_qty: movementsByItem[item.id]?.total_returned_qty || 0,
       damaged_qty: movementsByItem[item.id]?.total_damaged_qty || 0,
@@ -193,23 +193,23 @@ function InventoryOverviewPage() {
     let filtered = inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory;
 
     // Only show Prodhan.com items
-    filtered = filtered.filter(item => item.department === 'prodhan_com_e_commerce');
+    filtered = filtered.filter((item) => item.department === 'prodhan_com_e_commerce');
 
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.item_name?.toLowerCase().includes(query) ||
-        item.category?.toLowerCase().includes(query) ||
-        item.isbn?.toLowerCase().includes(query) ||
-        item.author_name?.toLowerCase().includes(query)
+      filtered = filtered.filter((item) =>
+      item.item_name?.toLowerCase().includes(query) ||
+      item.category?.toLowerCase().includes(query) ||
+      item.isbn?.toLowerCase().includes(query) ||
+      item.author_name?.toLowerCase().includes(query)
       );
     }
 
     // Category filter
     if (categoryFilter !== 'all') {
-      filtered = filtered.filter(item => 
-        item.category?.toLowerCase() === categoryFilter.toLowerCase() ||
-        item.subject?.toLowerCase() === categoryFilter.toLowerCase()
+      filtered = filtered.filter((item) =>
+      item.category?.toLowerCase() === categoryFilter.toLowerCase() ||
+      item.subject?.toLowerCase() === categoryFilter.toLowerCase()
       );
     }
 
@@ -268,25 +268,25 @@ function InventoryOverviewPage() {
     }
   };
 
-  const lowStockItems = filteredInventory.filter(i => i.current_stock < i.minimum_stock);
+  const lowStockItems = filteredInventory.filter((i) => i.current_stock < i.minimum_stock);
 
   const departmentStats = {
     total: filteredInventory.length,
     low_stock: lowStockItems.length,
-    total_value: filteredInventory.reduce((sum, item) => sum + ((item.current_stock || 0) * (item.selling_price || 0)), 0)
+    total_value: filteredInventory.reduce((sum, item) => sum + (item.current_stock || 0) * (item.selling_price || 0), 0)
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
-      </div>
-    );
+      </div>);
+
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="w-full p-6 space-y-6">
+      <div className="pt-3 pb-3 pl-1 w-full space-y-6">
         {/* Compact Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -295,11 +295,11 @@ function InventoryOverviewPage() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
           </div>
-          <Button 
+          <Button
             className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 py-6 text-base font-semibold"
-            onClick={() => { setEditingItem(null); setIsFormOpen(true); }}
-          >
-            <Plus className="w-5 h-5 mr-2"/> Add New Item
+            onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
+
+            <Plus className="w-5 h-5 mr-2" /> Add New Item
           </Button>
         </div>
 
@@ -333,57 +333,57 @@ function InventoryOverviewPage() {
             <SmartInventorySearch
               value={searchTerm}
               onChange={setSearchTerm}
-              onSearch={(term) => { setSearchTerm(term); loadUserAndInventory(); }}
+              onSearch={(term) => {setSearchTerm(term);loadUserAndInventory();}}
               currentUser={currentUser}
-              placeholder="🔍 Search inventory by name, ISBN, barcode, or author..."
-            />
+              placeholder="🔍 Search inventory by name, ISBN, barcode, or author..." />
+
             
             {/* Category Filter */}
-            {categories.length > 0 && (
-              <div className="flex items-center gap-3 flex-wrap">
+            {categories.length > 0 &&
+            <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Filter className="w-4 h-4" />
                   <span className="font-medium">Filter by Category:</span>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button
-                    variant={categoryFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCategoryFilter('all')}
-                    className={categoryFilter === 'all' ? 'bg-violet-600' : ''}
-                  >
+                  variant={categoryFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCategoryFilter('all')}
+                  className={categoryFilter === 'all' ? 'bg-violet-600' : ''}>
+
                     All
                   </Button>
-                  {categories.map(cat => (
-                    <Button
-                      key={cat.id}
-                      variant={categoryFilter === cat.slug ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCategoryFilter(cat.slug)}
-                      className="gap-2"
-                      style={categoryFilter === cat.slug ? { backgroundColor: cat.color } : {}}
-                    >
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: cat.color }}
-                      />
+                  {categories.map((cat) =>
+                <Button
+                  key={cat.id}
+                  variant={categoryFilter === cat.slug ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCategoryFilter(cat.slug)}
+                  className="gap-2"
+                  style={categoryFilter === cat.slug ? { backgroundColor: cat.color } : {}}>
+
+                      <div
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: cat.color }} />
+
                       {cat.name}
                     </Button>
-                  ))}
+                )}
                 </div>
-                {categoryFilter !== 'all' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCategoryFilter('all')}
-                    className="text-slate-500"
-                  >
+                {categoryFilter !== 'all' &&
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCategoryFilter('all')}
+                className="text-slate-500">
+
                     <X className="w-4 h-4 mr-1" />
                     Clear
                   </Button>
-                )}
+              }
               </div>
-            )}
+            }
           </CardContent>
         </Card>
 
@@ -391,32 +391,32 @@ function InventoryOverviewPage() {
         <InventoryImportExport inventory={filteredInventory} onImportComplete={loadUserAndInventory} />
 
         {/* Low Stock Alert Banner */}
-        {lowStockItems.length > 0 && (
-          <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 shadow-lg">
+        {lowStockItems.length > 0 &&
+        <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 shadow-lg">
             <CardHeader className="pb-3">
               <CardTitle className="text-red-900 flex items-center gap-3 text-lg">
                 <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-white"/>
+                  <AlertTriangle className="w-5 h-5 text-white" />
                 </div>
                 Low Stock Alerts — {lowStockItems.length} Items Require Attention
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {lowStockItems.slice(0, 10).map(item => (
-                  <Badge key={item.id} variant="outline" className="bg-white text-red-700 border-red-300">
+                {lowStockItems.slice(0, 10).map((item) =>
+              <Badge key={item.id} variant="outline" className="bg-white text-red-700 border-red-300">
                     {item.item_name}
                   </Badge>
-                ))}
-                {lowStockItems.length > 10 && (
-                  <Badge variant="outline" className="bg-red-200 text-red-900 border-red-400">
+              )}
+                {lowStockItems.length > 10 &&
+              <Badge variant="outline" className="bg-red-200 text-red-900 border-red-400">
                     +{lowStockItems.length - 10} more
                   </Badge>
-                )}
+              }
               </div>
             </CardContent>
           </Card>
-        )}
+        }
 
         {/* Main Inventory Table */}
         <Card className="bg-white border border-slate-200 shadow-sm">
@@ -440,29 +440,29 @@ function InventoryOverviewPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInventory.length === 0 ? (
-                    <TableRow>
+                  {filteredInventory.length === 0 ?
+                  <TableRow>
                       <TableCell colSpan={10} className="text-center py-16">
                         <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No inventory items found</p>
                         <p className="text-slate-400 text-sm mt-1">Add items or adjust your filters</p>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredInventory.map((item, idx) => (
-                      <TableRow 
-                        key={item.id} 
-                        className="hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer"
-                      >
+                    </TableRow> :
+
+                  filteredInventory.map((item, idx) =>
+                  <TableRow
+                    key={item.id}
+                    className="hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer">
+
                         <TableCell className="py-4">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'
-                            }`}>
-                              {item.category === 'books' ? 
-                                <BookOpen className="w-5 h-5 text-cyan-600" /> : 
-                                <Package className="w-5 h-5 text-purple-600" />
-                              }
+                        item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'}`
+                        }>
+                              {item.category === 'books' ?
+                          <BookOpen className="w-5 h-5 text-cyan-600" /> :
+                          <Package className="w-5 h-5 text-purple-600" />
+                          }
                             </div>
                             <div>
                               <p className="font-semibold text-slate-900">{item.item_name}</p>
@@ -502,39 +502,39 @@ function InventoryOverviewPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge 
-                            variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}
-                            className={item.current_stock < item.minimum_stock ? 
-                              'bg-red-100 text-red-800 border-red-300' : 
-                              'bg-green-100 text-green-800 border-green-300'
-                            }
-                          >
+                          <Badge
+                        variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}
+                        className={item.current_stock < item.minimum_stock ?
+                        'bg-red-100 text-red-800 border-red-300' :
+                        'bg-green-100 text-green-800 border-green-300'
+                        }>
+
                             {item.current_stock < item.minimum_stock ? 'Low Stock' : 'In Stock'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
+                            <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {e.stopPropagation();handleEdit(item);}}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+
                               Edit
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
+                            <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {e.stopPropagation();handleDeleteClick(item);}}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50">
+
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
+                  )
+                  }
                 </TableBody>
               </Table>
             </div>
@@ -555,8 +555,8 @@ function InventoryOverviewPage() {
               item={editingItem}
               onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
-              selectedDepartment="prodhan_com_e_commerce"
-            />
+              selectedDepartment="prodhan_com_e_commerce" />
+
           </div>
         </DialogContent>
       </Dialog>
@@ -567,11 +567,11 @@ function InventoryOverviewPage() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete <strong>{itemToDelete?.item_name}</strong> from your inventory. This action cannot be undone.
-              {itemToDelete?.current_stock > 0 && (
-                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+              {itemToDelete?.current_stock > 0 &&
+              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
                   <p className="text-orange-800 font-semibold">⚠️ Warning: This item has {itemToDelete.current_stock} units in stock.</p>
                 </div>
-              )}
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -580,8 +580,8 @@ function InventoryOverviewPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }
 
 export default withPermission(InventoryOverviewPage, 'inventory_overview', 'can_view');
