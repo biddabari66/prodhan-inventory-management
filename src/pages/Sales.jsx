@@ -31,6 +31,7 @@ import OrderInvoice from '../components/invoices/OrderInvoice';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import SearchableProductSelect from '../components/common/SearchableProductSelect';
+import { ChevronDown } from 'lucide-react';
 import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -937,19 +938,155 @@ function SalesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
       <div className="w-full px-6 py-6 space-y-6">
-      {/* Compact Header */}
-      <div className="flex justify-between items-center">
+      {/* Compact Header with Search & Filter */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Sales Management</h1>
-        <Button
-          onClick={() => {
-            setEditingOrder(null);
-            setIsOrderFormOpen(true);
-          }}
-          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 py-3 font-semibold"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create Sale Order
-        </Button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search by order number, customer..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10"
+            />
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2 h-10">
+                <Filter className="w-4 h-4" />
+                Filters
+                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
+                  <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-violet-600 text-white text-xs">
+                    {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" align="end">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Quick Date Filters</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        setDateRange({ from: today, to: today });
+                      }}
+                      className="text-sm"
+                    >
+                      Today
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const yesterdayStr = yesterday.toISOString().split('T')[0];
+                        setDateRange({ from: yesterdayStr, to: yesterdayStr });
+                      }}
+                      className="text-sm"
+                    >
+                      Yesterday
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Date Range</Label>
+                  <div className="space-y-2">
+                    <div>
+                      <Label className="text-xs text-slate-600">From</Label>
+                      <Input
+                        type="date"
+                        value={dateRange.from || ''}
+                        onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+                        className="h-9"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600">To</Label>
+                      <Input
+                        type="date"
+                        value={dateRange.to || ''}
+                        onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Order Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Payment Status</Label>
+                  <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Payments</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="partial">Partial</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
+                  <>
+                    <Separator />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDateRange({ from: undefined, to: undefined });
+                        setStatusFilter('all');
+                        setPaymentFilter('all');
+                      }}
+                      className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Clear All Filters
+                    </Button>
+                  </>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            onClick={() => {
+              setEditingOrder(null);
+              setIsOrderFormOpen(true);
+            }}
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 h-10 font-semibold"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Sale Order
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards - Only Requested */}
@@ -1015,69 +1152,7 @@ function SalesPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="bg-white border border-slate-200 shadow-sm">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div className="lg:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search by order number, customer name, or phone..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
 
-            <div>
-              <Label className="text-xs text-slate-600 mb-1">Date From</Label>
-              <Input
-                type="date"
-                value={dateRange.from || ''}
-                onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs text-slate-600 mb-1">Date To</Label>
-              <Input
-                type="date"
-                value={dateRange.to || ''}
-                onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-              />
-            </div>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Order Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Payment Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payments</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="partial">Partial</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Bulk Actions Bar */}
       {selectedOrderIds.length > 0 && (
@@ -1246,7 +1321,46 @@ function SalesPage() {
                         {getPaymentBadge(order.payment_status)}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(order.order_status)}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 gap-1">
+                              {getStatusBadge(order.order_status)}
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center">
+                            {order.order_status === 'pending' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
+                                Confirm Order
+                              </DropdownMenuItem>
+                            )}
+                            {order.order_status === 'confirmed' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
+                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
+                                Mark as Processing
+                              </DropdownMenuItem>
+                            )}
+                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                <Truck className="w-4 h-4 mr-2 text-purple-600" />
+                                Mark as Shipped
+                              </DropdownMenuItem>
+                            )}
+                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                Mark as Delivered
+                              </DropdownMenuItem>
+                            )}
+                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
+                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                                Cancel Order
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -1257,7 +1371,7 @@ function SalesPage() {
                             className="h-9 w-9 p-0 hover:bg-blue-50"
                             title="View Invoice"
                           >
-                            <Eye className="w-4 h-4 text-blue-600" />
+                            <FileText className="w-4 h-4 text-blue-600" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -1272,16 +1386,19 @@ function SalesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (order.order_status === 'pending') handleQuickStatusChange(order, 'confirmed');
-                              else if (order.order_status === 'confirmed') handleQuickStatusChange(order, 'processing');
-                              else if (order.order_status === 'processing' || order.order_status === 'packed') handleQuickStatusChange(order, 'shipped');
-                              else if (order.order_status === 'shipped' || order.order_status === 'out_for_delivery') handleQuickStatusChange(order, 'delivered');
+                              const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `invoice-${order.order_number}.pdf`;
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              toast.success('Invoice downloaded!');
                             }}
                             className="h-9 w-9 p-0 hover:bg-green-50"
-                            title="Update Status"
-                            disabled={order.order_status === 'delivered' || order.order_status === 'cancelled'}
+                            title="Download Invoice"
                           >
-                            <Truck className="w-4 h-4 text-green-600" />
+                            <Download className="w-4 h-4 text-green-600" />
                           </Button>
                           {order.order_status === 'delivered' && !order.adprofit_synced && (
                             <Button
