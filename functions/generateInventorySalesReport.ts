@@ -65,9 +65,9 @@ Deno.serve(async (req) => {
     const inventoryIds = new Set(filteredInventory.map(i => i.id));
 
     // Filter orders by date range (BDT timezone) and status
-    // Count confirmed, processing, packed, shipped, out_for_delivery, delivered as valid sales
+    // ONLY count confirmed orders (exclude pending, cancelled, returned)
     const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-    let filteredOrders = orders.filter(o => validStatuses.includes(o.order_status));
+    let filteredOrders = orders.filter(o => o.order_status && validStatuses.includes(o.order_status));
     if (dateFrom) {
       filteredOrders = filteredOrders.filter(o => {
         const orderDate = toBDTDate(o.order_date || o.created_date);
@@ -169,89 +169,168 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
     orders: acc.orders + d.orders
   }), { unitsSold: 0, totalSales: 0, profit: 0, orders: 0 });
 
-  // Header
-  doc.setFillColor(16, 185, 129);
-  doc.rect(0, 0, pageWidth, 35, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('SALES SUMMARY REPORT', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  const deptText = department === 'all' ? 'All Departments' : getDepartmentName(department);
-  const dateText = dateFrom && dateTo ? `${dateFrom} - ${dateTo}` : 'All Time';
-  doc.text(`${deptText} | ${dateText}`, 14, 28);
+  const totalMargin = totals.totalSales > 0 ? ((totals.profit / totals.totalSales) * 100) : 0;
+
+  // PROFESSIONAL HEADER - Clean & Modern Design
+  doc.setFillColor(30, 41, 59); // Dark slate background
+  doc.rect(0, 0, pageWidth, 45, 'F');
+  
+  // Company branding
   doc.setFontSize(10);
-  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 18, { align: 'right' });
-  doc.text(`By: ${user.full_name || user.email}`, pageWidth - 14, 28, { align: 'right' });
-
-  doc.setTextColor(0, 0, 0);
-
-  // Summary Box
-  doc.setFillColor(240, 253, 244);
-  doc.rect(10, 42, pageWidth - 20, 25, 'F');
-  doc.setDrawColor(187, 247, 208);
-  doc.rect(10, 42, pageWidth - 20, 25, 'S');
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(20, 83, 45);
-  doc.text('SALES SUMMARY', 14, 52);
-
-  const summaryY = 60;
-  const colW = (pageWidth - 28) / 4;
-  const summaryItems = [
-    { label: 'Total Units Sold', value: totals.unitsSold.toLocaleString() },
-    { label: 'Total Sales', value: formatCurrency(totals.totalSales) },
-    { label: 'Total Profit', value: formatCurrency(totals.profit) },
-    { label: 'Total Orders', value: totals.orders.toLocaleString() }
-  ];
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(124, 58, 237); // Purple accent
+  doc.text('PRODHAN.COM E-COMMERCE', 14, 12);
+  
+  // Report title
+  doc.setFontSize(28);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Sales Summary Report', 14, 26);
+  
+  // Report details
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(203, 213, 225); // Light slate
+  const deptText = department === 'all' ? 'All Departments' : 'Prodhan.com E-commerce';
+  const dateText = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : 'All Time';
+  doc.text(`${deptText} • ${dateText}`, 14, 36);
+  
+  // Meta info (right aligned)
+  doc.setTextColor(148, 163, 184);
   doc.setFontSize(9);
-  summaryItems.forEach((item, i) => {
-    doc.setTextColor(51, 65, 85);
-    doc.setFont(undefined, 'bold');
-    doc.text(item.label, 14 + colW * i, summaryY);
-    doc.setTextColor(16, 185, 129);
-    doc.setFont(undefined, 'normal');
-    doc.text(item.value, 14 + colW * i, summaryY + 5);
+  doc.text(`Generated: ${toBDTDateTime(new Date())}`, pageWidth - 14, 20, { align: 'right' });
+  doc.text(`By: ${user.full_name || user.email}`, pageWidth - 14, 28, { align: 'right' });
+  doc.text(`Status: Confirmed Orders Only`, pageWidth - 14, 36, { align: 'right' });
+
+  // PROFESSIONAL SUMMARY CARDS - High Contrast
+  const cardStartY = 55;
+  const cardHeight = 32;
+  const cardSpacing = 4;
+  const cardWidth = (pageWidth - 24 - (3 * cardSpacing)) / 4;
+  
+  const summaryCards = [
+    { 
+      label: 'TOTAL UNITS SOLD', 
+      value: totals.unitsSold.toLocaleString(), 
+      color: [59, 130, 246], // Blue
+      lightColor: [219, 234, 254]
+    },
+    { 
+      label: 'TOTAL REVENUE', 
+      value: formatCurrency(totals.totalSales), 
+      color: [16, 185, 129], // Green
+      lightColor: [209, 250, 229]
+    },
+    { 
+      label: 'TOTAL PROFIT', 
+      value: formatCurrency(totals.profit), 
+      color: [168, 85, 247], // Purple
+      lightColor: [237, 233, 254]
+    },
+    { 
+      label: 'CONFIRMED ORDERS', 
+      value: totals.orders.toLocaleString(), 
+      color: [249, 115, 22], // Orange
+      lightColor: [255, 237, 213]
+    }
+  ];
+
+  summaryCards.forEach((card, i) => {
+    const x = 12 + (cardWidth + cardSpacing) * i;
+    
+    // Card background with shadow effect
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x, cardStartY, cardWidth, cardHeight, 3, 3, 'F');
+    
+    // Colored accent bar on top
+    doc.setFillColor(card.color[0], card.color[1], card.color[2]);
+    doc.roundedRect(x, cardStartY, cardWidth, 4, 2, 2, 'F');
+    
+    // Card label
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139); // Slate
+    doc.text(card.label, x + cardWidth / 2, cardStartY + 14, { align: 'center' });
+    
+    // Card value (larger, bold, colored)
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(card.color[0], card.color[1], card.color[2]);
+    doc.text(card.value, x + cardWidth / 2, cardStartY + 26, { align: 'center' });
   });
 
-  doc.setTextColor(0, 0, 0);
+  // Overall margin indicator
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Overall Profit Margin: ${totalMargin.toFixed(1)}%`, pageWidth / 2, cardStartY + cardHeight + 10, { align: 'center' });
 
-  // Table
+  // PROFESSIONAL TABLE - Enhanced readability
   if (salesData.length > 0) {
-    const tableColumns = ['Product Name', 'Category', 'Dept', 'Units', 'Sales', 'Profit', 'Margin %', 'Orders'];
+    const tableColumns = ['Product Name', 'Category', 'Units Sold', 'Revenue', 'Profit', 'Margin %', 'Orders'];
     const tableRows = salesData.map(d => [
-      d.name.substring(0, 35) + (d.name.length > 35 ? '...' : ''),
+      d.name.substring(0, 45) + (d.name.length > 45 ? '...' : ''),
       d.category,
-      d.department === 'boibari' ? 'Boibari' : 'Prodhan',
-      d.unitsSold,
+      d.unitsSold.toLocaleString(),
       formatCurrency(d.totalSales),
       formatCurrency(d.profit),
       d.profitMargin.toFixed(1) + '%',
-      d.orders
+      d.orders.toString()
     ]);
 
     doc.autoTable({
       head: [tableColumns],
       body: tableRows,
-      startY: 72,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', halign: 'center' },
-      alternateRowStyles: { fillColor: [240, 253, 244] },
+      startY: cardStartY + cardHeight + 18,
+      theme: 'striped',
+      styles: { 
+        fontSize: 9, 
+        cellPadding: 4,
+        lineColor: [226, 232, 240],
+        lineWidth: 0.5,
+        font: 'helvetica',
+        textColor: [30, 41, 59]
+      },
+      headStyles: { 
+        fillColor: [30, 41, 59], // Dark slate
+        textColor: [255, 255, 255], 
+        fontStyle: 'bold', 
+        halign: 'left',
+        fontSize: 10,
+        cellPadding: 5
+      },
+      alternateRowStyles: { 
+        fillColor: [248, 250, 252] // Very light slate
+      },
       columnStyles: {
-        0: { cellWidth: 60 },
-        3: { halign: 'center' },
-        4: { halign: 'right' },
-        5: { halign: 'right' },
-        6: { halign: 'center' },
-        7: { halign: 'center' }
-      }
+        0: { cellWidth: 80, fontStyle: 'bold' }, // Product name - bold
+        1: { halign: 'left', cellWidth: 35 },
+        2: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
+        3: { halign: 'right', fontStyle: 'bold', cellWidth: 30 },
+        4: { halign: 'right', fontStyle: 'bold', cellWidth: 30 },
+        5: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
+        6: { halign: 'center', cellWidth: 20 }
+      },
+      margin: { left: 12, right: 12 }
     });
   } else {
-    doc.setFontSize(14);
-    doc.setTextColor(107, 114, 128);
-    doc.text('No sales data found for the selected period.', pageWidth / 2, 90, { align: 'center' });
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text('No confirmed sales found for the selected period.', pageWidth / 2, cardStartY + cardHeight + 30, { align: 'center' });
+    doc.setFontSize(11);
+    doc.text('Only confirmed orders are included in this report.', pageWidth / 2, cardStartY + cardHeight + 42, { align: 'center' });
   }
+
+  // Footer
+  const footerY = pageHeight - 15;
+  doc.setDrawColor(226, 232, 240);
+  doc.line(12, footerY - 5, pageWidth - 12, footerY - 5);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text('Prodhan.com E-commerce • Bee ERP System', 14, footerY);
+  doc.text(`Page 1 of ${doc.internal.pages.length - 1}`, pageWidth - 14, footerY, { align: 'right' });
 
   return doc;
 }
