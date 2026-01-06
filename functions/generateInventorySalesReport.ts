@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
         doc = generateDamagedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
       } else if (reportType === 'returned_products') {
         doc = generateReturnedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'sales_manager') {
+        doc = generateSalesManagerReport(filteredOrders, filteredInventory, inventoryMap, inventoryIds, movements, department, user);
       } else {
         return Response.json({ error: 'Invalid report type' }, { status: 400 });
       }
