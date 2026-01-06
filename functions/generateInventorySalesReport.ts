@@ -226,26 +226,20 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
 
   const salesData = inventory.map(item => {
     const sales = salesByProduct[item.id] || { qty: 0, totalSales: 0, orders: 0, profit: 0 };
-    const profitMargin = sales.totalSales > 0 ? (sales.profit / sales.totalSales) * 100 : 0;
     return {
       name: getDisplayName(item),
       category: item.category || 'N/A',
       unitsSold: sales.qty,
       totalSales: sales.totalSales,
-      orders: sales.orders,
-      profit: sales.profit,
-      profitMargin: profitMargin
+      orders: sales.orders
     };
   }).filter(d => d.unitsSold > 0).sort((a, b) => b.totalSales - a.totalSales);
 
   const totals = salesData.reduce((acc, d) => ({
     unitsSold: acc.unitsSold + d.unitsSold,
     totalSales: acc.totalSales + d.totalSales,
-    profit: acc.profit + d.profit,
     orders: acc.orders + d.orders
-  }), { unitsSold: 0, totalSales: 0, profit: 0, orders: 0 });
-
-  const totalMargin = totals.totalSales > 0 ? ((totals.profit / totals.totalSales) * 100) : 0;
+  }), { unitsSold: 0, totalSales: 0, orders: 0 });
 
   // Header
   const dateText = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : 'All Time';
@@ -269,14 +263,12 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
 
   // Professional Table
   if (salesData.length > 0) {
-    const tableColumns = ['Product Name', 'Category', 'Units Sold', 'Revenue (৳)', 'Profit (৳)', 'Margin %', 'Orders'];
+    const tableColumns = ['Product Name', 'Category', 'Units Sold', 'Revenue (৳)', 'Orders'];
     const tableRows = salesData.map(d => [
-      d.name.substring(0, 50),
+      d.name.substring(0, 60),
       d.category,
       d.unitsSold.toLocaleString(),
       (d.totalSales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      (d.profit || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      d.profitMargin.toFixed(1) + '%',
       d.orders.toString()
     ]);
 
@@ -306,13 +298,11 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
         fillColor: [248, 250, 252]
       },
       columnStyles: {
-        0: { cellWidth: 95, fontStyle: 'normal' },
-        1: { halign: 'left', cellWidth: 35 },
-        2: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
-        3: { halign: 'right', fontStyle: 'bold', cellWidth: 30 },
-        4: { halign: 'right', fontStyle: 'bold', cellWidth: 30 },
-        5: { halign: 'center', fontStyle: 'bold', cellWidth: 22 },
-        6: { halign: 'center', cellWidth: 20 }
+        0: { cellWidth: 130, fontStyle: 'normal' },
+        1: { halign: 'left', cellWidth: 50 },
+        2: { halign: 'center', fontStyle: 'bold', cellWidth: 30 },
+        3: { halign: 'right', fontStyle: 'bold', cellWidth: 40 },
+        4: { halign: 'center', cellWidth: 25 }
       },
       margin: { left: 16, right: 16 },
       didDrawPage: (data) => {
