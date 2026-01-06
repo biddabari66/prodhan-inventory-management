@@ -691,35 +691,19 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
     
     const baseModules = [
-      {
-        id: 'pim',
-        label: 'PIM',
-        url: createPageUrl('InventoryOverview'),
-        icon: Warehouse,
-        isExpandable: false,
-        colorClass: 'text-orange-500'
-      },
-      {
-        id: 'inventory',
-        label: 'Inventory',
-        icon: Package,
-        isExpandable: true,
-        subItems: [
-          { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
-          { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-blue-500', permission: 'customer_management' },
-          { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
-          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory_movements' },
-          { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory_returns' },
-          { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
-          { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory_suppliers' },
-          { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory_categories' },
-          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'product_analytics' },
-          { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
-          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' },
-          { label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, colorClass: 'text-green-600', permission: 'financial_analytics' }
-        ],
-        colorClass: 'text-indigo-500'
-      },
+      { id: 'pim', label: 'PIM', url: createPageUrl('InventoryOverview'), icon: Warehouse, isExpandable: false, colorClass: 'text-orange-500', permission: 'inventory_overview' },
+      { id: 'sales', label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, isExpandable: false, colorClass: 'text-green-500', permission: 'sales' },
+      { id: 'customers', label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, isExpandable: false, colorClass: 'text-blue-500', permission: 'customer_management' },
+      { id: 'purchase_orders', label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, isExpandable: false, colorClass: 'text-purple-500', permission: 'purchase_orders' },
+      { id: 'movements', label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, isExpandable: false, colorClass: 'text-blue-500', permission: 'inventory_movements' },
+      { id: 'returns', label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, isExpandable: false, colorClass: 'text-amber-500', permission: 'inventory_returns' },
+      { id: 'reconciliation', label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, isExpandable: false, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
+      { id: 'suppliers', label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, isExpandable: false, colorClass: 'text-indigo-500', permission: 'inventory_suppliers' },
+      { id: 'categories', label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, isExpandable: false, colorClass: 'text-cyan-500', permission: 'inventory_categories' },
+      { id: 'analytics', label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, isExpandable: false, colorClass: 'text-pink-500', permission: 'product_analytics' },
+      { id: 'reports', label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, isExpandable: false, colorClass: 'text-slate-600', permission: 'inventory_reports' },
+      { id: 'ai_insights', label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, isExpandable: false, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' },
+      { id: 'financial_reports', label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, isExpandable: false, colorClass: 'text-green-600', permission: 'financial_analytics' },
       {
         id: 'settings',
         label: t(isMobile ? 'System Settings' : 'System Settings'),
