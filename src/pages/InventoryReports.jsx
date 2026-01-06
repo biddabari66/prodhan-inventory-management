@@ -52,27 +52,32 @@ function InventoryReportsPage() {
   const handleGenerateReport = async (reportType) => {
     setReportGenerating(reportType);
     try {
-      // Fetch real-time data
-      toast.info('Fetching latest data...');
-      const [orders, inventory, movements] = await Promise.all([
-        base44.entities.Order.list('-order_date'),
-        base44.entities.Inventory.list(),
-        base44.entities.InventoryMovement.list('-movement_date', 10000)
-      ]);
-
-      const requestBody = { 
-        reportType,
-        department: 'prodhan_com_e_commerce',
-        dateFrom: startDate,
-        dateTo: endDate,
-        category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        orders,
-        inventory,
-        movements
-      };
-
       toast.info('Generating report...');
-      const response = await base44.functions.invoke('generateInventorySalesReport', requestBody);
+      
+      let response;
+      if (reportType === 'sales_manager') {
+        response = await base44.functions.invoke('generateSalesManagerReport', {});
+      } else {
+        // Fetch real-time data for other reports
+        const [orders, inventory, movements] = await Promise.all([
+          base44.entities.Order.list('-order_date'),
+          base44.entities.Inventory.list(),
+          base44.entities.InventoryMovement.list('-movement_date', 10000)
+        ]);
+
+        const requestBody = { 
+          reportType,
+          department: 'prodhan_com_e_commerce',
+          dateFrom: startDate,
+          dateTo: endDate,
+          category: selectedCategory !== 'all' ? selectedCategory : undefined,
+          orders,
+          inventory,
+          movements
+        };
+
+        response = await base44.functions.invoke('generateInventorySalesReport', requestBody);
+      }
 
       if (response.data?.pdfBase64) {
         // Decode base64 to blob
