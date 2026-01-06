@@ -130,23 +130,7 @@ function ProductAnalyticsDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-200">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <BarChart3 className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">পণ্য বিশ্লেষণ</h1>
-              <p className="text-slate-500 text-sm">পণ্যের কর্মক্ষমতা ও মুভমেন্ট বিশ্লেষণ করুন</p>
-            </div>
-          </div>
-          <Button onClick={handleExport} disabled={isExporting || safeAnalyticsData.length === 0} className="bg-violet-600 hover:bg-violet-700">
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-            Export PDF
-          </Button>
-        </div>
+      <div className="w-full p-6 space-y-6">
 
         {/* Filters Row */}
         <Card className="bg-white border border-slate-200">
