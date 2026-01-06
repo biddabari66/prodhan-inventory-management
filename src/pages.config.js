@@ -23,6 +23,7 @@ import ExportCenter from './pages/ExportCenter';
 import FacebookLeadsWebhook from './pages/FacebookLeadsWebhook';
 import FeludaAnalytics from './pages/FeludaAnalytics';
 import FinanceReports from './pages/FinanceReports';
+import FinancialReports from './pages/FinancialReports';
 import FollowUp from './pages/FollowUp';
 import Home from './pages/Home';
 import IncentiveManagement from './pages/IncentiveManagement';
@@ -71,7 +72,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import FinancialReports from './pages/FinancialReports';
 import __Layout from './Layout.jsx';
 
 
@@ -101,6 +101,7 @@ export const PAGES = {
     "FacebookLeadsWebhook": FacebookLeadsWebhook,
     "FeludaAnalytics": FeludaAnalytics,
     "FinanceReports": FinanceReports,
+    "FinancialReports": FinancialReports,
     "FollowUp": FollowUp,
     "Home": Home,
     "IncentiveManagement": IncentiveManagement,
@@ -149,7 +150,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "FinancialReports": FinancialReports,
 }
 
 export const pagesConfig = {

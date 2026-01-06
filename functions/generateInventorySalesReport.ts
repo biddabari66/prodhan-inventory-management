@@ -163,7 +163,7 @@ function addModernFooter(doc, pageWidth, pageHeight) {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Prodhan.com E-commerce • Bee ERP System', 16, footerY);
+  doc.text('Prodhan.com E-commerce • Prodhan Inventory System', 16, footerY);
   doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth - 16, footerY, { align: 'right' });
 }
 

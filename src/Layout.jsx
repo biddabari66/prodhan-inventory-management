@@ -1438,10 +1438,10 @@ export default function Layout({ children, currentPageName }) {
                 {isSidebarOpen && (
                   <div className="min-w-0">
                     <span className="text-[17px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      Bee ERP
+                      Prodhan Inventory
                     </span>
                     <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Enterprise
+                      System
                     </span>
                   </div>
                 )}
