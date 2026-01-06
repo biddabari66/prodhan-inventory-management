@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { 
   FileText, TrendingDown, RotateCcw, RefreshCw, 
-  BookOpen, ShoppingCart, ShoppingBag, PackageX, TrendingUp, BarChart3
+  BookOpen, ShoppingCart, ShoppingBag, PackageX, TrendingUp, BarChart3, Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
@@ -133,17 +133,7 @@ function InventoryReportsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-200">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-            <FileText className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Inventory Reports</h1>
-            <p className="text-slate-500 text-sm">Generate PDF reports with real-time data (BDT timezone)</p>
-          </div>
-        </div>
+      <div className="w-full p-6 space-y-6">
 
         {/* Filters */}
         <Card className="bg-white border border-slate-200">
@@ -230,7 +220,7 @@ function InventoryReportsPage() {
             <CardTitle className="text-base font-semibold text-slate-800">Sales & Loss Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <ReportButton 
                 type="sales_summary" 
                 icon={ShoppingBag} 
@@ -238,6 +228,14 @@ function InventoryReportsPage() {
                 color="text-green-600"
                 bgColor="bg-green-50"
                 hoverBorder="green-400"
+              />
+              <ReportButton 
+                type="sales_manager" 
+                icon={BarChart3} 
+                title="Sales Manager" 
+                color="text-violet-600"
+                bgColor="bg-violet-50"
+                hoverBorder="violet-400"
               />
               <ReportButton 
                 type="damaged_products" 
