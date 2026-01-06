@@ -1424,17 +1424,7 @@ function SalesPage() {
                               <Send className="w-4 h-4 text-indigo-600" />
                             </Button>
                           )}
-                          {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleQuickStatusChange(order, 'cancelled')}
-                              className="h-9 w-9 p-0 hover:bg-red-50"
-                              title="Cancel Order"
-                            >
-                              <XCircle className="w-4 h-4 text-red-600" />
-                            </Button>
-                          )}
+
                         </div>
                       </TableCell>
                     </TableRow>
