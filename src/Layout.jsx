@@ -251,56 +251,17 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     );
   }
 
-  // Expanded sidebar - full view
-  if (!module.isExpandable) {
-    return (
-      <Link
-        to={module.url}
-        className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
-        } ${isActive(module.url) ? 'active' : ''}`}
-      >
-        <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-      </Link>
-    );
-  }
-
+  // Simple navigation item - no expansion
   return (
-    <div>
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
-        } ${isModuleActive() ? 'active' : ''}`}
-      >
-        <div className="flex items-center gap-3">
-          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-        </div>
-        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-      </button>
-
-      {isExpanded && module.subItems && (
-        <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
-          {module.subItems.map((subItem, index) => (
-            <Link
-              key={index}
-              to={subItem.url}
-              className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'
-              } ${isActive(subItem.url) 
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' 
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-              }`}
-            >
-              <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
-              <span>{subItem.label}</span>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+    <Link
+      to={module.url}
+      className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'
+      } ${isActive(module.url) ? 'active' : ''}`}
+    >
+      <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+      <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+    </Link>
   );
 };
 
@@ -704,37 +665,14 @@ export default function Layout({ children, currentPageName }) {
       { id: 'reports', label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, isExpandable: false, colorClass: 'text-slate-600', permission: 'inventory_reports' },
       { id: 'ai_insights', label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, isExpandable: false, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' },
       { id: 'financial_reports', label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, isExpandable: false, colorClass: 'text-green-600', permission: 'financial_analytics' },
-      {
-        id: 'settings',
-        label: t(isMobile ? 'System Settings' : 'System Settings'),
-        icon: Settings,
-        isExpandable: true,
-        colorClass: 'text-gray-500',
-        subItems: [
-          { label: t(isMobile ? 'User Access Manager' : 'User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t(isMobile ? 'System Alerts' : 'System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
-          { label: t(isMobile ? 'Audit Trail' : 'Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }
-        ]
-      }
+      { id: 'user_access', label: t('User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' },
+      { id: 'integrations', label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' },
+      { id: 'alerts', label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' },
+      { id: 'audit', label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, isExpandable: false, colorClass: 'text-gray-500', permission: 'settings' }
     ];
 
     return baseModules.filter((module) => {
-      if (!module.isExpandable) {
-        return hasPermission(module.id);
-      }
-
-      if (module.isExpandable && module.subItems) {
-        const filteredSubItems = module.subItems.filter((subItem) => {
-          const permissionKey = subItem.permission || getPermissionKey(subItem.url.split('/').pop().split('?')[0]);
-          return hasPermission(permissionKey);
-        });
-
-        module.subItems = filteredSubItems;
-        return filteredSubItems.length > 0;
-      }
-
-      return false;
+      return hasPermission(module.permission || module.id);
     });
   }, [currentUser, userPermissions, currentLanguage, t, createPageUrl, hasPermission, getPermissionKey]);
 
