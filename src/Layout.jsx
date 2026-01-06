@@ -691,59 +691,16 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
 
     const baseModules = [
-    {
-      id: 'inventory',
-      label: t('PIM'),
-      icon: Warehouse,
-      isExpandable: true,
-      subItems: [
-      { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-orange-500', permission: 'inventory_overview' },
-      { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-500', permission: 'sales' },
-      { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-blue-500', permission: 'customer_management' },
-      { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-purple-500', permission: 'purchase_orders' },
-      { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory_movements' },
-      { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-500', permission: 'inventory_returns' },
-      { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-500', permission: 'inventory_reconciliation' },
-      { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-indigo-500', permission: 'inventory_suppliers' },
-      { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-500', permission: 'inventory_categories' },
-      { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-pink-500', permission: 'product_analytics' },
-      { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
-      { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-violet-500', permission: 'inventory_ai_insights' },
-      { label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, colorClass: 'text-green-600', permission: 'financial_analytics' }],
-
-      colorClass: 'text-orange-500'
-    },
-    {
-      id: 'settings',
-      label: t(isMobile ? 'System Settings' : 'System Settings'),
-      icon: Settings,
-      isExpandable: true,
-      colorClass: 'text-gray-500',
-      subItems: [
-      { label: t(isMobile ? 'User Access Manager' : 'User Access Manager'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
+    { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-gray-500', permission: 'settings' },
       { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-gray-500', permission: 'settings' },
-      { label: t(isMobile ? 'System Alerts' : 'System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
-      { label: t(isMobile ? 'Audit Trail' : 'Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }]
-
-    }];
+      { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-gray-500', permission: 'settings' },
+      { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-gray-500', permission: 'settings' }
+    ];
 
 
     return baseModules.filter((module) => {
-      if (!module.isExpandable) {
-        return hasPermission(module.id);
-      }
-
-      if (module.isExpandable && module.subItems) {
-        const filteredSubItems = module.subItems.filter((subItem) => {
-          const permissionKey = subItem.permission || getPermissionKey(subItem.url.split('/').pop().split('?')[0]);
-          return hasPermission(permissionKey);
-        });
-
-        module.subItems = filteredSubItems;
-        return filteredSubItems.length > 0;
-      }
-
-      return false;
+      const permissionKey = module.permission || getPermissionKey(module.url?.split('/').pop()?.split('?')[0] || module.label);
+      return hasPermission(permissionKey);
     });
   }, [currentUser, userPermissions, currentLanguage, t, createPageUrl, hasPermission, getPermissionKey]);
 
@@ -851,15 +808,25 @@ export default function Layout({ children, currentPageName }) {
 
   }
 
-  // ENHANCED NavItem with prefetching on hover
-  const EnhancedNavItem = ({ module, isMobile = false, isCollapsed = false }) => {
+  // Simple nav link component for flat menu
+  const SimpleNavLink = ({ module }) => {
+    const location = useLocation();
+    const isActive = location.pathname === module.url;
     const hoverProps = module.url ? prefetchForRoute(module.url) : {};
 
     return (
       <div {...hoverProps}>
-        <NavItem module={module} isMobile={isMobile} isCollapsed={isCollapsed} />
-      </div>);
-
+        <Link
+          to={module.url}
+          className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+            isActive ? 'active bg-indigo-50 dark:bg-indigo-900/30' : ''
+          }`}
+        >
+          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+          <span className={`font-semibold text-[15px] ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+        </Link>
+      </div>
+    );
   };
 
   return (
@@ -1424,7 +1391,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
           <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
-            ${isSidebarOpen ? 'w-[240px] translate-x-0' : 'w-[72px] -translate-x-full lg:translate-x-0'}`}>
+            ${isSidebarOpen ? 'w-[260px] translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[260px]'}`}>
             
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
@@ -1434,11 +1401,11 @@ export default function Layout({ children, currentPageName }) {
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">
-                    <span className="text-[15px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      Prodhan Inventory
+                    <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
+                      PIM
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Management
+                    <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400 tracking-wide">
+                      Prodhan Inventory
                     </span>
                   </div>
                 }
@@ -1466,9 +1433,9 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Navigation Content */}
             <div className="flex-1 overflow-y-auto py-4 px-3">
-              <nav className={`space-y-1 ${!isSidebarOpen ? 'flex flex-col items-center' : ''}`}>
+              <nav className="space-y-1">
                 {getNavigationModules().map((mod) =>
-                <EnhancedNavItem key={mod.id} module={mod} isMobile={window.innerWidth < 1024} isCollapsed={!isSidebarOpen} />
+                  <SimpleNavLink key={mod.url} module={mod} />
                 )}
               </nav>
             </div>
@@ -1544,7 +1511,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Main Content Area */}
           <div className={`flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950
-            ${isSidebarOpen ? 'lg:ml-[240px] ml-0' : 'lg:ml-[72px] ml-0'}
+            ${isSidebarOpen ? 'lg:ml-[260px] ml-0' : 'ml-0 lg:ml-[260px]'}
           `}>
             
             {/* Professional Header */}

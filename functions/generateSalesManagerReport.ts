@@ -46,6 +46,10 @@ Deno.serve(async (req) => {
     
     const confirmedToday = todayOrders.filter(o => validStatuses.includes(o.order_status));
     const pendingToday = todayOrders.filter(o => o.order_status === 'pending');
+    const confirmedStatusToday = todayOrders.filter(o => o.order_status === 'confirmed');
+    const shippedToday = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));
+    const returnsToday = todayOrders.filter(o => o.order_status === 'returned');
+    
     const confirmedAll = orders.filter(o => o.order_status === 'confirmed');
     const shippedAll = orders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));
     const deliveredAll = orders.filter(o => o.order_status === 'delivered');
@@ -102,16 +106,23 @@ Deno.serve(async (req) => {
     doc.text(`By: ${user.full_name || user.email}`, pageWidth - 16, 28, { align: 'right' });
     doc.setTextColor(0, 0, 0);
 
-    // Summary Cards
+    // Summary Cards - 6 cards in 2 rows
     const cardY = 60;
-    const cardWidth = (pageWidth - 40) / 3;
-    const cardHeight = 28;
+    const cardWidth = (pageWidth - 52) / 3;
+    const cardHeight = 26;
     
     [
-      ["TODAY'S ORDERS", confirmedToday.length.toString(), [59, 130, 246]],
+      ["TODAY'S ORDERS", confirmedToday.length.toString(), [16, 185, 129]],
+      ['PRODUCT QTY TODAY', totalProductQty.toString(), [139, 92, 246]],
+      ['RETURNS TODAY', returnsToday.length.toString(), [239, 68, 68]],
       ['PENDING TODAY', pendingToday.length.toString(), [251, 146, 60]],
-      ['PRODUCT QTY', totalProductQty.toString(), [139, 92, 246]]
+      ['CONFIRMED TODAY', confirmedStatusToday.length.toString(), [59, 130, 246]],
+      ['SHIPPED TODAY', shippedToday.length.toString(), [168, 85, 247]]
     ].forEach((card, i) => {
+      const row = Math.floor(i / 3);
+      const col = i % 3;
+      const x = 16 + col * (cardWidth + 10);
+      const y = cardY + row * (cardHeight + 10);
       doc.setFillColor(255, 255, 255);
       doc.setDrawColor(226, 232, 240);
       doc.setLineWidth(0.5);
@@ -129,7 +140,7 @@ Deno.serve(async (req) => {
     });
 
     // Status Overview
-    const statusY = cardY + cardHeight + 20;
+    const statusY = cardY + (cardHeight + 10) * 2 + 16;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);

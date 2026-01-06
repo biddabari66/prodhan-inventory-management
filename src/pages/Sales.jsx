@@ -764,6 +764,24 @@ function SalesPage() {
     updateOrderStatusMutation.mutate({ orderId: order.id, newStatus });
   };
 
+  // Payment status update mutation
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ orderId, newPaymentStatus }) => {
+      return await Order.update(orderId, { payment_status: newPaymentStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      toast.success('Payment status updated!');
+    },
+    onError: (error) => {
+      toast.error('Failed to update payment status: ' + error.message);
+    },
+  });
+
+  const handlePaymentStatusChange = (order, newPaymentStatus) => {
+    updatePaymentStatusMutation.mutate({ orderId: order.id, newPaymentStatus });
+  };
+
   const handleBulkAction = async (action) => {
     if (selectedOrderIds.length === 0) {
       toast.error('Please select orders first');
@@ -1422,7 +1440,28 @@ function SalesPage() {
                         BDT {order.total_amount?.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        {getPaymentBadge(order.payment_status)}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 gap-1">
+                              {getPaymentBadge(order.payment_status)}
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center">
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
+                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                              Mark as Pending
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
+                              <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
+                              Mark as Partial
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                              Mark as Paid
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
