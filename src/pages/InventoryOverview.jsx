@@ -273,7 +273,7 @@ function InventoryOverviewPage() {
   const departmentStats = {
     total: filteredInventory.length,
     low_stock: lowStockItems.length,
-    total_value: filteredInventory.reduce((sum, item) => sum + (item.current_stock * item.purchase_price || 0), 0)
+    total_value: filteredInventory.reduce((sum, item) => sum + ((item.current_stock || 0) * (item.selling_price || 0)), 0)
   };
 
   if (isLoading) {

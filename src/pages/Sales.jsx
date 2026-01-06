@@ -887,10 +887,15 @@ function SalesPage() {
   const stats = useMemo(() => {
     const totalOrders = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-    const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending' || o.order_status === 'confirmed').length;
-    const deliveredOrders = filteredOrders.filter(o => o.order_status === 'delivered').length;
+    const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
+    const confirmedOrders = filteredOrders.filter(o => o.order_status === 'confirmed').length;
+    const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
+    const totalProductQuantity = filteredOrders.reduce((sum, o) => {
+      const orderTotal = (o.order_items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
+      return sum + orderTotal;
+    }, 0);
 
-    return { totalOrders, totalRevenue, pendingOrders, deliveredOrders };
+    return { totalOrders, totalRevenue, pendingOrders, confirmedOrders, shippedOrders, totalProductQuantity };
   }, [filteredOrders]);
 
   const getStatusBadge = (status) => {
@@ -931,101 +936,81 @@ function SalesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-green-500/30">
-            <ShoppingCart className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-bold text-slate-900">
-                Sales Management
-              </h1>
-              {!canViewAllDepartments && (
-                <Badge className="bg-orange-100 text-orange-800 flex items-center gap-1 px-3 py-1.5">
-                  <Shield className="w-4 h-4" />
-                  {userDepartment === 'boibari' ? '📚 Boibari Only' : '🛒 Prodhan.com Only'}
-                </Badge>
-              )}
-            </div>
-            <p className="text-slate-600 mt-1">
-              কাস্টমার অর্ডার ও বিক্রয় ব্যবস্থাপনা করুন
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            onClick={() => {
-              setEditingOrder(null);
-              setIsOrderFormOpen(true);
-            }}
-            className="bg-violet-600 hover:bg-violet-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Sale Order
-          </Button>
-        </div>
+      <div className="w-full px-6 py-6 space-y-6">
+      {/* Compact Header */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-slate-900">Sales Management</h1>
+        <Button
+          onClick={() => {
+            setEditingOrder(null);
+            setIsOrderFormOpen(true);
+          }}
+          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 py-3 font-semibold"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Create Sale Order
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Sales
-            </CardTitle>
-            <ShoppingCart className="w-5 h-5 text-violet-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-violet-600">
-              {stats.totalOrders}
-            </div>
-          </CardContent>
-        </Card>
-
-        {isAdmin && (
-          <Card className="premium-card border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Revenue
-              </CardTitle>
-              <DollarSign className="w-5 h-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">
-                BDT {stats.totalRevenue.toLocaleString()}
+      {/* Stats Cards - Only Requested */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card className="bg-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-emerald-600" />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Orders
-            </CardTitle>
-            <Clock className="w-5 h-5 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
-              {stats.pendingOrders}
             </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
+            <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
           </CardContent>
         </Card>
 
-        <Card className="premium-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Delivered
-            </CardTitle>
-            <CheckCircle className="w-5 h-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
-              {stats.deliveredOrders}
+        <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
             </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pending Orders</p>
+            <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Confirmed Orders</p>
+            <p className="text-3xl font-bold text-blue-600">{stats.confirmedOrders}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <Truck className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Shipped Orders</p>
+            <p className="text-3xl font-bold text-purple-600">{stats.shippedOrders}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                <Package className="w-5 h-5 text-indigo-600" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
+            <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
           </CardContent>
         </Card>
       </div>
@@ -1263,82 +1248,77 @@ function SalesPage() {
                       <TableCell>
                         {getStatusBadge(order.order_status)}
                       </TableCell>
-                      <TableCell className="text-center">
-                       <DropdownMenu>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="ghost" size="sm">
-                             <MoreVertical className="w-4 h-4" />
-                           </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent align="end">
-                           <DropdownMenuItem onClick={() => handleViewInvoice(order)}>
-                             <FileText className="w-4 h-4 mr-2" />
-                             View Invoice
-                           </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => handleEditOrder(order)}>
-                             <Edit className="w-4 h-4 mr-2" />
-                             Edit Order
-                           </DropdownMenuItem>
-
-                           {order.order_status === 'delivered' && !order.adprofit_synced && (
-                             <DropdownMenuItem onClick={async () => {
-                               toast.info('Syncing to Adprofit...');
-                               try {
-                                 const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
-                                 if (response.data?.success) {
-                                   queryClient.invalidateQueries(['orders']);
-                                   toast.success('✅ Synced to Adprofit successfully!');
-                                 } else {
-                                   toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
-                                 }
-                               } catch (error) {
-                                 toast.error('Sync failed: ' + error.message);
-                               }
-                             }}>
-                               <Send className="w-4 h-4 mr-2 text-blue-600" />
-                               Sync to Adprofit
-                             </DropdownMenuItem>
-                           )}
-
-                           {order.order_status === 'delivered' && order.adprofit_synced && (
-                             <DropdownMenuItem disabled>
-                               <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                               Synced to Adprofit ✓
-                             </DropdownMenuItem>
-                           )}
-
-                            {order.order_status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                Confirm Order
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                Mark as Processing
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                <Truck className="w-4 h-4 mr-2 text-cyan-600" />
-                                Mark as Shipped
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Mark as Delivered
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
-                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                                Cancel Order
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewInvoice(order)}
+                            className="h-9 w-9 p-0 hover:bg-blue-50"
+                            title="View Invoice"
+                          >
+                            <Eye className="w-4 h-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditOrder(order)}
+                            className="h-9 w-9 p-0 hover:bg-purple-50"
+                            title="Edit Order"
+                          >
+                            <Edit className="w-4 h-4 text-purple-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (order.order_status === 'pending') handleQuickStatusChange(order, 'confirmed');
+                              else if (order.order_status === 'confirmed') handleQuickStatusChange(order, 'processing');
+                              else if (order.order_status === 'processing' || order.order_status === 'packed') handleQuickStatusChange(order, 'shipped');
+                              else if (order.order_status === 'shipped' || order.order_status === 'out_for_delivery') handleQuickStatusChange(order, 'delivered');
+                            }}
+                            className="h-9 w-9 p-0 hover:bg-green-50"
+                            title="Update Status"
+                            disabled={order.order_status === 'delivered' || order.order_status === 'cancelled'}
+                          >
+                            <Truck className="w-4 h-4 text-green-600" />
+                          </Button>
+                          {order.order_status === 'delivered' && !order.adprofit_synced && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                toast.info('Syncing to Adprofit...');
+                                try {
+                                  const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
+                                  if (response.data?.success) {
+                                    queryClient.invalidateQueries(['orders']);
+                                    toast.success('✅ Synced to Adprofit!');
+                                  } else {
+                                    toast.error('Sync failed');
+                                  }
+                                } catch (error) {
+                                  toast.error('Sync failed: ' + error.message);
+                                }
+                              }}
+                              className="h-9 w-9 p-0 hover:bg-indigo-50"
+                              title="Sync to Adprofit"
+                            >
+                              <Send className="w-4 h-4 text-indigo-600" />
+                            </Button>
+                          )}
+                          {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleQuickStatusChange(order, 'cancelled')}
+                              className="h-9 w-9 p-0 hover:bg-red-50"
+                              title="Cancel Order"
+                            >
+                              <XCircle className="w-4 h-4 text-red-600" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
