@@ -35,6 +35,9 @@ function ProductAnalyticsDashboard() {
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => Inventory.list(),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: analyticsData = { success: true, data: [] }, isLoading: analyticsLoading } = useQuery({

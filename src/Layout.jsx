@@ -686,8 +686,9 @@ export default function Layout({ children, currentPageName }) {
     return mapping[pageName] || pageName.toLowerCase();
   };
 
-  // OPTIMIZED: Memoize expensive functions
+  // PRODUCTION: Optimized navigation with memoization
   const getNavigationModules = useCallback(() => {
+    if (!currentUser) return [];
     const isMobile = window.innerWidth < 1024;
 
     const baseModules = [
@@ -1642,8 +1643,8 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </header>
 
-            {/* Main Content */}
-            <main className="p-6 main-content flex-1 overflow-y-auto lg:p-8">
+            {/* Main Content - OPTIMIZED padding */}
+            <main className="p-4 main-content flex-1 overflow-y-auto lg:p-6">
               <ErrorBoundary>
                 <Suspense fallback={
                 <div className="text-center p-20 text-muted-foreground">

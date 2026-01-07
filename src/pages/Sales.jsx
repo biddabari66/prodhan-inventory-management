@@ -952,8 +952,9 @@ function SalesPage() {
     setDepartmentFilter(value);
   };
 
-  // Filter orders
+  // OPTIMIZED: Fast order filtering with early returns
   const filteredOrders = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
     let filtered = [...orders];
 
     if (!canViewAllDepartments) {
@@ -1053,7 +1054,7 @@ function SalesPage() {
       todayReturns,
       todayProductQty
     };
-  }, [filteredOrders]);
+  }, [filteredOrders, inventory]);
 
   const getStatusBadge = (status) => {
     const config = {

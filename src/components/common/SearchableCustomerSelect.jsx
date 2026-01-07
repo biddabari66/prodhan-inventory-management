@@ -18,13 +18,14 @@ export default function SearchableCustomerSelect({
   }, [customers, value]);
 
   const filteredCustomers = useMemo(() => {
-    if (!searchQuery) return customers.slice(0, 50);
+    if (!customers || customers.length === 0) return [];
+    if (!searchQuery) return customers.slice(0, 100);
     const query = searchQuery.toLowerCase();
     return customers.filter(customer => 
       customer.customer_name?.toLowerCase().includes(query) ||
       customer.customer_phone?.includes(query) ||
       customer.customer_email?.toLowerCase().includes(query)
-    ).slice(0, 50);
+    ).slice(0, 100);
   }, [customers, searchQuery]);
 
   // Close dropdown when clicking outside

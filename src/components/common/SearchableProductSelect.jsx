@@ -23,7 +23,8 @@ export default function SearchableProductSelect({
   }, [inventory, value]);
 
   const filteredItems = useMemo(() => {
-    if (!searchQuery) return inventory.slice(0, 50);
+    if (!inventory || inventory.length === 0) return [];
+    if (!searchQuery) return inventory.slice(0, 100);
     const query = searchQuery.toLowerCase();
     return inventory.filter(item => 
       item.item_name?.toLowerCase().includes(query) ||
@@ -31,7 +32,7 @@ export default function SearchableProductSelect({
       item.isbn?.includes(query) ||
       item.barcode?.includes(query) ||
       item.category?.toLowerCase().includes(query)
-    ).slice(0, 50);
+    ).slice(0, 100);
   }, [inventory, searchQuery]);
 
   // Close dropdown when clicking outside

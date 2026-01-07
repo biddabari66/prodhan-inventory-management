@@ -684,6 +684,9 @@ function PurchaseOrdersPage() {
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => Inventory.list(),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Create purchase order mutation
