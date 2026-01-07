@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { withPermission } from '../components/common/PermissionGuard';
+import EnhancedReportButtons from '../components/inventory/EnhancedReportButtons';
 
 // BDT timezone helpers
 const toBDTDate = (date = new Date()) => {
