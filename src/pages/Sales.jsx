@@ -1562,15 +1562,13 @@ function SalesPage() {
                             {order.order_items.map((item, idx) => {
                               const inventoryItem = inventory.find(i => i.id === item.inventory_id);
                               
-                              // Enhanced combo detection - check bundle_items OR product name
-                              const hasBundle = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
-                              const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-                              
+                              // EXPERT COMBO DETECTION - Sum bundle quantities OR parse name
                               let bundleCount = 1;
-                              if (hasBundle) {
-                                bundleCount = inventoryItem.bundle_items.length;
-                              } else if (nameMatch) {
-                                bundleCount = parseInt(nameMatch[1]);
+                              if (inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0) {
+                                bundleCount = inventoryItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
+                              } else {
+                                const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+                                if (nameMatch) bundleCount = parseInt(nameMatch[1]);
                               }
                               
                               const isCombo = bundleCount > 1;

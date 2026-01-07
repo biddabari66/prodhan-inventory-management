@@ -55,15 +55,15 @@ Deno.serve(async (req) => {
     const deliveredAll = orders.filter(o => o.order_status === 'delivered');
     const returnedAll = orders.filter(o => o.order_status === 'returned');
     
-    // Enhanced product quantity calculation with combo detection
+    // EXPERT: Calculate actual product quantity with proper combo detection
     const totalProductQty = confirmedToday.reduce((sum, o) => {
       return sum + (o.order_items || []).reduce((s, item) => {
         const invItem = inventoryMap.get(item.inventory_id);
         
-        // Detect combo from bundle_items OR product name
+        // Sum bundle item quantities OR parse from name
         let bundleCount = 1;
         if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-          bundleCount = invItem.bundle_items.length;
+          bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
         } else {
           const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
           if (nameMatch) bundleCount = parseInt(nameMatch[1]);
@@ -80,10 +80,10 @@ Deno.serve(async (req) => {
           const invItem = inventoryMap.get(item.inventory_id);
           let details = invItem ? getDisplayName(invItem) : item.item_name;
           
-          // Detect combo from bundle_items OR product name
+          // EXPERT: Sum bundle quantities OR parse from name
           let bundleCount = 1;
           if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-            bundleCount = invItem.bundle_items.length;
+            bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
             const comps = invItem.bundle_items.map(bi => {
               const comp = inventoryMap.get(bi.inventory_id);
               return `${bi.quantity}×${comp?.item_name?.substring(0, 10) || 'Unknown'}`;

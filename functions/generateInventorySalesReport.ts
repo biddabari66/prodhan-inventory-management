@@ -248,10 +248,10 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
     // Build detailed info with combo/variant/weight/waste
     let details = '';
     
-    // Detect combo from bundle_items OR product name
+    // EXPERT: Sum bundle quantities OR parse from name
     let bundleCount = 1;
     if (item.is_bundle && item.bundle_items?.length > 0) {
-      bundleCount = item.bundle_items.length;
+      bundleCount = item.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
       const comps = item.bundle_items.map(bi => {
         const comp = inventoryMap.get(bi.inventory_id);
         return `${bi.quantity}×${comp?.item_name?.substring(0, 12) || 'Unknown'}`;
