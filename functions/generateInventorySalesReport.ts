@@ -2,6 +2,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 import 'npm:jspdf-autotable@3.8.2';
 
+// EXPERT COMBO DETECTION UTILITY
+const getComboCount = (inventoryItem, orderItem = null) => {
+  if (!inventoryItem) return 1;
+  if (inventoryItem.is_bundle === true && Array.isArray(inventoryItem.bundle_items) && inventoryItem.bundle_items.length > 0) {
+    return inventoryItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
+  }
+  const itemName = orderItem?.item_name || inventoryItem.item_name || '';
+  const nameMatch = itemName.match(/^(\d+)\s*(?:pcs?|pc|piece)/i);
+  return nameMatch ? parseInt(nameMatch[1]) : 1;
+};
+
 // BDT timezone helper
 const toBDTDate = (date) => {
   const d = date ? new Date(date) : new Date();
@@ -212,15 +223,7 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
       const invItem = inventoryMap.get(item.inventory_id);
       if (!invItem) return;
 
-      // EXPERT: Sum bundle quantities OR parse from name
-      let bundleCount = 1;
-      if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-        bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-      } else {
-        const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-        if (nameMatch) bundleCount = parseInt(nameMatch[1]);
-      }
-
+      const bundleCount = getComboCount(invItem, item);
       const qty = item.quantity || 0;
       const actualQty = qty * bundleCount;
       const sellingPrice = invItem.selling_price || 0;
@@ -248,19 +251,16 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
     // Build detailed info with combo/variant/weight/waste
     let details = '';
     
-    // EXPERT: Sum bundle quantities OR parse from name
-    let bundleCount = 1;
-    if (item.is_bundle && item.bundle_items?.length > 0) {
-      bundleCount = item.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-      const comps = item.bundle_items.map(bi => {
-        const comp = inventoryMap.get(bi.inventory_id);
-        return `${bi.quantity}×${comp?.item_name?.substring(0, 12) || 'Unknown'}`;
-      }).join(' + ');
-      details += ` [Combo: ${comps}]`;
-    } else {
-      const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-      if (nameMatch) {
-        bundleCount = parseInt(nameMatch[1]);
+    // Use centralized combo detection
+    const bundleCount = getComboCount(item);
+    if (bundleCount > 1) {
+      if (item.is_bundle && item.bundle_items?.length > 0) {
+        const comps = item.bundle_items.map(bi => {
+          const comp = inventoryMap.get(bi.inventory_id);
+          return `${bi.quantity}×${comp?.item_name?.substring(0, 12) || 'Unknown'}`;
+        }).join(' + ');
+        details += ` [Combo: ${comps}]`;
+      } else {
         details += ` [${bundleCount}-pc combo]`;
       }
     }
@@ -553,15 +553,7 @@ function generateTopSellingReport(inventory, orders, inventoryMap, inventoryIds,
     (order.order_items || []).forEach(item => {
       if (!inventoryIds.has(item.inventory_id)) return;
       const invItem = inventoryMap.get(item.inventory_id);
-      
-      // EXPERT: Sum bundle quantities OR parse from name
-      let bundleCount = 1;
-      if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-        bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-      } else {
-        const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-        if (nameMatch) bundleCount = parseInt(nameMatch[1]);
-      }
+      const bundleCount = getComboCount(invItem, item);
       
       if (!salesByProduct[item.inventory_id]) {
         salesByProduct[item.inventory_id] = { orderedQty: 0, actualQty: 0 };

@@ -2,6 +2,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 import 'npm:jspdf-autotable@3.8.2';
 
+// EXPERT COMBO DETECTION UTILITY
+const getComboCount = (inventoryItem, orderItem = null) => {
+  if (!inventoryItem) return 1;
+  if (inventoryItem.is_bundle === true && Array.isArray(inventoryItem.bundle_items) && inventoryItem.bundle_items.length > 0) {
+    return inventoryItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
+  }
+  const itemName = orderItem?.item_name || inventoryItem.item_name || '';
+  const nameMatch = itemName.match(/^(\d+)\s*(?:pcs?|pc|piece)/i);
+  return nameMatch ? parseInt(nameMatch[1]) : 1;
+};
+
 const toBDTDate = (date) => {
   const d = date ? new Date(date) : new Date();
   return new Intl.DateTimeFormat('en-CA', {
@@ -59,16 +70,7 @@ Deno.serve(async (req) => {
     const totalProductQty = confirmedToday.reduce((sum, o) => {
       return sum + (o.order_items || []).reduce((s, item) => {
         const invItem = inventoryMap.get(item.inventory_id);
-        
-        // Sum bundle item quantities OR parse from name
-        let bundleCount = 1;
-        if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-          bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-        } else {
-          const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-          if (nameMatch) bundleCount = parseInt(nameMatch[1]);
-        }
-        
+        const bundleCount = getComboCount(invItem, item);
         return s + ((item.quantity || 0) * bundleCount);
       }, 0);
     }, 0);
@@ -80,19 +82,16 @@ Deno.serve(async (req) => {
           const invItem = inventoryMap.get(item.inventory_id);
           let details = invItem ? getDisplayName(invItem) : item.item_name;
           
-          // EXPERT: Sum bundle quantities OR parse from name
-          let bundleCount = 1;
-          if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-            bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-            const comps = invItem.bundle_items.map(bi => {
-              const comp = inventoryMap.get(bi.inventory_id);
-              return `${bi.quantity}×${comp?.item_name?.substring(0, 10) || 'Unknown'}`;
-            }).join(' + ');
-            details += ` [Combo: ${comps}]`;
-          } else {
-            const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-            if (nameMatch) {
-              bundleCount = parseInt(nameMatch[1]);
+          // Use centralized combo detection
+          const bundleCount = getComboCount(invItem, item);
+          if (bundleCount > 1) {
+            if (invItem?.is_bundle && invItem?.bundle_items?.length > 0) {
+              const comps = invItem.bundle_items.map(bi => {
+                const comp = inventoryMap.get(bi.inventory_id);
+                return `${bi.quantity}×${comp?.item_name?.substring(0, 10) || 'Unknown'}`;
+              }).join(' + ');
+              details += ` [Combo: ${comps}]`;
+            } else {
               details += ` [${bundleCount}-pc combo]`;
             }
           }

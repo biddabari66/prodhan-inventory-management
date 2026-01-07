@@ -37,6 +37,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
+import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
 // Enhanced Order Form Component
 const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) => {
@@ -609,19 +610,25 @@ function SalesPage() {
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders'],
     queryFn: () => Order.list('-order_date', 500),
-    staleTime: 1 * 60 * 1000
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: () => Customer.list(),
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => Inventory.list(),
-    staleTime: 2 * 60 * 1000
+    staleTime: 3 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const canViewAllDepartments = useMemo(() => {
@@ -1010,9 +1017,7 @@ function SalesPage() {
     const totalProductQuantity = filteredOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
-        const bundleCount = isCombo ? inventoryItem.bundle_items.length : 1;
-        const actualQty = item.quantity * bundleCount;
+        const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
         return itemSum + actualQty;
       }, 0);
       return sum + orderTotal;
@@ -1027,9 +1032,7 @@ function SalesPage() {
     const todayProductQty = todayOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
-        const bundleCount = isCombo ? inventoryItem.bundle_items.length : 1;
-        const actualQty = item.quantity * bundleCount;
+        const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
         return itemSum + actualQty;
       }, 0);
       return sum + orderTotal;
@@ -1561,18 +1564,9 @@ function SalesPage() {
                           <div className="flex flex-col gap-1">
                             {order.order_items.map((item, idx) => {
                               const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-                              
-                              // EXPERT COMBO DETECTION - Sum bundle quantities OR parse name
-                              let bundleCount = 1;
-                              if (inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0) {
-                                bundleCount = inventoryItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-                              } else {
-                                const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
-                                if (nameMatch) bundleCount = parseInt(nameMatch[1]);
-                              }
-                              
+                              const bundleCount = getComboCount(inventoryItem, item);
                               const isCombo = bundleCount > 1;
-                              const actualQty = item.quantity * bundleCount;
+                              const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
 
                               return (
                                 <div key={idx} className="inline-flex items-center gap-1.5">
