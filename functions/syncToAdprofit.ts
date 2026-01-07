@@ -1,12 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * ADPROFIT SYNC FUNCTION - PRODUCTION READY
- * Automatically syncs CONFIRMED orders to Adprofit for profit analysis
+ * ADPROFIT SYNC FUNCTION
+ * Automatically syncs delivered BEE ERP orders to Adprofit for profit analysis
  * 
- * Triggered when order status changes to "confirmed" or "delivered"
+ * Triggered when order status changes to "delivered"
  * Creates sales records in Adprofit with product_id mapping
- * Properly handles combo products with expanded quantities
  * Uses Asia/Dhaka (BDT) timezone for all dates
  */
 
@@ -58,24 +57,21 @@ Deno.serve(async (req) => {
 
     console.log('✅ Order found:', order.order_number, 'Status:', order.order_status);
 
-    // PRODUCTION: Check if order is confirmed or delivered
-    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-    if (!validStatuses.includes(order.order_status)) {
-      console.warn('⚠️ Order not in valid status for sync:', order.order_status);
+    // Check if order is delivered
+    if (order.order_status !== 'delivered') {
+      console.warn('⚠️ Order not delivered:', order.order_status);
       return Response.json({ 
-        error: 'Order must be confirmed or in fulfillment to sync',
+        error: 'Order must be in delivered status to sync',
         current_status: order.order_status
       }, { status: 400 });
     }
 
-    // Check if already synced (allow re-sync for debugging)
-    if (order.adprofit_synced && order.order_status !== 'confirmed') {
-      console.log('ℹ️ Order already synced, skipping');
+    // Check if already synced
+    if (order.adprofit_synced) {
+      console.log('ℹ️ Order already synced');
       return Response.json({ 
         message: 'Order already synced to Adprofit',
-        synced_date: order.adprofit_sync_date,
-        synced_items: order.order_items?.length || 0,
-        failed_items: 0
+        synced_date: order.adprofit_sync_date
       });
     }
 
@@ -115,24 +111,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // EXPERT: Calculate actual quantity for combo products
-        let actualQty = item.quantity;
-        if (inventoryItem.is_bundle && Array.isArray(inventoryItem.bundle_items) && inventoryItem.bundle_items.length > 0) {
-          const bundleCount = inventoryItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
-          actualQty = item.quantity * bundleCount;
-        } else {
-          const nameMatch = item.item_name?.match(/^(\d+)\s*(?:pcs?|pc|piece)/i);
-          if (nameMatch) {
-            actualQty = item.quantity * parseInt(nameMatch[1]);
-          }
-        }
-
         const adprofitPayload = {
           erp_sale_id: `${order.order_number}-${item.inventory_id}`,
           erp_product_id: inventoryItem.barcode,
-          quantity: actualQty,
+          quantity: item.quantity,
           sale_price: item.unit_price,
-          date: toBDTDate(order.actual_delivery_date || order.order_date),
+          date: toBDTDate(order.actual_delivery_date),
           customer_name: order.customer_name
         };
 
@@ -179,29 +163,35 @@ Deno.serve(async (req) => {
 
     console.log(`📊 Sync complete: ${syncResults.length} success, ${errors.length} failed`);
 
-    // PRODUCTION: Update order sync status
+    // Update order sync status (using BDT timezone)
     const updateData = {
-      adprofit_sync_date: new Date().toISOString(),
-      adprofit_synced: syncResults.length > 0,
-      adprofit_sync_error: errors.length > 0 
-        ? `${errors.length} items failed: ${errors.map(e => e.error).join('; ')}`
-        : null
+      adprofit_sync_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
     };
 
-    await base44.asServiceRole.entities.Order.update(order_id, updateData);
-    console.log('✅ Order sync status updated - Success:', syncResults.length, 'Failed:', errors.length);
+    if (errors.length === 0) {
+      // Full success
+      updateData.adprofit_synced = true;
+      updateData.adprofit_sync_error = null;
+    } else if (syncResults.length > 0) {
+      // Partial success
+      updateData.adprofit_synced = true;
+      updateData.adprofit_sync_error = `Partial sync: ${errors.length} items failed`;
+    } else {
+      // Complete failure
+      updateData.adprofit_synced = false;
+      updateData.adprofit_sync_error = `All items failed to sync`;
+    }
+
+    await base44.entities.Order.update(order_id, updateData);
+    console.log('✅ Order sync status updated');
 
     const response = {
-      success: syncResults.length > 0,
+      success: true,
       order_number: order.order_number,
       synced_items: syncResults.length,
       failed_items: errors.length,
-      total_items: order.order_items?.length || 0,
       sync_results: syncResults,
-      errors: errors.length > 0 ? errors : undefined,
-      message: errors.length === 0 
-        ? `✅ All ${syncResults.length} items synced successfully!`
-        : `⚠️ Partial sync: ${syncResults.length} succeeded, ${errors.length} failed`
+      errors: errors.length > 0 ? errors : undefined
     };
 
     console.log('🎉 Final response:', JSON.stringify(response, null, 2));

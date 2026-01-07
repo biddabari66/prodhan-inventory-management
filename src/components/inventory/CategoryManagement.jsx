@@ -194,13 +194,10 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
   const [activeTab, setActiveTab] = useState('product_category');
   const [departmentFilter, setDepartmentFilter] = useState(isAdmin ? 'all' : userDepartment);
 
-  // OPTIMIZED: Fetch categories with caching
+  // Fetch categories
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['product-categories'],
     queryFn: () => base44.entities.ProductCategory.list('sort_order'),
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
   // Create mutation

@@ -406,13 +406,10 @@ export default function SupplierManagement({ selectedDepartment }) {
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  // OPTIMIZED: Fetch suppliers with caching
+  // Fetch suppliers
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => base44.entities.Supplier.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
   // Create supplier mutation

@@ -813,39 +813,29 @@ function SalesPage() {
     },
   });
 
-  // Status update mutation with AUTO Adprofit sync on CONFIRMED
+  // Status update mutation with Adprofit sync
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       const updatedOrder = await Order.update(orderId, { order_status: newStatus });
       
-      // AUTO-SYNC to Adprofit when order is CONFIRMED
-      if (newStatus === 'confirmed') {
+      // Auto-sync to Adprofit when order is delivered
+      if (newStatus === 'delivered') {
         try {
           const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
           
           if (syncResponse.data?.success) {
             const { synced_items, failed_items } = syncResponse.data;
             if (failed_items > 0) {
-              toast.warning(`✅ Order confirmed & partially synced to Adprofit (${synced_items}/${synced_items + failed_items} items)`);
+              toast.warning(`⚠️ Order delivered & partially synced to Adprofit (${synced_items}/${synced_items + failed_items} items)`);
             } else {
-              toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
+              toast.success(`✅ Order delivered & synced to Adprofit (${synced_items} items)!`);
             }
+          } else {
+            toast.warning('Order delivered but Adprofit sync failed. Check order details.');
           }
         } catch (syncError) {
           console.error('Adprofit sync error:', syncError);
-          toast.warning('⚠️ Order confirmed but Adprofit sync failed');
-        }
-      }
-      
-      // Also sync when delivered (in case it was missed)
-      if (newStatus === 'delivered') {
-        try {
-          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
-          if (syncResponse.data?.success) {
-            toast.success(`✅ Order delivered & synced!`);
-          }
-        } catch (syncError) {
-          console.error('Adprofit sync error:', syncError);
+          toast.warning('Order delivered but Adprofit sync failed');
         }
       }
       
@@ -853,7 +843,7 @@ function SalesPage() {
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      if (!['confirmed', 'delivered'].includes(variables.newStatus)) {
+      if (variables.newStatus !== 'delivered') {
         toast.success('Order status updated!');
       }
     },
@@ -1011,27 +1001,21 @@ function SalesPage() {
     return filtered;
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
-  // PRODUCTION: Calculate stats - ONLY CONFIRMED ORDERS (matching reports)
+  // Calculate stats with today's data
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-    
-    // Filter for confirmed orders only
-    const confirmedOrders = filteredOrders.filter(o => validStatuses.includes(o.order_status));
-    const todayOrders = confirmedOrders.filter(o => {
+    const todayOrders = filteredOrders.filter(o => {
       const orderDate = new Date(o.order_date).toISOString().split('T')[0];
       return orderDate === today;
     });
 
     const totalOrders = filteredOrders.length;
-    const totalRevenue = confirmedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrdersCount = filteredOrders.filter(o => o.order_status === 'confirmed').length;
+    const confirmedOrders = filteredOrders.filter(o => o.order_status === 'confirmed').length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
-    
-    // CRITICAL: Count only confirmed orders for accurate product quantity
-    const totalProductQuantity = confirmedOrders.reduce((sum, o) => {
+    const totalProductQuantity = filteredOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1040,18 +1024,12 @@ function SalesPage() {
       return sum + orderTotal;
     }, 0);
 
-    // Today's stats - ONLY CONFIRMED (matching report logic)
+    // Today's stats with actual product count (combo expanded)
     const todayOrdersCount = todayOrders.length;
-    const todayPending = filteredOrders.filter(o => {
-      const orderDate = new Date(o.order_date).toISOString().split('T')[0];
-      return orderDate === today && o.order_status === 'pending';
-    }).length;
+    const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayConfirmed = todayOrders.filter(o => o.order_status === 'confirmed').length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
-    const todayReturns = filteredOrders.filter(o => {
-      const orderDate = new Date(o.order_date).toISOString().split('T')[0];
-      return orderDate === today && o.order_status === 'returned';
-    }).length;
+    const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     const todayProductQty = todayOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
@@ -1065,7 +1043,7 @@ function SalesPage() {
       totalOrders, 
       totalRevenue, 
       pendingOrders, 
-      confirmedOrders: confirmedOrdersCount, 
+      confirmedOrders, 
       shippedOrders, 
       totalProductQuantity,
       totalReturns,
@@ -1714,7 +1692,7 @@ function SalesPage() {
                           >
                             <Download className="w-4 h-4 text-green-600" />
                           </Button>
-                          {!order.adprofit_synced && ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && (
+                          {order.order_status === 'delivered' && !order.adprofit_synced && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1724,12 +1702,7 @@ function SalesPage() {
                                   const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
                                   if (response.data?.success) {
                                     queryClient.invalidateQueries(['orders']);
-                                    const { synced_items, failed_items } = response.data;
-                                    if (failed_items > 0) {
-                                      toast.warning(`⚠️ Partially synced (${synced_items}/${synced_items + failed_items})`);
-                                    } else {
-                                      toast.success(`✅ Synced ${synced_items} items!`);
-                                    }
+                                    toast.success('✅ Synced to Adprofit!');
                                   } else {
                                     toast.error('Sync failed');
                                   }
