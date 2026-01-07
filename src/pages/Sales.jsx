@@ -598,6 +598,7 @@ function SalesPage() {
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
+  const [productFilter, setProductFilter] = useState('all');
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -971,6 +972,12 @@ function SalesPage() {
       filtered = filtered.filter(order => order.payment_status === paymentFilter);
     }
 
+    if (productFilter !== 'all') {
+      filtered = filtered.filter(order => 
+        order.order_items?.some(item => item.inventory_id === productFilter)
+      );
+    }
+
     if (dateRange.from) {
       const fromDate = new Date(dateRange.from);
       fromDate.setHours(0, 0, 0, 0);
@@ -984,7 +991,7 @@ function SalesPage() {
     }
 
     return filtered;
-  }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment]);
+  }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
   // Calculate stats with today's data
   const stats = useMemo(() => {
@@ -1001,18 +1008,28 @@ function SalesPage() {
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
     const totalProductQuantity = filteredOrders.reduce((sum, o) => {
-      const orderTotal = (o.order_items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
+      const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
+        const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+        const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+        const actualQty = isCombo ? item.quantity * inventoryItem.bundle_items.length : item.quantity;
+        return itemSum + actualQty;
+      }, 0);
       return sum + orderTotal;
     }, 0);
 
-    // Today's stats
+    // Today's stats with actual product count (combo expanded)
     const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayConfirmed = todayOrders.filter(o => o.order_status === 'confirmed').length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     const todayProductQty = todayOrders.reduce((sum, o) => {
-      const orderTotal = (o.order_items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
+      const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
+        const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+        const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+        const actualQty = isCombo ? item.quantity * inventoryItem.bundle_items.length : item.quantity;
+        return itemSum + actualQty;
+      }, 0);
       return sum + orderTotal;
     }, 0);
 
@@ -1189,8 +1206,25 @@ function SalesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
+
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Product Filter</Label>
+                  <Select value={productFilter} onValueChange={setProductFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Products" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="all">All Products</SelectItem>
+                      {inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all').map(item => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.item_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all') && (
                   <>
                     <Separator />
                     <Button
@@ -1200,6 +1234,7 @@ function SalesPage() {
                         setDateRange({ from: undefined, to: undefined });
                         setStatusFilter('all');
                         setPaymentFilter('all');
+                        setProductFilter('all');
                       }}
                       className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
@@ -1525,11 +1560,20 @@ function SalesPage() {
                       <TableCell className="text-center">
                         {order.order_items && order.order_items.length > 0 ? (
                           <div className="text-sm space-y-0.5">
-                            {order.order_items.map((item, idx) => (
-                              <p key={idx} className="font-bold text-violet-600">
-                                ×{item.quantity}
-                              </p>
-                            ))}
+                            {order.order_items.map((item, idx) => {
+                              const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+                              const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+                              const actualQty = isCombo 
+                                ? item.quantity * inventoryItem.bundle_items.length 
+                                : item.quantity;
+
+                              return (
+                                <p key={idx} className="font-bold text-violet-600">
+                                  ×{actualQty}
+                                  {isCombo && <span className="text-xs text-blue-600 ml-1">(combo)</span>}
+                                </p>
+                              );
+                            })}
                           </div>
                         ) : (
                           <span className="text-slate-500">-</span>
