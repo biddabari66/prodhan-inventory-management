@@ -212,7 +212,17 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
       const invItem = inventoryMap.get(item.inventory_id);
       if (!invItem) return;
 
+      // Detect combo from bundle_items OR product name
+      let bundleCount = 1;
+      if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
+        bundleCount = invItem.bundle_items.length;
+      } else {
+        const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+        if (nameMatch) bundleCount = parseInt(nameMatch[1]);
+      }
+
       const qty = item.quantity || 0;
+      const actualQty = qty * bundleCount;
       const sellingPrice = invItem.selling_price || 0;
       const purchasePrice = invItem.purchase_price || 0;
       const grossSales = qty * sellingPrice;
@@ -222,9 +232,10 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
       const profit = totalSales - (qty * purchasePrice);
 
       if (!salesByProduct[item.inventory_id]) {
-        salesByProduct[item.inventory_id] = { qty: 0, totalSales: 0, orders: 0, profit: 0 };
+        salesByProduct[item.inventory_id] = { qty: 0, actualQty: 0, totalSales: 0, orders: 0, profit: 0 };
       }
       salesByProduct[item.inventory_id].qty += qty;
+      salesByProduct[item.inventory_id].actualQty += actualQty;
       salesByProduct[item.inventory_id].totalSales += totalSales;
       salesByProduct[item.inventory_id].profit += profit;
       salesByProduct[item.inventory_id].orders += 1;
@@ -232,16 +243,26 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
   });
 
   const salesData = inventory.map(item => {
-    const sales = salesByProduct[item.id] || { qty: 0, totalSales: 0, orders: 0, profit: 0 };
+    const sales = salesByProduct[item.id] || { qty: 0, actualQty: 0, totalSales: 0, orders: 0, profit: 0 };
     
     // Build detailed info with combo/variant/weight/waste
     let details = '';
+    
+    // Detect combo from bundle_items OR product name
+    let bundleCount = 1;
     if (item.is_bundle && item.bundle_items?.length > 0) {
+      bundleCount = item.bundle_items.length;
       const comps = item.bundle_items.map(bi => {
         const comp = inventoryMap.get(bi.inventory_id);
         return `${bi.quantity}×${comp?.item_name?.substring(0, 12) || 'Unknown'}`;
       }).join(' + ');
       details += ` [Combo: ${comps}]`;
+    } else {
+      const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+      if (nameMatch) {
+        bundleCount = parseInt(nameMatch[1]);
+        details += ` [${bundleCount}-pc combo]`;
+      }
     }
     
     if (item.color_variants?.length > 0) {
@@ -250,19 +271,20 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
     }
     
     if (item.weight_kg > 0) {
-      const totalWeight = sales.qty * item.weight_kg;
-      details += ` [${sales.qty} units = ${totalWeight.toFixed(2)}kg]`;
+      const totalWeight = sales.actualQty * item.weight_kg;
+      details += ` [${sales.actualQty} units = ${totalWeight.toFixed(2)}kg]`;
     }
     
     if (item.waste_quantity > 0) {
-      const totalWaste = sales.qty * item.waste_quantity;
+      const totalWaste = sales.actualQty * item.waste_quantity;
       details += ` [Waste: ${totalWaste.toFixed(2)}kg]`;
     }
     
     return {
       name: getDisplayName(item) + details,
       category: item.category || 'N/A',
-      unitsSold: sales.qty,
+      unitsSold: sales.actualQty,
+      orderedQty: sales.qty,
       totalSales: sales.totalSales,
       orders: sales.orders
     };
@@ -289,10 +311,11 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
 
   // Professional Table
   if (salesData.length > 0) {
-    const tableColumns = ['Product Details (Combo/Variant/Weight)', 'Category', 'Units', 'Revenue (৳)', 'Orders'];
+    const tableColumns = ['Product Details (Combo/Variant/Weight)', 'Category', 'Ordered', 'Actual Units', 'Revenue (৳)', 'Orders'];
     const tableRows = salesData.map(d => [
-      d.name.substring(0, 100),
+      d.name.substring(0, 90),
       d.category,
+      d.orderedQty.toLocaleString(),
       d.unitsSold.toLocaleString(),
       (d.totalSales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       d.orders.toString()
@@ -324,11 +347,12 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
         fillColor: [248, 250, 252]
       },
       columnStyles: {
-        0: { cellWidth: 150, fontStyle: 'normal', fontSize: 7 },
-        1: { halign: 'left', cellWidth: 35 },
-        2: { halign: 'center', fontStyle: 'bold', cellWidth: 20 },
-        3: { halign: 'right', fontStyle: 'bold', cellWidth: 35 },
-        4: { halign: 'center', cellWidth: 20 }
+        0: { cellWidth: 120, fontStyle: 'normal', fontSize: 7 },
+        1: { halign: 'left', cellWidth: 30 },
+        2: { halign: 'center', fontStyle: 'normal', cellWidth: 20, textColor: [100, 116, 139] },
+        3: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
+        4: { halign: 'right', fontStyle: 'bold', cellWidth: 30 },
+        5: { halign: 'center', cellWidth: 20 }
       },
       margin: { left: 16, right: 16 },
       didDrawPage: (data) => {
@@ -528,13 +552,30 @@ function generateTopSellingReport(inventory, orders, inventoryMap, inventoryIds,
   orders.forEach(order => {
     (order.order_items || []).forEach(item => {
       if (!inventoryIds.has(item.inventory_id)) return;
-      if (!salesByProduct[item.inventory_id]) salesByProduct[item.inventory_id] = 0;
-      salesByProduct[item.inventory_id] += item.quantity || 0;
+      const invItem = inventoryMap.get(item.inventory_id);
+      
+      // Detect combo from bundle_items OR product name
+      let bundleCount = 1;
+      if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
+        bundleCount = invItem.bundle_items.length;
+      } else {
+        const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+        if (nameMatch) bundleCount = parseInt(nameMatch[1]);
+      }
+      
+      if (!salesByProduct[item.inventory_id]) {
+        salesByProduct[item.inventory_id] = { orderedQty: 0, actualQty: 0 };
+      }
+      salesByProduct[item.inventory_id].orderedQty += item.quantity || 0;
+      salesByProduct[item.inventory_id].actualQty += (item.quantity || 0) * bundleCount;
     });
   });
 
   const topProducts = inventory
-    .map(i => ({ ...i, soldQty: salesByProduct[i.id] || 0 }))
+    .map(i => {
+      const sales = salesByProduct[i.id] || { orderedQty: 0, actualQty: 0 };
+      return { ...i, orderedQty: sales.orderedQty, soldQty: sales.actualQty };
+    })
     .filter(i => i.soldQty > 0)
     .sort((a, b) => b.soldQty - a.soldQty)
     .slice(0, 25);
@@ -544,11 +585,12 @@ function generateTopSellingReport(inventory, orders, inventoryMap, inventoryIds,
   addModernHeader(doc, 'Top Selling Products', `Best Performers • ${dateText}`, user, pageWidth);
 
   // Table
-  const tableColumns = ['#', 'Product Name', 'Category', 'Units Sold', 'Revenue (৳)'];
+  const tableColumns = ['#', 'Product Name', 'Category', 'Ordered', 'Actual Units', 'Revenue (৳)'];
   const tableRows = topProducts.map((p, idx) => [
     (idx + 1).toString(),
-    getDisplayName(p).substring(0, 40),
+    getDisplayName(p).substring(0, 35),
     p.category || 'N/A',
+    p.orderedQty.toLocaleString(),
     p.soldQty.toLocaleString(),
     (p.soldQty * (p.selling_price || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })
   ]);
@@ -577,11 +619,12 @@ function generateTopSellingReport(inventory, orders, inventoryMap, inventoryIds,
       fillColor: [254, 243, 199]
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 12, fontStyle: 'bold', fillColor: [255, 251, 235], textColor: [180, 83, 9] },
-      1: { halign: 'left', cellWidth: 80 },
-      2: { halign: 'left', cellWidth: 35 },
-      3: { halign: 'center', fontStyle: 'bold', cellWidth: 28 },
-      4: { halign: 'right', fontStyle: 'bold', cellWidth: 35 }
+      0: { halign: 'center', cellWidth: 10, fontStyle: 'bold', fillColor: [255, 251, 235], textColor: [180, 83, 9] },
+      1: { halign: 'left', cellWidth: 65 },
+      2: { halign: 'left', cellWidth: 30 },
+      3: { halign: 'center', fontStyle: 'normal', cellWidth: 22, textColor: [100, 116, 139] },
+      4: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
+      5: { halign: 'right', fontStyle: 'bold', cellWidth: 30 }
     },
     margin: { left: 16, right: 16 },
     didDrawPage: () => addModernFooter(doc, pageWidth, pageHeight)

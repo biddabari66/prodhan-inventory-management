@@ -55,8 +55,22 @@ Deno.serve(async (req) => {
     const deliveredAll = orders.filter(o => o.order_status === 'delivered');
     const returnedAll = orders.filter(o => o.order_status === 'returned');
     
+    // Enhanced product quantity calculation with combo detection
     const totalProductQty = confirmedToday.reduce((sum, o) => {
-      return sum + (o.order_items || []).reduce((s, i) => s + (i.quantity || 0), 0);
+      return sum + (o.order_items || []).reduce((s, item) => {
+        const invItem = inventoryMap.get(item.inventory_id);
+        
+        // Detect combo from bundle_items OR product name
+        let bundleCount = 1;
+        if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
+          bundleCount = invItem.bundle_items.length;
+        } else {
+          const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+          if (nameMatch) bundleCount = parseInt(nameMatch[1]);
+        }
+        
+        return s + ((item.quantity || 0) * bundleCount);
+      }, 0);
     }, 0);
 
     const productBreakdown = {};
@@ -66,13 +80,21 @@ Deno.serve(async (req) => {
           const invItem = inventoryMap.get(item.inventory_id);
           let details = invItem ? getDisplayName(invItem) : item.item_name;
           
-          // Add combo details
-          if (invItem?.is_bundle && invItem?.bundle_items?.length > 0) {
+          // Detect combo from bundle_items OR product name
+          let bundleCount = 1;
+          if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
+            bundleCount = invItem.bundle_items.length;
             const comps = invItem.bundle_items.map(bi => {
               const comp = inventoryMap.get(bi.inventory_id);
               return `${bi.quantity}×${comp?.item_name?.substring(0, 10) || 'Unknown'}`;
             }).join(' + ');
             details += ` [Combo: ${comps}]`;
+          } else {
+            const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+            if (nameMatch) {
+              bundleCount = parseInt(nameMatch[1]);
+              details += ` [${bundleCount}-pc combo]`;
+            }
           }
           
           // Add color variants
@@ -93,11 +115,14 @@ Deno.serve(async (req) => {
           productBreakdown[item.inventory_id] = {
             name: details,
             qty: 0,
+            actualQty: 0,
             orders: 0,
-            weight: invItem?.weight_kg || 0
+            weight: invItem?.weight_kg || 0,
+            bundleCount
           };
         }
         productBreakdown[item.inventory_id].qty += item.quantity || 0;
+        productBreakdown[item.inventory_id].actualQty += (item.quantity || 0) * productBreakdown[item.inventory_id].bundleCount;
         productBreakdown[item.inventory_id].orders += 1;
       });
     });
@@ -207,17 +232,23 @@ Deno.serve(async (req) => {
 
     if (topProducts.length > 0) {
       doc.autoTable({
-        head: [['Product Details (Combo/Variant/Weight)', 'Qty', 'Orders']],
-        body: topProducts.map(p => [p.name.substring(0, 85), p.qty.toString(), p.orders.toString()]),
+        head: [['Product Details (Combo/Variant/Weight)', 'Ordered', 'Actual Units', 'Orders']],
+        body: topProducts.map(p => [
+          p.name.substring(0, 75), 
+          p.qty.toString(), 
+          p.actualQty.toString(),
+          p.orders.toString()
+        ]),
         startY: productY + 6,
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 3.5, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: { 
-          0: { cellWidth: 120 }, 
-          1: { halign: 'center', fontStyle: 'bold', cellWidth: 30, textColor: [139, 92, 246] },
-          2: { halign: 'center', fontStyle: 'bold', cellWidth: 30, textColor: [59, 130, 246] }
+          0: { cellWidth: 95 }, 
+          1: { halign: 'center', fontStyle: 'bold', cellWidth: 25, textColor: [100, 116, 139] },
+          2: { halign: 'center', fontStyle: 'bold', cellWidth: 30, textColor: [139, 92, 246] },
+          3: { halign: 'center', fontStyle: 'bold', cellWidth: 25, textColor: [59, 130, 246] }
         },
         margin: { left: 16, right: 16 }
       });
