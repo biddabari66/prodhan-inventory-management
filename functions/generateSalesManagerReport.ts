@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const today = toBDTDate(new Date());
     const todayOrders = orders.filter(o => toBDTDate(o.order_date || o.created_date) === today);
     
-    // CRITICAL: Only count CONFIRMED and PROCESSING orders (matches sales page logic)
+    // PRODUCTION: Match exact logic from Sales page - CONFIRMED status orders for product count
     const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
     const confirmedToday = todayOrders.filter(o => validStatuses.includes(o.order_status));
     const pendingToday = todayOrders.filter(o => o.order_status === 'pending');
