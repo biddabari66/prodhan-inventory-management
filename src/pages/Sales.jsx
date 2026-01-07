@@ -1010,8 +1010,9 @@ function SalesPage() {
     const totalProductQuantity = filteredOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
-        const actualQty = isCombo ? item.quantity * inventoryItem.bundle_items.length : item.quantity;
+        const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
+        const bundleCount = isCombo ? inventoryItem.bundle_items.length : 1;
+        const actualQty = item.quantity * bundleCount;
         return itemSum + actualQty;
       }, 0);
       return sum + orderTotal;
@@ -1026,8 +1027,9 @@ function SalesPage() {
     const todayProductQty = todayOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
-        const actualQty = isCombo ? item.quantity * inventoryItem.bundle_items.length : item.quantity;
+        const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
+        const bundleCount = isCombo ? inventoryItem.bundle_items.length : 1;
+        const actualQty = item.quantity * bundleCount;
         return itemSum + actualQty;
       }, 0);
       return sum + orderTotal;
@@ -1209,19 +1211,16 @@ function SalesPage() {
 
                 <div>
                   <Label className="text-sm font-semibold mb-2 block">Product Filter</Label>
-                  <Select value={productFilter} onValueChange={setProductFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="All Products" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      <SelectItem value="all">All Products</SelectItem>
-                      {inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all').map(item => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.item_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableProductSelect
+                    inventory={inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all')}
+                    value={productFilter}
+                    onValueChange={setProductFilter}
+                    placeholder="Search products..."
+                    showStock={false}
+                    showPrice={false}
+                    allowClear={true}
+                    onClear={() => setProductFilter('all')}
+                  />
                 </div>
 
                 {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all') && (
@@ -1562,15 +1561,14 @@ function SalesPage() {
                           <div className="text-sm space-y-0.5">
                             {order.order_items.map((item, idx) => {
                               const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-                              const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
-                              const actualQty = isCombo 
-                                ? item.quantity * inventoryItem.bundle_items.length 
-                                : item.quantity;
+                              const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
+                              const bundleCount = isCombo ? inventoryItem.bundle_items.length : 1;
+                              const actualQty = item.quantity * bundleCount;
 
                               return (
                                 <p key={idx} className="font-bold text-violet-600">
                                   ×{actualQty}
-                                  {isCombo && <span className="text-xs text-blue-600 ml-1">(combo)</span>}
+                                  {isCombo && <span className="text-xs text-blue-600 ml-1">({bundleCount}-item combo)</span>}
                                 </p>
                               );
                             })}
