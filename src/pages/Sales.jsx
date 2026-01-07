@@ -1561,8 +1561,19 @@ function SalesPage() {
                           <div className="flex flex-col gap-1">
                             {order.order_items.map((item, idx) => {
                               const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-                              const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
-                              const bundleCount = isCombo ? inventoryItem.bundle_items.length : 1;
+                              
+                              // Enhanced combo detection - check bundle_items OR product name
+                              const hasBundle = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
+                              const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
+                              
+                              let bundleCount = 1;
+                              if (hasBundle) {
+                                bundleCount = inventoryItem.bundle_items.length;
+                              } else if (nameMatch) {
+                                bundleCount = parseInt(nameMatch[1]);
+                              }
+                              
+                              const isCombo = bundleCount > 1;
                               const actualQty = item.quantity * bundleCount;
 
                               return (
