@@ -41,20 +41,28 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState(null);
 
-  // Fetch data
+  // OPTIMIZED: Fetch data with aggressive caching
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => Inventory.list(),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: movements = [] } = useQuery({
     queryKey: ['movements'],
     queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 500),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 
   useEffect(() => {
