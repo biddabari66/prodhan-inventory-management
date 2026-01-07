@@ -121,6 +121,28 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
       return;
     }
 
+    // Check combo product component availability
+    if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
+      let canFulfillCombo = true;
+      let unavailableComponent = null;
+
+      for (const bundleItem of inventoryItem.bundle_items) {
+        const component = inventory.find(i => i.id === bundleItem.inventory_id);
+        const requiredQty = bundleItem.quantity * itemQuantity;
+
+        if (!component || component.current_stock < requiredQty) {
+          canFulfillCombo = false;
+          unavailableComponent = component?.item_name || 'Unknown';
+          break;
+        }
+      }
+
+      if (!canFulfillCombo) {
+        toast.error(`Cannot fulfill combo: Insufficient stock for component "${unavailableComponent}"`);
+        return;
+      }
+    }
+
     if (inventoryItem.current_stock < itemQuantity) {
       toast.error(`Only ${inventoryItem.current_stock} units available in stock`);
       return;
@@ -136,7 +158,8 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
       quantity: itemQuantity,
       unit_price: unitPrice,
       discount: discount,
-      subtotal: subtotal
+      subtotal: subtotal,
+      is_combo: inventoryItem.is_bundle || false
     };
 
     setFormData(prev => ({
@@ -663,13 +686,74 @@ function SalesPage() {
         customer_id: customerId
       });
 
-      // Update inventory
+      // Update inventory with combo and variant support
       for (const item of orderData.order_items) {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        if (inventoryItem) {
+        if (!inventoryItem) continue;
+
+        // Check if this is a combo product
+        if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
+          // Deduct all component items
+          for (const bundleItem of inventoryItem.bundle_items) {
+            const componentItem = inventory.find(i => i.id === bundleItem.inventory_id);
+            if (componentItem) {
+              const deductQty = bundleItem.quantity * item.quantity;
+              const newComponentStock = componentItem.current_stock - deductQty;
+
+              await Inventory.update(bundleItem.inventory_id, {
+                current_stock: newComponentStock
+              });
+
+              await base44.entities.InventoryMovement.create({
+                inventory_item_id: bundleItem.inventory_id,
+                movement_type: 'out',
+                quantity: -deductQty,
+                reference_type: 'sale',
+                reference_id: order.id,
+                reference_number: order.order_number,
+                unit_cost: componentItem.selling_price,
+                total_value: -(deductQty * componentItem.selling_price),
+                performed_by: currentUser?.id || 'system',
+                notes: `Combo Sale: ${order.order_number} - Component of ${inventoryItem.item_name} (${item.quantity}×)`,
+                movement_date: new Date().toISOString().split('T')[0],
+                balance_after: newComponentStock
+              });
+            }
+          }
+
+          // Record combo movement (informational)
+          await base44.entities.InventoryMovement.create({
+            inventory_item_id: item.inventory_id,
+            movement_type: 'out',
+            quantity: -item.quantity,
+            reference_type: 'sale',
+            reference_id: order.id,
+            reference_number: order.order_number,
+            unit_cost: item.unit_price,
+            total_value: -(item.quantity * item.unit_price),
+            performed_by: currentUser?.id || 'system',
+            notes: `Combo Sale: ${order.order_number} - ${inventoryItem.bundle_items.length} components auto-deducted`,
+            movement_date: new Date().toISOString().split('T')[0],
+            balance_after: inventoryItem.current_stock
+          });
+        } else {
+          // Regular product or variant tracking
           const newStock = inventoryItem.current_stock - item.quantity;
+
+          // Handle color variant deduction if applicable
+          let updatedColorVariants = inventoryItem.color_variants;
+          if (item.selected_color && inventoryItem.color_variants?.length > 0) {
+            updatedColorVariants = inventoryItem.color_variants.map(variant => {
+              if (variant.color === item.selected_color) {
+                return { ...variant, quantity: variant.quantity - item.quantity };
+              }
+              return variant;
+            });
+          }
+
           await Inventory.update(item.inventory_id, {
-            current_stock: newStock
+            current_stock: newStock,
+            ...(updatedColorVariants && { color_variants: updatedColorVariants })
           });
 
           await base44.entities.InventoryMovement.create({
@@ -682,7 +766,7 @@ function SalesPage() {
             unit_cost: item.unit_price,
             total_value: -(item.quantity * item.unit_price),
             performed_by: currentUser?.id || 'system',
-            notes: `Sale: ${order.order_number} - Customer: ${order.customer_name}`,
+            notes: `Sale: ${order.order_number} - Customer: ${order.customer_name}${item.selected_color ? ` - Color: ${item.selected_color}` : ''}`,
             movement_date: new Date().toISOString().split('T')[0],
             balance_after: newStock
           });
