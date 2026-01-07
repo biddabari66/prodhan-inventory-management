@@ -57,11 +57,12 @@ Deno.serve(async (req) => {
 
     console.log('✅ Order found:', order.order_number, 'Status:', order.order_status);
 
-    // Check if order is delivered
-    if (order.order_status !== 'delivered') {
-      console.warn('⚠️ Order not delivered:', order.order_status);
+    // Check if order is confirmed or delivered
+    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+    if (!validStatuses.includes(order.order_status)) {
+      console.warn('⚠️ Order not in valid status for sync:', order.order_status);
       return Response.json({ 
-        error: 'Order must be in delivered status to sync',
+        error: 'Order must be confirmed or in fulfillment to sync',
         current_status: order.order_status
       }, { status: 400 });
     }
@@ -111,12 +112,24 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // EXPERT: Calculate actual quantity for combo products
+        let actualQty = item.quantity;
+        if (inventoryItem.is_bundle && Array.isArray(inventoryItem.bundle_items) && inventoryItem.bundle_items.length > 0) {
+          const bundleCount = inventoryItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
+          actualQty = item.quantity * bundleCount;
+        } else {
+          const nameMatch = item.item_name?.match(/^(\d+)\s*(?:pcs?|pc|piece)/i);
+          if (nameMatch) {
+            actualQty = item.quantity * parseInt(nameMatch[1]);
+          }
+        }
+
         const adprofitPayload = {
           erp_sale_id: `${order.order_number}-${item.inventory_id}`,
           erp_product_id: inventoryItem.barcode,
-          quantity: item.quantity,
+          quantity: actualQty,
           sale_price: item.unit_price,
-          date: toBDTDate(order.actual_delivery_date),
+          date: toBDTDate(order.actual_delivery_date || order.order_date),
           customer_name: order.customer_name
         };
 

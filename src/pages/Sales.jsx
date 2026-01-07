@@ -1714,7 +1714,7 @@ function SalesPage() {
                           >
                             <Download className="w-4 h-4 text-green-600" />
                           </Button>
-                          {order.order_status === 'delivered' && !order.adprofit_synced && (
+                          {!order.adprofit_synced && ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1724,7 +1724,12 @@ function SalesPage() {
                                   const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
                                   if (response.data?.success) {
                                     queryClient.invalidateQueries(['orders']);
-                                    toast.success('✅ Synced to Adprofit!');
+                                    const { synced_items, failed_items } = response.data;
+                                    if (failed_items > 0) {
+                                      toast.warning(`⚠️ Partially synced (${synced_items}/${synced_items + failed_items})`);
+                                    } else {
+                                      toast.success(`✅ Synced ${synced_items} items!`);
+                                    }
                                   } else {
                                     toast.error('Sync failed');
                                   }
