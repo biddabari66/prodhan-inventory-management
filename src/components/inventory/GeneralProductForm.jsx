@@ -6,13 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Package, Check, X, Sparkles, Loader2, Link2, Wand2, Palette, Plus, AlertCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Package, Check, X, Sparkles, Loader2, Link2, Wand2, Palette, Plus, AlertCircle, Layers, Trash2, Recycle } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { ProductCategory } from '@/entities/ProductCategory';
 import { toast } from 'sonner';
 import { ProdhanCategorySelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
 import { base44 } from '@/api/base44Client';
+import SearchableProductSelect from '../common/SearchableProductSelect';
 
 // Helper function to detect if text contains Bengali characters
 const containsBengali = (text) => {
@@ -45,6 +47,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     description: product?.description || '',
     warehouse_location: product?.warehouse_location || { zone: '', aisle: '', shelf: '', bin: '' },
     weight_kg: product?.weight_kg || 0,
+    weight_unit: product?.weight_unit || 'kg',
+    weight_value: product?.weight_value || 0,
     dimensions: product?.dimensions || { length_cm: 0, width_cm: 0, height_cm: 0 },
     web_visibility: product?.web_visibility !== undefined ? product.web_visibility : true,
     featured: product?.featured || false,
@@ -52,7 +56,15 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     seo_keywords: product?.seo_keywords || [],
     department: 'prodhan_com_e_commerce',
     status: product?.status || 'active',
-    color_variants: product?.color_variants || []
+    color_variants: product?.color_variants || [],
+    product_source_url: product?.product_source_url || '',
+    is_bundle: product?.is_bundle || false,
+    bundle_items: product?.bundle_items || [],
+    requires_refining: product?.requires_refining || false,
+    raw_quantity: product?.raw_quantity || 0,
+    yield_percentage: product?.yield_percentage || 100,
+    usable_quantity: product?.usable_quantity || 0,
+    waste_quantity: product?.waste_quantity || 0
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +75,9 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [colorName, setColorName] = useState('');
   const [colorQuantity, setColorQuantity] = useState(0);
+  const [bundleProductId, setBundleProductId] = useState('');
+  const [bundleQuantity, setBundleQuantity] = useState(1);
+  const [allInventory, setAllInventory] = useState([]);
 
   // Auto-translate Bengali name to English
   const translateToEnglish = useCallback(async (bengaliText) => {
@@ -91,6 +106,19 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     }
   }, []);
 
+  // Load inventory for bundle selection
+  useEffect(() => {
+    const loadInventory = async () => {
+      try {
+        const items = await Inventory.list();
+        setAllInventory(items.filter(i => i.department === 'prodhan_com_e_commerce' && !i.is_bundle));
+      } catch (error) {
+        console.error('Failed to load inventory:', error);
+      }
+    };
+    loadInventory();
+  }, []);
+
   // Debounced translation trigger
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -101,6 +129,35 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     
     return () => clearTimeout(timer);
   }, [formData.item_name, formData.english_item_name, translateToEnglish]);
+
+  // Auto-calculate weight_kg from weight_value and weight_unit
+  useEffect(() => {
+    if (formData.weight_value > 0) {
+      const weightInKg = formData.weight_unit === 'grams' 
+        ? formData.weight_value / 1000 
+        : formData.weight_value;
+      setFormData(prev => ({ ...prev, weight_kg: weightInKg }));
+    }
+  }, [formData.weight_value, formData.weight_unit]);
+
+  // Auto-calculate waste/yield
+  useEffect(() => {
+    if (formData.requires_refining && formData.raw_quantity > 0 && formData.yield_percentage > 0) {
+      const usable = (formData.raw_quantity * formData.yield_percentage) / 100;
+      const waste = formData.raw_quantity - usable;
+      setFormData(prev => ({ 
+        ...prev, 
+        usable_quantity: usable,
+        waste_quantity: waste
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        usable_quantity: 0,
+        waste_quantity: 0
+      }));
+    }
+  }, [formData.requires_refining, formData.raw_quantity, formData.yield_percentage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -217,6 +274,25 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     setFormData({...formData, seo_keywords: formData.seo_keywords.filter(k => k !== keyword)});
   };
 
+  // Parse weight intelligently
+  const parseWeight = (weightStr) => {
+    if (!weightStr) return null;
+    const str = weightStr.toLowerCase().trim();
+    
+    // Match patterns like "500g", "1kg", "1.5 kg", "1000 grams"
+    const kgMatch = str.match(/(\d+\.?\d*)\s*k?g/);
+    const gramsMatch = str.match(/(\d+\.?\d*)\s*g(?!r)/); // g but not gr
+    const gramsWordMatch = str.match(/(\d+\.?\d*)\s*grams?/);
+    
+    if (kgMatch) {
+      return { value: parseFloat(kgMatch[1]), unit: 'kg' };
+    } else if (gramsMatch || gramsWordMatch) {
+      const value = parseFloat(gramsMatch?.[1] || gramsWordMatch?.[1]);
+      return { value, unit: 'grams' };
+    }
+    return null;
+  };
+
   // Extract product details from URL
   const extractFromUrl = async () => {
     if (!productUrl.trim()) {
@@ -242,9 +318,11 @@ Extract the following product information:
 3. SKU/Product ID/Model Number (look for SKU, Product ID, Model Number, or Item Number)
 4. Selling price (numeric value only, no currency symbols - if multiple prices, use the main selling price)
 5. Product description (detailed description)
-6. Weight in kg (if available)
+6. Weight as a string (e.g., "500g", "1kg", "1.5kg", "1000g") - extract exactly as shown
 7. Dimensions in cm (length, width, height if available)
-8. Relevant tags/keywords (3-5 tags that describe the product)
+8. Available color variants/options (e.g., ["Red", "Blue", "Black"])
+9. Product images (URLs if available)
+10. Relevant tags/keywords (3-5 tags that describe the product)
 
 Be thorough and extract as much information as possible from the page content, meta tags, product specifications, and structured data.
 
@@ -258,7 +336,7 @@ Return ONLY valid JSON with no additional text.`,
             sku: { type: "string" },
             selling_price: { type: "number" },
             description: { type: "string" },
-            weight_kg: { type: "number" },
+            weight: { type: "string" },
             dimensions: {
               type: "object",
               properties: {
@@ -267,6 +345,8 @@ Return ONLY valid JSON with no additional text.`,
                 height_cm: { type: "number" }
               }
             },
+            colors: { type: "array", items: { type: "string" } },
+            images: { type: "array", items: { type: "string" } },
             tags: { type: "array", items: { type: "string" } }
           },
           required: ["product_name"]
@@ -277,11 +357,10 @@ Return ONLY valid JSON with no additional text.`,
 
       if (response && response.product_name) {
         // Auto-fill form with extracted data
-        const updates = {};
+        const updates = { product_source_url: productUrl };
         
         if (response.product_name) {
           updates.item_name = response.product_name;
-          // Auto-translate if needed
           if (!containsBengali(response.product_name)) {
             updates.english_item_name = response.product_name;
           }
@@ -293,11 +372,9 @@ Return ONLY valid JSON with no additional text.`,
           const categorySlug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
           
           try {
-            // Check if category exists
             const existingCategories = await ProductCategory.filter({ name: categoryName, department: 'prodhan_com_e_commerce' });
             
             if (existingCategories.length === 0) {
-              // Create new category
               await ProductCategory.create({
                 name: categoryName,
                 slug: categorySlug,
@@ -329,8 +406,14 @@ Return ONLY valid JSON with no additional text.`,
           updates.description = response.description;
         }
         
-        if (response.weight_kg && response.weight_kg > 0) {
-          updates.weight_kg = response.weight_kg;
+        // Parse weight intelligently
+        if (response.weight) {
+          const parsedWeight = parseWeight(response.weight);
+          if (parsedWeight) {
+            updates.weight_value = parsedWeight.value;
+            updates.weight_unit = parsedWeight.unit;
+            updates.weight_kg = parsedWeight.unit === 'grams' ? parsedWeight.value / 1000 : parsedWeight.value;
+          }
         }
         
         if (response.dimensions) {
@@ -339,6 +422,16 @@ Return ONLY valid JSON with no additional text.`,
           if (response.dimensions.width_cm) newDimensions.width_cm = response.dimensions.width_cm;
           if (response.dimensions.height_cm) newDimensions.height_cm = response.dimensions.height_cm;
           updates.dimensions = newDimensions;
+        }
+
+        // Auto-detect color variants
+        if (response.colors && Array.isArray(response.colors) && response.colors.length > 0) {
+          const qtyPerColor = Math.floor(formData.current_stock / response.colors.length);
+          updates.color_variants = response.colors.map(color => ({
+            color: color,
+            quantity: qtyPerColor
+          }));
+          toast.info(`🎨 Detected ${response.colors.length} color variants`);
         }
         
         if (response.tags && Array.isArray(response.tags) && response.tags.length > 0) {
@@ -741,14 +834,41 @@ Return ONLY valid JSON with no additional text.`,
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="weight_kg">Weight (kg)</Label>
+                <Label htmlFor="weight_value">Weight</Label>
                 <Input
-                  id="weight_kg"
+                  id="weight_value"
                   type="text"
                   inputMode="decimal"
-                  value={formData.weight_kg}
-                  onChange={(e) => setFormData({...formData, weight_kg: parseFloat(e.target.value) || 0})}
+                  value={formData.weight_value}
+                  onChange={(e) => setFormData({...formData, weight_value: parseFloat(e.target.value) || 0})}
+                  placeholder="e.g., 500 or 1.5"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="weight_unit">Weight Unit</Label>
+                <Select 
+                  value={formData.weight_unit} 
+                  onValueChange={(value) => setFormData({...formData, weight_unit: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                    <SelectItem value="grams">Grams (g)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="col-span-2">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-800">
+                    <strong>Converted:</strong> {formData.weight_value > 0 
+                      ? `${formData.weight_value}${formData.weight_unit === 'grams' ? 'g' : 'kg'} = ${formData.weight_kg.toFixed(3)}kg`
+                      : 'Enter weight above'}
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -826,6 +946,202 @@ Return ONLY valid JSON with no additional text.`,
                 />
               </div>
             </div>
+          </div>
+
+          {/* Combo/Bundle Product */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-orange-600" />
+              Combo/Bundle Product
+            </h3>
+            
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Checkbox
+                  id="is_bundle"
+                  checked={formData.is_bundle}
+                  onCheckedChange={(checked) => setFormData({...formData, is_bundle: checked, bundle_items: checked ? formData.bundle_items : []})}
+                />
+                <Label htmlFor="is_bundle" className="font-semibold cursor-pointer">
+                  This is a combo product
+                </Label>
+              </div>
+              <p className="text-xs text-orange-800">
+                When a combo is sold, all component products are automatically deducted from stock. Example: "Tea Set" contains 1× Tea + 1× Honey + 1× Box.
+              </p>
+            </div>
+
+            {formData.is_bundle && (
+              <div className="space-y-3">
+                {/* Add Bundle Item */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+                  <div className="md:col-span-1">
+                    <Label className="text-xs font-semibold">Select Product</Label>
+                    <SearchableProductSelect
+                      inventory={allInventory.filter(i => i.id !== product?.id)}
+                      value={bundleProductId}
+                      onValueChange={setBundleProductId}
+                      placeholder="Search products..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Quantity</Label>
+                    <Input
+                      type="number"
+                      value={bundleQuantity}
+                      onChange={(e) => setBundleQuantity(parseInt(e.target.value) || 1)}
+                      placeholder="1"
+                      min="1"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (!bundleProductId) {
+                          toast.error('Select a product');
+                          return;
+                        }
+                        
+                        const alreadyAdded = formData.bundle_items?.find(b => b.inventory_id === bundleProductId);
+                        if (alreadyAdded) {
+                          toast.error('This product is already in the bundle');
+                          return;
+                        }
+
+                        const selectedProduct = allInventory.find(i => i.id === bundleProductId);
+                        setFormData({
+                          ...formData,
+                          bundle_items: [...(formData.bundle_items || []), { 
+                            inventory_id: bundleProductId,
+                            quantity: bundleQuantity
+                          }]
+                        });
+                        setBundleProductId('');
+                        setBundleQuantity(1);
+                        toast.success(`Added ${selectedProduct?.item_name} (${bundleQuantity}×)`);
+                      }}
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Component
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bundle Items Display */}
+                {formData.bundle_items?.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Bundle Components ({formData.bundle_items.length})</Label>
+                    <div className="space-y-2">
+                      {formData.bundle_items.map((item, index) => {
+                        const product = allInventory.find(i => i.id === item.inventory_id);
+                        return (
+                          <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-slate-200">
+                            <div className="flex items-center gap-3">
+                              <Badge className="bg-orange-100 text-orange-800">{item.quantity}×</Badge>
+                              <div>
+                                <p className="font-semibold text-sm">{product?.item_name || 'Unknown Product'}</p>
+                                <p className="text-xs text-slate-500">Stock: {product?.current_stock || 0}</p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  bundle_items: formData.bundle_items.filter((_, i) => i !== index)
+                                });
+                              }}
+                              className="hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Waste/Yield Tracking */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
+              <Recycle className="w-5 h-5 text-green-600" />
+              Waste/Yield Tracking
+            </h3>
+            
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Checkbox
+                  id="requires_refining"
+                  checked={formData.requires_refining}
+                  onCheckedChange={(checked) => setFormData({...formData, requires_refining: checked})}
+                />
+                <Label htmlFor="requires_refining" className="font-semibold cursor-pointer">
+                  This product requires refining/processing
+                </Label>
+              </div>
+              <p className="text-xs text-green-800">
+                Track waste during refining. Example: 1kg raw tea with 90% yield = 900g usable + 100g waste.
+              </p>
+            </div>
+
+            {formData.requires_refining && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="raw_quantity">Raw Quantity (kg)</Label>
+                  <Input
+                    id="raw_quantity"
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.raw_quantity}
+                    onChange={(e) => setFormData({...formData, raw_quantity: parseFloat(e.target.value) || 0})}
+                    placeholder="e.g., 10"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="yield_percentage">Yield Percentage (%)</Label>
+                  <Input
+                    id="yield_percentage"
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.yield_percentage}
+                    onChange={(e) => setFormData({...formData, yield_percentage: parseFloat(e.target.value) || 100})}
+                    placeholder="e.g., 90"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+
+                <div className="col-span-1 md:col-span-3">
+                  <div className="p-4 bg-white rounded-lg border-2 border-green-300">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Usable Quantity</p>
+                        <p className="text-lg font-bold text-green-600">
+                          {formData.usable_quantity.toFixed(3)} kg
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Waste</p>
+                        <p className="text-lg font-bold text-red-600">
+                          {formData.waste_quantity.toFixed(3)} kg
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* E-commerce Settings */}
