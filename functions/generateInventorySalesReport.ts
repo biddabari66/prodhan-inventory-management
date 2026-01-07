@@ -91,6 +91,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`📊 Report Generation: ${reportType} | Orders: ${filteredOrders.length} confirmed | Inventory: ${filteredInventory.length} items`);
+    console.log(`📅 Date Filter: ${dateFrom || 'none'} to ${dateTo || 'none'}`);
 
     // Generate report based on type
     let doc;
