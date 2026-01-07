@@ -259,11 +259,24 @@ function InventoryReportsPage() {
                 hoverBorder="orange-400"
               />
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+            </CardContent>
+            </Card>
 
-export default withPermission(InventoryReportsPage, 'inventory_reports', 'can_view');
+            {/* Enhanced Reports - NEW */}
+            <Card className="premium-card border-2 border-violet-300">
+            <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-violet-600" />
+              Advanced Analytics Reports
+            </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+            <EnhancedReportButtons />
+            </CardContent>
+            </Card>
+            </div>
+            </div>
+            );
+            }
+
+            export default withPermission(InventoryReportsPage, 'inventory_reports', 'can_view');
