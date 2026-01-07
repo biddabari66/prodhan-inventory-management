@@ -1558,7 +1558,7 @@ function SalesPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         {order.order_items && order.order_items.length > 0 ? (
-                          <div className="text-sm space-y-0.5">
+                          <div className="flex flex-col gap-1">
                             {order.order_items.map((item, idx) => {
                               const inventoryItem = inventory.find(i => i.id === item.inventory_id);
                               const isCombo = inventoryItem?.is_bundle === true && Array.isArray(inventoryItem?.bundle_items) && inventoryItem?.bundle_items?.length > 0;
@@ -1566,10 +1566,14 @@ function SalesPage() {
                               const actualQty = item.quantity * bundleCount;
 
                               return (
-                                <p key={idx} className="font-bold text-violet-600">
-                                  ×{actualQty}
-                                  {isCombo && <span className="text-xs text-blue-600 ml-1">({bundleCount}-item combo)</span>}
-                                </p>
+                                <div key={idx} className="inline-flex items-center gap-1.5">
+                                  <span className="font-bold text-violet-600 text-base">×{actualQty}</span>
+                                  {isCombo && (
+                                    <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
+                                      {item.quantity}×{bundleCount}
+                                    </Badge>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
