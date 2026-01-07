@@ -212,10 +212,10 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
       const invItem = inventoryMap.get(item.inventory_id);
       if (!invItem) return;
 
-      // Detect combo from bundle_items OR product name
+      // EXPERT: Sum bundle quantities OR parse from name
       let bundleCount = 1;
       if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-        bundleCount = invItem.bundle_items.length;
+        bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
       } else {
         const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
         if (nameMatch) bundleCount = parseInt(nameMatch[1]);
@@ -554,10 +554,10 @@ function generateTopSellingReport(inventory, orders, inventoryMap, inventoryIds,
       if (!inventoryIds.has(item.inventory_id)) return;
       const invItem = inventoryMap.get(item.inventory_id);
       
-      // Detect combo from bundle_items OR product name
+      // EXPERT: Sum bundle quantities OR parse from name
       let bundleCount = 1;
       if (invItem?.is_bundle && Array.isArray(invItem?.bundle_items) && invItem?.bundle_items?.length > 0) {
-        bundleCount = invItem.bundle_items.length;
+        bundleCount = invItem.bundle_items.reduce((sum, bi) => sum + (bi.quantity || 1), 0);
       } else {
         const nameMatch = item.item_name?.match(/^(\d+)\s*pcs?/i);
         if (nameMatch) bundleCount = parseInt(nameMatch[1]);
