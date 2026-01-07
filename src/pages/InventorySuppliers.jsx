@@ -68,18 +68,8 @@ function InventorySuppliersPage() {
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Supplier Management</h1>
               <p className="text-slate-600 mt-1 text-base">কেন্দ্রীভূত সরবরাহকারী ব্যবস্থাপনা এবং ক্রয় সম্পর্ক ট্র্যাকিং</p>
             </div>
-          </div>
-
-          <Card className="bg-white border border-slate-200 shadow-sm">
-            <CardContent className="p-5">
-              <DepartmentFilter
-                currentUser={currentUser}
-                selectedDepartment={selectedDepartment}
-                onDepartmentChange={setSelectedDepartment}
-              />
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            </div>
 
         <SupplierManagement selectedDepartment={selectedDepartment} />
       </div>

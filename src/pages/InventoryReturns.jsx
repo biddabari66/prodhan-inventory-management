@@ -70,23 +70,13 @@ function InventoryReturnsPage() {
         
         {/* Professional Header */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                <PackageX className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">রিটার্ন ও ক্ষতি ব্যবস্থাপনা</h1>
-                <p className="text-slate-500 text-sm mt-0.5">সম্পূর্ণ ট্র্যাকিং ও ব্যবস্থাপনা</p>
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+              <PackageX className="w-7 h-7 text-white" />
             </div>
-            
-            <div className="flex items-center gap-3">
-              <DepartmentFilter
-                currentUser={currentUser}
-                selectedDepartment={selectedDepartment}
-                onDepartmentChange={setSelectedDepartment}
-              />
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">রিটার্ন ও ক্ষতি ব্যবস্থাপনা</h1>
+              <p className="text-slate-500 text-sm mt-0.5">সম্পূর্ণ ট্র্যাকিং ও ব্যবস্থাপনা</p>
             </div>
           </div>
         </div>

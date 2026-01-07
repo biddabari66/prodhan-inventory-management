@@ -135,7 +135,7 @@ function ProductAnalyticsDashboard() {
         {/* Filters Row */}
         <Card className="bg-white border border-slate-200">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
                 <Label className="text-xs text-slate-600">Search Products</Label>
                 <div className="relative mt-1">
@@ -147,17 +147,6 @@ function ProductAnalyticsDashboard() {
                     className="pl-9"
                   />
                 </div>
-              </div>
-              <div>
-                <Label className="text-xs text-slate-600">Department</Label>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="boibari">📚 Boibari</SelectItem>
-                    <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label className="text-xs text-slate-600">Start Date</Label>

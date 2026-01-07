@@ -662,7 +662,8 @@ function PurchaseOrdersPage() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Fetch data
   const { data: currentUser } = useQuery({
@@ -805,10 +806,6 @@ function PurchaseOrdersPage() {
   const filteredOrders = useMemo(() => {
     let filtered = [...purchaseOrders];
 
-    if (departmentFilter !== 'all') {
-      filtered = filtered.filter(o => o.department === departmentFilter);
-    }
-
     if (statusFilter !== 'all') {
       filtered = filtered.filter(o => o.order_status === statusFilter);
     }
@@ -821,8 +818,16 @@ function PurchaseOrdersPage() {
       );
     }
 
+    if (startDate) {
+      filtered = filtered.filter(o => o.order_date >= startDate);
+    }
+
+    if (endDate) {
+      filtered = filtered.filter(o => o.order_date <= endDate);
+    }
+
     return filtered;
-  }, [purchaseOrders, departmentFilter, statusFilter, searchQuery]);
+  }, [purchaseOrders, statusFilter, searchQuery, startDate, endDate]);
 
   // Stats
   const stats = useMemo(() => {
@@ -943,7 +948,7 @@ function PurchaseOrdersPage() {
       {/* Filters */}
       <Card className="bg-white border border-slate-200 shadow-sm">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -955,16 +960,20 @@ function PurchaseOrdersPage() {
                 />
               </div>
             </div>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="boibari">📚 Boibari</SelectItem>
-                <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              placeholder="Start Date"
+              className="w-full"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              placeholder="End Date"
+              className="w-full"
+            />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Status" />
