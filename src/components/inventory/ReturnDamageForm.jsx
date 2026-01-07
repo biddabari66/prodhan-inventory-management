@@ -33,6 +33,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isManualFinancialImpact, setIsManualFinancialImpact] = useState(false);
+  const [productItems, setProductItems] = useState([]);
 
   // Auto-sync condition breakdown with total quantity
   useEffect(() => {
@@ -121,32 +122,77 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     toast.success('Financial impact will auto-calculate');
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (!formData.inventory_item_id || !formData.quantity || !formData.reason) {
-      toast.error('Please fill all required fields');
+  const handleAddProduct = () => {
+    if (!formData.inventory_item_id || !formData.quantity || formData.quantity <= 0) {
+      toast.error('Please select a product and enter valid quantity');
       return;
     }
 
-    if (formData.return_type === 'sales_return') {
-      const total = formData.condition_breakdown.good.quantity + 
-                   formData.condition_breakdown.fair.quantity + 
-                   formData.condition_breakdown.damaged.quantity;
-      
-      if (total !== formData.quantity) {
-        toast.error(`Condition breakdown (${total}) must equal total quantity (${formData.quantity})`);
-        return;
-      }
+    const product = inventory.find(i => i.id === formData.inventory_item_id);
+    if (!product) {
+      toast.error('Product not found');
+      return;
     }
 
-    onSubmit({
+    const newItem = {
+      id: Date.now().toString(),
+      inventory_item_id: formData.inventory_item_id,
+      product_name: product.item_name,
+      quantity: formData.quantity,
+      return_type: formData.return_type,
+      condition_breakdown: {...formData.condition_breakdown},
+      financial_impact: formData.financial_impact,
+      restocking_fee: formData.restocking_fee
+    };
+
+    setProductItems([...productItems, newItem]);
+    
+    // Reset product selection
+    setFormData({
       ...formData,
+      inventory_item_id: '',
+      quantity: 1,
+      condition_breakdown: {
+        good: { quantity: 0, action: 'restock' },
+        fair: { quantity: 0, action: 'return_to_supplier' },
+        damaged: { quantity: 0, action: 'write_off' }
+      },
+      financial_impact: 0,
+      restocking_fee: 0
+    });
+    setSelectedProduct(null);
+    toast.success('Product added to return list');
+  };
+
+  const handleRemoveProduct = (itemId) => {
+    setProductItems(productItems.filter(i => i.id !== itemId));
+    toast.success('Product removed');
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (productItems.length === 0) {
+      toast.error('Please add at least one product to return/damage');
+      return;
+    }
+
+    if (!formData.reason || !formData.notes) {
+      toast.error('Please provide reason and detailed notes');
+      return;
+    }
+
+    // Submit all products
+    onSubmit({
+      items: productItems,
       type,
-      quantity: parseInt(formData.quantity),
-      condition_breakdown: formData.return_type === 'sales_return' ? formData.condition_breakdown : null,
-      financial_impact: parseFloat(formData.financial_impact),
-      restocking_fee: parseFloat(formData.restocking_fee || 0)
+      return_type: formData.return_type,
+      reason: formData.reason,
+      order_number: formData.order_number,
+      customer_name: formData.customer_name,
+      supplier_name: formData.supplier_name,
+      notes: formData.notes,
+      incident_date: formData.incident_date
     });
   };
 
@@ -182,6 +228,39 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
             </button>
           </div>
         </div>
+      )}
+
+      {/* Added Products List */}
+      {productItems.length > 0 && (
+        <Card className="bg-violet-50 border-2 border-violet-300">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Products to Return/Damage ({productItems.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {productItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-violet-200">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{item.product_name}</p>
+                    <p className="text-xs text-muted-foreground">Qty: {item.quantity} • Impact: ৳{item.financial_impact.toLocaleString()}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveProduct(item.id)}
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -633,6 +712,17 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         )}
       </div>
 
+      <div className="flex justify-end gap-3">
+        <Button
+          type="button"
+          onClick={handleAddProduct}
+          variant="outline"
+          className="border-2 border-violet-500 text-violet-700 hover:bg-violet-50"
+        >
+          Add Product to List
+        </Button>
+      </div>
+
       <div>
         <Label>Detailed Notes *</Label>
         <Textarea
@@ -648,8 +738,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className={type === 'return' ? 'bg-blue-600' : 'bg-red-600'}>
-          Record {type === 'return' ? 'Return' : 'Damage'}
+        <Button type="submit" className={type === 'return' ? 'bg-blue-600' : 'bg-red-600'} disabled={productItems.length === 0}>
+          Submit {productItems.length} Product{productItems.length !== 1 ? 's' : ''}
         </Button>
       </div>
     </form>

@@ -364,11 +364,38 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     }
   };
 
-  const handleSubmit = (data) => {
+  const handleSubmit = async (data) => {
     if (editingMovement) {
       updateMovementMutation.mutate({ movementId: editingMovement.id, data });
     } else {
-      recordIncidentMutation.mutate(data);
+      // Handle multiple products
+      if (data.items && data.items.length > 0) {
+        try {
+          for (const item of data.items) {
+            await recordIncidentMutation.mutateAsync({
+              inventory_item_id: item.inventory_item_id,
+              quantity: item.quantity,
+              type: data.type,
+              return_type: item.return_type,
+              reason: data.reason,
+              order_number: data.order_number,
+              customer_name: data.customer_name,
+              supplier_name: data.supplier_name,
+              condition_breakdown: item.condition_breakdown,
+              financial_impact: item.financial_impact,
+              restocking_fee: item.restocking_fee,
+              notes: data.notes,
+              incident_date: data.incident_date
+            });
+          }
+          toast.success(`${data.items.length} product(s) processed successfully!`);
+          setIsFormOpen(false);
+        } catch (error) {
+          toast.error('Failed to process all products: ' + error.message);
+        }
+      } else {
+        recordIncidentMutation.mutate(data);
+      }
     }
   };
 
