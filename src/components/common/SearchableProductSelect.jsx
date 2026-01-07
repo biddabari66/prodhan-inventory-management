@@ -7,7 +7,12 @@ export default function SearchableProductSelect({
   inventory = [], 
   value, 
   onValueChange, 
-  placeholder = "Search and select product..." 
+  placeholder = "Search and select product...",
+  showStock = true,
+  showPrice = true,
+  disabled = false,
+  allowClear = false,
+  onClear
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +53,11 @@ export default function SearchableProductSelect({
 
   const handleClear = (e) => {
     e.stopPropagation();
-    onValueChange('');
+    if (allowClear && onClear) {
+      onClear();
+    } else {
+      onValueChange('');
+    }
     setSearchQuery('');
   };
 
@@ -57,23 +66,27 @@ export default function SearchableProductSelect({
       {/* Selected Value Display / Search Input */}
       <div 
         className="relative cursor-pointer"
-        onClick={() => setIsOpen(true)}
+        onClick={() => !disabled && setIsOpen(true)}
       >
         {selectedItem && !isOpen ? (
-          <div className="flex items-center justify-between p-2.5 border rounded-lg bg-white hover:border-violet-400 transition-colors">
+          <div className={`flex items-center justify-between p-2.5 border rounded-lg transition-colors ${
+            disabled ? 'bg-slate-50 cursor-not-allowed' : 'bg-white hover:border-violet-400 cursor-pointer'
+          }`}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Package className="w-4 h-4 text-violet-600 flex-shrink-0" />
               <div className="truncate">
                 <span className="font-medium text-sm">{selectedItem.item_name}</span>
-                <span className="text-xs text-slate-500 ml-2">(Stock: {selectedItem.current_stock})</span>
+                {showStock && <span className="text-xs text-slate-500 ml-2">(Stock: {selectedItem.current_stock})</span>}
               </div>
             </div>
-            <button 
-              onClick={handleClear}
-              className="p-1 hover:bg-slate-100 rounded-full"
-            >
-              <X className="w-4 h-4 text-slate-400" />
-            </button>
+            {!disabled && (
+              <button 
+                onClick={handleClear}
+                className="p-1 hover:bg-slate-100 rounded-full"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="relative">
@@ -81,9 +94,10 @@ export default function SearchableProductSelect({
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsOpen(true)}
+              onFocus={() => !disabled && setIsOpen(true)}
               placeholder={placeholder}
               className="pl-9 pr-4"
+              disabled={disabled}
             />
           </div>
         )}
@@ -134,9 +148,11 @@ export default function SearchableProductSelect({
                       )}
                     </div>
                     <div className="flex gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs py-0">
-                        Stock: {item.current_stock}
-                      </Badge>
+                      {showStock && (
+                        <Badge variant="outline" className="text-xs py-0">
+                          Stock: {item.current_stock}
+                        </Badge>
+                      )}
                       {item.category && (
                         <Badge variant="outline" className="text-xs py-0">
                           {item.category}
@@ -149,11 +165,13 @@ export default function SearchableProductSelect({
                       )}
                     </div>
                   </div>
-                  <div className="text-right ml-2 flex-shrink-0">
-                    <p className="text-sm font-semibold text-violet-600">
-                      ৳{item.selling_price?.toLocaleString() || 0}
-                    </p>
-                  </div>
+                  {showPrice && (
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <p className="text-sm font-semibold text-violet-600">
+                        ৳{item.selling_price?.toLocaleString() || 0}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
