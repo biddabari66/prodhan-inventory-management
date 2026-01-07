@@ -813,29 +813,39 @@ function SalesPage() {
     },
   });
 
-  // Status update mutation with Adprofit sync
+  // Status update mutation with AUTO Adprofit sync on CONFIRMED
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       const updatedOrder = await Order.update(orderId, { order_status: newStatus });
       
-      // Auto-sync to Adprofit when order is delivered
-      if (newStatus === 'delivered') {
+      // AUTO-SYNC to Adprofit when order is CONFIRMED
+      if (newStatus === 'confirmed') {
         try {
           const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
           
           if (syncResponse.data?.success) {
             const { synced_items, failed_items } = syncResponse.data;
             if (failed_items > 0) {
-              toast.warning(`⚠️ Order delivered & partially synced to Adprofit (${synced_items}/${synced_items + failed_items} items)`);
+              toast.warning(`✅ Order confirmed & partially synced to Adprofit (${synced_items}/${synced_items + failed_items} items)`);
             } else {
-              toast.success(`✅ Order delivered & synced to Adprofit (${synced_items} items)!`);
+              toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
             }
-          } else {
-            toast.warning('Order delivered but Adprofit sync failed. Check order details.');
           }
         } catch (syncError) {
           console.error('Adprofit sync error:', syncError);
-          toast.warning('Order delivered but Adprofit sync failed');
+          toast.warning('⚠️ Order confirmed but Adprofit sync failed');
+        }
+      }
+      
+      // Also sync when delivered (in case it was missed)
+      if (newStatus === 'delivered') {
+        try {
+          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
+          if (syncResponse.data?.success) {
+            toast.success(`✅ Order delivered & synced!`);
+          }
+        } catch (syncError) {
+          console.error('Adprofit sync error:', syncError);
         }
       }
       
@@ -843,7 +853,7 @@ function SalesPage() {
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      if (variables.newStatus !== 'delivered') {
+      if (!['confirmed', 'delivered'].includes(variables.newStatus)) {
         toast.success('Order status updated!');
       }
     },
@@ -1001,21 +1011,27 @@ function SalesPage() {
     return filtered;
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
-  // Calculate stats with today's data
+  // PRODUCTION: Calculate stats - ONLY CONFIRMED ORDERS (matching reports)
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const todayOrders = filteredOrders.filter(o => {
+    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+    
+    // Filter for confirmed orders only
+    const confirmedOrders = filteredOrders.filter(o => validStatuses.includes(o.order_status));
+    const todayOrders = confirmedOrders.filter(o => {
       const orderDate = new Date(o.order_date).toISOString().split('T')[0];
       return orderDate === today;
     });
 
     const totalOrders = filteredOrders.length;
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const totalRevenue = confirmedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrders = filteredOrders.filter(o => o.order_status === 'confirmed').length;
+    const confirmedOrdersCount = filteredOrders.filter(o => o.order_status === 'confirmed').length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
-    const totalProductQuantity = filteredOrders.reduce((sum, o) => {
+    
+    // CRITICAL: Count only confirmed orders for accurate product quantity
+    const totalProductQuantity = confirmedOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1024,12 +1040,18 @@ function SalesPage() {
       return sum + orderTotal;
     }, 0);
 
-    // Today's stats with actual product count (combo expanded)
+    // Today's stats - ONLY CONFIRMED (matching report logic)
     const todayOrdersCount = todayOrders.length;
-    const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
+    const todayPending = filteredOrders.filter(o => {
+      const orderDate = new Date(o.order_date).toISOString().split('T')[0];
+      return orderDate === today && o.order_status === 'pending';
+    }).length;
     const todayConfirmed = todayOrders.filter(o => o.order_status === 'confirmed').length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
-    const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
+    const todayReturns = filteredOrders.filter(o => {
+      const orderDate = new Date(o.order_date).toISOString().split('T')[0];
+      return orderDate === today && o.order_status === 'returned';
+    }).length;
     const todayProductQty = todayOrders.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
@@ -1043,7 +1065,7 @@ function SalesPage() {
       totalOrders, 
       totalRevenue, 
       pendingOrders, 
-      confirmedOrders, 
+      confirmedOrders: confirmedOrdersCount, 
       shippedOrders, 
       totalProductQuantity,
       totalReturns,
