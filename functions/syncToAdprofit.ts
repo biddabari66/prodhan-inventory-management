@@ -1,11 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * ADPROFIT SYNC FUNCTION
- * Automatically syncs delivered BEE ERP orders to Adprofit for profit analysis
+ * ADPROFIT SYNC FUNCTION - PRODUCTION READY
+ * Automatically syncs CONFIRMED orders to Adprofit for profit analysis
  * 
- * Triggered when order status changes to "delivered"
+ * Triggered when order status changes to "confirmed" or "delivered"
  * Creates sales records in Adprofit with product_id mapping
+ * Properly handles combo products with expanded quantities
  * Uses Asia/Dhaka (BDT) timezone for all dates
  */
 
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
 
     console.log('✅ Order found:', order.order_number, 'Status:', order.order_status);
 
-    // Check if order is confirmed or delivered
+    // PRODUCTION: Check if order is confirmed or delivered
     const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
     if (!validStatuses.includes(order.order_status)) {
       console.warn('⚠️ Order not in valid status for sync:', order.order_status);
@@ -67,12 +68,14 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Check if already synced
-    if (order.adprofit_synced) {
-      console.log('ℹ️ Order already synced');
+    // Check if already synced (allow re-sync for debugging)
+    if (order.adprofit_synced && order.order_status !== 'confirmed') {
+      console.log('ℹ️ Order already synced, skipping');
       return Response.json({ 
         message: 'Order already synced to Adprofit',
-        synced_date: order.adprofit_sync_date
+        synced_date: order.adprofit_sync_date,
+        synced_items: order.order_items?.length || 0,
+        failed_items: 0
       });
     }
 
@@ -176,35 +179,29 @@ Deno.serve(async (req) => {
 
     console.log(`📊 Sync complete: ${syncResults.length} success, ${errors.length} failed`);
 
-    // Update order sync status (using BDT timezone)
+    // PRODUCTION: Update order sync status
     const updateData = {
-      adprofit_sync_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
+      adprofit_sync_date: new Date().toISOString(),
+      adprofit_synced: syncResults.length > 0,
+      adprofit_sync_error: errors.length > 0 
+        ? `${errors.length} items failed: ${errors.map(e => e.error).join('; ')}`
+        : null
     };
 
-    if (errors.length === 0) {
-      // Full success
-      updateData.adprofit_synced = true;
-      updateData.adprofit_sync_error = null;
-    } else if (syncResults.length > 0) {
-      // Partial success
-      updateData.adprofit_synced = true;
-      updateData.adprofit_sync_error = `Partial sync: ${errors.length} items failed`;
-    } else {
-      // Complete failure
-      updateData.adprofit_synced = false;
-      updateData.adprofit_sync_error = `All items failed to sync`;
-    }
-
-    await base44.entities.Order.update(order_id, updateData);
-    console.log('✅ Order sync status updated');
+    await base44.asServiceRole.entities.Order.update(order_id, updateData);
+    console.log('✅ Order sync status updated - Success:', syncResults.length, 'Failed:', errors.length);
 
     const response = {
-      success: true,
+      success: syncResults.length > 0,
       order_number: order.order_number,
       synced_items: syncResults.length,
       failed_items: errors.length,
+      total_items: order.order_items?.length || 0,
       sync_results: syncResults,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
+      message: errors.length === 0 
+        ? `✅ All ${syncResults.length} items synced successfully!`
+        : `⚠️ Partial sync: ${syncResults.length} succeeded, ${errors.length} failed`
     };
 
     console.log('🎉 Final response:', JSON.stringify(response, null, 2));
