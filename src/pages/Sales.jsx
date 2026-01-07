@@ -1570,7 +1570,7 @@ function SalesPage() {
                                   <span className="font-bold text-violet-600 text-base">×{actualQty}</span>
                                   {isCombo && (
                                     <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
-                                      {item.quantity}×{bundleCount}
+                                      {bundleCount}×{item.quantity}
                                     </Badge>
                                   )}
                                 </div>
