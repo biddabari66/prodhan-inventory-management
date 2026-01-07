@@ -23,7 +23,6 @@ import { withPermission } from '../components/common/PermissionGuard';
 // Source of truth for default permissions per role
 const ROLE_PERMISSIONS = {
   super_admin: {
-    // Super Admin has UNRESTRICTED access to everything
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
@@ -43,7 +42,6 @@ const ROLE_PERMISSIONS = {
     audit_trail: { can_view: true, can_export: true }
   },
   admin: {
-    // Admin has extensive access to all inventory modules
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
