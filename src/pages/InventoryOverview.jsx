@@ -465,7 +465,7 @@ function InventoryOverviewPage() {
                           }
                             </div>
                             <div>
-                              <p className="font-semibold text-slate-900">{item.item_name}</p>
+                              <p className="font-semibold text-slate-900" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{item.item_name}</p>
                               <div className="flex gap-2 mt-0.5">
                                 {item.isbn && <span className="text-xs text-slate-500">ISBN: {item.isbn}</span>}
                                 {item.author_name && <span className="text-xs text-slate-500">• {item.author_name}</span>}

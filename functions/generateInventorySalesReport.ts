@@ -233,8 +233,34 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
 
   const salesData = inventory.map(item => {
     const sales = salesByProduct[item.id] || { qty: 0, totalSales: 0, orders: 0, profit: 0 };
+    
+    // Build detailed info with combo/variant/weight/waste
+    let details = '';
+    if (item.is_bundle && item.bundle_items?.length > 0) {
+      const comps = item.bundle_items.map(bi => {
+        const comp = inventoryMap.get(bi.inventory_id);
+        return `${bi.quantity}×${comp?.item_name?.substring(0, 12) || 'Unknown'}`;
+      }).join(' + ');
+      details += ` [Combo: ${comps}]`;
+    }
+    
+    if (item.color_variants?.length > 0) {
+      const colors = item.color_variants.map(v => `${v.color}:${v.quantity}`).join(', ');
+      details += ` [Colors: ${colors}]`;
+    }
+    
+    if (item.weight_kg > 0) {
+      const totalWeight = sales.qty * item.weight_kg;
+      details += ` [${sales.qty} units = ${totalWeight.toFixed(2)}kg]`;
+    }
+    
+    if (item.waste_quantity > 0) {
+      const totalWaste = sales.qty * item.waste_quantity;
+      details += ` [Waste: ${totalWaste.toFixed(2)}kg]`;
+    }
+    
     return {
-      name: getDisplayName(item),
+      name: getDisplayName(item) + details,
       category: item.category || 'N/A',
       unitsSold: sales.qty,
       totalSales: sales.totalSales,
@@ -263,9 +289,9 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
 
   // Professional Table
   if (salesData.length > 0) {
-    const tableColumns = ['Product Name', 'Category', 'Units Sold', 'Revenue (৳)', 'Orders'];
+    const tableColumns = ['Product Details (Combo/Variant/Weight)', 'Category', 'Units', 'Revenue (৳)', 'Orders'];
     const tableRows = salesData.map(d => [
-      d.name.substring(0, 60),
+      d.name.substring(0, 100),
       d.category,
       d.unitsSold.toLocaleString(),
       (d.totalSales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -298,11 +324,11 @@ function generateSalesSummaryReport(inventory, orders, inventoryMap, inventoryId
         fillColor: [248, 250, 252]
       },
       columnStyles: {
-        0: { cellWidth: 130, fontStyle: 'normal' },
-        1: { halign: 'left', cellWidth: 50 },
-        2: { halign: 'center', fontStyle: 'bold', cellWidth: 30 },
-        3: { halign: 'right', fontStyle: 'bold', cellWidth: 40 },
-        4: { halign: 'center', cellWidth: 25 }
+        0: { cellWidth: 150, fontStyle: 'normal', fontSize: 7 },
+        1: { halign: 'left', cellWidth: 35 },
+        2: { halign: 'center', fontStyle: 'bold', cellWidth: 20 },
+        3: { halign: 'right', fontStyle: 'bold', cellWidth: 35 },
+        4: { halign: 'center', cellWidth: 20 }
       },
       margin: { left: 16, right: 16 },
       didDrawPage: (data) => {

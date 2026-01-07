@@ -64,10 +64,37 @@ Deno.serve(async (req) => {
       (order.order_items || []).forEach(item => {
         if (!productBreakdown[item.inventory_id]) {
           const invItem = inventoryMap.get(item.inventory_id);
+          let details = invItem ? getDisplayName(invItem) : item.item_name;
+          
+          // Add combo details
+          if (invItem?.is_bundle && invItem?.bundle_items?.length > 0) {
+            const comps = invItem.bundle_items.map(bi => {
+              const comp = inventoryMap.get(bi.inventory_id);
+              return `${bi.quantity}×${comp?.item_name?.substring(0, 10) || 'Unknown'}`;
+            }).join(' + ');
+            details += ` [Combo: ${comps}]`;
+          }
+          
+          // Add color variants
+          if (invItem?.color_variants?.length > 0 && item.selected_color) {
+            details += ` [${item.selected_color}]`;
+          }
+          
+          // Add weight
+          if (invItem?.weight_kg > 0) {
+            details += ` [${invItem.weight_kg}kg each]`;
+          }
+          
+          // Add waste
+          if (invItem?.waste_quantity > 0) {
+            details += ` [Waste: ${invItem.waste_quantity}kg]`;
+          }
+          
           productBreakdown[item.inventory_id] = {
-            name: invItem ? getDisplayName(invItem) : item.item_name,
+            name: details,
             qty: 0,
-            orders: 0
+            orders: 0,
+            weight: invItem?.weight_kg || 0
           };
         }
         productBreakdown[item.inventory_id].qty += item.quantity || 0;
@@ -76,6 +103,7 @@ Deno.serve(async (req) => {
     });
 
     const topProducts = Object.values(productBreakdown).sort((a, b) => b.qty - a.qty).slice(0, 15);
+    const totalWeight = topProducts.reduce((sum, p) => sum + (p.qty * p.weight), 0);
 
     const doc = new jsPDF('portrait');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -169,21 +197,27 @@ Deno.serve(async (req) => {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Top Products Sold Today', 16, productY);
+    doc.text('Top Products Sold Today (with Combo/Variant/Weight)', 16, productY);
+    
+    if (totalWeight > 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(59, 130, 246);
+      doc.text(`Total Weight Sold: ${totalWeight.toFixed(2)}kg`, pageWidth - 16, productY, { align: 'right' });
+    }
 
     if (topProducts.length > 0) {
       doc.autoTable({
-        head: [['Product Name', 'Quantity Sold', 'Product-Based Orders']],
-        body: topProducts.map(p => [p.name.substring(0, 55), p.qty.toString(), p.orders.toString()]),
+        head: [['Product Details (Combo/Variant/Weight)', 'Qty', 'Orders']],
+        body: topProducts.map(p => [p.name.substring(0, 85), p.qty.toString(), p.orders.toString()]),
         startY: productY + 6,
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 3.5, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
-        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 7, cellPadding: 3.5, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: { 
-          0: { cellWidth: 100 }, 
-          1: { halign: 'center', fontStyle: 'bold', cellWidth: 40, textColor: [139, 92, 246] },
-          2: { halign: 'center', fontStyle: 'bold', cellWidth: 40, textColor: [59, 130, 246] }
+          0: { cellWidth: 120 }, 
+          1: { halign: 'center', fontStyle: 'bold', cellWidth: 30, textColor: [139, 92, 246] },
+          2: { halign: 'center', fontStyle: 'bold', cellWidth: 30, textColor: [59, 130, 246] }
         },
         margin: { left: 16, right: 16 }
       });
