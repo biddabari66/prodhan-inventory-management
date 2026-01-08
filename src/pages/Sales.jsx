@@ -813,30 +813,30 @@ function SalesPage() {
     },
   });
 
-  // PRODUCTION: Status update with automatic Adprofit sync on confirmed
+  // PRODUCTION: Auto-sync to Adprofit on confirmed status
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       const updatedOrder = await Order.update(orderId, { order_status: newStatus });
       
-      // Auto-sync to Adprofit when order is CONFIRMED or DELIVERED
-      if (newStatus === 'confirmed' || newStatus === 'delivered') {
+      // CRITICAL: Auto-sync when order reaches CONFIRMED status
+      if (newStatus === 'confirmed') {
         try {
-          toast.info('🔄 Syncing to Adprofit...', { duration: 2000 });
+          toast.info('🔄 Auto-syncing to Adprofit...', { duration: 2000 });
           const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
           
           if (syncResponse.data?.success) {
             const { synced_items, failed_items } = syncResponse.data;
             if (failed_items > 0) {
-              toast.warning(`⚠️ Order ${newStatus} & partially synced to Adprofit (${synced_items}/${synced_items + failed_items} items)`);
+              toast.warning(`⚠️ Confirmed & partially synced (${synced_items}/${synced_items + failed_items} items)`);
             } else {
-              toast.success(`✅ Order ${newStatus} & synced to Adprofit (${synced_items} items)!`);
+              toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
             }
           } else {
-            toast.warning(`Order ${newStatus} but Adprofit sync failed. Check order details.`);
+            toast.warning('Order confirmed but Adprofit sync failed');
           }
         } catch (syncError) {
-          console.error('Adprofit sync error:', syncError);
-          toast.warning(`Order ${newStatus} but Adprofit sync failed`);
+          console.error('Adprofit auto-sync error:', syncError);
+          toast.warning('Order confirmed but Adprofit sync failed');
         }
       }
       
@@ -844,7 +844,7 @@ function SalesPage() {
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      if (variables.newStatus !== 'confirmed' && variables.newStatus !== 'delivered') {
+      if (variables.newStatus !== 'confirmed') {
         toast.success('Order status updated!');
       }
     },
