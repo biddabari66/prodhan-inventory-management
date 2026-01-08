@@ -18,18 +18,29 @@ Deno.serve(async (req) => {
     
     console.log('🛒 WooCommerce Order Webhook Triggered');
 
-    // Parse incoming order data
-    const body = await req.json();
-    console.log('📦 Received order data:', JSON.stringify(body, null, 2));
+    // Parse incoming order data (WooCommerce sends as array)
+    let bodyData = await req.json();
+    console.log('📦 Received data:', JSON.stringify(bodyData, null, 2));
+
+    // Handle array format - WooCommerce sends [{...}]
+    if (Array.isArray(bodyData)) {
+      if (bodyData.length === 0) {
+        return Response.json({ success: false, error: 'Empty order array' }, { status: 400 });
+      }
+      bodyData = bodyData[0]; // Extract first order from array
+      console.log('✅ Extracted order from array:', bodyData.wp_order_id || 'no-id');
+    }
 
     // Validate required fields
-    if (!body.customer_name || !body.phone || !body.products || body.products.length === 0) {
+    if (!bodyData.customer_name || !bodyData.phone || !bodyData.products || bodyData.products.length === 0) {
       console.error('❌ Missing required fields');
       return Response.json({ 
         success: false, 
         error: 'Missing required fields: customer_name, phone, or products' 
       }, { status: 400 });
     }
+
+    const body = bodyData;
 
     // STEP 1: Find or create customer
     let customer = null;
