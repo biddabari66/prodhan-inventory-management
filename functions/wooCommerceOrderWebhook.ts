@@ -1,192 +1,171 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * WOOCOMMERCE ORDER WEBHOOK HANDLER - PRODUCTION VERSION
- * Automatically receives orders from WooCommerce landing pages and creates them in Sales
- * Matches SKU to inventory and auto-creates customers
+ * WOOCOMMERCE ORDER WEBHOOK - PRODUCTION
+ * Receives orders from WooCommerce/WordPress landing pages
+ * Auto-creates customers, matches SKUs, and syncs to Adprofit
  */
 
-// Convert Bangladesh timezone date to ISO
 const toBDTDate = (date) => {
   const d = date ? new Date(date) : new Date();
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
 };
 
 Deno.serve(async (req) => {
+  const base44 = createClientFromRequest(req);
+  
   try {
-    const base44 = createClientFromRequest(req);
+    console.log('🛒 WooCommerce Webhook Started');
+
+    // Parse payload - handle both single object and array
+    const rawData = await req.json();
+    const orderData = Array.isArray(rawData) ? rawData[0] : rawData;
     
-    console.log('🛒 WooCommerce Order Webhook Triggered');
+    console.log('📦 Order ID:', orderData?.wp_order_id);
+    console.log('👤 Customer:', orderData?.customer_name);
+    console.log('📱 Phone:', orderData?.phone);
+    console.log('🛍️ Products count:', orderData?.products?.length);
 
-    // Parse incoming order data - handle both object and array formats
-    const bodyData = await req.json();
-    console.log('📦 Raw data received:', JSON.stringify(bodyData, null, 2));
-
-    // WooCommerce can send as object {} or array [{...}]
-    let body;
-    if (Array.isArray(bodyData)) {
-      if (bodyData.length === 0) {
-        return Response.json({ success: false, error: 'Empty order array' }, { status: 400 });
-      }
-      body = bodyData[0];
-      console.log('✅ Extracted from array');
-    } else {
-      body = bodyData;
-      console.log('✅ Using object directly');
-    }
-
-    console.log('📋 Processing order:', body.wp_order_id || 'no-wp-id', '| Customer:', body.customer_name);
-
-    // Validate required fields
-    if (!body.customer_name || !body.phone || !body.products || body.products.length === 0) {
-      console.error('❌ Validation failed - Missing:', {
-        has_customer_name: !!body.customer_name,
-        has_phone: !!body.phone,
-        has_products: !!body.products,
-        products_length: body.products?.length
+    // Validate
+    if (!orderData?.customer_name || !orderData?.phone || !orderData?.products?.length) {
+      console.error('❌ Missing fields:', {
+        customer_name: orderData?.customer_name,
+        phone: orderData?.phone,
+        products_count: orderData?.products?.length
       });
       return Response.json({ 
         success: false, 
-        error: 'Missing required fields: customer_name, phone, or products' 
+        error: 'Missing: customer_name, phone, or products'
       }, { status: 400 });
     }
 
-    // STEP 1: Find or create customer
-    let customer = null;
-    const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ phone: body.phone });
+    console.log('✅ Validation passed');
+
+    // Find or create customer
+    const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ 
+      phone: orderData.phone 
+    });
     
-    if (existingCustomers && existingCustomers.length > 0) {
+    let customer;
+    if (existingCustomers?.length > 0) {
       customer = existingCustomers[0];
-      console.log('✅ Found existing customer:', customer.customer_name);
+      console.log('✅ Existing customer:', customer.customer_name);
     } else {
-      // Create new customer
       customer = await base44.asServiceRole.entities.Customer.create({
-        customer_name: body.customer_name,
-        phone: body.phone,
-        email: body.email || '',
-        address: body.address || body.billing_address || '',
-        city: body.city || 'Dhaka',
+        customer_name: orderData.customer_name,
+        phone: orderData.phone,
+        email: orderData.email || '',
+        address: orderData.address || orderData.billing_address || '',
+        city: orderData.city || 'Dhaka',
         customer_type: 'retail',
-        source: 'woocommerce_landing'
+        source: 'woocommerce'
       });
-      console.log('✨ Created new customer:', customer.customer_name);
+      console.log('✨ New customer created:', customer.customer_name);
     }
 
-    // STEP 2: Match SKUs to inventory and prepare order items
+    // Match products by SKU
     const inventory = await base44.asServiceRole.entities.Inventory.list();
     const orderItems = [];
-    let matchedCount = 0;
-    let unmatchedProducts = [];
+    const unmatched = [];
 
-    for (const product of body.products) {
-      // Find inventory by SKU (barcode field)
-      const inventoryItem = inventory.find(item => 
-        item.barcode === product.sku || 
-        item.item_name?.toLowerCase() === product.name?.toLowerCase()
+    for (const product of orderData.products) {
+      const invItem = inventory.find(i => 
+        i.barcode === product.sku || 
+        i.item_name?.toLowerCase() === product.name?.toLowerCase()
       );
 
-      if (inventoryItem) {
+      if (invItem) {
         orderItems.push({
-          inventory_id: inventoryItem.id,
-          product_name: inventoryItem.item_name,
+          inventory_id: invItem.id,
+          item_name: invItem.item_name,
           quantity: product.quantity || 1,
-          unit_price: product.unit_price || inventoryItem.selling_price || 0,
-          total_price: product.total_price || (product.unit_price * product.quantity),
-          weight: product.weight || inventoryItem.weight_kg || 0
+          unit_price: product.unit_price || invItem.selling_price || 0,
+          subtotal: product.total_price || (product.quantity * product.unit_price),
+          weight: product.weight || invItem.weight_kg || 0
         });
-        matchedCount++;
-        console.log(`✅ Matched SKU ${product.sku} → ${inventoryItem.item_name}`);
+        console.log(`✅ SKU ${product.sku} → ${invItem.item_name}`);
       } else {
-        unmatchedProducts.push(product.name || product.sku);
-        console.warn(`⚠️ SKU not found in inventory: ${product.sku} (${product.name})`);
+        unmatched.push(product.name);
+        console.warn(`⚠️ SKU not found: ${product.sku} (${product.name})`);
       }
     }
 
     if (orderItems.length === 0) {
-      console.error('❌ No products matched - cannot create order');
       return Response.json({ 
         success: false, 
-        error: 'No products matched in inventory',
-        unmatched_products: unmatchedProducts
+        error: 'No products matched',
+        unmatched
       }, { status: 400 });
     }
 
-    // STEP 3: Map WooCommerce status to our order status
-    const statusMapping = {
+    // Map status
+    const statusMap = {
       'pending': 'pending',
       'processing': 'confirmed',
-      'on-hold': 'pending',
       'completed': 'delivered',
-      'cancelled': 'cancelled',
-      'refunded': 'cancelled',
-      'failed': 'cancelled'
+      'cancelled': 'cancelled'
     };
+    const orderStatus = statusMap[orderData.delivery_status] || 'pending';
 
-    const orderStatus = statusMapping[body.delivery_status?.toLowerCase()] || 'pending';
-
-    // STEP 4: Create the order
-    const orderData = {
+    // Create order
+    const newOrder = await base44.asServiceRole.entities.Order.create({
       customer_id: customer.id,
-      customer_name: body.customer_name,
-      customer_phone: body.phone,
-      customer_email: body.email || '',
-      delivery_address: body.address || body.billing_address || '',
-      delivery_city: body.city || 'Dhaka',
+      customer_name: orderData.customer_name,
+      customer_phone: orderData.phone,
+      customer_email: orderData.email || '',
+      delivery_address: orderData.address || orderData.billing_address || '',
+      delivery_city: orderData.city || 'Dhaka',
       order_items: orderItems,
-      subtotal: body.subtotal || 0,
-      delivery_charge: body.delivery_charge || 0,
-      discount: body.discount || 0,
-      grand_total: body.grand_total || body.subtotal + body.delivery_charge - body.discount,
-      payment_method: body.payment_method || 'cash_on_delivery',
-      payment_status: body.payment_status || 'unpaid',
+      subtotal: orderData.subtotal || 0,
+      delivery_charge: orderData.delivery_charge || 0,
+      discount: orderData.discount || 0,
+      total_amount: orderData.grand_total || orderData.subtotal,
+      payment_method: orderData.payment_method || 'cod',
+      payment_status: orderData.payment_status || 'pending',
       order_status: orderStatus,
-      order_date: body.order_date || new Date().toISOString(),
-      order_source: 'woocommerce_landing',
-      order_note: body.order_note || 'Order from WooCommerce landing page',
-      wp_order_id: body.wp_order_id || `WP-${Date.now()}`,
-      shipping_method: body.shipping_method || 'home_delivery',
+      order_date: orderData.order_date || new Date().toISOString(),
+      order_source: 'woocommerce',
+      order_note: orderData.order_note || '',
+      wp_order_id: orderData.wp_order_id || `WP-${Date.now()}`,
+      shipping_method: orderData.shipping_method || 'home_delivery',
       department: 'prodhan_com_e_commerce'
-    };
+    });
 
-    const createdOrder = await base44.asServiceRole.entities.Order.create(orderData);
-    console.log('✅ Order created successfully:', createdOrder.id);
+    console.log('✅ Order created:', newOrder.id);
 
-    // STEP 5: If order is confirmed, sync to Adprofit automatically
-    let adprofitSyncResult = null;
+    // Auto-sync to Adprofit if confirmed
+    let syncResult = null;
     if (orderStatus === 'confirmed') {
-      console.log('🔄 Order is confirmed - Auto-syncing to Adprofit...');
+      console.log('🔄 Auto-syncing to Adprofit...');
       try {
-        const syncResponse = await base44.asServiceRole.functions.invoke('syncToAdprofit', { 
-          order_id: createdOrder.id 
+        const sync = await base44.asServiceRole.functions.invoke('syncToAdprofit', { 
+          order_id: newOrder.id 
         });
-        adprofitSyncResult = syncResponse.data;
-        console.log('✅ Adprofit sync completed:', adprofitSyncResult);
-      } catch (syncError) {
-        console.error('⚠️ Adprofit sync failed:', syncError.message);
-        adprofitSyncResult = { success: false, error: syncError.message };
+        syncResult = sync.data;
+        console.log('✅ Adprofit synced:', syncResult?.synced_items || 0, 'items');
+      } catch (err) {
+        console.error('⚠️ Adprofit sync failed:', err.message);
+        syncResult = { success: false, error: err.message };
       }
     }
 
-    // STEP 6: Return success response
     return Response.json({ 
       success: true,
-      order_id: createdOrder.id,
-      order_number: createdOrder.order_number || createdOrder.id,
+      order_id: newOrder.id,
+      order_number: newOrder.order_number || newOrder.id,
       customer_id: customer.id,
-      matched_products: matchedCount,
-      total_products: body.products.length,
-      unmatched_products: unmatchedProducts.length > 0 ? unmatchedProducts : null,
-      order_status: orderStatus,
-      adprofit_synced: adprofitSyncResult?.success || false,
-      adprofit_sync_details: adprofitSyncResult
-    }, { status: 200 });
+      matched: orderItems.length,
+      total: orderData.products.length,
+      unmatched: unmatched.length > 0 ? unmatched : null,
+      status: orderStatus,
+      adprofit_synced: syncResult?.success || false
+    });
 
   } catch (error) {
-    console.error('❌ WooCommerce webhook error:', error);
+    console.error('❌ Error:', error.message);
     return Response.json({ 
       success: false, 
-      error: error.message,
-      stack: error.stack 
+      error: error.message 
     }, { status: 500 });
   }
 });
