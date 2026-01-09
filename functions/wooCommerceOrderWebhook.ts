@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         customer_name: customerName,
         customer_phone: phone,
         customer_email: email,
-        customer_address: address,
+        customer_address: shippingAddress,
         customer_city: city,
         customer_type: 'retail',
         source: 'woocommerce',
