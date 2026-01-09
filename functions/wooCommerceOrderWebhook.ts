@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     }
     
     // Find or create customer
-    const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ phone });
+    const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ customer_phone: phone });
     
     let customer;
     if (existingCustomers?.length > 0) {
@@ -136,10 +136,10 @@ Deno.serve(async (req) => {
     } else {
       customer = await base44.asServiceRole.entities.Customer.create({
         customer_name: customerName,
-        phone: phone,
-        email: email,
-        address: address,
-        city: city,
+        customer_phone: phone,
+        customer_email: email,
+        customer_address: address,
+        customer_city: city,
         customer_type: 'retail',
         source: 'woocommerce',
         department: 'prodhan_com_e_commerce'
