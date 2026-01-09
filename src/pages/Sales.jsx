@@ -1018,10 +1018,13 @@ function SalesPage() {
     const totalOrders = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrders = filteredOrders.filter(o => o.order_status === 'confirmed').length;
+    const confirmedOrders = filteredOrders.filter(o => validStatuses.includes(o.order_status)).length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
-    const totalProductQuantity = filteredOrders.reduce((sum, o) => {
+    
+    // CRITICAL: Only count CONFIRMED orders (same logic as reports)
+    const confirmedForProductQty = filteredOrders.filter(o => validStatuses.includes(o.order_status));
+    const totalProductQuantity = confirmedForProductQty.reduce((sum, o) => {
       const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1033,7 +1036,7 @@ function SalesPage() {
     // Today's stats with actual product count (combo expanded)
     const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
-    const todayConfirmed = todayOrders.filter(o => o.order_status === 'confirmed').length;
+    const todayConfirmed = todayOrders.filter(o => validStatuses.includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     // CRITICAL: Only count CONFIRMED orders for product quantity (matches reports)
