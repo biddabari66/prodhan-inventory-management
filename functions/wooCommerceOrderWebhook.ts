@@ -22,9 +22,16 @@ Deno.serve(async (req) => {
       throw new Error('Invalid payload structure');
     }
     
-    // Extract and clean customer data
-    const customerName = String(data.customer_name || 'Unknown Customer').trim();
-    let phone = String(data.phone || '').replace(/[\s\-\+]/g, '');
+    // Extract and clean customer data with flexible field mapping
+    const customerName = String(data.customer_name || data.name || 'Unknown Customer').trim();
+    
+    // Phone: accept multiple formats
+    let phone = String(
+      data.phone || 
+      data.customer_phone || 
+      data.billing_phone || 
+      ''
+    ).replace(/[\s\-\+]/g, '');
     
     // Validate phone
     if (!phone || phone.length < 10) {
@@ -36,9 +43,29 @@ Deno.serve(async (req) => {
       phone = '0' + phone;
     }
     
-    const email = String(data.email || '').trim();
-    const address = String(data.address || data.billing_address || '').trim();
-    const city = String(data.city || 'Dhaka').trim();
+    // Email: flexible field names
+    const email = String(
+      data.email || 
+      data.customer_email || 
+      data.billing_email || 
+      ''
+    ).trim();
+    
+    // Address: prioritize shipping, then billing, then generic
+    const shippingAddress = String(
+      data.shipping_address || 
+      data.address || 
+      data.billing_address || 
+      ''
+    ).trim();
+    
+    // City
+    const city = String(
+      data.city || 
+      data.delivery_city || 
+      data.billing_city || 
+      'Dhaka'
+    ).trim();
     
     console.log('✅ Customer:', { customerName, phone, city });
     
