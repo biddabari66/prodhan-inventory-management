@@ -1411,7 +1411,7 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="bg-violet-300 rounded-xl w-12 h-12 from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
                   <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen &&
@@ -1419,9 +1419,9 @@ export default function Layout({ children, currentPageName }) {
                     <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
                       PIM
                     </span>
-                    <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400 tracking-wide">
-                      Prodhan Inventory
-                    </span>
+                    <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Prodhan Inventory
+
+                  </span>
                   </div>
                 }
               </Link>
