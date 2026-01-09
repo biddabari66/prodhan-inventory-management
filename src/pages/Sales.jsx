@@ -1018,10 +1018,11 @@ function SalesPage() {
     // Today's CONFIRMED orders only (for product qty calculation)
     const todayConfirmedOrders = todayOrders.filter(o => validStatuses.includes(o.order_status));
 
-    const totalOrders = filteredOrders.length;
+    // CRITICAL FIX: Count only orders that passed confirmed state (same as product qty)
+    const confirmedOrders = filteredOrders.filter(o => validStatuses.includes(o.order_status)).length;
+    const totalOrders = confirmedOrders; // Total orders = confirmed+ only
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrders = filteredOrders.filter(o => validStatuses.includes(o.order_status)).length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
     
