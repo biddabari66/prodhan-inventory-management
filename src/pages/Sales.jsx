@@ -1037,10 +1037,10 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // Today's stats with actual product count (combo expanded)
-    const todayOrdersCount = todayOrders.length;
-    const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
+    // Today's stats - count only confirmed+ orders to match Total Orders logic
     const todayConfirmed = todayOrders.filter(o => validStatuses.includes(o.order_status)).length;
+    const todayOrdersCount = todayConfirmed; // TODAY: confirmed+ orders only (matches totalOrders)
+    const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     // CRITICAL: Sum ACTUAL QUANTITIES of all items in today's confirmed orders
