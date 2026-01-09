@@ -19,37 +19,53 @@ Deno.serve(async (req) => {
 
     // Parse JSON body
     const rawData = await req.json();
-    console.log('📦 Raw data type:', Array.isArray(rawData) ? 'array' : typeof rawData);
-    console.log('📦 Raw keys:', Object.keys(rawData || {}));
+    console.log('📦 Received data:', JSON.stringify(rawData).substring(0, 300));
     
     // Extract order (handle both array and object)
     const orderData = Array.isArray(rawData) ? rawData[0] : rawData;
     
-    console.log('📋 Parsed order data:', JSON.stringify({
-      customer_name: orderData?.customer_name,
-      phone: orderData?.phone,
-      products_length: orderData?.products?.length,
-      wp_order_id: orderData?.wp_order_id
-    }));
-
-    // Validate with detailed checks
-    const missing = [];
-    if (!orderData?.customer_name) missing.push('customer_name');
-    if (!orderData?.phone) missing.push('phone');
-    if (!orderData?.products || !Array.isArray(orderData.products)) missing.push('products (array)');
-    if (orderData?.products && orderData.products.length === 0) missing.push('products (empty)');
-
-    if (missing.length > 0) {
-      console.error('❌ Validation failed:', missing);
-      console.error('Received data:', JSON.stringify(orderData, null, 2));
+    if (!orderData || typeof orderData !== 'object') {
       return Response.json({ 
         success: false, 
-        error: `Missing fields: ${missing.join(', ')}`,
-        received_keys: Object.keys(orderData || {})
+        error: 'Invalid payload format',
+        expected_format: {
+          customer_name: 'string',
+          phone: 'string',
+          products: '[{sku, name, quantity, unit_price}]'
+        }
       }, { status: 400 });
     }
 
-    console.log('✅ Validation OK');
+    // Validate required fields
+    const missing = [];
+    if (!orderData.customer_name) missing.push('customer_name');
+    if (!orderData.phone) missing.push('phone');
+    if (!Array.isArray(orderData.products)) missing.push('products');
+    if (orderData.products && orderData.products.length === 0) missing.push('products (empty array)');
+
+    if (missing.length > 0) {
+      console.error('❌ Missing:', missing);
+      return Response.json({ 
+        success: false, 
+        error: `Missing required fields: ${missing.join(', ')}`,
+        received_keys: Object.keys(orderData),
+        expected_format: {
+          customer_name: 'Customer full name',
+          phone: 'Customer phone number',
+          products: [{
+            sku: 'Product SKU/barcode',
+            name: 'Product name',
+            quantity: 1,
+            unit_price: 100
+          }],
+          email: 'optional',
+          address: 'optional',
+          city: 'optional'
+        }
+      }, { status: 400 });
+    }
+
+    console.log('✅ Valid payload');
 
     // Find or create customer
     const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ 
