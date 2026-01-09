@@ -109,10 +109,10 @@ Deno.serve(async (req) => {
     const notFound = [];
     
     for (const prod of products) {
-      const sku = String(prod.sku || '').trim();
-      const name = String(prod.name || '').trim();
-      const qty = parseInt(prod.quantity) || 1;
-      const price = parseFloat(prod.unit_price) || 0;
+      const sku = String(prod.sku || prod.product_sku || prod.barcode || '').trim();
+      const name = String(prod.name || prod.product_name || prod.item_name || '').trim();
+      const qty = parseInt(prod.quantity || prod.qty || 1);
+      const price = parseFloat(prod.unit_price || prod.price || 0);
       
       // Find in inventory by SKU (barcode) or name
       const invItem = inventory.find(i => 
