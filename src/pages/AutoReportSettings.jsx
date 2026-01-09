@@ -19,6 +19,8 @@ function AutoReportSettingsPage() {
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [reportType, setReportType] = useState('daily_sales');
+  const [frequency, setFrequency] = useState('daily');
 
   useEffect(() => {
     loadScheduledTasks();
@@ -59,29 +61,58 @@ function AutoReportSettingsPage() {
     setRecipients(recipients.filter(e => e !== email));
   };
 
+  const reportTypeConfig = {
+    daily_sales: {
+      name: 'Daily Sales Report',
+      function: 'sendDailySalesEmail',
+      description: 'Daily sales summary with order details and top products'
+    },
+    weekly_sales: {
+      name: 'Weekly Sales Report',
+      function: 'sendWeeklySalesReport',
+      description: 'Comprehensive weekly sales analysis with trends'
+    },
+    low_stock: {
+      name: 'Low Stock Alert',
+      function: 'sendLowStockAlert',
+      description: 'Alert for products below minimum stock levels'
+    },
+    monthly_performance: {
+      name: 'Monthly Performance Report',
+      function: 'sendMonthlyPerformanceReport',
+      description: 'Monthly business performance analysis'
+    }
+  };
+
   const createSchedule = async () => {
     if (recipients.length === 0) {
       toast.error('Add at least one email recipient');
       return;
     }
 
+    const config = reportTypeConfig[reportType];
+    const repeatConfig = frequency === 'daily' 
+      ? { repeat_interval: 1, repeat_unit: 'days' }
+      : frequency === 'weekly'
+      ? { repeat_interval: 1, repeat_unit: 'weeks', repeat_on_days: [1] }
+      : { repeat_interval: 1, repeat_unit: 'months', repeat_on_day_of_month: 1 };
+
     setIsCreating(true);
     try {
       await base44.functions.invoke('manageScheduledReports', {
         action: 'create',
         task_data: {
-          name: 'Daily Sales Email Report',
-          function_name: 'sendDailySalesEmail',
-          description: `Sends automated daily sales summary to ${recipients.length} recipient(s)`,
+          name: `${config.name} - ${frequency}`,
+          function_name: config.function,
+          description: `${config.description} | Sent to ${recipients.length} recipient(s)`,
           function_args: { recipient_emails: recipients },
-          repeat_interval: 1,
-          repeat_unit: 'days',
+          ...repeatConfig,
           start_time: scheduleTime,
           is_active: true
         }
       });
 
-      toast.success(`✅ Daily report scheduled for ${scheduleTime}!`);
+      toast.success(`✅ ${config.name} scheduled!`);
       setRecipients([]);
       loadScheduledTasks();
     } catch (error) {
@@ -120,17 +151,18 @@ function AutoReportSettingsPage() {
       return;
     }
 
+    const config = reportTypeConfig[reportType];
     setIsTesting(true);
     const loadingToast = toast.loading('📧 Sending test report...');
     
     try {
-      const response = await base44.functions.invoke('sendDailySalesEmail', {
+      const response = await base44.functions.invoke(config.function, {
         recipient_emails: recipients
       });
       
       toast.dismiss(loadingToast);
       if (response.data?.success) {
-        toast.success(`✅ Test report sent to ${response.data.emails_sent} recipient(s)!`);
+        toast.success(`✅ Test report sent successfully!`);
       } else {
         toast.error('Failed to send test report');
       }
@@ -141,10 +173,6 @@ function AutoReportSettingsPage() {
       setIsTesting(false);
     }
   };
-
-  const dailyReportTasks = scheduledTasks.filter(t => 
-    t.function_name === 'sendDailySalesEmail' || t.name?.includes('Daily Sales')
-  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -164,10 +192,42 @@ function AutoReportSettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            Create New Daily Report Schedule
+            Create New Report Schedule
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Report Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="font-semibold mb-2 block">Report Type *</Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily_sales">📊 Daily Sales Report</SelectItem>
+                  <SelectItem value="weekly_sales">📈 Weekly Sales Report</SelectItem>
+                  <SelectItem value="low_stock">⚠️ Low Stock Alert</SelectItem>
+                  <SelectItem value="monthly_performance">📈 Monthly Performance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="font-semibold mb-2 block">Frequency *</Label>
+              <Select value={frequency} onValueChange={setFrequency}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly (Every Monday)</SelectItem>
+                  <SelectItem value="monthly">Monthly (1st of month)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Email Recipients */}
           <div>
             <Label className="font-semibold mb-2 block">Email Recipients *</Label>
@@ -202,7 +262,7 @@ function AutoReportSettingsPage() {
 
           {/* Schedule Time */}
           <div>
-            <Label className="font-semibold mb-2 block">Daily Send Time (Asia/Dhaka)</Label>
+            <Label className="font-semibold mb-2 block">Send Time (Asia/Dhaka)</Label>
             <div className="flex gap-3 items-center">
               <Input
                 type="time"
@@ -212,7 +272,9 @@ function AutoReportSettingsPage() {
               />
               <Badge variant="outline" className="text-slate-600">
                 <Clock className="w-3 h-3 mr-1" />
-                Report will be sent every day at this time
+                {frequency === 'daily' && 'Every day at this time'}
+                {frequency === 'weekly' && 'Every Monday at this time'}
+                {frequency === 'monthly' && '1st of every month at this time'}
               </Badge>
             </div>
           </div>
@@ -251,7 +313,7 @@ function AutoReportSettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600" />
-            Active Report Schedules ({dailyReportTasks.length})
+            Active Report Schedules ({scheduledTasks.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -259,47 +321,76 @@ function AutoReportSettingsPage() {
             <div className="text-center py-8">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
             </div>
-          ) : dailyReportTasks.length === 0 ? (
+          ) : scheduledTasks.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No scheduled reports yet. Create one above!</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {dailyReportTasks.map(task => (
-                <div key={task.id} className="p-4 bg-slate-50 rounded-lg border flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge className={task.is_active ? 'bg-green-600' : 'bg-slate-400'}>
-                        {task.is_active ? 'Active' : 'Paused'}
-                      </Badge>
-                      <span className="font-semibold">{task.name}</span>
-                    </div>
-                    <p className="text-sm text-slate-600">{task.description}</p>
-                    <div className="flex gap-4 mt-2 text-xs text-slate-500">
-                      <span>⏰ Time: {task.start_time || 'Not set'}</span>
-                      <span>📧 Recipients: {task.function_args?.recipient_emails?.length || 0}</span>
+              {scheduledTasks.map(task => {
+                const isDaily = task.repeat_unit === 'days';
+                const isWeekly = task.repeat_unit === 'weeks';
+                const isMonthly = task.repeat_unit === 'months';
+                const frequencyText = isDaily ? 'Daily' : isWeekly ? 'Weekly' : isMonthly ? 'Monthly' : 'Custom';
+                
+                return (
+                  <div key={task.id} className="p-4 bg-slate-50 rounded-lg border-2 hover:border-blue-300 transition-all">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Badge className={task.is_active ? 'bg-green-600' : 'bg-slate-400'}>
+                            {task.is_active ? '✓ Active' : '⏸ Paused'}
+                          </Badge>
+                          <Badge variant="outline">{frequencyText}</Badge>
+                          <span className="font-bold text-lg">{task.name}</span>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-3">{task.description}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Clock className="w-4 h-4" />
+                            <span>Time: <strong>{task.start_time || 'Not set'}</strong></span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Mail className="w-4 h-4" />
+                            <span>Recipients: <strong>{task.function_args?.recipient_emails?.length || 0}</strong></span>
+                          </div>
+                          {task.next_run && (
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Calendar className="w-4 h-4" />
+                              <span>Next: <strong>{new Date(task.next_run).toLocaleDateString()}</strong></span>
+                            </div>
+                          )}
+                          {task.last_run && (
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Last: <strong>{new Date(task.last_run).toLocaleDateString()}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleTask(task.id)}
+                          className={task.is_active ? 'hover:bg-orange-50' : 'hover:bg-green-50'}
+                        >
+                          {task.is_active ? 'Pause' : 'Activate'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteTask(task.id)}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleTask(task.id)}
-                    >
-                      {task.is_active ? 'Pause' : 'Activate'}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteTask(task.id)}
-                      className="text-red-600 hover:bg-red-50"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
