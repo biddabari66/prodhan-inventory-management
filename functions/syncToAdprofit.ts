@@ -57,11 +57,12 @@ Deno.serve(async (req) => {
 
     console.log('✅ Order found:', order.order_number, 'Status:', order.order_status);
 
-    // Check if order is delivered
-    if (order.order_status !== 'delivered') {
-      console.warn('⚠️ Order not delivered:', order.order_status);
+    // Check if order is confirmed or later
+    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+    if (!validStatuses.includes(order.order_status)) {
+      console.warn('⚠️ Order not in syncable status:', order.order_status);
       return Response.json({ 
-        error: 'Order must be in delivered status to sync',
+        error: 'Order must be confirmed or later to sync',
         current_status: order.order_status
       }, { status: 400 });
     }
@@ -116,7 +117,7 @@ Deno.serve(async (req) => {
           erp_product_id: inventoryItem.barcode,
           quantity: item.quantity,
           sale_price: item.unit_price,
-          date: toBDTDate(order.actual_delivery_date),
+          date: toBDTDate(order.order_date || order.created_date),
           customer_name: order.customer_name
         };
 

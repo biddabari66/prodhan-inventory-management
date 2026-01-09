@@ -6,6 +6,7 @@ import Attendance from './pages/Attendance';
 import AttendanceMy from './pages/AttendanceMy';
 import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
+import AutoReportSettings from './pages/AutoReportSettings';
 import Budget from './pages/Budget';
 import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
@@ -72,7 +73,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import AutoReportSettings from './pages/AutoReportSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -85,6 +85,7 @@ export const PAGES = {
     "AttendanceMy": AttendanceMy,
     "AuditTrailViewer": AuditTrailViewer,
     "Auth": Auth,
+    "AutoReportSettings": AutoReportSettings,
     "Budget": Budget,
     "CRM": CRM,
     "CategorySettings": CategorySettings,
@@ -151,7 +152,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "AutoReportSettings": AutoReportSettings,
 }
 
 export const pagesConfig = {

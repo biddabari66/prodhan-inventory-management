@@ -1518,14 +1518,14 @@ function SalesPage() {
                          <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
-                             <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">
+                             <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
                                <CheckCircle className="w-3 h-3 mr-1" />
-                               Adprofit ✓
+                               Adprofit Synced
                              </Badge>
                            )}
-                           {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-ORDER')) && (
+                           {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-')) && (
                              <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
-                               🌐 Landing Page
+                               🌐 Website
                              </Badge>
                            )}
                          </div>
@@ -1710,21 +1710,29 @@ function SalesPage() {
                           >
                             <Download className="w-4 h-4 text-green-600" />
                           </Button>
-                          {(order.order_status === 'confirmed' || order.order_status === 'delivered') && !order.adprofit_synced && (
+                          {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={async () => {
-                                toast.info('🔄 Syncing to Adprofit...');
+                                const loadingToast = toast.loading('🔄 Syncing to Adprofit...');
                                 try {
                                   const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
+                                  toast.dismiss(loadingToast);
+                                  
                                   if (response.data?.success) {
                                     queryClient.invalidateQueries(['orders']);
-                                    toast.success('✅ Synced to Adprofit!');
+                                    const { synced_items, failed_items } = response.data;
+                                    if (failed_items > 0) {
+                                      toast.warning(`⚠️ Partially synced: ${synced_items}/${synced_items + failed_items} items`);
+                                    } else {
+                                      toast.success(`✅ Synced ${synced_items} items to Adprofit!`);
+                                    }
                                   } else {
-                                    toast.error('Sync failed');
+                                    toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
                                   }
                                 } catch (error) {
+                                  toast.dismiss(loadingToast);
                                   toast.error('Sync failed: ' + error.message);
                                 }
                               }}
