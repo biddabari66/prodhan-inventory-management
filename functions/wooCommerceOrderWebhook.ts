@@ -1,8 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * PRODUCTION-READY WooCommerce Webhook
- * Creates orders in "pending" state for manual confirmation
+ * PRODUCTION WooCommerce Webhook - Fully Dynamic Field Mapping
+ * Handles all field variations except SKU (which is critical for inventory matching)
  */
 
 Deno.serve(async (req) => {
@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     
     // Parse JSON body
     const body = await req.json();
-    console.log('📦 Received:', JSON.stringify(body, null, 2));
+    console.log('📦 Raw payload:', JSON.stringify(body, null, 2));
     
     // Handle array wrapper
     const data = Array.isArray(body) ? body[0] : body;
@@ -22,62 +22,95 @@ Deno.serve(async (req) => {
       throw new Error('Invalid payload structure');
     }
     
-    // Extract and clean customer data with flexible field mapping
-    const customerName = String(data.customer_name || data.name || 'Unknown Customer').trim();
+    // ============= FLEXIBLE CUSTOMER DATA EXTRACTION =============
+    const customerName = String(
+      data.customer_name || 
+      data.name || 
+      data.billing_name ||
+      data.shipping_name ||
+      'Unknown Customer'
+    ).trim();
     
-    // Phone: accept multiple formats
+    // Phone - try all possible field names
     let phone = String(
       data.phone || 
       data.customer_phone || 
-      data.billing_phone || 
+      data.billing_phone ||
+      data.shipping_phone ||
+      data.contact_number ||
       ''
     ).replace(/[\s\-\+]/g, '');
     
-    // Validate phone
+    // Validate and normalize phone
     if (!phone || phone.length < 10) {
-      throw new Error(`Invalid phone number: ${data.phone}`);
+      throw new Error(`Invalid phone: "${data.phone || 'missing'}"`);
     }
-    
-    // Normalize BD phone format
     if (!phone.startsWith('88') && !phone.startsWith('0')) {
       phone = '0' + phone;
     }
     
-    // Email: flexible field names
+    // Email - flexible
     const email = String(
       data.email || 
       data.customer_email || 
-      data.billing_email || 
+      data.billing_email ||
+      data.contact_email ||
       ''
     ).trim();
     
-    // Address: prioritize shipping, then billing, then generic
-    const shippingAddress = String(
-      data.shipping_address || 
+    // Address - try all variations
+    const addressLine = String(
       data.address || 
-      data.billing_address || 
+      data.billing_address ||
+      data.shipping_address ||
+      data.delivery_address ||
+      data.address_line ||
       ''
     ).trim();
     
-    // City
+    // City - flexible
     const city = String(
       data.city || 
-      data.delivery_city || 
-      data.billing_city || 
+      data.delivery_city ||
+      data.billing_city ||
+      data.shipping_city ||
       'Dhaka'
     ).trim();
     
-    console.log('✅ Customer:', { customerName, phone, city, shippingAddress });
+    // District - optional
+    const district = String(
+      data.district ||
+      data.region ||
+      data.state ||
+      ''
+    ).trim();
     
-    // Parse products (flexible field names)
-    let products = data.products || data.items || data.order_items || [];
+    // Postal code - optional
+    const postalCode = String(
+      data.postal_code ||
+      data.zip ||
+      data.zip_code ||
+      ''
+    ).trim();
+    
+    console.log('✅ Customer extracted:', { 
+      customerName, 
+      phone, 
+      email,
+      addressLine,
+      city,
+      district
+    });
+    
+    // ============= FLEXIBLE PRODUCT DATA EXTRACTION =============
+    let products = data.products || data.items || data.order_items || data.line_items || [];
     if (!Array.isArray(products) || products.length === 0) {
       throw new Error('No products in order');
     }
     
-    console.log('📦 Products:', products.length);
+    console.log('📦 Products count:', products.length);
     
-    // Find or create customer
+    // ============= FIND OR CREATE CUSTOMER =============
     let customer;
     const existing = await base44.asServiceRole.entities.Customer.filter({ 
       customer_phone: phone 
@@ -91,7 +124,7 @@ Deno.serve(async (req) => {
         customer_name: customerName,
         customer_phone: phone,
         customer_email: email,
-        customer_address: shippingAddress,
+        customer_address: addressLine,
         customer_city: city,
         customer_type: 'retail',
         source: 'woocommerce',
@@ -100,21 +133,66 @@ Deno.serve(async (req) => {
       console.log('✨ Created customer:', customer.customer_name);
     }
     
-    // Load inventory
+    // ============= LOAD INVENTORY =============
     const inventory = await base44.asServiceRole.entities.Inventory.list();
-    console.log('📊 Inventory items:', inventory.length);
+    console.log('📊 Inventory items loaded:', inventory.length);
     
-    // Match products to inventory
+    // ============= MATCH PRODUCTS TO INVENTORY (SKU is critical!) =============
     const orderItems = [];
     const notFound = [];
     
     for (const prod of products) {
-      const sku = String(prod.sku || prod.product_sku || prod.barcode || '').trim();
-      const name = String(prod.name || prod.product_name || prod.item_name || '').trim();
-      const qty = parseInt(prod.quantity || prod.qty || 1);
-      const price = parseFloat(prod.unit_price || prod.price || 0);
+      // SKU is critical - try these fields but prioritize exact match
+      const sku = String(
+        prod.sku || 
+        prod.product_sku || 
+        prod.barcode ||
+        prod.item_code ||
+        ''
+      ).trim();
       
-      // Find in inventory by SKU (barcode) or name
+      // Product name - flexible
+      const name = String(
+        prod.name || 
+        prod.product_name || 
+        prod.item_name ||
+        prod.title ||
+        ''
+      ).trim();
+      
+      // Quantity - flexible
+      const qty = parseInt(
+        prod.quantity || 
+        prod.qty || 
+        prod.amount ||
+        1
+      );
+      
+      // Price - flexible
+      const price = parseFloat(
+        prod.unit_price || 
+        prod.price ||
+        prod.item_price ||
+        prod.amount ||
+        0
+      );
+      
+      // Total price - flexible
+      const totalPrice = parseFloat(
+        prod.total_price ||
+        prod.total ||
+        prod.subtotal ||
+        (qty * price)
+      );
+      
+      // Weight - optional but useful
+      const weight = parseFloat(
+        prod.weight ||
+        prod.item_weight ||
+        0
+      );
+      
+      // Find in inventory by SKU (critical!) or name fallback
       const invItem = inventory.find(i => 
         (sku && i.barcode === sku) || 
         (name && i.item_name?.toLowerCase().includes(name.toLowerCase()))
@@ -126,80 +204,166 @@ Deno.serve(async (req) => {
           item_name: invItem.item_name,
           quantity: qty,
           unit_price: price || invItem.selling_price,
-          subtotal: qty * (price || invItem.selling_price),
-          weight: parseFloat(prod.weight) || invItem.weight_kg || 0
+          subtotal: totalPrice || (qty * (price || invItem.selling_price)),
+          weight: weight || invItem.weight_kg || 0
         });
-        console.log(`✅ Matched: ${sku} → ${invItem.item_name}`);
+        console.log(`✅ Matched: "${sku || name}" → ${invItem.item_name}`);
       } else {
         notFound.push({ sku, name });
-        console.warn(`⚠️ Not found: ${sku} - ${name}`);
+        console.warn(`⚠️ Not found: SKU="${sku}" Name="${name}"`);
       }
     }
     
     if (orderItems.length === 0) {
-      throw new Error(`No products matched. Not found: ${JSON.stringify(notFound)}`);
+      throw new Error(`No products matched in inventory. Missing: ${JSON.stringify(notFound)}`);
     }
     
-    // Calculate totals
-    const subtotal = parseFloat(data.subtotal) || 
-      orderItems.reduce((sum, item) => sum + item.subtotal, 0);
-    const deliveryCharge = parseFloat(data.delivery_charge) || 0;
-    const discount = parseFloat(data.discount) || 0;
-    const total = parseFloat(data.grand_total) || (subtotal + deliveryCharge - discount);
+    // ============= CALCULATE TOTALS (FLEXIBLE) =============
+    const subtotal = parseFloat(
+      data.subtotal || 
+      data.sub_total ||
+      data.items_total ||
+      orderItems.reduce((sum, item) => sum + item.subtotal, 0)
+    );
     
-    console.log('💰 Total:', total);
+    const deliveryCharge = parseFloat(
+      data.delivery_charge || 
+      data.shipping_cost ||
+      data.shipping_charge ||
+      data.delivery_cost ||
+      0
+    );
     
-    // Generate order number
+    const discount = parseFloat(
+      data.discount || 
+      data.discount_amount ||
+      data.coupon_discount ||
+      0
+    );
+    
+    const total = parseFloat(
+      data.grand_total || 
+      data.total ||
+      data.total_amount ||
+      data.order_total ||
+      (subtotal + deliveryCharge - discount)
+    );
+    
+    console.log('💰 Order totals:', { subtotal, deliveryCharge, discount, total });
+    
+    // ============= GENERATE UNIQUE ORDER NUMBER =============
     const timestamp = Date.now();
     const orderNumber = `WC-${timestamp}`;
     
-    // Create order with ALL required fields
+    // ============= EXTRACT ADDITIONAL FIELDS (FLEXIBLE) =============
+    const paymentMethod = String(
+      data.payment_method || 
+      data.payment_type ||
+      'cod'
+    ).toLowerCase();
+    
+    const paymentStatus = String(
+      data.payment_status ||
+      'unpaid'
+    ).toLowerCase();
+    
+    const orderNote = String(
+      data.order_note || 
+      data.note ||
+      data.customer_note ||
+      data.notes ||
+      'WooCommerce order'
+    ).trim();
+    
+    const wpOrderId = String(
+      data.wp_order_id || 
+      data.order_id ||
+      data.wc_order_id ||
+      `WP-${timestamp}`
+    ).trim();
+    
+    const shippingMethod = String(
+      data.shipping_method ||
+      data.delivery_method ||
+      'home_delivery'
+    ).trim();
+    
+    const deliveryStatus = String(
+      data.delivery_status ||
+      data.order_status ||
+      'pending'
+    ).trim();
+    
+    // ============= CREATE ORDER WITH PROPERLY STRUCTURED SHIPPING ADDRESS =============
     const newOrder = await base44.asServiceRole.entities.Order.create({
+      // Basic info
       order_number: orderNumber,
       customer_id: customer.id,
       customer_name: customerName,
       customer_phone: phone,
       customer_email: email,
-      shipping_address: shippingAddress || 'No address provided',
-      delivery_city: city,
+      
+      // Shipping address as OBJECT (critical fix!)
+      shipping_address: {
+        address_line: addressLine || 'No address provided',
+        city: city,
+        district: district || '',
+        postal_code: postalCode || '',
+        phone: phone
+      },
+      
+      // Order items
       order_items: orderItems,
+      
+      // Pricing
       subtotal: subtotal,
-      delivery_charge: deliveryCharge,
-      discount: discount,
+      shipping_cost: deliveryCharge,
+      discount_amount: discount,
       total_amount: total,
-      payment_method: data.payment_method || 'cod',
-      payment_status: 'unpaid',
+      
+      // Payment
+      payment_method: paymentMethod,
+      payment_status: paymentStatus === 'paid' ? 'paid' : 'pending',
+      
+      // Status
       order_status: 'pending',
       order_date: new Date().toISOString(),
-      order_source: 'woocommerce',
-      order_note: String(data.order_note || 'WooCommerce order').trim(),
-      wp_order_id: String(data.wp_order_id || `WP-${timestamp}`).trim(),
-      shipping_method: String(data.shipping_method || 'home_delivery').trim(),
-      department: 'prodhan_com_e_commerce'
+      
+      // Source & metadata
+      order_source: 'website',
+      department: 'prodhan_com_e_commerce',
+      notes: orderNote,
+      customer_notes: orderNote,
+      
+      // WooCommerce specific
+      tags: ['woocommerce', wpOrderId, shippingMethod]
     });
     
     console.log('✅ Order created:', newOrder.order_number);
     
+    // ============= SUCCESS RESPONSE =============
     return Response.json({
       success: true,
       order_id: newOrder.id,
       order_number: newOrder.order_number,
       customer: customerName,
       phone: phone,
-      items: orderItems.length,
+      items_matched: orderItems.length,
+      items_not_matched: notFound.length,
       total: total,
       status: 'pending',
+      message: 'Order created successfully',
       not_matched: notFound.length > 0 ? notFound : undefined
     });
     
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('❌ Webhook Error:', error.message);
     console.error('Stack:', error.stack);
     
     return Response.json({
       success: false,
       error: error.message,
-      hint: 'Check payload format and required fields'
+      hint: 'Check webhook payload structure and inventory SKU matching'
     }, { status: 500 });
   }
 });
