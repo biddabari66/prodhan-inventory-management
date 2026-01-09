@@ -18,29 +18,38 @@ Deno.serve(async (req) => {
     
     console.log('🛒 WooCommerce Order Webhook Triggered');
 
-    // Parse incoming order data (WooCommerce sends as array)
-    let bodyData = await req.json();
-    console.log('📦 Received data:', JSON.stringify(bodyData, null, 2));
+    // Parse incoming order data - handle both object and array formats
+    const bodyData = await req.json();
+    console.log('📦 Raw data received:', JSON.stringify(bodyData, null, 2));
 
-    // Handle array format - WooCommerce sends [{...}]
+    // WooCommerce can send as object {} or array [{...}]
+    let body;
     if (Array.isArray(bodyData)) {
       if (bodyData.length === 0) {
         return Response.json({ success: false, error: 'Empty order array' }, { status: 400 });
       }
-      bodyData = bodyData[0]; // Extract first order from array
-      console.log('✅ Extracted order from array:', bodyData.wp_order_id || 'no-id');
+      body = bodyData[0];
+      console.log('✅ Extracted from array');
+    } else {
+      body = bodyData;
+      console.log('✅ Using object directly');
     }
 
+    console.log('📋 Processing order:', body.wp_order_id || 'no-wp-id', '| Customer:', body.customer_name);
+
     // Validate required fields
-    if (!bodyData.customer_name || !bodyData.phone || !bodyData.products || bodyData.products.length === 0) {
-      console.error('❌ Missing required fields');
+    if (!body.customer_name || !body.phone || !body.products || body.products.length === 0) {
+      console.error('❌ Validation failed - Missing:', {
+        has_customer_name: !!body.customer_name,
+        has_phone: !!body.phone,
+        has_products: !!body.products,
+        products_length: body.products?.length
+      });
       return Response.json({ 
         success: false, 
         error: 'Missing required fields: customer_name, phone, or products' 
       }, { status: 400 });
     }
-
-    const body = bodyData;
 
     // STEP 1: Find or create customer
     let customer = null;
