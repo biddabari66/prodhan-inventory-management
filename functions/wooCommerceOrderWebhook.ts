@@ -67,10 +67,10 @@ Deno.serve(async (req) => {
       'Dhaka'
     ).trim();
     
-    console.log('✅ Customer:', { customerName, phone, city });
+    console.log('✅ Customer:', { customerName, phone, city, shippingAddress });
     
-    // Parse products
-    let products = data.products || [];
+    // Parse products (flexible field names)
+    let products = data.products || data.items || data.order_items || [];
     if (!Array.isArray(products) || products.length === 0) {
       throw new Error('No products in order');
     }
