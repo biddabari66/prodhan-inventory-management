@@ -1,84 +1,116 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * WOOCOMMERCE ORDER WEBHOOK - PRODUCTION
- * Receives orders from WooCommerce/WordPress landing pages
- * Auto-creates customers, matches SKUs, and syncs to Adprofit
+ * WOOCOMMERCE WEBHOOK - FLEXIBLE INPUT HANDLER
+ * Accepts orders from WooCommerce/WordPress in any format
  */
-
-const toBDTDate = (date) => {
-  const d = date ? new Date(date) : new Date();
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
-};
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   
   try {
-    console.log('🛒 WooCommerce Webhook Started');
-
-    // Parse incoming data
-    const rawData = await req.json();
-    console.log('📦 Received data:', JSON.stringify(rawData, null, 2));
+    console.log('🛒 WooCommerce Webhook - Incoming request');
     
-    // Extract order (array or object)
-    const data = Array.isArray(rawData) ? rawData[0] : rawData;
+    // Try multiple ways to get the data
+    let orderData = null;
+    let dataSource = '';
     
-    // Validate payload structure
-    if (!data || typeof data !== 'object') {
-      return Response.json({ 
-        success: false, 
-        error: 'Invalid payload - must be JSON object or array',
-        test_payload: {
+    // Method 1: Try JSON body
+    try {
+      const body = await req.json();
+      console.log('📦 JSON Body:', JSON.stringify(body, null, 2));
+      
+      if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+        // Check if it's wrapped in an array
+        orderData = Array.isArray(body) ? body[0] : body;
+        dataSource = 'JSON body';
+      }
+    } catch (e) {
+      console.log('⚠️ No valid JSON body:', e.message);
+    }
+    
+    // Method 2: Try URL parameters if JSON failed
+    if (!orderData) {
+      const url = new URL(req.url);
+      const params = Object.fromEntries(url.searchParams);
+      console.log('🔗 URL Params:', JSON.stringify(params, null, 2));
+      
+      if (Object.keys(params).length > 0) {
+        orderData = params;
+        dataSource = 'URL parameters';
+      }
+    }
+    
+    // Method 3: Try form data
+    if (!orderData) {
+      try {
+        const formData = await req.formData();
+        const formObj = {};
+        for (const [key, value] of formData.entries()) {
+          formObj[key] = value;
+        }
+        console.log('📝 Form Data:', JSON.stringify(formObj, null, 2));
+        
+        if (Object.keys(formObj).length > 0) {
+          orderData = formObj;
+          dataSource = 'Form data';
+        }
+      } catch (e) {
+        console.log('⚠️ No form data');
+      }
+    }
+    
+    if (!orderData) {
+      return Response.json({
+        success: false,
+        error: 'No data received. Send JSON body with: customer_name, phone, products[]',
+        example: {
           customer_name: "Shaleh Ahmed Khan",
           phone: "01817180019",
-          products: [{sku: "TB07", name: "Prodhan Rosolla Tea", quantity: 1, unit_price: 389}],
-          address: "House no 181 rd no 9 /A Dhanmondi Dhaka",
-          city: "Dhaka"
+          products: [{sku: "TB07", name: "Prodhan Rosolla Tea", quantity: 1, unit_price: 389}]
         }
       }, { status: 400 });
     }
-
-    // Check required fields
-    const errors = [];
-    if (!data.customer_name || typeof data.customer_name !== 'string') errors.push('customer_name (string required)');
-    if (!data.phone || typeof data.phone !== 'string') errors.push('phone (string required)');
-    if (!Array.isArray(data.products)) errors.push('products (array required)');
-    else if (data.products.length === 0) errors.push('products (cannot be empty)');
-
-    if (errors.length > 0) {
-      console.error('❌ Validation failed:', errors);
-      return Response.json({ 
-        success: false, 
-        error: `Invalid fields: ${errors.join(', ')}`,
-        received: Object.keys(data),
-        test_payload_example: {
+    
+    console.log(`✅ Data source: ${dataSource}`);
+    console.log('📋 Order data:', JSON.stringify(orderData));
+    
+    // Parse products if it's a JSON string
+    if (orderData.products && typeof orderData.products === 'string') {
+      try {
+        orderData.products = JSON.parse(orderData.products);
+      } catch (e) {
+        console.error('Failed to parse products JSON');
+      }
+    }
+    
+    // Validate
+    if (!orderData.customer_name || !orderData.phone || !Array.isArray(orderData.products) || orderData.products.length === 0) {
+      console.error('❌ Invalid data:', {
+        has_customer_name: !!orderData.customer_name,
+        has_phone: !!orderData.phone,
+        has_products: Array.isArray(orderData.products),
+        products_count: orderData.products?.length
+      });
+      
+      return Response.json({
+        success: false,
+        error: 'Missing required fields',
+        received: Object.keys(orderData),
+        required: ['customer_name', 'phone', 'products'],
+        example: {
           customer_name: "Shaleh Ahmed Khan",
           phone: "01817180019",
-          email: "customer@example.com",
           address: "House no 181 rd no 9 /A Dhanmondi Dhaka",
-          city: "Dhaka",
           products: [
-            {
-              sku: "TB07",
-              name: "Prodhan Rosolla Tea",
-              quantity: 1,
-              unit_price: 389,
-              total_price: 389
-            }
-          ],
-          subtotal: 389,
-          delivery_charge: 60,
-          discount: 0,
-          grand_total: 449,
-          delivery_status: "pending",
-          payment_method: "cash_on_delivery"
+            {sku: "TB07", name: "Prodhan Rosolla Tea", quantity: 1, unit_price: 389}
+          ]
         }
       }, { status: 400 });
     }
-
-    console.log('✅ Payload valid');
-
+    
+    console.log('✅ Validation passed');
+    
     // Find or create customer
     const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ 
       phone: orderData.phone 
@@ -87,7 +119,7 @@ Deno.serve(async (req) => {
     let customer;
     if (existingCustomers?.length > 0) {
       customer = existingCustomers[0];
-      console.log('✅ Existing customer:', customer.customer_name);
+      console.log('✅ Found customer:', customer.customer_name);
     } else {
       customer = await base44.asServiceRole.entities.Customer.create({
         customer_name: orderData.customer_name,
@@ -98,44 +130,44 @@ Deno.serve(async (req) => {
         customer_type: 'retail',
         source: 'woocommerce'
       });
-      console.log('✨ New customer created:', customer.customer_name);
+      console.log('✨ New customer:', customer.customer_name);
     }
-
-    // Match products by SKU
+    
+    // Match products
     const inventory = await base44.asServiceRole.entities.Inventory.list();
     const orderItems = [];
     const unmatched = [];
-
-    for (const product of orderData.products) {
+    
+    for (const prod of orderData.products) {
       const invItem = inventory.find(i => 
-        i.barcode === product.sku || 
-        i.item_name?.toLowerCase() === product.name?.toLowerCase()
+        i.barcode === prod.sku || 
+        i.item_name?.toLowerCase() === prod.name?.toLowerCase()
       );
-
+      
       if (invItem) {
         orderItems.push({
           inventory_id: invItem.id,
           item_name: invItem.item_name,
-          quantity: product.quantity || 1,
-          unit_price: product.unit_price || invItem.selling_price || 0,
-          subtotal: product.total_price || (product.quantity * product.unit_price),
-          weight: product.weight || invItem.weight_kg || 0
+          quantity: parseInt(prod.quantity) || 1,
+          unit_price: parseFloat(prod.unit_price) || invItem.selling_price || 0,
+          subtotal: parseFloat(prod.total_price) || (prod.quantity * prod.unit_price),
+          weight: parseFloat(prod.weight) || invItem.weight_kg || 0
         });
-        console.log(`✅ SKU ${product.sku} → ${invItem.item_name}`);
+        console.log(`✅ SKU ${prod.sku} → ${invItem.item_name}`);
       } else {
-        unmatched.push(product.name);
-        console.warn(`⚠️ SKU not found: ${product.sku} (${product.name})`);
+        unmatched.push(prod.name || prod.sku);
+        console.warn(`⚠️ Not found: ${prod.sku}`);
       }
     }
-
+    
     if (orderItems.length === 0) {
-      return Response.json({ 
-        success: false, 
-        error: 'No products matched',
+      return Response.json({
+        success: false,
+        error: 'No products matched in inventory',
         unmatched
       }, { status: 400 });
     }
-
+    
     // Map status
     const statusMap = {
       'pending': 'pending',
@@ -144,7 +176,7 @@ Deno.serve(async (req) => {
       'cancelled': 'cancelled'
     };
     const orderStatus = statusMap[orderData.delivery_status] || 'pending';
-
+    
     // Create order
     const newOrder = await base44.asServiceRole.entities.Order.create({
       customer_id: customer.id,
@@ -154,10 +186,10 @@ Deno.serve(async (req) => {
       delivery_address: orderData.address || orderData.billing_address || '',
       delivery_city: orderData.city || 'Dhaka',
       order_items: orderItems,
-      subtotal: orderData.subtotal || 0,
-      delivery_charge: orderData.delivery_charge || 0,
-      discount: orderData.discount || 0,
-      total_amount: orderData.grand_total || orderData.subtotal,
+      subtotal: parseFloat(orderData.subtotal) || 0,
+      delivery_charge: parseFloat(orderData.delivery_charge) || 0,
+      discount: parseFloat(orderData.discount) || 0,
+      total_amount: parseFloat(orderData.grand_total) || orderData.subtotal,
       payment_method: orderData.payment_method || 'cod',
       payment_status: orderData.payment_status || 'pending',
       order_status: orderStatus,
@@ -168,42 +200,41 @@ Deno.serve(async (req) => {
       shipping_method: orderData.shipping_method || 'home_delivery',
       department: 'prodhan_com_e_commerce'
     });
-
+    
     console.log('✅ Order created:', newOrder.id);
-
-    // Auto-sync to Adprofit if confirmed
+    
+    // Sync to Adprofit if confirmed
     let syncResult = null;
     if (orderStatus === 'confirmed') {
-      console.log('🔄 Auto-syncing to Adprofit...');
       try {
         const sync = await base44.asServiceRole.functions.invoke('syncToAdprofit', { 
           order_id: newOrder.id 
         });
         syncResult = sync.data;
-        console.log('✅ Adprofit synced:', syncResult?.synced_items || 0, 'items');
+        console.log('✅ Adprofit synced');
       } catch (err) {
         console.error('⚠️ Adprofit sync failed:', err.message);
-        syncResult = { success: false, error: err.message };
       }
     }
-
-    return Response.json({ 
+    
+    return Response.json({
       success: true,
+      message: 'Order created successfully',
       order_id: newOrder.id,
       order_number: newOrder.order_number || newOrder.id,
-      customer_id: customer.id,
-      matched: orderItems.length,
-      total: orderData.products.length,
-      unmatched: unmatched.length > 0 ? unmatched : null,
+      customer: customer.customer_name,
+      items: orderItems.length,
+      total: newOrder.total_amount,
       status: orderStatus,
-      adprofit_synced: syncResult?.success || false
+      data_source: dataSource
     });
-
+    
   } catch (error) {
     console.error('❌ Error:', error.message);
-    return Response.json({ 
-      success: false, 
-      error: error.message 
+    console.error('Stack:', error.stack);
+    return Response.json({
+      success: false,
+      error: error.message
     }, { status: 500 });
   }
 });
