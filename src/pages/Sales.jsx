@@ -1525,7 +1525,7 @@ function SalesPage() {
                            )}
                            {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-')) && (
                              <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
-                               🌐 Website
+                               🌐 Landing Page
                              </Badge>
                            )}
                          </div>
