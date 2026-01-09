@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Mail, Clock, Plus, X, CheckCircle, AlertCircle, Loader2, Calendar, Send } from 'lucide-react';
+import { Mail, Clock, Plus, X, CheckCircle, AlertCircle, Loader2, Calendar, Send, TrendingUp, Package, BarChart3, Play, Pause } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { withPermission } from '../components/common/PermissionGuard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function AutoReportSettingsPage() {
   const [scheduledTasks, setScheduledTasks] = useState([]);
@@ -174,21 +175,103 @@ function AutoReportSettingsPage() {
     }
   };
 
+  const reportTemplates = [
+    {
+      id: 'daily_sales',
+      title: 'Daily Sales Report',
+      description: 'Daily sales summary with order details and top products',
+      icon: BarChart3,
+      color: 'blue',
+      function: 'sendDailySalesEmail',
+      frequencies: ['daily']
+    },
+    {
+      id: 'weekly_sales',
+      title: 'Weekly Sales Report',
+      description: 'Comprehensive weekly sales analysis with trends',
+      icon: TrendingUp,
+      color: 'purple',
+      function: 'sendWeeklySalesReport',
+      frequencies: ['weekly']
+    },
+    {
+      id: 'low_stock',
+      title: 'Low Stock Alert',
+      description: 'Daily alert for products below minimum stock',
+      icon: Package,
+      color: 'orange',
+      function: 'sendLowStockAlert',
+      frequencies: ['daily', 'weekly']
+    },
+    {
+      id: 'monthly_performance',
+      title: 'Monthly Performance',
+      description: 'Monthly business performance with growth metrics',
+      icon: TrendingUp,
+      color: 'green',
+      function: 'sendMonthlyPerformanceReport',
+      frequencies: ['monthly']
+    }
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
-          <Mail className="w-7 h-7 text-white" />
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
+            <Mail className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Automated Reports</h1>
+            <p className="text-slate-600">Schedule sales reports, alerts & performance analysis</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Automated Reports</h1>
-          <p className="text-slate-600">Schedule daily sales summaries via email</p>
-        </div>
+        <Badge className="bg-green-100 text-green-700 border-green-300 px-3 py-1">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Production Ready
+        </Badge>
+      </div>
+
+      {/* Report Templates */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {reportTemplates.map(template => {
+          const Icon = template.icon;
+          const activeCount = scheduledTasks.filter(t => t.function_name === template.function).length;
+          
+          return (
+            <Card key={template.id} className="border-2 hover:shadow-lg transition-all cursor-pointer group">
+              <CardContent className="p-5">
+                <div className={`w-12 h-12 rounded-xl bg-${template.color}-100 flex items-center justify-center mb-3`}>
+                  <Icon className={`w-6 h-6 text-${template.color}-600`} />
+                </div>
+                <h3 className="font-bold text-lg mb-1">{template.title}</h3>
+                <p className="text-xs text-slate-600 mb-3">{template.description}</p>
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="text-xs">
+                    {activeCount} active
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setReportType(template.id);
+                      setFrequency(template.frequencies[0]);
+                      window.scrollTo({ top: document.querySelector('.create-schedule-card')?.offsetTop - 100, behavior: 'smooth' });
+                    }}
+                    className={`text-${template.color}-600 hover:bg-${template.color}-50`}
+                  >
+                    Configure →
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Create New Schedule */}
-      <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+      <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 create-schedule-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
@@ -308,12 +391,22 @@ function AutoReportSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Active Schedules */}
+      {/* Active Schedules - Grouped by Type */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            Active Report Schedules ({scheduledTasks.length})
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Active Report Schedules ({scheduledTasks.length})
+            </div>
+            <Button
+              onClick={loadScheduledTasks}
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -327,71 +420,128 @@ function AutoReportSettingsPage() {
               <p>No scheduled reports yet. Create one above!</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {scheduledTasks.map(task => {
-                const isDaily = task.repeat_unit === 'days';
-                const isWeekly = task.repeat_unit === 'weeks';
-                const isMonthly = task.repeat_unit === 'months';
-                const frequencyText = isDaily ? 'Daily' : isWeekly ? 'Weekly' : isMonthly ? 'Monthly' : 'Custom';
-                
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-4">
+                <TabsTrigger value="all">All ({scheduledTasks.length})</TabsTrigger>
+                <TabsTrigger value="daily_sales">Daily Sales</TabsTrigger>
+                <TabsTrigger value="weekly_sales">Weekly</TabsTrigger>
+                <TabsTrigger value="low_stock">Alerts</TabsTrigger>
+                <TabsTrigger value="monthly_performance">Monthly</TabsTrigger>
+              </TabsList>
+
+              {['all', 'daily_sales', 'weekly_sales', 'low_stock', 'monthly_performance'].map(tabValue => {
+                const filteredTasks = tabValue === 'all' 
+                  ? scheduledTasks 
+                  : scheduledTasks.filter(t => {
+                      const template = reportTemplates.find(rt => rt.function === t.function_name);
+                      return template?.id === tabValue;
+                    });
+
                 return (
-                  <div key={task.id} className="p-4 bg-slate-50 rounded-lg border-2 hover:border-blue-300 transition-all">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Badge className={task.is_active ? 'bg-green-600' : 'bg-slate-400'}>
-                            {task.is_active ? '✓ Active' : '⏸ Paused'}
-                          </Badge>
-                          <Badge variant="outline">{frequencyText}</Badge>
-                          <span className="font-bold text-lg">{task.name}</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-3">{task.description}</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Clock className="w-4 h-4" />
-                            <span>Time: <strong>{task.start_time || 'Not set'}</strong></span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Mail className="w-4 h-4" />
-                            <span>Recipients: <strong>{task.function_args?.recipient_emails?.length || 0}</strong></span>
-                          </div>
-                          {task.next_run && (
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <Calendar className="w-4 h-4" />
-                              <span>Next: <strong>{new Date(task.next_run).toLocaleDateString()}</strong></span>
-                            </div>
-                          )}
-                          {task.last_run && (
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <CheckCircle className="w-4 h-4" />
-                              <span>Last: <strong>{new Date(task.last_run).toLocaleDateString()}</strong></span>
-                            </div>
-                          )}
-                        </div>
+                  <TabsContent key={tabValue} value={tabValue} className="space-y-3 mt-0">
+                    {filteredTasks.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>No {tabValue === 'all' ? '' : reportTemplates.find(rt => rt.id === tabValue)?.title} schedules yet</p>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleTask(task.id)}
-                          className={task.is_active ? 'hover:bg-orange-50' : 'hover:bg-green-50'}
-                        >
-                          {task.is_active ? 'Pause' : 'Activate'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteTask(task.id)}
-                          className="text-red-600 hover:bg-red-50"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                    ) : (
+                      filteredTasks.map(task => {
+                        const isDaily = task.repeat_unit === 'days';
+                        const isWeekly = task.repeat_unit === 'weeks';
+                        const isMonthly = task.repeat_unit === 'months';
+                        const frequencyText = isDaily ? 'Daily' : isWeekly ? 'Weekly' : isMonthly ? 'Monthly' : 'Custom';
+                        const template = reportTemplates.find(rt => rt.function === task.function_name);
+                        
+                        return (
+                          <Card key={task.id} className={`border-2 hover:shadow-lg transition-all ${task.is_active ? 'border-green-200 bg-green-50/30' : 'border-slate-200 bg-slate-50/30'}`}>
+                            <CardContent className="p-5">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <Badge className={task.is_active ? 'bg-green-600' : 'bg-slate-400'}>
+                                      {task.is_active ? <><Play className="w-3 h-3 mr-1" /> Active</> : <><Pause className="w-3 h-3 mr-1" /> Paused</>}
+                                    </Badge>
+                                    <Badge variant="outline" className={`border-${template?.color || 'blue'}-300 text-${template?.color || 'blue'}-700 bg-${template?.color || 'blue'}-50`}>
+                                      {frequencyText}
+                                    </Badge>
+                                    <h3 className="font-bold text-lg">{task.name}</h3>
+                                  </div>
+                                  <p className="text-sm text-slate-600 mb-4">{task.description}</p>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Clock className="w-4 h-4 text-slate-400" />
+                                      <div>
+                                        <p className="text-xs text-slate-500">Send Time</p>
+                                        <p className="font-semibold">{task.start_time || 'Not set'}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Mail className="w-4 h-4 text-slate-400" />
+                                      <div>
+                                        <p className="text-xs text-slate-500">Recipients</p>
+                                        <p className="font-semibold">{task.function_args?.recipient_emails?.length || 0}</p>
+                                      </div>
+                                    </div>
+                                    {task.next_run && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Calendar className="w-4 h-4 text-slate-400" />
+                                        <div>
+                                          <p className="text-xs text-slate-500">Next Run</p>
+                                          <p className="font-semibold">{new Date(task.next_run).toLocaleDateString()}</p>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {task.last_run && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                        <div>
+                                          <p className="text-xs text-slate-500">Last Run</p>
+                                          <p className="font-semibold">{new Date(task.last_run).toLocaleDateString()}</p>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {task.function_args?.recipient_emails && (
+                                    <div className="mt-3 pt-3 border-t">
+                                      <p className="text-xs text-slate-500 mb-2">Email Recipients:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {task.function_args.recipient_emails.map((email, idx) => (
+                                          <Badge key={idx} variant="secondary" className="text-xs">
+                                            {email}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex gap-2 ml-4">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => toggleTask(task.id)}
+                                    className={task.is_active ? 'hover:bg-orange-50 border-orange-200' : 'hover:bg-green-50 border-green-200'}
+                                  >
+                                    {task.is_active ? <><Pause className="w-4 h-4 mr-1" /> Pause</> : <><Play className="w-4 h-4 mr-1" /> Activate</>}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteTask(task.id)}
+                                    className="text-red-600 hover:bg-red-50"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    )}
+                  </TabsContent>
                 );
               })}
-            </div>
+            </Tabs>
           )}
         </CardContent>
       </Card>

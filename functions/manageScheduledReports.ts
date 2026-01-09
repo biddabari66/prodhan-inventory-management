@@ -23,9 +23,9 @@ Deno.serve(async (req) => {
       }
 
       case 'create': {
-        const { name, description, function_name, function_args, repeat_interval, repeat_unit, start_time, is_active } = task_data;
+        const { name, description, function_name, function_args, repeat_interval, repeat_unit, start_time, is_active, repeat_on_days, repeat_on_day_of_month } = task_data;
         
-        const task = await base44.asServiceRole.scheduledTasks.create({
+        const taskConfig = {
           name,
           description,
           function_name,
@@ -34,7 +34,13 @@ Deno.serve(async (req) => {
           repeat_unit,
           start_time,
           is_active: is_active !== undefined ? is_active : true
-        });
+        };
+
+        // Add weekly/monthly config if provided
+        if (repeat_on_days) taskConfig.repeat_on_days = repeat_on_days;
+        if (repeat_on_day_of_month) taskConfig.repeat_on_day_of_month = repeat_on_day_of_month;
+        
+        const task = await base44.asServiceRole.scheduledTasks.create(taskConfig);
         
         return Response.json({ success: true, task });
       }

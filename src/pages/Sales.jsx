@@ -797,31 +797,51 @@ function SalesPage() {
   // PRODUCTION: Auto-sync to Adprofit on confirmed status
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
-      const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-      
-      // CRITICAL: Auto-sync when order reaches CONFIRMED status
+      // CRITICAL: Auto-sync BEFORE updating status for immediate feedback
       if (newStatus === 'confirmed') {
         try {
-          toast.info('🔄 Auto-syncing to Adprofit...', { duration: 2000 });
+          const loadingToast = toast.loading('🔄 Confirming & syncing to Adprofit...');
+          
           const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
+          
+          toast.dismiss(loadingToast);
           
           if (syncResponse.data?.success) {
             const { synced_items, failed_items } = syncResponse.data;
+            
+            // Update order with sync info
+            const updatedOrder = await Order.update(orderId, { 
+              order_status: newStatus,
+              adprofit_synced: true,
+              adprofit_sync_date: new Date().toISOString(),
+              adprofit_synced_items: synced_items,
+              adprofit_failed_items: failed_items || 0
+            });
+            
             if (failed_items > 0) {
               toast.warning(`⚠️ Confirmed & partially synced (${synced_items}/${synced_items + failed_items} items)`);
             } else {
               toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
             }
+            
+            return updatedOrder;
           } else {
+            // Still confirm order even if sync fails
+            const updatedOrder = await Order.update(orderId, { order_status: newStatus });
             toast.warning('Order confirmed but Adprofit sync failed');
+            return updatedOrder;
           }
         } catch (syncError) {
           console.error('Adprofit auto-sync error:', syncError);
-          toast.warning('Order confirmed but Adprofit sync failed');
+          // Still confirm order even if sync fails
+          const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+          toast.warning('Order confirmed but Adprofit sync failed: ' + syncError.message);
+          return updatedOrder;
         }
+      } else {
+        // For other status changes, just update normally
+        return await Order.update(orderId, { order_status: newStatus });
       }
-      
-      return updatedOrder;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
