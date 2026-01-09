@@ -15,31 +15,41 @@ Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   
   try {
-    console.log('🛒 WooCommerce Webhook Started');
+    console.log('🛒 WooCommerce Webhook - Start');
 
-    // Parse payload - handle both single object and array
+    // Parse JSON body
     const rawData = await req.json();
+    console.log('📦 Raw data type:', Array.isArray(rawData) ? 'array' : typeof rawData);
+    console.log('📦 Raw keys:', Object.keys(rawData || {}));
+    
+    // Extract order (handle both array and object)
     const orderData = Array.isArray(rawData) ? rawData[0] : rawData;
     
-    console.log('📦 Order ID:', orderData?.wp_order_id);
-    console.log('👤 Customer:', orderData?.customer_name);
-    console.log('📱 Phone:', orderData?.phone);
-    console.log('🛍️ Products count:', orderData?.products?.length);
+    console.log('📋 Parsed order data:', JSON.stringify({
+      customer_name: orderData?.customer_name,
+      phone: orderData?.phone,
+      products_length: orderData?.products?.length,
+      wp_order_id: orderData?.wp_order_id
+    }));
 
-    // Validate
-    if (!orderData?.customer_name || !orderData?.phone || !orderData?.products?.length) {
-      console.error('❌ Missing fields:', {
-        customer_name: orderData?.customer_name,
-        phone: orderData?.phone,
-        products_count: orderData?.products?.length
-      });
+    // Validate with detailed checks
+    const missing = [];
+    if (!orderData?.customer_name) missing.push('customer_name');
+    if (!orderData?.phone) missing.push('phone');
+    if (!orderData?.products || !Array.isArray(orderData.products)) missing.push('products (array)');
+    if (orderData?.products && orderData.products.length === 0) missing.push('products (empty)');
+
+    if (missing.length > 0) {
+      console.error('❌ Validation failed:', missing);
+      console.error('Received data:', JSON.stringify(orderData, null, 2));
       return Response.json({ 
         success: false, 
-        error: 'Missing: customer_name, phone, or products'
+        error: `Missing fields: ${missing.join(', ')}`,
+        received_keys: Object.keys(orderData || {})
       }, { status: 400 });
     }
 
-    console.log('✅ Validation passed');
+    console.log('✅ Validation OK');
 
     // Find or create customer
     const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ 
