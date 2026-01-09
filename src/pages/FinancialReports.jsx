@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign, TrendingUp, PieChart, Download, Loader2, BarChart3, Shield, Lock } from 'lucide-react';
+import { DollarSign, TrendingUp, PieChart, Download, Loader2, BarChart3, Shield, Lock, Package } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { withPermission } from '@/components/common/PermissionGuard';
@@ -21,6 +23,16 @@ function FinancialReportsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [category, setCategory] = useState('all');
+
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => Inventory.list(),
+    staleTime: 3 * 60 * 1000
+  });
+
+  const totalInventoryValue = inventory
+    .filter(item => item.department === 'prodhan_com_e_commerce')
+    .reduce((sum, item) => sum + (item.current_stock || 0) * (item.selling_price || 0), 0);
 
   const generateReport = async (type) => {
     setIsGenerating(true);
@@ -117,6 +129,24 @@ function FinancialReportsPage() {
           </Badge>
         </div>
       </div>
+
+      {/* Inventory Value Card */}
+      <Card className="bg-white border-l-4 border-l-purple-500 shadow-md hover:shadow-lg transition-shadow">
+        <CardContent className="pt-6 pb-6">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-14 h-14 rounded-xl bg-purple-100 flex items-center justify-center">
+              <Package className="w-7 h-7 text-purple-600" />
+            </div>
+          </div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Inventory Value</p>
+          <p className="text-4xl font-bold text-purple-600">
+            ৳{totalInventoryValue.toLocaleString()}
+          </p>
+          <p className="text-xs text-slate-500 mt-2">
+            Current stock value at selling price ({inventory.filter(i => i.department === 'prodhan_com_e_commerce').length} products)
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card className="premium-card">

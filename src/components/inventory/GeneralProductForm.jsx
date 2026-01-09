@@ -689,123 +689,137 @@ Return ONLY valid JSON with no additional text.`,
             </div>
           </div>
 
-          {/* Color Variants Management */}
+          {/* Enhanced Color Variants Management */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
               <Palette className="w-5 h-5 text-purple-600" />
-              Color Variants (Optional)
+              Color Variants with SKU & Weight
             </h3>
             
             <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
               <p className="text-xs text-purple-800">
-                <strong>Track by color:</strong> If this product comes in different colors, add them here. 
-                The sum of all color quantities must equal your total stock ({formData.current_stock} units).
+                <strong>Advanced variant tracking:</strong> Each color can have its own SKU, weight, and pricing. 
+                Total quantities must equal your current stock ({formData.current_stock} units).
               </p>
             </div>
 
-            {/* Add Color Form */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
-              <div>
-                <Label className="text-xs font-semibold">Color Name</Label>
-                <Input
-                  value={colorName}
-                  onChange={(e) => setColorName(e.target.value)}
-                  placeholder="e.g., Red, Blue, Black, White"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Quantity</Label>
-                <Input
-                  type="number"
-                  value={colorQuantity}
-                  onChange={(e) => setColorQuantity(parseInt(e.target.value) || 0)}
-                  placeholder="0"
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (!colorName.trim()) {
-                      toast.error('Enter color name');
-                      return;
-                    }
-                    if (colorQuantity <= 0) {
-                      toast.error('Quantity must be greater than 0');
-                      return;
-                    }
-                    
-                    const existingColor = formData.color_variants?.find(v => v.color.toLowerCase() === colorName.toLowerCase());
-                    if (existingColor) {
-                      toast.error('This color already exists');
-                      return;
-                    }
-
-                    setFormData({
-                      ...formData,
-                      color_variants: [...(formData.color_variants || []), { color: colorName.trim(), quantity: colorQuantity }]
-                    });
-                    setColorName('');
-                    setColorQuantity(0);
-                    toast.success(`Added ${colorName} variant (${colorQuantity} units)`);
-                  }}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Color
-                </Button>
-              </div>
-            </div>
-
-            {/* Color Variants Display */}
+            {/* Color Variants List */}
             {formData.color_variants?.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Color Breakdown</Label>
+                  <Label className="text-sm font-semibold">Variants ({formData.color_variants.length})</Label>
                   <Badge variant="outline" className={
-                    formData.color_variants.reduce((sum, v) => sum + v.quantity, 0) === formData.current_stock
+                    formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0) === formData.current_stock
                       ? 'bg-green-50 text-green-700 border-green-300'
                       : 'bg-red-50 text-red-700 border-red-300'
                   }>
-                    {formData.color_variants.reduce((sum, v) => sum + v.quantity, 0)} / {formData.current_stock} units
+                    {formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0)} / {formData.current_stock} units
                   </Badge>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {formData.color_variants.map((variant, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-slate-200 hover:border-purple-300 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-purple-300 flex items-center justify-center">
-                          <Palette className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm text-slate-900">{variant.color}</p>
-                          <p className="text-xs text-slate-500">{variant.quantity} units in stock</p>
-                        </div>
-                      </div>
+                {formData.color_variants.map((variant, index) => (
+                  <div key={index} className="p-4 bg-gradient-to-r from-white to-purple-50 rounded-lg border-2 border-purple-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge className="bg-purple-600 text-white">Variant #{index + 1}</Badge>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => {
+                          const removed = formData.color_variants[index];
                           setFormData({
                             ...formData,
                             color_variants: formData.color_variants.filter((_, i) => i !== index)
                           });
-                          toast.info(`Removed ${variant.color}`);
+                          toast.info(`Removed ${removed.color}`);
                         }}
-                        className="hover:bg-red-50"
                       >
                         <X className="w-4 h-4 text-red-500" />
                       </Button>
                     </div>
-                  ))}
-                </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <Label className="text-xs font-semibold">Color *</Label>
+                        <Input
+                          value={variant.color || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.color_variants];
+                            updated[index].color = e.target.value;
+                            setFormData({ ...formData, color_variants: updated });
+                          }}
+                          placeholder="e.g. Red"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold">SKU *</Label>
+                        <Input
+                          value={variant.sku || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.color_variants];
+                            updated[index].sku = e.target.value;
+                            setFormData({ ...formData, color_variants: updated });
+                          }}
+                          placeholder="RED-001"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold">Quantity *</Label>
+                        <Input
+                          type="number"
+                          value={variant.quantity || 0}
+                          onChange={(e) => {
+                            const updated = [...formData.color_variants];
+                            updated[index].quantity = parseInt(e.target.value) || 0;
+                            setFormData({ ...formData, color_variants: updated });
+                          }}
+                          placeholder="0"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold">Weight (kg)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={variant.weight_kg || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.color_variants];
+                            updated[index].weight_kg = parseFloat(e.target.value) || 0;
+                            setFormData({ ...formData, color_variants: updated });
+                          }}
+                          placeholder="0.5"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
+
+            {/* Add New Variant Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setFormData({
+                  ...formData,
+                  color_variants: [...(formData.color_variants || []), { 
+                    color: '', 
+                    sku: `${formData.barcode || 'VAR'}-${(formData.color_variants?.length || 0) + 1}`, 
+                    quantity: 0, 
+                    weight_kg: formData.weight_kg || 0
+                  }]
+                });
+              }}
+              className="w-full border-dashed border-2 border-purple-300 hover:bg-purple-50"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Color Variant
+            </Button>
           </div>
 
           {/* Supplier Information */}
