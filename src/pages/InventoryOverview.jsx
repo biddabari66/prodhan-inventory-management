@@ -304,7 +304,7 @@ function InventoryOverviewPage() {
         </div>
 
         {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Products</p>
@@ -316,13 +316,6 @@ function InventoryOverviewPage() {
             <CardContent className="p-6">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Low Stock Alerts</p>
               <p className="text-3xl font-bold text-red-600">{departmentStats.low_stock}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-l-4 border-l-purple-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Value</p>
-              <p className="text-3xl font-bold text-purple-600">৳{departmentStats.total_value.toLocaleString()}</p>
             </CardContent>
           </Card>
         </div>

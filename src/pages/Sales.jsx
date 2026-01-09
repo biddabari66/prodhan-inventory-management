@@ -41,12 +41,7 @@ import { getComboCount, getActualQuantity } from '../components/common/ComboProd
 
 // Enhanced Order Form Component
 const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) => {
-  const defaultDepartment = useMemo(() => {
-    if (order) return order.department;
-    if (!canViewAllDepartments && userDepartment && userDepartment !== 'all') return userDepartment;
-    if (initialDepartment && initialDepartment !== 'all') return initialDepartment;
-    return 'boibari';
-  }, [order, canViewAllDepartments, userDepartment, initialDepartment]);
+  const defaultDepartment = 'prodhan_com_e_commerce';
 
   const [formData, setFormData] = useState(order || {
     customer_id: '',
@@ -272,16 +267,16 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
           <CardTitle className="text-lg flex items-center gap-2">
             <ShoppingCart className="w-5 h-5" />
             Order Items
-            <Badge variant="outline" className={formData.department === 'boibari' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-red-100 text-red-800 border-red-300'}>
-              {formData.department === 'boibari' ? '📚 Boibari Products' : '🛒 Prodhan.com Products'}
+            <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">
+              🛒 Prodhan.com Products
             </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className={`p-4 rounded-lg border-2 ${formData.department === 'boibari' ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'}`}>
+          <div className="p-4 rounded-lg border-2 bg-purple-50 border-purple-300">
             <p className="text-sm font-medium flex items-center gap-2">
               <Package className="w-4 h-4" />
-              Products shown below are from <strong>{formData.department === 'boibari' ? 'Boibari.com (Books)' : 'Prodhan.com (E-commerce)'}</strong> only.
+              Products shown below are from <strong>Prodhan.com E-commerce</strong> only.
             </p>
           </div>
 
@@ -479,27 +474,13 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="font-semibold">Department *</Label>
-              <Select
-                value={formData.department}
-                onValueChange={(value) => {
-                  if (!canViewAllDepartments && value !== userDepartment) {
-                    toast.error('You can only create orders for your department');
-                    return;
-                  }
-                  setFormData({...formData, department: value, order_items: []});
-                  toast.info(`Product list updated to ${value === 'boibari' ? 'Boibari' : 'Prodhan.com'} items`);
-                }}
-                disabled={!canViewAllDepartments}
-              >
-                <SelectTrigger className={!canViewAllDepartments ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="boibari">📚 Boibari</SelectItem>
-                  <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com (E-commerce)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="font-semibold">Department</Label>
+              <div className="p-3 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-purple-600 text-white">🛒 Prodhan.com E-commerce</Badge>
+                  <span className="text-sm text-purple-700">All orders are for Prodhan.com</span>
+                </div>
+              </div>
             </div>
           </div>
 
