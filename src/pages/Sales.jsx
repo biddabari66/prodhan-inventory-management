@@ -1513,15 +1513,22 @@ function SalesPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
-                          {order.adprofit_synced && (
-                            <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Adprofit ✓
-                            </Badge>
-                          )}
-                        </div>
+                       <div className="flex flex-col gap-1">
+                         <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
+                         <div className="flex flex-wrap gap-1">
+                           {order.adprofit_synced && (
+                             <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">
+                               <CheckCircle className="w-3 h-3 mr-1" />
+                               Adprofit ✓
+                             </Badge>
+                           )}
+                           {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-ORDER')) && (
+                             <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
+                               🌐 Landing Page
+                             </Badge>
+                           )}
+                         </div>
+                       </div>
                       </TableCell>
                       <TableCell>
                         {format(new Date(order.order_date), 'dd MMM yyyy')}
