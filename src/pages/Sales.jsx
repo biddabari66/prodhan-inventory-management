@@ -1023,15 +1023,15 @@ function SalesPage() {
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
     
-    // CRITICAL: Only count CONFIRMED orders (same logic as reports)
+    // CRITICAL: Sum ACTUAL QUANTITIES of all items in confirmed orders (not order count)
     const confirmedForProductQty = filteredOrders.filter(o => validStatuses.includes(o.order_status));
-    const totalProductQuantity = confirmedForProductQty.reduce((sum, o) => {
-      const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
+    const totalProductQuantity = confirmedForProductQty.reduce((totalSum, order) => {
+      // Sum quantities of all items in this order
+      return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
-        return itemSum + actualQty;
+        return orderSum + actualQty;
       }, 0);
-      return sum + orderTotal;
     }, 0);
 
     // Today's stats with actual product count (combo expanded)
@@ -1040,14 +1040,13 @@ function SalesPage() {
     const todayConfirmed = todayOrders.filter(o => validStatuses.includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
-    // CRITICAL: Only count CONFIRMED orders for product quantity (matches reports)
-    const todayProductQty = todayConfirmedOrders.reduce((sum, o) => {
-      const orderTotal = (o.order_items || []).reduce((itemSum, item) => {
+    // CRITICAL: Sum ACTUAL QUANTITIES of all items in today's confirmed orders
+    const todayProductQty = todayConfirmedOrders.reduce((totalSum, order) => {
+      return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
-        return itemSum + actualQty;
+        return orderSum + actualQty;
       }, 0);
-      return sum + orderTotal;
     }, 0);
 
     return { 
