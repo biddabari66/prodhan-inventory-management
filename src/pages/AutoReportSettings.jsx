@@ -27,8 +27,8 @@ function AutoReportSettingsPage() {
   const loadScheduledTasks = async () => {
     setIsLoading(true);
     try {
-      const tasks = await base44.asServiceRole.scheduledTasks.list();
-      setScheduledTasks(tasks || []);
+      const response = await base44.functions.invoke('manageScheduledReports', { action: 'list' });
+      setScheduledTasks(response.data?.tasks || []);
     } catch (error) {
       console.error('Error loading tasks:', error);
       toast.error('Failed to load scheduled tasks');
@@ -67,15 +67,18 @@ function AutoReportSettingsPage() {
 
     setIsCreating(true);
     try {
-      await base44.asServiceRole.scheduledTasks.create({
-        name: 'Daily Sales Email Report',
-        function_name: 'sendDailySalesEmail',
-        description: `Sends automated daily sales summary to ${recipients.length} recipient(s)`,
-        function_args: { recipient_emails: recipients },
-        repeat_interval: 1,
-        repeat_unit: 'days',
-        start_time: scheduleTime,
-        is_active: true
+      await base44.functions.invoke('manageScheduledReports', {
+        action: 'create',
+        task_data: {
+          name: 'Daily Sales Email Report',
+          function_name: 'sendDailySalesEmail',
+          description: `Sends automated daily sales summary to ${recipients.length} recipient(s)`,
+          function_args: { recipient_emails: recipients },
+          repeat_interval: 1,
+          repeat_unit: 'days',
+          start_time: scheduleTime,
+          is_active: true
+        }
       });
 
       toast.success(`✅ Daily report scheduled for ${scheduleTime}!`);
@@ -91,7 +94,7 @@ function AutoReportSettingsPage() {
 
   const toggleTask = async (taskId) => {
     try {
-      await base44.asServiceRole.scheduledTasks.toggle(taskId);
+      await base44.functions.invoke('manageScheduledReports', { action: 'toggle', task_id: taskId });
       toast.success('Task status updated');
       loadScheduledTasks();
     } catch (error) {
@@ -103,7 +106,7 @@ function AutoReportSettingsPage() {
     if (!confirm('Delete this scheduled report? This cannot be undone.')) return;
     
     try {
-      await base44.asServiceRole.scheduledTasks.delete(taskId);
+      await base44.functions.invoke('manageScheduledReports', { action: 'delete', task_id: taskId });
       toast.success('Scheduled report deleted');
       loadScheduledTasks();
     } catch (error) {
