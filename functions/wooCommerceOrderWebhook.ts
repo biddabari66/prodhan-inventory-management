@@ -73,12 +73,31 @@ Deno.serve(async (req) => {
     
     // Extract customer info with fallbacks
     const customerName = data.customer_name || data.billing_first_name || data.name || 'Unknown Customer';
-    const phone = data.phone || data.billing_phone || data.customer_phone;
+    let phone = data.phone || data.billing_phone || data.customer_phone || '';
+    
+    // Clean phone number - remove spaces, dashes, plus signs
+    phone = String(phone).replace(/[\s\-\+]/g, '');
+    
+    // Ensure phone starts with valid format (BD numbers)
+    if (phone && !phone.startsWith('0') && !phone.startsWith('88')) {
+      phone = '0' + phone;
+    }
+    
     const email = data.email || data.billing_email || '';
     const address = data.address || data.billing_address || data.shipping_address || '';
     const city = data.city || data.billing_city || 'Dhaka';
     
     console.log('👤 Customer:', { customerName, phone, email, city });
+    
+    // Validate phone exists
+    if (!phone || phone.length < 10) {
+      return Response.json({
+        success: false,
+        error: 'Invalid or missing phone number',
+        received_phone: data.phone,
+        note: 'Phone must be at least 10 digits'
+      }, { status: 400 });
+    }
     
     // Parse products with fallbacks
     let products = data.products || data.line_items || data.items || [];
