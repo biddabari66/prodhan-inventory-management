@@ -1,10 +1,26 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { getComboCount } from './comboUtils.js';
 
 /**
  * AUTOMATED DAILY SALES EMAIL REPORT
  * Sends comprehensive daily sales summary to configured email addresses
  */
+
+// Inline combo calculation to avoid import issues
+const getComboCount = (inventoryItem, orderItem) => {
+  if (!inventoryItem) return 1;
+  
+  if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
+    return inventoryItem.bundle_items.reduce((sum, b) => sum + (b.quantity || 1), 0);
+  }
+  
+  const itemName = orderItem?.item_name || inventoryItem.item_name || '';
+  const match = itemName.match(/(\d+)×/);
+  if (match) {
+    return parseInt(match[1]);
+  }
+  
+  return 1;
+};
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
