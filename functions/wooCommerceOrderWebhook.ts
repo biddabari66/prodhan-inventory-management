@@ -1,8 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * WOOCOMMERCE WEBHOOK - FLEXIBLE INPUT HANDLER
- * Accepts orders from WooCommerce/WordPress in any format
+ * WooCommerce Order Webhook
+ * Creates orders in "pending" state for manual confirmation
+ * Auto-sync to Adprofit happens when user confirms in Sales page
  */
 
 Deno.serve(async (req) => {
@@ -11,110 +12,103 @@ Deno.serve(async (req) => {
   try {
     console.log('🛒 WooCommerce Webhook - Incoming request');
     
-    // Try multiple ways to get the data
-    let orderData = null;
-    let dataSource = '';
+    // Get request body
+    const body = await req.json();
+    console.log('📦 JSON Body:', JSON.stringify(body, null, 2));
     
-    // Method 1: Try JSON body
-    try {
-      const body = await req.json();
-      console.log('📦 JSON Body:', JSON.stringify(body, null, 2));
-      
-      if (body && typeof body === 'object' && Object.keys(body).length > 0) {
-        // Check if it's wrapped in an array
-        orderData = Array.isArray(body) ? body[0] : body;
-        dataSource = 'JSON body';
-      }
-    } catch (e) {
-      console.log('⚠️ No valid JSON body:', e.message);
-    }
+    // Handle array or object
+    const data = Array.isArray(body) ? body[0] : body;
     
-    // Method 2: Try URL parameters if JSON failed
-    if (!orderData) {
-      const url = new URL(req.url);
-      const params = Object.fromEntries(url.searchParams);
-      console.log('🔗 URL Params:', JSON.stringify(params, null, 2));
-      
-      if (Object.keys(params).length > 0) {
-        orderData = params;
-        dataSource = 'URL parameters';
-      }
-    }
+    // Log what we actually received
+    console.log('📋 Order data:', JSON.stringify(data, null, 2));
+    console.log('🔑 Data keys:', Object.keys(data));
     
-    // Method 3: Try form data
-    if (!orderData) {
-      try {
-        const formData = await req.formData();
-        const formObj = {};
-        for (const [key, value] of formData.entries()) {
-          formObj[key] = value;
-        }
-        console.log('📝 Form Data:', JSON.stringify(formObj, null, 2));
-        
-        if (Object.keys(formObj).length > 0) {
-          orderData = formObj;
-          dataSource = 'Form data';
-        }
-      } catch (e) {
-        console.log('⚠️ No form data');
-      }
-    }
+    // Check if data has the expected structure
+    const hasCustomerName = !!(data.customer_name || data.billing_first_name || data.name);
+    const hasPhone = !!(data.phone || data.billing_phone || data.customer_phone);
+    const hasProducts = !!(data.products || data.line_items || data.items);
     
-    if (!orderData) {
+    console.log('✅ Field check:', { 
+      hasCustomerName, 
+      hasPhone, 
+      hasProducts,
+      customer_name_field: data.customer_name,
+      phone_field: data.phone,
+      products_field: data.products 
+    });
+    
+    // Validate required data
+    if (!hasCustomerName || !hasPhone || !hasProducts) {
       return Response.json({
         success: false,
-        error: 'No data received. Send JSON body with: customer_name, phone, products[]',
-        example: {
+        error: 'Missing required order data',
+        received_keys: Object.keys(data),
+        required: {
+          customer_name: data.customer_name || data.billing_first_name || data.name || 'MISSING',
+          phone: data.phone || data.billing_phone || data.customer_phone || 'MISSING',
+          products: data.products || data.line_items || data.items || 'MISSING'
+        },
+        example_payload: {
           customer_name: "Shaleh Ahmed Khan",
           phone: "01817180019",
-          products: [{sku: "TB07", name: "Prodhan Rosolla Tea", quantity: 1, unit_price: 389}]
+          email: "customer@example.com",
+          address: "House no 181 rd no 9 /A Dhanmondi Dhaka",
+          city: "Dhaka",
+          products: [
+            {
+              sku: "TB07",
+              name: "Prodhan Rosolla Tea",
+              quantity: 1,
+              unit_price: 389,
+              total_price: 389
+            }
+          ],
+          subtotal: 389,
+          delivery_charge: 60,
+          discount: 0,
+          grand_total: 449
         }
       }, { status: 400 });
     }
     
-    console.log(`✅ Data source: ${dataSource}`);
-    console.log('📋 Order data:', JSON.stringify(orderData));
+    // Extract customer info with fallbacks
+    const customerName = data.customer_name || data.billing_first_name || data.name || 'Unknown Customer';
+    const phone = data.phone || data.billing_phone || data.customer_phone;
+    const email = data.email || data.billing_email || '';
+    const address = data.address || data.billing_address || data.shipping_address || '';
+    const city = data.city || data.billing_city || 'Dhaka';
     
-    // Parse products if it's a JSON string
-    if (orderData.products && typeof orderData.products === 'string') {
+    console.log('👤 Customer:', { customerName, phone, email, city });
+    
+    // Parse products with fallbacks
+    let products = data.products || data.line_items || data.items || [];
+    
+    // Convert to array if needed
+    if (!Array.isArray(products)) {
+      products = [products];
+    }
+    
+    // Parse if JSON string
+    if (typeof products === 'string') {
       try {
-        orderData.products = JSON.parse(orderData.products);
+        products = JSON.parse(products);
       } catch (e) {
         console.error('Failed to parse products JSON');
       }
     }
     
-    // Validate
-    if (!orderData.customer_name || !orderData.phone || !Array.isArray(orderData.products) || orderData.products.length === 0) {
-      console.error('❌ Invalid data:', {
-        has_customer_name: !!orderData.customer_name,
-        has_phone: !!orderData.phone,
-        has_products: Array.isArray(orderData.products),
-        products_count: orderData.products?.length
-      });
-      
+    console.log('📦 Products count:', products.length);
+    
+    if (!Array.isArray(products) || products.length === 0) {
       return Response.json({
         success: false,
-        error: 'Missing required fields',
-        received: Object.keys(orderData),
-        required: ['customer_name', 'phone', 'products'],
-        example: {
-          customer_name: "Shaleh Ahmed Khan",
-          phone: "01817180019",
-          address: "House no 181 rd no 9 /A Dhanmondi Dhaka",
-          products: [
-            {sku: "TB07", name: "Prodhan Rosolla Tea", quantity: 1, unit_price: 389}
-          ]
-        }
+        error: 'No valid products in order',
+        products_received: products
       }, { status: 400 });
     }
     
-    console.log('✅ Validation passed');
-    
     // Find or create customer
-    const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ 
-      phone: orderData.phone 
-    });
+    const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ phone });
     
     let customer;
     if (existingCustomers?.length > 0) {
@@ -122,41 +116,53 @@ Deno.serve(async (req) => {
       console.log('✅ Found customer:', customer.customer_name);
     } else {
       customer = await base44.asServiceRole.entities.Customer.create({
-        customer_name: orderData.customer_name,
-        phone: orderData.phone,
-        email: orderData.email || '',
-        address: orderData.address || orderData.billing_address || '',
-        city: orderData.city || 'Dhaka',
+        customer_name: customerName,
+        phone: phone,
+        email: email,
+        address: address,
+        city: city,
         customer_type: 'retail',
-        source: 'woocommerce'
+        source: 'woocommerce',
+        department: 'prodhan_com_e_commerce'
       });
-      console.log('✨ New customer:', customer.customer_name);
+      console.log('✨ Created customer:', customer.customer_name);
     }
     
-    // Match products
+    // Load inventory
     const inventory = await base44.asServiceRole.entities.Inventory.list();
+    console.log('📊 Inventory loaded:', inventory.length, 'items');
+    
+    // Match products to inventory
     const orderItems = [];
     const unmatched = [];
     
-    for (const prod of orderData.products) {
+    for (const prod of products) {
+      const sku = prod.sku || prod.product_id || prod.id;
+      const name = prod.name || prod.product_name || prod.title;
+      const quantity = parseInt(prod.quantity) || 1;
+      const price = parseFloat(prod.unit_price || prod.price || 0);
+      
+      console.log('🔍 Matching:', { sku, name, quantity, price });
+      
+      // Try to find in inventory
       const invItem = inventory.find(i => 
-        i.barcode === prod.sku || 
-        i.item_name?.toLowerCase() === prod.name?.toLowerCase()
+        (sku && i.barcode === String(sku)) || 
+        (name && i.item_name?.toLowerCase().includes(name.toLowerCase()))
       );
       
       if (invItem) {
         orderItems.push({
           inventory_id: invItem.id,
           item_name: invItem.item_name,
-          quantity: parseInt(prod.quantity) || 1,
-          unit_price: parseFloat(prod.unit_price) || invItem.selling_price || 0,
-          subtotal: parseFloat(prod.total_price) || (prod.quantity * prod.unit_price),
+          quantity: quantity,
+          unit_price: price || invItem.selling_price,
+          subtotal: quantity * (price || invItem.selling_price),
           weight: parseFloat(prod.weight) || invItem.weight_kg || 0
         });
-        console.log(`✅ SKU ${prod.sku} → ${invItem.item_name}`);
+        console.log(`✅ Matched: ${sku} → ${invItem.item_name}`);
       } else {
-        unmatched.push(prod.name || prod.sku);
-        console.warn(`⚠️ Not found: ${prod.sku}`);
+        unmatched.push({ sku, name });
+        console.warn(`⚠️ Not found in inventory: ${sku} - ${name}`);
       }
     }
     
@@ -164,77 +170,73 @@ Deno.serve(async (req) => {
       return Response.json({
         success: false,
         error: 'No products matched in inventory',
-        unmatched
+        unmatched,
+        inventory_sample: inventory.slice(0, 5).map(i => ({ 
+          id: i.id, 
+          name: i.item_name, 
+          sku: i.barcode 
+        }))
       }, { status: 400 });
     }
     
-    // Map status
-    const statusMap = {
-      'pending': 'pending',
-      'processing': 'confirmed',
-      'completed': 'delivered',
-      'cancelled': 'cancelled'
-    };
-    const orderStatus = statusMap[orderData.delivery_status] || 'pending';
+    // Calculate totals
+    const subtotal = parseFloat(data.subtotal) || orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const deliveryCharge = parseFloat(data.delivery_charge) || 0;
+    const discount = parseFloat(data.discount) || 0;
+    const grandTotal = parseFloat(data.grand_total) || (subtotal + deliveryCharge - discount);
     
-    // Create order
+    console.log('💰 Totals:', { subtotal, deliveryCharge, discount, grandTotal });
+    
+    // Create order in PENDING state (no Adprofit sync)
     const newOrder = await base44.asServiceRole.entities.Order.create({
       customer_id: customer.id,
-      customer_name: orderData.customer_name,
-      customer_phone: orderData.phone,
-      customer_email: orderData.email || '',
-      delivery_address: orderData.address || orderData.billing_address || '',
-      delivery_city: orderData.city || 'Dhaka',
+      customer_name: customerName,
+      customer_phone: phone,
+      customer_email: email,
+      delivery_address: address,
+      delivery_city: city,
       order_items: orderItems,
-      subtotal: parseFloat(orderData.subtotal) || 0,
-      delivery_charge: parseFloat(orderData.delivery_charge) || 0,
-      discount: parseFloat(orderData.discount) || 0,
-      total_amount: parseFloat(orderData.grand_total) || orderData.subtotal,
-      payment_method: orderData.payment_method || 'cod',
-      payment_status: orderData.payment_status || 'pending',
-      order_status: orderStatus,
-      order_date: orderData.order_date || new Date().toISOString(),
+      subtotal: subtotal,
+      delivery_charge: deliveryCharge,
+      discount: discount,
+      total_amount: grandTotal,
+      payment_method: data.payment_method || 'cod',
+      payment_status: 'unpaid',
+      order_status: 'pending',  // ALWAYS pending from webhook
+      order_date: new Date().toISOString(),
       order_source: 'woocommerce',
-      order_note: orderData.order_note || '',
-      wp_order_id: orderData.wp_order_id || `WP-${Date.now()}`,
-      shipping_method: orderData.shipping_method || 'home_delivery',
+      order_note: data.order_note || 'Order from WooCommerce',
+      wp_order_id: data.wp_order_id || data.order_id || `WC-${Date.now()}`,
+      shipping_method: data.shipping_method || 'home_delivery',
       department: 'prodhan_com_e_commerce'
     });
     
-    console.log('✅ Order created:', newOrder.id);
-    
-    // Sync to Adprofit if confirmed
-    let syncResult = null;
-    if (orderStatus === 'confirmed') {
-      try {
-        const sync = await base44.asServiceRole.functions.invoke('syncToAdprofit', { 
-          order_id: newOrder.id 
-        });
-        syncResult = sync.data;
-        console.log('✅ Adprofit synced');
-      } catch (err) {
-        console.error('⚠️ Adprofit sync failed:', err.message);
-      }
-    }
+    console.log('✅ Order created as PENDING:', newOrder.id);
+    console.log('📌 User must confirm in Sales page to sync to Adprofit');
     
     return Response.json({
       success: true,
-      message: 'Order created successfully',
+      message: 'Order created successfully as PENDING',
       order_id: newOrder.id,
       order_number: newOrder.order_number || newOrder.id,
-      customer: customer.customer_name,
-      items: orderItems.length,
-      total: newOrder.total_amount,
-      status: orderStatus,
-      data_source: dataSource
+      customer: customerName,
+      phone: phone,
+      items_count: orderItems.length,
+      matched_items: orderItems.map(i => i.item_name),
+      unmatched_items: unmatched,
+      total_amount: grandTotal,
+      status: 'pending',
+      note: 'Order awaiting confirmation in Sales page. Adprofit sync will happen on confirmation.'
     });
     
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('❌ Webhook Error:', error.message);
     console.error('Stack:', error.stack);
+    
     return Response.json({
       success: false,
-      error: error.message
+      error: error.message,
+      stack: error.stack
     }, { status: 500 });
   }
 });
