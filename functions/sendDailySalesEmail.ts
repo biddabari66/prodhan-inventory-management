@@ -12,13 +12,17 @@ Deno.serve(async (req) => {
   try {
     console.log('📧 Starting daily sales email generation...');
 
-    // Admin authentication required
-    const user = await base44.auth.me();
-    if (user?.role !== 'admin' && user?.job_role !== 'admin' && user?.job_role !== 'super_admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Parse request body
+    let recipient_emails = [];
+    
+    try {
+      const body = await req.json();
+      recipient_emails = body.recipient_emails || [];
+    } catch (parseError) {
+      console.log('No JSON body provided, scheduled task invocation');
+      // For scheduled tasks, default recipients should be in function args
+      recipient_emails = [];
     }
-
-    const { recipient_emails } = await req.json();
     
     if (!recipient_emails || !Array.isArray(recipient_emails) || recipient_emails.length === 0) {
       throw new Error('recipient_emails array is required');
