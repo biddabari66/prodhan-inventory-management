@@ -1004,6 +1004,8 @@ function SalesPage() {
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
   // PRODUCTION: Calculate stats with accurate today filtering
+  // Order states flow: pending → confirmed → processing → packed → shipped → out_for_delivery → delivered
+  // Product Qty counts items from ALL orders that have PASSED confirmed state (confirmed+)
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
