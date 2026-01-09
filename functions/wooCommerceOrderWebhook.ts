@@ -15,57 +15,69 @@ Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   
   try {
-    console.log('🛒 WooCommerce Webhook - Start');
+    console.log('🛒 WooCommerce Webhook Started');
 
-    // Parse JSON body
+    // Parse incoming data
     const rawData = await req.json();
-    console.log('📦 Received data:', JSON.stringify(rawData).substring(0, 300));
+    console.log('📦 Received data:', JSON.stringify(rawData, null, 2));
     
-    // Extract order (handle both array and object)
-    const orderData = Array.isArray(rawData) ? rawData[0] : rawData;
+    // Extract order (array or object)
+    const data = Array.isArray(rawData) ? rawData[0] : rawData;
     
-    if (!orderData || typeof orderData !== 'object') {
+    // Validate payload structure
+    if (!data || typeof data !== 'object') {
       return Response.json({ 
         success: false, 
-        error: 'Invalid payload format',
-        expected_format: {
-          customer_name: 'string',
-          phone: 'string',
-          products: '[{sku, name, quantity, unit_price}]'
+        error: 'Invalid payload - must be JSON object or array',
+        test_payload: {
+          customer_name: "Shaleh Ahmed Khan",
+          phone: "01817180019",
+          products: [{sku: "TB07", name: "Prodhan Rosolla Tea", quantity: 1, unit_price: 389}],
+          address: "House no 181 rd no 9 /A Dhanmondi Dhaka",
+          city: "Dhaka"
         }
       }, { status: 400 });
     }
 
-    // Validate required fields
-    const missing = [];
-    if (!orderData.customer_name) missing.push('customer_name');
-    if (!orderData.phone) missing.push('phone');
-    if (!Array.isArray(orderData.products)) missing.push('products');
-    if (orderData.products && orderData.products.length === 0) missing.push('products (empty array)');
+    // Check required fields
+    const errors = [];
+    if (!data.customer_name || typeof data.customer_name !== 'string') errors.push('customer_name (string required)');
+    if (!data.phone || typeof data.phone !== 'string') errors.push('phone (string required)');
+    if (!Array.isArray(data.products)) errors.push('products (array required)');
+    else if (data.products.length === 0) errors.push('products (cannot be empty)');
 
-    if (missing.length > 0) {
-      console.error('❌ Missing:', missing);
+    if (errors.length > 0) {
+      console.error('❌ Validation failed:', errors);
       return Response.json({ 
         success: false, 
-        error: `Missing required fields: ${missing.join(', ')}`,
-        received_keys: Object.keys(orderData),
-        expected_format: {
-          customer_name: 'Customer full name',
-          phone: 'Customer phone number',
-          products: [{
-            sku: 'Product SKU/barcode',
-            name: 'Product name',
-            quantity: 1,
-            unit_price: 100
-          }],
-          email: 'optional',
-          address: 'optional',
-          city: 'optional'
+        error: `Invalid fields: ${errors.join(', ')}`,
+        received: Object.keys(data),
+        test_payload_example: {
+          customer_name: "Shaleh Ahmed Khan",
+          phone: "01817180019",
+          email: "customer@example.com",
+          address: "House no 181 rd no 9 /A Dhanmondi Dhaka",
+          city: "Dhaka",
+          products: [
+            {
+              sku: "TB07",
+              name: "Prodhan Rosolla Tea",
+              quantity: 1,
+              unit_price: 389,
+              total_price: 389
+            }
+          ],
+          subtotal: 389,
+          delivery_charge: 60,
+          discount: 0,
+          grand_total: 449,
+          delivery_status: "pending",
+          payment_method: "cash_on_delivery"
         }
       }, { status: 400 });
     }
 
-    console.log('✅ Valid payload');
+    console.log('✅ Payload valid');
 
     // Find or create customer
     const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ 
