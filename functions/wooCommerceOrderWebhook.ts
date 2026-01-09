@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
       customer_name: customerName,
       customer_phone: phone,
       customer_email: email,
-      shipping_address: address || 'No address provided',
+      shipping_address: shippingAddress || 'No address provided',
       delivery_city: city,
       order_items: orderItems,
       subtotal: subtotal,
