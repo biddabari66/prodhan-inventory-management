@@ -3,7 +3,7 @@ import { Inventory } from '@/entities/Inventory';
 import { User } from '@/entities/User';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, RefreshCw } from 'lucide-react';
-import AIInventoryInsights from '../components/inventory/AIInventoryInsights';
+import EnhancedAIInsights from '../components/inventory/EnhancedAIInsights';
 import DepartmentFilter from '../components/inventory/DepartmentFilter';
 import { withPermission } from '../components/common/PermissionGuard';
 import { CacheManager } from '../components/common/PerformanceOptimizer';
@@ -102,7 +102,7 @@ function InventoryAIInsightsPage() {
           </Card>
         </div>
 
-        <AIInventoryInsights department={selectedDepartment} inventoryItems={filteredInventory} />
+        <EnhancedAIInsights department={selectedDepartment} inventoryItems={filteredInventory} />
       </div>
     </div>
   );

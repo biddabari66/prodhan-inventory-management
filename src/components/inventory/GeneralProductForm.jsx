@@ -15,6 +15,7 @@ import { ProdhanCategorySelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
 import { base44 } from '@/api/base44Client';
 import SearchableProductSelect from '../common/SearchableProductSelect';
+import AdvancedVariantManager from './AdvancedVariantManager';
 
 // Helper function to detect if text contains Bengali characters
 const containsBengali = (text) => {
@@ -57,6 +58,7 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     department: 'prodhan_com_e_commerce',
     status: product?.status || 'active',
     color_variants: product?.color_variants || [],
+    product_variants: product?.product_variants || [],
     product_source_url: product?.product_source_url || '',
     is_bundle: product?.is_bundle || false,
     bundle_items: product?.bundle_items || [],
@@ -689,137 +691,27 @@ Return ONLY valid JSON with no additional text.`,
             </div>
           </div>
 
-          {/* Enhanced Color Variants Management */}
+          {/* ADVANCED VARIANT MANAGER */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
               <Palette className="w-5 h-5 text-purple-600" />
-              Color Variants with SKU & Weight
+              Product Variants (Advanced)
             </h3>
             
-            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-xs text-purple-800">
-                <strong>Advanced variant tracking:</strong> Each color can have its own SKU, weight, and pricing. 
-                Total quantities must equal your current stock ({formData.current_stock} units).
-              </p>
-            </div>
-
-            {/* Color Variants List */}
-            {formData.color_variants?.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Variants ({formData.color_variants.length})</Label>
-                  <Badge variant="outline" className={
-                    formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0) === formData.current_stock
-                      ? 'bg-green-50 text-green-700 border-green-300'
-                      : 'bg-red-50 text-red-700 border-red-300'
-                  }>
-                    {formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0)} / {formData.current_stock} units
-                  </Badge>
-                </div>
-                
-                {formData.color_variants.map((variant, index) => (
-                  <div key={index} className="p-4 bg-gradient-to-r from-white to-purple-50 rounded-lg border-2 border-purple-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge className="bg-purple-600 text-white">Variant #{index + 1}</Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const removed = formData.color_variants[index];
-                          setFormData({
-                            ...formData,
-                            color_variants: formData.color_variants.filter((_, i) => i !== index)
-                          });
-                          toast.info(`Removed ${removed.color}`);
-                        }}
-                      >
-                        <X className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div>
-                        <Label className="text-xs font-semibold">Color *</Label>
-                        <Input
-                          value={variant.color || ''}
-                          onChange={(e) => {
-                            const updated = [...formData.color_variants];
-                            updated[index].color = e.target.value;
-                            setFormData({ ...formData, color_variants: updated });
-                          }}
-                          placeholder="e.g. Red"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs font-semibold">SKU *</Label>
-                        <Input
-                          value={variant.sku || ''}
-                          onChange={(e) => {
-                            const updated = [...formData.color_variants];
-                            updated[index].sku = e.target.value;
-                            setFormData({ ...formData, color_variants: updated });
-                          }}
-                          placeholder="RED-001"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs font-semibold">Quantity *</Label>
-                        <Input
-                          type="number"
-                          value={variant.quantity || 0}
-                          onChange={(e) => {
-                            const updated = [...formData.color_variants];
-                            updated[index].quantity = parseInt(e.target.value) || 0;
-                            setFormData({ ...formData, color_variants: updated });
-                          }}
-                          placeholder="0"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs font-semibold">Weight (kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={variant.weight_kg || ''}
-                          onChange={(e) => {
-                            const updated = [...formData.color_variants];
-                            updated[index].weight_kg = parseFloat(e.target.value) || 0;
-                            setFormData({ ...formData, color_variants: updated });
-                          }}
-                          placeholder="0.5"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add New Variant Button */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setFormData({
-                  ...formData,
-                  color_variants: [...(formData.color_variants || []), { 
-                    color: '', 
-                    sku: `${formData.barcode || 'VAR'}-${(formData.color_variants?.length || 0) + 1}`, 
-                    quantity: 0, 
-                    weight_kg: formData.weight_kg || 0
-                  }]
-                });
+            <AdvancedVariantManager
+              variants={formData.product_variants || []}
+              onChange={(variants) => {
+                setFormData({ ...formData, product_variants: variants });
+                // Auto-update current stock to match total variants
+                const totalQty = variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+                if (totalQty > 0) {
+                  setFormData(prev => ({ ...prev, current_stock: totalQty }));
+                }
               }}
-              className="w-full border-dashed border-2 border-purple-300 hover:bg-purple-50"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Color Variant
-            </Button>
+              basePrice={formData.selling_price}
+              baseWeight={formData.weight_kg}
+              baseSKU={formData.barcode}
+            />
           </div>
 
           {/* Supplier Information */}
