@@ -1012,10 +1012,16 @@ function SalesPage() {
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     
-    const todayOrders = filteredOrders.filter(o => {
-      const orderDate = new Date(o.order_date).toISOString().split('T')[0];
-      return orderDate === today;
-    });
+    // CRITICAL FIX: If date filter is active, "Today" cards = filtered data
+    const isDateFilterActive = dateRange.from !== undefined;
+    
+    // If date filter active, use filtered orders; otherwise calculate actual today
+    const todayOrders = isDateFilterActive 
+      ? filteredOrders 
+      : filteredOrders.filter(o => {
+          const orderDate = new Date(o.order_date).toISOString().split('T')[0];
+          return orderDate === today;
+        });
     
     // CRITICAL FIX: Total Orders = ALL orders (pending + confirmed + everything)
     const totalOrders = filteredOrders.length;
@@ -1036,14 +1042,14 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // Today's stats
+    // Today's stats (matches filtered data when date filter active)
     const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayConfirmed = todayOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     
-    // Today's product quantity
+    // Today's product quantity (matches filtered data when date filter active)
     const todayProductQty = todayOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
@@ -1067,7 +1073,7 @@ function SalesPage() {
       todayReturns,
       todayProductQty
     };
-  }, [filteredOrders, inventory]);
+  }, [filteredOrders, inventory, dateRange.from]);
 
   const getStatusBadge = (status) => {
     const config = {
