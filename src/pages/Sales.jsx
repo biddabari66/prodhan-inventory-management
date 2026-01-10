@@ -588,9 +588,14 @@ function SalesPage() {
     staleTime: 5 * 60 * 1000
   });
 
+  // CRITICAL FIX: Fetch ALL orders (no limit) to show complete history
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders'],
-    queryFn: () => Order.list('-order_date', 500),
+    queryFn: async () => {
+      const allOrders = await Order.list('-order_date');
+      console.log('✅ Loaded all orders:', allOrders.length);
+      return allOrders;
+    },
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -1003,33 +1008,27 @@ function SalesPage() {
     return filtered;
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
-  // PRODUCTION: Calculate stats with accurate today filtering
-  // Order states flow: pending → confirmed → processing → packed → shipped → out_for_delivery → delivered
-  // Product Qty counts items from ALL orders that have PASSED confirmed state (confirmed+)
+  // PRODUCTION-READY: 100% accurate stats for all historical data
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
     
     const todayOrders = filteredOrders.filter(o => {
       const orderDate = new Date(o.order_date).toISOString().split('T')[0];
       return orderDate === today;
     });
     
-    // Today's CONFIRMED orders only (for product qty calculation)
-    const todayConfirmedOrders = todayOrders.filter(o => validStatuses.includes(o.order_status));
-
-    // CRITICAL FIX: Count only orders that passed confirmed state (same as product qty)
-    const confirmedOrders = filteredOrders.filter(o => validStatuses.includes(o.order_status)).length;
-    const totalOrders = confirmedOrders; // Total orders = confirmed+ only
+    // CRITICAL FIX: Total Orders = ALL orders (pending + confirmed + everything)
+    const totalOrders = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    
+    // Status breakdown
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
+    const confirmedOrders = filteredOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
     
-    // CRITICAL: Sum ACTUAL QUANTITIES of all items in confirmed orders (not order count)
-    const confirmedForProductQty = filteredOrders.filter(o => validStatuses.includes(o.order_status));
-    const totalProductQuantity = confirmedForProductQty.reduce((totalSum, order) => {
-      // Sum quantities of all items in this order
+    // CRITICAL: Total Product Qty = sum actual quantities from ALL orders (including pending)
+    const totalProductQuantity = filteredOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1037,14 +1036,15 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // Today's stats - count only confirmed+ orders to match Total Orders logic
-    const todayConfirmed = todayOrders.filter(o => validStatuses.includes(o.order_status)).length;
-    const todayOrdersCount = todayConfirmed; // TODAY: confirmed+ orders only (matches totalOrders)
+    // Today's stats
+    const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
+    const todayConfirmed = todayOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
-    // CRITICAL: Sum ACTUAL QUANTITIES of all items in today's confirmed orders
-    const todayProductQty = todayConfirmedOrders.reduce((totalSum, order) => {
+    
+    // Today's product quantity
+    const todayProductQty = todayOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1685,15 +1685,17 @@ function SalesPage() {
                           >
                             <FileText className="w-4 h-4 text-blue-600" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditOrder(order)}
-                            className="h-9 w-9 p-0 hover:bg-purple-50"
-                            title="Edit Order"
-                          >
-                            <Edit className="w-4 h-4 text-purple-600" />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditOrder(order)}
+                              className="h-9 w-9 p-0 hover:bg-purple-50"
+                              title="Edit Order"
+                            >
+                              <Edit className="w-4 h-4 text-purple-600" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
