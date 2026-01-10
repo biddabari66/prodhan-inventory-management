@@ -169,10 +169,11 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
       return;
     }
 
-    // Validate color variants if present
+    // Validate color variants only if they exist AND have quantities
     if (formData.color_variants?.length > 0) {
-      const totalColorStock = formData.color_variants.reduce((sum, v) => sum + v.quantity, 0);
-      if (totalColorStock !== formData.current_stock) {
+      const totalColorStock = formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+      // Only enforce validation if color quantities are actually defined (not all zeros)
+      if (totalColorStock > 0 && totalColorStock !== formData.current_stock) {
         toast.error(`Color quantities (${totalColorStock}) must equal total stock (${formData.current_stock})`);
         return;
       }
@@ -614,7 +615,10 @@ Return ONLY valid JSON with no additional text.`,
                   onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value) || 0})}
                   required
                 />
-                {formData.color_variants?.length > 0 && formData.color_variants.reduce((sum, v) => sum + v.quantity, 0) !== formData.current_stock && (
+                {formData.color_variants?.length > 0 && (() => {
+                  const totalColorStock = formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+                  return totalColorStock > 0 && totalColorStock !== formData.current_stock;
+                })() && (
                   <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Color quantities must equal total stock
