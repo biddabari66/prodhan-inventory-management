@@ -73,24 +73,33 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
   const [itemDiscount, setItemDiscount] = useState(0);
 
   const departmentFilteredInventory = useMemo(() => {
-    return inventory.filter(item => {
-      return item.department === formData.department && item.current_stock > 0;
-    });
+    try {
+      return inventory.filter(item => {
+        return item?.department === formData.department && (item?.current_stock || 0) > 0;
+      });
+    } catch (error) {
+      console.error('Error filtering inventory:', error);
+      return [];
+    }
   }, [inventory, formData.department]);
 
   useEffect(() => {
-    if (formData.customer_id && customers.length > 0) {
-      const customer = customers.find(c => c.id === formData.customer_id);
-      if (customer) {
-        setSelectedCustomer(customer);
-        setFormData(prev => ({
-          ...prev,
-          customer_name: customer.customer_name,
-          customer_phone: customer.customer_phone,
-          customer_email: customer.customer_email || '',
-          shipping_address: customer.shipping_addresses?.[0] || prev.shipping_address
-        }));
+    try {
+      if (formData.customer_id && customers.length > 0) {
+        const customer = customers.find(c => c.id === formData.customer_id);
+        if (customer) {
+          setSelectedCustomer(customer);
+          setFormData(prev => ({
+            ...prev,
+            customer_name: customer.customer_name || prev.customer_name,
+            customer_phone: customer.customer_phone || prev.customer_phone,
+            customer_email: customer.customer_email || prev.customer_email || '',
+            shipping_address: customer.shipping_addresses?.[0] || prev.shipping_address
+          }));
+        }
       }
+    } catch (error) {
+      console.error('Error loading customer:', error);
     }
   }, [formData.customer_id, customers]);
 
@@ -940,8 +949,36 @@ function SalesPage() {
   };
 
   const handleEditOrder = (order) => {
-    setEditingOrder(order);
-    setIsOrderFormOpen(true);
+    try {
+      // Validate order data before editing
+      if (!order || !order.id) {
+        toast.error('Invalid order data');
+        return;
+      }
+      
+      // Ensure order has required fields
+      const validatedOrder = {
+        ...order,
+        order_items: Array.isArray(order.order_items) ? order.order_items : [],
+        shipping_address: order.shipping_address || {
+          address_line: '',
+          city: '',
+          district: '',
+          postal_code: '',
+          phone: ''
+        },
+        department: order.department || 'prodhan_com_e_commerce',
+        discount_amount: order.discount_amount || 0,
+        coupon_discount: order.coupon_discount || 0,
+        shipping_cost: order.shipping_cost || 60
+      };
+      
+      setEditingOrder(validatedOrder);
+      setIsOrderFormOpen(true);
+    } catch (error) {
+      console.error('Error opening order for edit:', error);
+      toast.error('Failed to load order for editing: ' + error.message);
+    }
   };
 
   const handleViewInvoice = (order) => {
