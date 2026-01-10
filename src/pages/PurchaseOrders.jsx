@@ -805,6 +805,15 @@ function PurchaseOrdersPage() {
     }
   };
 
+  // Create supplier lookup map for real-time data
+  const supplierMap = useMemo(() => {
+    const map = {};
+    suppliers.forEach(supplier => {
+      map[supplier.id] = supplier;
+    });
+    return map;
+  }, [suppliers]);
+
   // Filter orders
   const filteredOrders = useMemo(() => {
     let filtered = [...purchaseOrders];
@@ -815,10 +824,12 @@ function PurchaseOrdersPage() {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(o =>
-        o.po_number?.toLowerCase().includes(query) ||
-        o.supplier_name?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(o => {
+        const currentSupplier = supplierMap[o.supplier_id];
+        const supplierName = currentSupplier?.supplier_name || o.supplier_name;
+        return o.po_number?.toLowerCase().includes(query) ||
+               supplierName?.toLowerCase().includes(query);
+      });
     }
 
     if (startDate) {
@@ -830,7 +841,7 @@ function PurchaseOrdersPage() {
     }
 
     return filtered;
-  }, [purchaseOrders, statusFilter, searchQuery, startDate, endDate]);
+  }, [purchaseOrders, statusFilter, searchQuery, startDate, endDate, supplierMap]);
 
   // Stats
   const stats = useMemo(() => {
@@ -1034,7 +1045,14 @@ function PurchaseOrdersPage() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{order.supplier_name}</p>
+                          <p className="font-medium">
+                            {supplierMap[order.supplier_id]?.supplier_name || order.supplier_name}
+                          </p>
+                          {supplierMap[order.supplier_id]?.supplier_phone && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              📞 {supplierMap[order.supplier_id].supplier_phone}
+                            </p>
+                          )}
                           <Badge variant="outline" className="text-xs mt-1">
                             {order.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan'}
                           </Badge>
