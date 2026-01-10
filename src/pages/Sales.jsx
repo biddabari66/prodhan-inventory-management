@@ -346,10 +346,10 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
                 {formData.order_items.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{item.item_name}</TableCell>
-                    <TableCell className="text-center">{item.quantity}</TableCell>
-                    <TableCell className="text-right">BDT {item.unit_price.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-red-600">-BDT {item.discount.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-semibold">BDT {item.subtotal.toLocaleString()}</TableCell>
+                    <TableCell className="text-center">{item.quantity || 0}</TableCell>
+                    <TableCell className="text-right">BDT {(item.unit_price || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-red-600">-BDT {(item.discount || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-semibold">BDT {(item.subtotal || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-center">
                       <Button
                         type="button"
@@ -531,22 +531,22 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
           <div className="bg-gradient-to-br from-violet-50 to-pink-50 p-6 rounded-xl space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Items Total:</span>
-              <span className="font-medium">BDT {calculations.subtotal.toLocaleString()}</span>
+              <span className="font-medium">BDT {(calculations.subtotal || 0).toLocaleString()}</span>
             </div>
             {calculations.totalDiscount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Discount:</span>
-                <span className="font-medium text-red-600">-BDT {calculations.totalDiscount.toLocaleString()}</span>
+                <span className="font-medium text-red-600">-BDT {(calculations.totalDiscount || 0).toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping:</span>
-              <span className="font-medium">BDT {calculations.shippingCost.toLocaleString()}</span>
+              <span className="font-medium">BDT {(calculations.shippingCost || 0).toLocaleString()}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total Amount:</span>
-              <span className="text-violet-600">BDT {calculations.total.toLocaleString()}</span>
+              <span className="text-violet-600">BDT {(calculations.total || 0).toLocaleString()}</span>
             </div>
           </div>
 
