@@ -13,9 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { withPermission } from '../components/common/PermissionGuard';
+import { withPermission, usePermission } from '../components/common/PermissionGuard';
 
 function CustomerManagementPage() {
+  // CRITICAL: Permission-based access control
+  const { hasPermission: canCreate } = usePermission('customer_management', 'can_create');
+  const { hasPermission: canEdit } = usePermission('customer_management', 'can_edit');
+  const { hasPermission: canDelete } = usePermission('customer_management', 'can_delete');
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,13 +135,15 @@ function CustomerManagementPage() {
               <p className="text-slate-600 mt-1 text-base">Manage customers, track spending, and analyze behavior</p>
             </div>
           </div>
-          <Button 
-            onClick={() => setIsAddCustomerOpen(true)}
-            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add New Customer
-          </Button>
+          {canCreate && (
+            <Button 
+              onClick={() => setIsAddCustomerOpen(true)}
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add New Customer
+            </Button>
+          )}
         </div>
 
         {/* Stats Grid */}
@@ -554,4 +560,4 @@ function CustomerDetails({ customer }) {
   );
 }
 
-export default withPermission(CustomerManagementPage, 'sales', 'can_view');
+export default withPermission(CustomerManagementPage, 'customer_management', 'can_view');

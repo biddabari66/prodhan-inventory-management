@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { usePerformanceMonitor, CacheManager } from '../components/common/PerformanceOptimizer';
 import { base44 } from '@/api/base44Client';
-import { withPermission } from '../components/common/PermissionGuard';
+import { withPermission, usePermission, PermissionGate } from '../components/common/PermissionGuard';
 
 function InventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
   // Always use General Product Form for Prodhan.com
@@ -43,6 +43,11 @@ function InventoryOverviewPage() {
   const [todaySalesData, setTodaySalesData] = useState({});
 
   const [selectedDepartment, setSelectedDepartment] = useState('prodhan_com_e_commerce');
+
+  // CRITICAL: Permission-based access control
+  const { hasPermission: canCreate } = usePermission('inventory_overview', 'can_create');
+  const { hasPermission: canEdit } = usePermission('inventory_overview', 'can_edit');
+  const { hasPermission: canDelete } = usePermission('inventory_overview', 'can_delete');
 
   // Fetch categories for filtering
   const { data: categories = [] } = useQuery({
@@ -295,12 +300,14 @@ function InventoryOverviewPage() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
           </div>
-          <Button
-            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 py-6 text-base font-semibold"
-            onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
+          {canCreate && (
+            <Button
+              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 py-6 text-base font-semibold"
+              onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
 
-            <Plus className="w-5 h-5 mr-2" /> Add New Item
-          </Button>
+              <Plus className="w-5 h-5 mr-2" /> Add New Item
+            </Button>
+          )}
         </div>
 
         {/* Enhanced Stats Grid */}
@@ -507,22 +514,24 @@ function InventoryOverviewPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-2 justify-center">
-                            <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {e.stopPropagation();handleEdit(item);}}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-
-                              Edit
-                            </Button>
-                            <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {e.stopPropagation();handleDeleteClick(item);}}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50">
-
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {e.stopPropagation();handleEdit(item);}}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                Edit
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {e.stopPropagation();handleDeleteClick(item);}}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
