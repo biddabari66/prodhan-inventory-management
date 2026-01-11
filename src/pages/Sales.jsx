@@ -644,6 +644,46 @@ function SalesPage() {
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
 
+  // CRITICAL: Check user permissions from UserPermission entity (passed via withPermission HOC)
+  const { data: rawUserPermissions = [] } = useQuery({
+    queryKey: ['user-permissions', currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser?.id) return [];
+      const perms = await base44.entities.UserPermission.filter({ user_id: currentUser.id });
+      return perms;
+    },
+    enabled: !!currentUser?.id,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const userPermissions = useMemo(() => {
+    const permMap = {};
+    rawUserPermissions.forEach(p => {
+      permMap[p.module] = {
+        can_view: p.can_view || false,
+        can_create: p.can_create || false,
+        can_edit: p.can_edit || false,
+        can_delete: p.can_delete || false,
+        can_approve: p.can_approve || false,
+        can_export: p.can_export || false
+      };
+    });
+    return permMap;
+  }, [rawUserPermissions]);
+
+  // Check if user has specific permission
+  const hasPermission = useCallback((module, action) => {
+    // Super admin and admin have all permissions
+    if (['admin', 'super_admin'].includes(currentUser?.job_role?.toLowerCase())) return true;
+    return userPermissions[module]?.[action] === true;
+  }, [currentUser?.job_role, userPermissions]);
+
+  const canEdit = hasPermission('sales', 'can_edit');
+  const canDelete = hasPermission('sales', 'can_delete');
+  const canCreate = hasPermission('sales', 'can_create');
+  const canApprove = hasPermission('sales', 'can_approve');
+  const canExport = hasPermission('sales', 'can_export');
+
   const isAdmin = useMemo(() => {
     return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
   }, [currentUser]);
@@ -1312,16 +1352,18 @@ function SalesPage() {
               </div>
             </PopoverContent>
           </Popover>
-          <Button
-            onClick={() => {
-              setEditingOrder(null);
-              setIsOrderFormOpen(true);
-            }}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 h-10 font-semibold"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create Sale Order
-          </Button>
+          {canCreate && (
+            <Button
+              onClick={() => {
+                setEditingOrder(null);
+                setIsOrderFormOpen(true);
+              }}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 h-10 font-semibold"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Sale Order
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1468,42 +1510,48 @@ function SalesPage() {
                 </Button>
               </div>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('confirmed')}
-                  className="text-blue-600 hover:bg-blue-50"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Confirm All
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('shipped')}
-                  className="text-cyan-600 hover:bg-cyan-50"
-                >
-                  <Truck className="w-4 h-4 mr-1" />
-                  Ship All
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('delivered')}
-                  className="text-green-600 hover:bg-green-50"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Mark Delivered
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('delete')}
-                  className="text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
-                </Button>
+                {canApprove && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('confirmed')}
+                      className="text-blue-600 hover:bg-blue-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Confirm All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('shipped')}
+                      className="text-cyan-600 hover:bg-cyan-50"
+                    >
+                      <Truck className="w-4 h-4 mr-1" />
+                      Ship All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('delivered')}
+                      className="text-green-600 hover:bg-green-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Mark Delivered
+                    </Button>
+                  </>
+                )}
+                {canDelete && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkAction('delete')}
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -1736,7 +1784,7 @@ function SalesPage() {
                           >
                             <FileText className="w-4 h-4 text-blue-600" />
                           </Button>
-                          {isAdmin && (
+                          {canEdit && (
                             <Button
                               variant="ghost"
                               size="sm"
