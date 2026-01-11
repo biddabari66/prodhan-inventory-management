@@ -53,14 +53,13 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.Inventory.list()
     ]);
 
-    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-    
+    // CRITICAL FIX: Include ALL order statuses (pending, confirmed, processing, etc.)
     const todayOrders = allOrders.filter(order => {
       const orderDateBDT = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Dhaka'
       }).format(new Date(order.order_date || order.created_date));
       
-      return orderDateBDT === todayBDT && validStatuses.includes(order.order_status);
+      return orderDateBDT === todayBDT;
     });
 
     // Calculate stats
@@ -151,6 +150,10 @@ Deno.serve(async (req) => {
             
             <div class="section">
               <h2>📦 Order Status Breakdown</h2>
+              <div class="product-item">
+                <span>Pending</span>
+                <span style="font-weight: bold; color: #f59e0b;">${todayOrders.filter(o => o.order_status === 'pending').length}</span>
+              </div>
               <div class="product-item">
                 <span>Confirmed</span>
                 <span style="font-weight: bold;">${todayOrders.filter(o => o.order_status === 'confirmed').length}</span>
