@@ -51,7 +51,6 @@ import Permissions from './pages/Permissions';
 import Procurement from './pages/Procurement';
 import ProdhanComIntegration from './pages/ProdhanComIntegration';
 import ProductAnalytics from './pages/ProductAnalytics';
-import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
 import ReportGenerator from './pages/ReportGenerator';
 import Reports from './pages/Reports';
@@ -65,13 +64,14 @@ import SubmittedReports from './pages/SubmittedReports';
 import SystemLogs from './pages/SystemLogs';
 import SystemOptimization from './pages/SystemOptimization';
 import ThirdPartyApps from './pages/ThirdPartyApps';
-import UserAccessManager from './pages/UserAccessManager';
 import Webhooks from './pages/Webhooks';
 import WhatsApp from './pages/WhatsApp';
 import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
+import PurchaseOrders from './pages/PurchaseOrders';
+import UserAccessManager from './pages/UserAccessManager';
 import Sales from './pages/Sales';
 import __Layout from './Layout.jsx';
 
@@ -130,7 +130,6 @@ export const PAGES = {
     "Procurement": Procurement,
     "ProdhanComIntegration": ProdhanComIntegration,
     "ProductAnalytics": ProductAnalytics,
-    "PurchaseOrders": PurchaseOrders,
     "ReportBuilder": ReportBuilder,
     "ReportGenerator": ReportGenerator,
     "Reports": Reports,
@@ -144,13 +143,14 @@ export const PAGES = {
     "SystemLogs": SystemLogs,
     "SystemOptimization": SystemOptimization,
     "ThirdPartyApps": ThirdPartyApps,
-    "UserAccessManager": UserAccessManager,
     "Webhooks": Webhooks,
     "WhatsApp": WhatsApp,
     "WhatsAppWebhook": WhatsAppWebhook,
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
+    "PurchaseOrders": PurchaseOrders,
+    "UserAccessManager": UserAccessManager,
     "Sales": Sales,
 }
 

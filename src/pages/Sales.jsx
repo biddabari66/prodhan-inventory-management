@@ -644,35 +644,9 @@ function SalesPage() {
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
 
-  // CRITICAL: Check actual permissions from UserPermission entity
-  const { data: userPermissions } = useQuery({
-    queryKey: ['userPermissions', currentUser?.id],
-    queryFn: async () => {
-      if (!currentUser) return {};
-      const perms = await base44.entities.UserPermission.filter({ user_id: currentUser.id });
-      const permMap = {};
-      perms.forEach(p => {
-        permMap[p.module] = p;
-      });
-      return permMap;
-    },
-    enabled: !!currentUser,
-    staleTime: 5 * 60 * 1000
-  });
-
-  const canEdit = useMemo(() => {
-    if (!currentUser) return false;
-    // Admin/super_admin always have full access
-    if (['admin', 'super_admin'].includes(currentUser.job_role?.toLowerCase())) return true;
-    // Check UserPermission entity
-    return userPermissions?.sales?.can_edit === true;
-  }, [currentUser, userPermissions]);
-
-  const canDelete = useMemo(() => {
-    if (!currentUser) return false;
-    if (['admin', 'super_admin'].includes(currentUser.job_role?.toLowerCase())) return true;
-    return userPermissions?.sales?.can_delete === true;
-  }, [currentUser, userPermissions]);
+  const isAdmin = useMemo(() => {
+    return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
+  }, [currentUser]);
 
   // Create order mutation
   const createOrderMutation = useMutation({
@@ -834,40 +808,60 @@ function SalesPage() {
     },
   });
 
-  // PRODUCTION: Auto-sync to Adprofit on confirmed status (SILENT)
+  // PRODUCTION: Auto-sync to Adprofit on confirmed status
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
-      // Update order status first
-      const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-      
-      // CRITICAL: Auto-sync SILENTLY in background when confirming
+      // CRITICAL: Auto-sync BEFORE updating status for immediate feedback
       if (newStatus === 'confirmed') {
-        // Trigger sync in background without blocking UI
-        base44.functions.invoke('syncToAdprofit', { order_id: orderId })
-          .then(syncResponse => {
-            if (syncResponse.data?.success) {
-              const { synced_items, failed_items } = syncResponse.data;
-              // Update order with sync info silently
-              Order.update(orderId, { 
-                adprofit_synced: true,
-                adprofit_sync_date: new Date().toISOString(),
-                adprofit_synced_items: synced_items,
-                adprofit_failed_items: failed_items || 0
-              }).then(() => {
-                queryClient.invalidateQueries(['orders']);
-              });
+        try {
+          const loadingToast = toast.loading('🔄 Confirming & syncing to Adprofit...');
+          
+          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
+          
+          toast.dismiss(loadingToast);
+          
+          if (syncResponse.data?.success) {
+            const { synced_items, failed_items } = syncResponse.data;
+            
+            // Update order with sync info
+            const updatedOrder = await Order.update(orderId, { 
+              order_status: newStatus,
+              adprofit_synced: true,
+              adprofit_sync_date: new Date().toISOString(),
+              adprofit_synced_items: synced_items,
+              adprofit_failed_items: failed_items || 0
+            });
+            
+            if (failed_items > 0) {
+              toast.warning(`⚠️ Confirmed & partially synced (${synced_items}/${synced_items + failed_items} items)`);
+            } else {
+              toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
             }
-          })
-          .catch(syncError => {
-            console.error('Adprofit auto-sync error:', syncError);
-          });
+            
+            return updatedOrder;
+          } else {
+            // Still confirm order even if sync fails
+            const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+            toast.warning('Order confirmed but Adprofit sync failed');
+            return updatedOrder;
+          }
+        } catch (syncError) {
+          console.error('Adprofit auto-sync error:', syncError);
+          // Still confirm order even if sync fails
+          const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+          toast.warning('Order confirmed but Adprofit sync failed: ' + syncError.message);
+          return updatedOrder;
+        }
+      } else {
+        // For other status changes, just update normally
+        return await Order.update(orderId, { order_status: newStatus });
       }
-      
-      return updatedOrder;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      toast.success('Order status updated!');
+      if (variables.newStatus !== 'confirmed') {
+        toast.success('Order status updated!');
+      }
     },
     onError: (error) => {
       toast.error('Failed to update order status: ' + error.message);
@@ -1501,17 +1495,15 @@ function SalesPage() {
                   <CheckCircle className="w-4 h-4 mr-1" />
                   Mark Delivered
                 </Button>
-                {canDelete && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleBulkAction('delete')}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('delete')}
+                  className="text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -1744,7 +1736,7 @@ function SalesPage() {
                           >
                             <FileText className="w-4 h-4 text-blue-600" />
                           </Button>
-                          {canEdit && (
+                          {isAdmin && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1778,14 +1770,25 @@ function SalesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={async () => {
+                                const loadingToast = toast.loading('🔄 Syncing to Adprofit...');
                                 try {
                                   const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
+                                  toast.dismiss(loadingToast);
                                   
                                   if (response.data?.success) {
                                     queryClient.invalidateQueries(['orders']);
+                                    const { synced_items, failed_items } = response.data;
+                                    if (failed_items > 0) {
+                                      toast.warning(`⚠️ Partially synced: ${synced_items}/${synced_items + failed_items} items`);
+                                    } else {
+                                      toast.success(`✅ Synced ${synced_items} items to Adprofit!`);
+                                    }
+                                  } else {
+                                    toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
                                   }
                                 } catch (error) {
-                                  console.error('Manual sync error:', error);
+                                  toast.dismiss(loadingToast);
+                                  toast.error('Sync failed: ' + error.message);
                                 }
                               }}
                               className="h-9 w-9 p-0 hover:bg-indigo-50"
