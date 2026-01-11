@@ -23,7 +23,7 @@ import SearchableProductSelect from '../components/common/SearchableProductSelec
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { withPermission } from '../components/common/PermissionGuard';
+import { withPermission, usePermission } from '../components/common/PermissionGuard';
 
 // Purchase Order Form Component
 const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit, onCancel }) => {
@@ -665,6 +665,11 @@ function PurchaseOrdersPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // CRITICAL: Permission-based access control
+  const { hasPermission: canCreate } = usePermission('purchase_orders', 'can_create');
+  const { hasPermission: canEdit } = usePermission('purchase_orders', 'can_edit');
+  const { hasPermission: canApprove } = usePermission('purchase_orders', 'can_approve');
+
   // Fetch data
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -892,16 +897,18 @@ function PurchaseOrdersPage() {
             <p className="text-slate-600 mt-1 text-base">সাপ্লায়ার ম্যানেজমেন্ট ও ইনভেন্টরি সংগ্রহ ট্র্যাকিং</p>
           </div>
         </div>
-        <Button
-          onClick={() => {
-            setEditingOrder(null);
-            setIsFormOpen(true);
-          }}
-          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/30 px-6 py-6 text-base font-semibold"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create Purchase Order
-        </Button>
+        {canCreate && (
+          <Button
+            onClick={() => {
+              setEditingOrder(null);
+              setIsFormOpen(true);
+            }}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/30 px-6 py-6 text-base font-semibold"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Purchase Order
+          </Button>
+        )}
       </div>
 
       {/* Enhanced Stats Grid */}
@@ -1097,11 +1104,13 @@ function PurchaseOrdersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(order)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit Order
-                            </DropdownMenuItem>
-                            {order.order_status !== 'received' && order.order_status !== 'cancelled' && (
+                            {canEdit && (
+                              <DropdownMenuItem onClick={() => handleEdit(order)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Order
+                              </DropdownMenuItem>
+                            )}
+                            {canApprove && order.order_status !== 'received' && order.order_status !== 'cancelled' && (
                               <DropdownMenuItem onClick={() => handleReceive(order)}>
                                 <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
                                 Mark as Received
