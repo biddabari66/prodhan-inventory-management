@@ -1045,32 +1045,30 @@ function SalesPage() {
     return filtered;
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
-  // PRODUCTION-READY: 100% accurate stats for all historical data
+  // PRODUCTION-READY: 100% accurate stats matching filters and including ALL order statuses
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    
-    // CRITICAL FIX: If date filter is active, "Today" cards = filtered data
     const isDateFilterActive = dateRange.from !== undefined;
     
-    // If date filter active, use filtered orders; otherwise calculate actual today
+    // Calculate today's data separately (only when no date filter)
     const todayOrders = isDateFilterActive 
-      ? filteredOrders 
+      ? [] 
       : filteredOrders.filter(o => {
           const orderDate = new Date(o.order_date).toISOString().split('T')[0];
           return orderDate === today;
         });
     
-    // CRITICAL FIX: Total Orders = ALL orders (pending + confirmed + everything)
+    // Main stats = ALL filtered orders (respects all filters including date, status, payment, etc.)
     const totalOrders = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     
-    // Status breakdown
+    // Status breakdown from filtered data
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
     const confirmedOrders = filteredOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
     
-    // CRITICAL: Total Product Qty = sum actual quantities from ALL orders (including pending)
+    // Total Product Qty from ALL filtered orders (including pending)
     const totalProductQuantity = filteredOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
@@ -1079,14 +1077,12 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // Today's stats (matches filtered data when date filter active)
+    // Today-only stats (when no date filter is active)
     const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayConfirmed = todayOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
-    
-    // Today's product quantity (matches filtered data when date filter active)
     const todayProductQty = todayOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
@@ -1108,7 +1104,8 @@ function SalesPage() {
       todayConfirmed,
       todayShipped,
       todayReturns,
-      todayProductQty
+      todayProductQty,
+      isDateFilterActive
     };
   }, [filteredOrders, inventory, dateRange.from]);
 
@@ -1317,7 +1314,7 @@ function SalesPage() {
         </div>
       </div>
 
-      {/* Stats Cards with Today's Metrics */}
+      {/* Stats Cards - Shows filtered data */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         {/* Total Orders */}
         <div className="space-y-2">
@@ -1328,15 +1325,19 @@ function SalesPage() {
                   <ShoppingCart className="w-5 h-5 text-emerald-600" />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                {stats.isDateFilterActive ? 'Filtered Orders' : 'Total Orders'}
+              </p>
               <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-emerald-700 font-medium">Today: {stats.todayOrders}</p>
-            </CardContent>
-          </Card>
+          {!stats.isDateFilterActive && (
+            <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-emerald-700 font-medium">Today: {stats.todayOrders}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Total Product Qty */}
@@ -1348,15 +1349,19 @@ function SalesPage() {
                   <Package className="w-5 h-5 text-indigo-600" />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                {stats.isDateFilterActive ? 'Filtered Products' : 'Total Product Qty'}
+              </p>
               <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-indigo-700 font-medium">Today: {stats.todayProductQty}</p>
-            </CardContent>
-          </Card>
+          {!stats.isDateFilterActive && (
+            <Card className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-indigo-700 font-medium">Today: {stats.todayProductQty}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Total Returns */}
@@ -1368,15 +1373,19 @@ function SalesPage() {
                   <RefreshCw className="w-5 h-5 text-red-600" />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Returns</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                {stats.isDateFilterActive ? 'Filtered Returns' : 'Total Returns'}
+              </p>
               <p className="text-3xl font-bold text-red-600">{stats.totalReturns}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-red-700 font-medium">Today: {stats.todayReturns}</p>
-            </CardContent>
-          </Card>
+          {!stats.isDateFilterActive && (
+            <Card className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-red-700 font-medium">Today: {stats.todayReturns}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Pending Orders */}
@@ -1388,15 +1397,19 @@ function SalesPage() {
                   <Clock className="w-5 h-5 text-amber-600" />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pending Orders</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                {stats.isDateFilterActive ? 'Filtered Pending' : 'Pending Orders'}
+              </p>
               <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-amber-700 font-medium">Today: {stats.todayPending}</p>
-            </CardContent>
-          </Card>
+          {!stats.isDateFilterActive && (
+            <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-amber-700 font-medium">Today: {stats.todayPending}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Confirmed Orders */}
@@ -1408,15 +1421,19 @@ function SalesPage() {
                   <CheckCircle className="w-5 h-5 text-blue-600" />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Confirmed Orders</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                {stats.isDateFilterActive ? 'Filtered Confirmed' : 'Confirmed Orders'}
+              </p>
               <p className="text-3xl font-bold text-blue-600">{stats.confirmedOrders}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-blue-700 font-medium">Today: {stats.todayConfirmed}</p>
-            </CardContent>
-          </Card>
+          {!stats.isDateFilterActive && (
+            <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-blue-700 font-medium">Today: {stats.todayConfirmed}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Shipped Orders */}
@@ -1428,15 +1445,19 @@ function SalesPage() {
                   <Truck className="w-5 h-5 text-purple-600" />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Shipped Orders</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                {stats.isDateFilterActive ? 'Filtered Shipped' : 'Shipped Orders'}
+              </p>
               <p className="text-3xl font-bold text-purple-600">{stats.shippedOrders}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-purple-700 font-medium">Today: {stats.todayShipped}</p>
-            </CardContent>
-          </Card>
+          {!stats.isDateFilterActive && (
+            <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-purple-700 font-medium">Today: {stats.todayShipped}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
