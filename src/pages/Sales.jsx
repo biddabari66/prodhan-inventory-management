@@ -808,60 +808,40 @@ function SalesPage() {
     },
   });
 
-  // PRODUCTION: Auto-sync to Adprofit on confirmed status
+  // PRODUCTION: Auto-sync to Adprofit on confirmed status (SILENT)
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
-      // CRITICAL: Auto-sync BEFORE updating status for immediate feedback
+      // Update status first
+      const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+      
+      // CRITICAL: Auto-sync silently in background when confirmed
       if (newStatus === 'confirmed') {
-        try {
-          const loadingToast = toast.loading('🔄 Confirming & syncing to Adprofit...');
-          
-          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
-          
-          toast.dismiss(loadingToast);
-          
-          if (syncResponse.data?.success) {
-            const { synced_items, failed_items } = syncResponse.data;
-            
-            // Update order with sync info
-            const updatedOrder = await Order.update(orderId, { 
-              order_status: newStatus,
-              adprofit_synced: true,
-              adprofit_sync_date: new Date().toISOString(),
-              adprofit_synced_items: synced_items,
-              adprofit_failed_items: failed_items || 0
-            });
-            
-            if (failed_items > 0) {
-              toast.warning(`⚠️ Confirmed & partially synced (${synced_items}/${synced_items + failed_items} items)`);
-            } else {
-              toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
+        // Fire and forget - sync happens in background
+        base44.functions.invoke('syncToAdprofit', { order_id: orderId })
+          .then((syncResponse) => {
+            if (syncResponse.data?.success) {
+              const { synced_items, failed_items } = syncResponse.data;
+              // Silent update with sync status
+              Order.update(orderId, { 
+                adprofit_synced: true,
+                adprofit_sync_date: new Date().toISOString(),
+                adprofit_synced_items: synced_items,
+                adprofit_failed_items: failed_items || 0
+              }).then(() => {
+                queryClient.invalidateQueries(['orders']);
+              });
             }
-            
-            return updatedOrder;
-          } else {
-            // Still confirm order even if sync fails
-            const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-            toast.warning('Order confirmed but Adprofit sync failed');
-            return updatedOrder;
-          }
-        } catch (syncError) {
-          console.error('Adprofit auto-sync error:', syncError);
-          // Still confirm order even if sync fails
-          const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-          toast.warning('Order confirmed but Adprofit sync failed: ' + syncError.message);
-          return updatedOrder;
-        }
-      } else {
-        // For other status changes, just update normally
-        return await Order.update(orderId, { order_status: newStatus });
+          })
+          .catch((syncError) => {
+            console.error('Background Adprofit sync error:', syncError);
+          });
       }
+      
+      return updatedOrder;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['orders']);
-      if (variables.newStatus !== 'confirmed') {
-        toast.success('Order status updated!');
-      }
+      toast.success('Order status updated!');
     },
     onError: (error) => {
       toast.error('Failed to update order status: ' + error.message);
@@ -1770,26 +1750,17 @@ function SalesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={async () => {
-                                const loadingToast = toast.loading('🔄 Syncing to Adprofit...');
-                                try {
-                                  const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
-                                  toast.dismiss(loadingToast);
-                                  
-                                  if (response.data?.success) {
-                                    queryClient.invalidateQueries(['orders']);
-                                    const { synced_items, failed_items } = response.data;
-                                    if (failed_items > 0) {
-                                      toast.warning(`⚠️ Partially synced: ${synced_items}/${synced_items + failed_items} items`);
-                                    } else {
-                                      toast.success(`✅ Synced ${synced_items} items to Adprofit!`);
+                                // Silent background sync
+                                base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                  .then((response) => {
+                                    if (response.data?.success) {
+                                      queryClient.invalidateQueries(['orders']);
                                     }
-                                  } else {
-                                    toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
-                                  }
-                                } catch (error) {
-                                  toast.dismiss(loadingToast);
-                                  toast.error('Sync failed: ' + error.message);
-                                }
+                                  })
+                                  .catch((error) => {
+                                    console.error('Sync error:', error);
+                                  });
+                                toast.info('Syncing in background...');
                               }}
                               className="h-9 w-9 p-0 hover:bg-indigo-50"
                               title="Sync to Adprofit"
