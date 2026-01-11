@@ -526,31 +526,38 @@ export default function Layout({ children, currentPageName }) {
         };
       });
 
-      // Super Admin and Admin: All permissions automatically
-      if (user.job_role === 'admin' || user.job_role === 'super_admin') {
-        const fullPermissions = {
-          inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+      if (permissions.length === 0 && user.job_role === 'admin') {
+        const adminPermissions = {
+          dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          admissions: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          students: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          finance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          hr: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          settings: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          followup: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          whatsapp: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          income: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          expenses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          incentives: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          budget: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          employees: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          performance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          manual_reporting: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+          customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          product_analytics: { can_view: true, can_export: true },
-          inventory_reports: { can_view: true, can_export: true },
-          inventory_ai_insights: { can_view: true, can_export: true },
-          financial_analytics: { can_view: true, can_export: true, can_view_sensitive_finance: user.job_role === 'super_admin' },
-          user_access_manager: { can_view: true, can_create: true, can_edit: true, can_delete: true },
-          integrations: { can_view: true, can_create: true, can_edit: true, can_delete: true },
-          system_alerts: { can_view: true, can_create: true, can_edit: true, can_delete: true },
-          audit_trail: { can_view: true, can_export: true }
+          financial_analytics: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true }
         };
-        setUserPermissions(fullPermissions);
-        localStorage.setItem('cached_user_permissions', JSON.stringify(fullPermissions));
+        setUserPermissions(adminPermissions);
+        localStorage.setItem('cached_user_permissions', JSON.stringify(adminPermissions));
       } else {
-        // Regular users: Use actual permissions from database
         setUserPermissions(permissionsMap);
         localStorage.setItem('cached_user_permissions', JSON.stringify(permissionsMap));
       }
@@ -626,8 +633,7 @@ export default function Layout({ children, currentPageName }) {
   const hasPermission = (moduleKey) => {
     if (!currentUser) return false;
 
-    // Super Admin and Admin always have access
-    if (currentUser.job_role === 'super_admin' || currentUser.job_role === 'admin' || currentUser.role === 'admin') return true;
+    if (currentUser.job_role === 'admin' || currentUser.role === 'admin') return true;
 
     const modulePermissions = userPermissions[moduleKey];
     return modulePermissions && modulePermissions.can_view === true;
