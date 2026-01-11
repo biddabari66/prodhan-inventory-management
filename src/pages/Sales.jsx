@@ -597,11 +597,11 @@ function SalesPage() {
     staleTime: 5 * 60 * 1000
   });
 
-  // CRITICAL FIX: Fetch ALL orders (no limit) to show complete history
+  // CRITICAL FIX: Fetch ALL orders with large limit to show complete history
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const allOrders = await Order.list('-order_date');
+      const allOrders = await Order.list('-order_date', 5000);
       console.log('✅ Loaded all orders:', allOrders.length);
       return allOrders;
     },
