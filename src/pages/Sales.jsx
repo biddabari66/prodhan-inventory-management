@@ -588,7 +588,6 @@ function SalesPage() {
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
-  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
   const [productFilter, setProductFilter] = useState('all');
 
   const { data: currentUser } = useQuery({
@@ -650,8 +649,6 @@ function SalesPage() {
       setDepartmentFilter(userDepartment);
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
-
-
 
   // Create order mutation
   const createOrderMutation = useMutation({
@@ -1156,754 +1153,746 @@ function SalesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
       <div className="w-full px-6 py-6 space-y-6">
-      {/* Compact Header with Search & Filter */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Sales Management</h1>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search by order number, customer..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-10"
-            />
-          </div>
-          {canExport && (
-            <Button
-              variant="outline"
-              className="gap-2 h-10"
-              onClick={() => {
-                const csv = [
-                  ['Order Number', 'Date', 'Customer', 'Phone', 'Total', 'Status', 'Payment'],
-                  ...filteredOrders.map(o => [
-                    o.order_number,
-                    format(new Date(o.order_date), 'dd/MM/yyyy'),
-                    o.customer_name,
-                    o.customer_phone,
-                    o.total_amount,
-                    o.order_status,
-                    o.payment_status
-                  ])
-                ].map(row => row.join(',')).join('\n');
-
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `sales-orders-${new Date().toISOString().split('T')[0]}.csv`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                toast.success('Export downloaded!');
-              }}
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
-          )}
-          </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 h-10">
-                <Filter className="w-4 h-4" />
-                Filters
-                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
-                  <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-violet-600 text-white text-xs">
-                    {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4" align="end">
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Quick Date Filters</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        setDateRange({ from: today, to: today });
-                      }}
-                      className="text-sm"
-                    >
-                      Today
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const yesterday = new Date();
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yesterdayStr = yesterday.toISOString().split('T')[0];
-                        setDateRange({ from: yesterdayStr, to: yesterdayStr });
-                      }}
-                      className="text-sm"
-                    >
-                      Yesterday
-                    </Button>
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Date Range</Label>
-                  <div className="space-y-2">
-                    <div>
-                      <Label className="text-xs text-slate-600">From</Label>
-                      <Input
-                        type="date"
-                        value={dateRange.from || ''}
-                        onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                        className="h-9"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-600">To</Label>
-                      <Input
-                        type="date"
-                        value={dateRange.to || ''}
-                        onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                        className="h-9"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Order Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                      <SelectItem value="shipped">Shipped</SelectItem>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Payment Status</Label>
-                  <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Payments</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="partial">Partial</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Product Filter</Label>
-                  <SearchableProductSelect
-                    inventory={inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all')}
-                    value={productFilter}
-                    onValueChange={setProductFilter}
-                    placeholder="Search products..."
-                    showStock={false}
-                    showPrice={false}
-                    allowClear={true}
-                    onClear={() => setProductFilter('all')}
-                  />
-                </div>
-
-                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all') && (
-                  <>
-                    <Separator />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setDateRange({ from: undefined, to: undefined });
-                        setStatusFilter('all');
-                        setPaymentFilter('all');
-                        setProductFilter('all');
-                      }}
-                      className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      Clear All Filters
-                    </Button>
-                  </>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Button
-            onClick={() => {
-              setEditingOrder(null);
-              setIsOrderFormOpen(true);
-            }}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 h-10 font-semibold"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create Sale Order
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards with Today's Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        {/* Total Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <ShoppingCart className="w-5 h-5 text-emerald-600" />
-                </div>
-              </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
-              <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-emerald-700 font-medium">Today: {stats.todayOrders}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Total Product Qty */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-indigo-600" />
-                </div>
-              </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
-              <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-indigo-700 font-medium">Today: {stats.todayProductQty}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Total Returns */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5 text-red-600" />
-                </div>
-              </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Returns</p>
-              <p className="text-3xl font-bold text-red-600">{stats.totalReturns}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-red-700 font-medium">Today: {stats.todayReturns}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Pending Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                </div>
-              </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pending Orders</p>
-              <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-amber-700 font-medium">Today: {stats.todayPending}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Confirmed Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
-                </div>
-              </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Confirmed Orders</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.confirmedOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-blue-700 font-medium">Today: {stats.todayConfirmed}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Shipped Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Truck className="w-5 h-5 text-purple-600" />
-                </div>
-              </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Shipped Orders</p>
-              <p className="text-3xl font-bold text-purple-600">{stats.shippedOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-purple-700 font-medium">Today: {stats.todayShipped}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-
-
-      {/* Bulk Actions Bar */}
-      {selectedOrderIds.length > 0 && (canEdit || canDelete) && (
-        <Card className="bg-violet-50 border-violet-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className="bg-violet-600 text-white">
-                  {selectedOrderIds.length} order(s) selected
-                </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedOrderIds([])}
-                >
-                  Clear Selection
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                {canEdit && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBulkAction('confirmed')}
-                      className="text-blue-600 hover:bg-blue-50"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Confirm All
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBulkAction('shipped')}
-                      className="text-cyan-600 hover:bg-cyan-50"
-                    >
-                      <Truck className="w-4 h-4 mr-1" />
-                      Ship All
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBulkAction('delivered')}
-                      className="text-green-600 hover:bg-green-50"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Mark Delivered
-                    </Button>
-                  </>
-                )}
-                {canDelete && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleBulkAction('delete')}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </Button>
-                )}
-              </div>
+        {/* Compact Header with Search & Filter */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h1 className="text-2xl font-bold text-slate-900">Sales Management</h1>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search by order number, customer..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10"
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Orders Table */}
-      <Card className="bg-white border border-slate-200 shadow-sm">
-        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-          <CardTitle className="flex items-center justify-between text-xl font-semibold text-slate-900">
-            <span>Sales Orders ({filteredOrders.length})</span>
-            {filteredOrders.length > 0 && (canEdit || canDelete) && (
+            {canExport && (
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSelectAll}
-                className="text-violet-600 hover:text-violet-700"
+                variant="outline"
+                className="gap-2 h-10"
+                onClick={() => {
+                  const csv = [
+                    ['Order Number', 'Date', 'Customer', 'Phone', 'Total', 'Status', 'Payment'],
+                    ...filteredOrders.map(o => [
+                      o.order_number,
+                      format(new Date(o.order_date), 'dd/MM/yyyy'),
+                      o.customer_name,
+                      o.customer_phone,
+                      o.total_amount,
+                      o.order_status,
+                      o.payment_status
+                    ])
+                  ].map(row => row.join(',')).join('\n');
+                  
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `sales-orders-${new Date().toISOString().split('T')[0]}.csv`;
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  toast.success('Export downloaded!');
+                }}
               >
-                {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+                <Download className="w-4 h-4" />
+                Export
               </Button>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {(canEdit || canDelete) && (
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2 h-10">
+                  <Filter className="w-4 h-4" />
+                  Filters
+                  {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
+                    <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-violet-600 text-white text-xs">
+                      {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
+                    </Badge>
                   )}
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Item Names</TableHead>
-                  <TableHead className="text-center">Quantity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Options</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.length === 0 ? (
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Quick Date Filters</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const today = new Date().toISOString().split('T')[0];
+                          setDateRange({ from: today, to: today });
+                        }}
+                        className="text-sm"
+                      >
+                        Today
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const yesterday = new Date();
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          const yesterdayStr = yesterday.toISOString().split('T')[0];
+                          setDateRange({ from: yesterdayStr, to: yesterdayStr });
+                        }}
+                        className="text-sm"
+                      >
+                        Yesterday
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Date Range</Label>
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs text-slate-600">From</Label>
+                        <Input
+                          type="date"
+                          value={dateRange.from || ''}
+                          onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-600">To</Label>
+                        <Input
+                          type="date"
+                          value={dateRange.to || ''}
+                          onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Order Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Payment Status</Label>
+                    <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Payments</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="partial">Partial</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Product Filter</Label>
+                    <SearchableProductSelect
+                      inventory={inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all')}
+                      value={productFilter}
+                      onValueChange={setProductFilter}
+                      placeholder="Search products..."
+                      showStock={false}
+                      showPrice={false}
+                      allowClear={true}
+                      onClear={() => setProductFilter('all')}
+                    />
+                  </div>
+
+                  {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all') && (
+                    <>
+                      <Separator />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDateRange({ from: undefined, to: undefined });
+                          setStatusFilter('all');
+                          setPaymentFilter('all');
+                          setProductFilter('all');
+                        }}
+                        className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        Clear All Filters
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            {canCreate && (
+              <Button
+                onClick={() => {
+                  setEditingOrder(null);
+                  setIsOrderFormOpen(true);
+                }}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 h-10 font-semibold"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create Sale Order
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Stats Cards with Today's Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          {/* Total Orders */}
+          <div className="space-y-2">
+            <Card className="bg-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                    <ShoppingCart className="w-5 h-5 text-emerald-600" />
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
+                <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-emerald-700 font-medium">Today: {stats.todayOrders}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Total Product Qty */}
+          <div className="space-y-2">
+            <Card className="bg-white border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                    <Package className="w-5 h-5 text-indigo-600" />
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
+                <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-indigo-700 font-medium">Today: {stats.todayProductQty}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Total Returns */}
+          <div className="space-y-2">
+            <Card className="bg-white border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-red-600" />
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Returns</p>
+                <p className="text-3xl font-bold text-red-600">{stats.totalReturns}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-red-700 font-medium">Today: {stats.todayReturns}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Pending Orders */}
+          <div className="space-y-2">
+            <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-amber-600" />
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pending Orders</p>
+                <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-amber-700 font-medium">Today: {stats.todayPending}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Confirmed Orders */}
+          <div className="space-y-2">
+            <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Confirmed Orders</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.confirmedOrders}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-blue-700 font-medium">Today: {stats.todayConfirmed}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Shipped Orders */}
+          <div className="space-y-2">
+            <Card className="bg-white border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                    <Truck className="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Shipped Orders</p>
+                <p className="text-3xl font-bold text-purple-600">{stats.shippedOrders}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
+              <CardContent className="py-2 px-3">
+                <p className="text-xs text-purple-700 font-medium">Today: {stats.todayShipped}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Bulk Actions Bar */}
+        {selectedOrderIds.length > 0 && (canEdit || canDelete) && (
+          <Card className="bg-violet-50 border-violet-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Badge className="bg-violet-600 text-white">
+                    {selectedOrderIds.length} order(s) selected
+                  </Badge>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setSelectedOrderIds([])}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  {canEdit && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkAction('confirmed')}
+                        className="text-blue-600 hover:bg-blue-50"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Confirm All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkAction('shipped')}
+                        className="text-cyan-600 hover:bg-cyan-50"
+                      >
+                        <Truck className="w-4 h-4 mr-1" />
+                        Ship All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkAction('delivered')}
+                        className="text-green-600 hover:bg-green-50"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Mark Delivered
+                      </Button>
+                    </>
+                  )}
+                  {canDelete && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('delete')}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Orders Table */}
+        <Card className="bg-white border border-slate-200 shadow-sm">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+            <CardTitle className="flex items-center justify-between text-xl font-semibold text-slate-900">
+              <span>Sales Orders ({filteredOrders.length})</span>
+              {filteredOrders.length > 0 && (canEdit || canDelete) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                  className="text-violet-600 hover:text-violet-700"
+                >
+                  {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>No sales orders found</p>
-                    </TableCell>
+                    {(canEdit || canDelete) && (
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Item Names</TableHead>
+                    <TableHead className="text-center">Quantity</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Options</TableHead>
                   </TableRow>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-gray-50">
-                      {(canEdit || canDelete) && (
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No sales orders found</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <TableRow key={order.id} className="hover:bg-gray-50">
+                        {(canEdit || canDelete) && (
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedOrderIds.includes(order.id)}
+                              onCheckedChange={() => toggleOrderSelection(order.id)}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell>
-                          <Checkbox
-                            checked={selectedOrderIds.includes(order.id)}
-                            onCheckedChange={() => toggleOrderSelection(order.id)}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell>
-                       <div className="flex flex-col gap-1">
-                         <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
-                         <div className="flex flex-wrap gap-1">
-                           {order.adprofit_synced && (
-                             <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
-                               <CheckCircle className="w-3 h-3 mr-1" />
-                               Adprofit Synced
-                             </Badge>
-                           )}
-                           {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-')) && (
-                             <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
-                               🌐 Landing Page
-                             </Badge>
-                           )}
+                         <div className="flex flex-col gap-1">
+                           <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
+                           <div className="flex flex-wrap gap-1">
+                             {order.adprofit_synced && (
+                               <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
+                                 <CheckCircle className="w-3 h-3 mr-1" />
+                                 Adprofit Synced
+                               </Badge>
+                             )}
+                             {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-')) && (
+                               <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
+                                 🌐 Landing Page
+                               </Badge>
+                             )}
+                           </div>
                          </div>
-                       </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(order.order_date), 'dd MMM yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-violet-100 text-violet-700 text-xs">
-                              {order.customer_name?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{order.customer_name}</p>
-                            <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(order.order_date), 'dd MMM yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-violet-100 text-violet-700 text-xs">
+                                {order.customer_name?.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{order.customer_name}</p>
+                              <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[250px]">
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-[250px]">
+                            {order.order_items && order.order_items.length > 0 ? (
+                              <div className="text-sm space-y-1">
+                                {order.order_items.map((item, idx) => {
+                                  const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+                                  const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+
+                                  return (
+                                    <div key={idx}>
+                                      <p className="font-medium text-slate-800 truncate" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
+                                        {item.item_name.substring(0, 30)}
+                                        {item.item_name.length > 30 ? '...' : ''}
+                                      </p>
+                                      {isCombo && (
+                                        <p className="text-xs text-blue-600 ml-2">
+                                          🎁 Combo: {inventoryItem.bundle_items.map(bi => {
+                                            const comp = inventory.find(i => i.id === bi.inventory_id);
+                                            return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
+                                          }).join(' + ')}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-slate-500 text-sm">No items</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
                           {order.order_items && order.order_items.length > 0 ? (
-                            <div className="text-sm space-y-1">
+                            <div className="flex flex-col gap-1">
                               {order.order_items.map((item, idx) => {
                                 const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-                                const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+                                const bundleCount = getComboCount(inventoryItem, item);
+                                const isCombo = bundleCount > 1;
+                                const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
 
                                 return (
-                                  <div key={idx}>
-                                    <p className="font-medium text-slate-800 truncate" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
-                                      {item.item_name.substring(0, 30)}
-                                      {item.item_name.length > 30 ? '...' : ''}
-                                    </p>
+                                  <div key={idx} className="inline-flex items-center gap-1.5">
+                                    <span className="font-bold text-violet-600 text-base">×{actualQty}</span>
                                     {isCombo && (
-                                      <p className="text-xs text-blue-600 ml-2">
-                                        🎁 Combo: {inventoryItem.bundle_items.map(bi => {
-                                          const comp = inventory.find(i => i.id === bi.inventory_id);
-                                          return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
-                                        }).join(' + ')}
-                                      </p>
+                                      <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
+                                        {bundleCount}×{item.quantity}
+                                      </Badge>
                                     )}
                                   </div>
                                 );
                               })}
                             </div>
                           ) : (
-                            <span className="text-slate-500 text-sm">No items</span>
+                            <span className="text-slate-500">-</span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {order.order_items && order.order_items.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {order.order_items.map((item, idx) => {
-                              const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-                              const bundleCount = getComboCount(inventoryItem, item);
-                              const isCombo = bundleCount > 1;
-                              const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
-
-                              return (
-                                <div key={idx} className="inline-flex items-center gap-1.5">
-                                  <span className="font-bold text-violet-600 text-base">×{actualQty}</span>
-                                  {isCombo && (
-                                    <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
-                                      {bundleCount}×{item.quantity}
-                                    </Badge>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="text-slate-500">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        BDT {order.total_amount?.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {canEdit ? (
-                          <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-1">
-                              {getPaymentBadge(order.payment_status)}
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center">
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
-                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
-                              Mark as Pending
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
-                              <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
-                              Mark as Partial
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                              Mark as Paid
-                            </DropdownMenuItem>
-                            </DropdownMenuContent>
-                            </DropdownMenu>
-                            ) : (
-                            <Badge className={
-                            order.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                            order.payment_status === 'partial' ? 'bg-orange-100 text-orange-800' :
-                            'bg-yellow-100 text-yellow-800'
-                            }>
-                            {order.payment_status}
-                            </Badge>
-                            )}
-                            </TableCell>
-                            <TableCell>
-                            {canEdit ? (
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          BDT {order.total_amount?.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {canEdit ? (
                             <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-1">
-                              {getStatusBadge(order.order_status)}
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center">
-                            {order.order_status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                Confirm Order
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                Mark as Processing
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                <Truck className="w-4 h-4 mr-2 text-purple-600" />
-                                Mark as Shipped
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Mark as Delivered
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
-                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                                Cancel Order
-                              </DropdownMenuItem>
-                            )}
-                            </DropdownMenuContent>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8 gap-1">
+                                  {getPaymentBadge(order.payment_status)}
+                                  <ChevronDown className="w-3 h-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="center">
+                                <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
+                                  <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                                  Mark as Pending
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
+                                  <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
+                                  Mark as Partial
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                  Mark as Paid
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
                             </DropdownMenu>
-                            ) : (
+                          ) : (
+                            getPaymentBadge(order.payment_status)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {canEdit ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8 gap-1">
+                                  {getStatusBadge(order.order_status)}
+                                  <ChevronDown className="w-3 h-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="center">
+                                {order.order_status === 'pending' && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                    <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
+                                    Confirm Order
+                                  </DropdownMenuItem>
+                                )}
+                                {order.order_status === 'confirmed' && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
+                                    <Package className="w-4 h-4 mr-2 text-indigo-600" />
+                                    Mark as Processing
+                                  </DropdownMenuItem>
+                                )}
+                                {(order.order_status === 'processing' || order.order_status === 'packed') && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                    <Truck className="w-4 h-4 mr-2 text-purple-600" />
+                                    Mark as Shipped
+                                  </DropdownMenuItem>
+                                )}
+                                {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                    Mark as Delivered
+                                  </DropdownMenuItem>
+                                )}
+                                {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
+                                    <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                                    Cancel Order
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
                             getStatusBadge(order.order_status)
-                            )}
-                            </TableCell>
-                            <TableCell>
-                            <div className="flex items-center gap-1">
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
                             <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewInvoice(order)}
-                            className="h-9 w-9 p-0 hover:bg-blue-50"
-                            title="View Invoice"
-                          >
-                            <FileText className="w-4 h-4 text-blue-600" />
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewInvoice(order)}
+                              className="h-9 w-9 p-0 hover:bg-blue-50"
+                              title="View Invoice"
+                            >
+                              <FileText className="w-4 h-4 text-blue-600" />
                             </Button>
                             {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditOrder(order)}
-                              className="h-9 w-9 p-0 hover:bg-purple-50"
-                              title="Edit Order"
-                            >
-                              <Edit className="w-4 h-4 text-purple-600" />
-                            </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditOrder(order)}
+                                className="h-9 w-9 p-0 hover:bg-purple-50"
+                                title="Edit Order"
+                              >
+                                <Edit className="w-4 h-4 text-purple-600" />
+                              </Button>
                             )}
                             {canExport && (
-                            <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
-                              const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `invoice-${order.order_number}.pdf`;
-                              a.click();
-                              window.URL.revokeObjectURL(url);
-                              toast.success('Invoice downloaded!');
-                            }}
-                            className="h-9 w-9 p-0 hover:bg-green-50"
-                            title="Download Invoice"
-                            >
-                            <Download className="w-4 h-4 text-green-600" />
-                            </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `invoice-${order.order_number}.pdf`;
+                                  a.click();
+                                  window.URL.revokeObjectURL(url);
+                                  toast.success('Invoice downloaded!');
+                                }}
+                                className="h-9 w-9 p-0 hover:bg-green-50"
+                                title="Download Invoice"
+                              >
+                                <Download className="w-4 h-4 text-green-600" />
+                              </Button>
                             )}
                             {canApprove && ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                const loadingToast = toast.loading('🔄 Syncing to Adprofit...');
-                                try {
-                                  const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
-                                  toast.dismiss(loadingToast);
-                                  
-                                  if (response.data?.success) {
-                                    queryClient.invalidateQueries(['orders']);
-                                    const { synced_items, failed_items } = response.data;
-                                    if (failed_items > 0) {
-                                      toast.warning(`⚠️ Partially synced: ${synced_items}/${synced_items + failed_items} items`);
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  const loadingToast = toast.loading('🔄 Syncing to Adprofit...');
+                                  try {
+                                    const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
+                                    toast.dismiss(loadingToast);
+                                    
+                                    if (response.data?.success) {
+                                      queryClient.invalidateQueries(['orders']);
+                                      const { synced_items, failed_items } = response.data;
+                                      if (failed_items > 0) {
+                                        toast.warning(`⚠️ Partially synced: ${synced_items}/${synced_items + failed_items} items`);
+                                      } else {
+                                        toast.success(`✅ Synced ${synced_items} items to Adprofit!`);
+                                      }
                                     } else {
-                                      toast.success(`✅ Synced ${synced_items} items to Adprofit!`);
+                                      toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
                                     }
-                                  } else {
-                                    toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
+                                  } catch (error) {
+                                    toast.dismiss(loadingToast);
+                                    toast.error('Sync failed: ' + error.message);
                                   }
-                                } catch (error) {
-                                  toast.dismiss(loadingToast);
-                                  toast.error('Sync failed: ' + error.message);
-                                }
-                              }}
-                              className="h-9 w-9 p-0 hover:bg-indigo-50"
-                              title="Sync to Adprofit"
-                            >
-                              <Send className="w-4 h-4 text-indigo-600" />
-                            </Button>
-                          )}
+                                }}
+                                className="h-9 w-9 p-0 hover:bg-indigo-50"
+                                title="Sync to Adprofit"
+                              >
+                                <Send className="w-4 h-4 text-indigo-600" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Order Form Dialog */}
+        <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
+            <DialogHeader className="px-6 pt-6">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <ShoppingCart className="w-6 h-6" />
+                {editingOrder ? 'Edit Sale Order' : 'Create New Sale Order'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6">
+              <OrderForm
+                order={editingOrder}
+                customers={customers}
+                inventory={inventory}
+                onSubmit={handleOrderSubmit}
+                onCancel={() => {
+                  setIsOrderFormOpen(false);
+                  setEditingOrder(null);
+                }}
+                currentUser={currentUser}
+                canViewAllDepartments={canViewAllDepartments}
+                userDepartment={userDepartment}
+                initialDepartment={departmentFilter}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
 
-      {/* Order Form Dialog */}
-      <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle className="text-2xl flex items-center gap-2">
-              <ShoppingCart className="w-6 h-6" />
-              {editingOrder ? 'Edit Sale Order' : 'Create New Sale Order'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="px-6 pb-6">
-            <OrderForm
-              order={editingOrder}
-              customers={customers}
-              inventory={inventory}
-              onSubmit={handleOrderSubmit}
-              onCancel={() => {
-                setIsOrderFormOpen(false);
-                setEditingOrder(null);
-              }}
-              currentUser={currentUser}
-              canViewAllDepartments={canViewAllDepartments}
-              userDepartment={userDepartment}
-              initialDepartment={departmentFilter}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Invoice Dialog */}
-      <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Invoice</DialogTitle>
-          </DialogHeader>
-          {selectedOrder && (
-            <OrderInvoice order={selectedOrder} />
-          )}
-        </DialogContent>
-      </Dialog>
+        {/* Invoice Dialog */}
+        <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Order Invoice</DialogTitle>
+            </DialogHeader>
+            {selectedOrder && (
+              <OrderInvoice order={selectedOrder} />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
