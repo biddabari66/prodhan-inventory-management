@@ -239,23 +239,34 @@ function UserAccessManagerPage() {
       const existingPermissions = await UserPermission.filter({ user_id: selectedEmployee.id });
       await Promise.all(existingPermissions.map(p => UserPermission.delete(p.id)));
 
-      // Create new permissions
-      const permissionPromises = Object.entries(permissions).map(([module, perms]) => {
-        return UserPermission.create({
-          user_id: selectedEmployee.id,
-          module,
-          can_view: perms.can_view || false,
-          can_create: perms.can_create || false,
-          can_edit: perms.can_edit || false,
-          can_delete: perms.can_delete || false,
-          can_approve: perms.can_approve || false,
-          can_export: perms.can_export || false,
-          can_view_sensitive_finance: perms.can_view_sensitive_finance || false,
+      // Create new permissions - only for modules with at least one permission enabled
+      const permissionPromises = Object.entries(permissions)
+        .filter(([module, perms]) => {
+          // Only save if at least one permission is enabled
+          return perms.can_view || perms.can_create || perms.can_edit || 
+                 perms.can_delete || perms.can_approve || perms.can_export || 
+                 perms.can_view_sensitive_finance;
+        })
+        .map(([module, perms]) => {
+          return UserPermission.create({
+            user_id: selectedEmployee.id,
+            module,
+            can_view: perms.can_view || false,
+            can_create: perms.can_create || false,
+            can_edit: perms.can_edit || false,
+            can_delete: perms.can_delete || false,
+            can_approve: perms.can_approve || false,
+            can_export: perms.can_export || false,
+            can_view_sensitive_finance: perms.can_view_sensitive_finance || false,
+          });
         });
-      });
 
       await Promise.all(permissionPromises);
-      toast.success('Permissions saved successfully!');
+      
+      // Clear user cache to force permission reload
+      localStorage.removeItem('cached_user_permissions');
+      
+      toast.success(`✅ Permissions saved for ${selectedEmployee.full_name}! User must refresh to see changes.`);
     } catch (error) {
       console.error('Error saving permissions:', error);
       toast.error('Failed to save permissions');

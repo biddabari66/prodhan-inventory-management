@@ -59,8 +59,8 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
   };
 
   const isPermissionDisabled = (moduleId, permissionId) => {
-    // Admin has all permissions and cannot be restricted
-    if (employee?.job_role === 'admin') return true;
+    // Super Admin and Admin have all permissions and cannot be restricted
+    if (employee?.job_role === 'admin' || employee?.job_role === 'super_admin') return true;
     
     // Get module permissions safely
     const modulePerms = safePermissions[moduleId] || {};
@@ -123,11 +123,11 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
         <h4 className="font-medium text-blue-900 mb-2">Permission Guidelines</h4>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• <strong>Admin:</strong> Has all permissions automatically - cannot be restricted</li>
-          <li>• <strong>Manager:</strong> Can approve transactions and view all data</li>
-          <li>• <strong>Employee:</strong> Basic permissions for daily operations</li>
+          <li>• <strong>Super Admin & Admin:</strong> Have all permissions automatically - cannot be restricted</li>
           <li>• <strong>View permission</strong> is required before granting other permissions</li>
-          <li>• <strong>Changes take effect immediately</strong> across the entire system</li>
+          <li>• <strong>Changes take effect</strong> after user refreshes their browser</li>
+          <li>• <strong>Export:</strong> Allows downloading data as CSV/PDF</li>
+          <li>• <strong>Approve:</strong> Allows approving purchase orders and transactions</li>
         </ul>
       </div>
     </div>
