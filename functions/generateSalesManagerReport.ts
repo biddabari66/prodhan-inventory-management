@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const [orders, inventory] = await Promise.all([
-      base44.asServiceRole.entities.Order.list('-order_date'),
+      base44.asServiceRole.entities.Order.list('-order_date', 5000),
       base44.asServiceRole.entities.Inventory.list()
     ]);
 
@@ -53,21 +53,23 @@ Deno.serve(async (req) => {
     const today = toBDTDate(new Date());
     const todayOrders = orders.filter(o => toBDTDate(o.order_date || o.created_date) === today);
     
-    // PRODUCTION: Match exact logic from Sales page - CONFIRMED status orders for product count
-    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-    const confirmedToday = todayOrders.filter(o => validStatuses.includes(o.order_status));
+    // CRITICAL FIX: Include ALL order statuses for accurate counts
     const pendingToday = todayOrders.filter(o => o.order_status === 'pending');
     const confirmedStatusToday = todayOrders.filter(o => o.order_status === 'confirmed');
+    const processingToday = todayOrders.filter(o => o.order_status === 'processing');
     const shippedToday = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));
+    const deliveredToday = todayOrders.filter(o => o.order_status === 'delivered');
     const returnsToday = todayOrders.filter(o => o.order_status === 'returned');
     
+    // All-time status counts
+    const pendingAll = orders.filter(o => o.order_status === 'pending');
     const confirmedAll = orders.filter(o => o.order_status === 'confirmed');
     const shippedAll = orders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));
     const deliveredAll = orders.filter(o => o.order_status === 'delivered');
     const returnedAll = orders.filter(o => o.order_status === 'returned');
     
-    // EXPERT: Calculate actual product quantity with proper combo detection
-    const totalProductQty = confirmedToday.reduce((sum, o) => {
+    // CRITICAL: Calculate product quantity from ALL today's orders (not just confirmed)
+    const totalProductQty = todayOrders.reduce((sum, o) => {
       return sum + (o.order_items || []).reduce((s, item) => {
         const invItem = inventoryMap.get(item.inventory_id);
         const bundleCount = getComboCount(invItem, item);
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
     }, 0);
 
     const productBreakdown = {};
-    confirmedToday.forEach(order => {
+    todayOrders.forEach(order => {
       (order.order_items || []).forEach(item => {
         if (!productBreakdown[item.inventory_id]) {
           const invItem = inventoryMap.get(item.inventory_id);
@@ -166,7 +168,7 @@ Deno.serve(async (req) => {
     const cardHeight = 26;
     
     [
-      ["TODAY'S ORDERS", confirmedToday.length.toString(), [16, 185, 129]],
+      ["TOTAL ORDERS TODAY", todayOrders.length.toString(), [16, 185, 129]],
       ['PRODUCT QTY TODAY', totalProductQty.toString(), [139, 92, 246]],
       ['RETURNS TODAY', returnsToday.length.toString(), [239, 68, 68]],
       ['PENDING TODAY', pendingToday.length.toString(), [251, 146, 60]],
@@ -203,6 +205,8 @@ Deno.serve(async (req) => {
     doc.autoTable({
       head: [['Status', 'Count']],
       body: [
+        ['Total Orders (All Time)', orders.length.toString()],
+        ['Pending Orders', pendingAll.length.toString()],
         ['Confirmed Orders', confirmedAll.length.toString()],
         ['Shipped Orders', shippedAll.length.toString()],
         ['Delivered Orders', deliveredAll.length.toString()],
