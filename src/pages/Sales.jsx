@@ -1031,40 +1031,48 @@ function SalesPage() {
     }
 
     if (dateRange.from) {
-      const fromDate = new Date(dateRange.from);
-      fromDate.setHours(0, 0, 0, 0);
-      const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-      toDate.setHours(23, 59, 59, 999);
+      // CRITICAL FIX: Use BD timezone for date filtering (12:00am to next day 12:00am)
+      const fromDateStr = dateRange.from;
+      const toDateStr = dateRange.to || dateRange.from;
 
       filtered = filtered.filter(order => {
-        const orderDate = new Date(order.order_date);
-        return orderDate >= fromDate && orderDate <= toDate;
+        // Convert order date to BD timezone date string (YYYY-MM-DD)
+        const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: 'Asia/Dhaka' 
+        }).format(new Date(order.order_date || order.created_date));
+        
+        // Compare date strings in BD timezone
+        return orderDateBDT >= fromDateStr && orderDateBDT <= toDateStr;
       });
     }
 
     return filtered;
   }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
-  // PRODUCTION-READY: 100% accurate stats for all historical data
+  // PRODUCTION-READY: 100% accurate stats using BD timezone (12:00am to 12:00am)
   const stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    // Get today's date in BD timezone (Asia/Dhaka) - 12:00am to 11:59:59pm
+    const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     
     // CRITICAL FIX: If date filter is active, "Today" cards = filtered data
     const isDateFilterActive = dateRange.from !== undefined;
     
-    // If date filter active, use filtered orders; otherwise calculate actual today
+    // If date filter active, use filtered orders; otherwise calculate actual today using BD timezone
     const todayOrders = isDateFilterActive 
       ? filteredOrders 
       : filteredOrders.filter(o => {
-          const orderDate = new Date(o.order_date).toISOString().split('T')[0];
-          return orderDate === today;
+          // Convert order date to BD timezone for accurate comparison
+          const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
+            timeZone: 'Asia/Dhaka' 
+          }).format(new Date(o.order_date || o.created_date));
+          return orderDateBDT === todayBDT;
         });
     
-    // CRITICAL FIX: Total Orders = ALL orders (pending + confirmed + everything)
+    // CRITICAL FIX: Total Orders = ALL orders (pending + confirmed + shipped + everything)
     const totalOrders = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     
-    // Status breakdown
+    // Status breakdown - ALL orders
     const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
     const confirmedOrders = filteredOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
@@ -1079,14 +1087,14 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // Today's stats (matches filtered data when date filter active)
+    // Today's stats using BD timezone (matches filtered data when date filter active)
     const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayConfirmed = todayOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     
-    // Today's product quantity (matches filtered data when date filter active)
+    // Today's product quantity using BD timezone (matches filtered data when date filter active)
     const todayProductQty = todayOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
