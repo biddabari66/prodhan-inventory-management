@@ -35,7 +35,7 @@ import { ChevronDown } from 'lucide-react';
 import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
 import { Checkbox } from '@/components/ui/checkbox';
 
-import { withPermission } from '../components/common/PermissionGuard';
+import { withPermission, usePermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
@@ -597,6 +597,13 @@ function SalesPage() {
     staleTime: 5 * 60 * 1000
   });
 
+  // CRITICAL: Check actual permissions instead of hardcoded roles
+  const { hasPermission: canCreate } = usePermission('sales', 'can_create');
+  const { hasPermission: canEdit } = usePermission('sales', 'can_edit');
+  const { hasPermission: canDelete } = usePermission('sales', 'can_delete');
+  const { hasPermission: canExport } = usePermission('sales', 'can_export');
+  const { hasPermission: canApprove } = usePermission('sales', 'can_approve');
+
   // CRITICAL FIX: Fetch ALL orders (no limit) to show complete history
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders'],
@@ -644,9 +651,7 @@ function SalesPage() {
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
 
-  const isAdmin = useMemo(() => {
-    return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
-  }, [currentUser]);
+
 
   // Create order mutation
   const createOrderMutation = useMutation({
@@ -1164,6 +1169,39 @@ function SalesPage() {
               className="pl-10 h-10"
             />
           </div>
+          {canExport && (
+            <Button
+              variant="outline"
+              className="gap-2 h-10"
+              onClick={() => {
+                const csv = [
+                  ['Order Number', 'Date', 'Customer', 'Phone', 'Total', 'Status', 'Payment'],
+                  ...filteredOrders.map(o => [
+                    o.order_number,
+                    format(new Date(o.order_date), 'dd/MM/yyyy'),
+                    o.customer_name,
+                    o.customer_phone,
+                    o.total_amount,
+                    o.order_status,
+                    o.payment_status
+                  ])
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sales-orders-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                toast.success('Export downloaded!');
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+          )}
+          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="gap-2 h-10">
@@ -1443,7 +1481,7 @@ function SalesPage() {
 
 
       {/* Bulk Actions Bar */}
-      {selectedOrderIds.length > 0 && (
+      {selectedOrderIds.length > 0 && (canEdit || canDelete) && (
         <Card className="bg-violet-50 border-violet-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -1460,42 +1498,48 @@ function SalesPage() {
                 </Button>
               </div>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('confirmed')}
-                  className="text-blue-600 hover:bg-blue-50"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Confirm All
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('shipped')}
-                  className="text-cyan-600 hover:bg-cyan-50"
-                >
-                  <Truck className="w-4 h-4 mr-1" />
-                  Ship All
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('delivered')}
-                  className="text-green-600 hover:bg-green-50"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Mark Delivered
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkAction('delete')}
-                  className="text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
-                </Button>
+                {canEdit && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('confirmed')}
+                      className="text-blue-600 hover:bg-blue-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Confirm All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('shipped')}
+                      className="text-cyan-600 hover:bg-cyan-50"
+                    >
+                      <Truck className="w-4 h-4 mr-1" />
+                      Ship All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('delivered')}
+                      className="text-green-600 hover:bg-green-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Mark Delivered
+                    </Button>
+                  </>
+                )}
+                {canDelete && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkAction('delete')}
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -1507,7 +1551,7 @@ function SalesPage() {
         <CardHeader className="border-b border-slate-100 bg-slate-50/50">
           <CardTitle className="flex items-center justify-between text-xl font-semibold text-slate-900">
             <span>Sales Orders ({filteredOrders.length})</span>
-            {filteredOrders.length > 0 && (
+            {filteredOrders.length > 0 && (canEdit || canDelete) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1524,12 +1568,14 @@ function SalesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
+                  {(canEdit || canDelete) && (
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Order #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
@@ -1552,12 +1598,14 @@ function SalesPage() {
                 ) : (
                   filteredOrders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-gray-50">
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedOrderIds.includes(order.id)}
-                          onCheckedChange={() => toggleOrderSelection(order.id)}
-                        />
-                      </TableCell>
+                      {(canEdit || canDelete) && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedOrderIds.includes(order.id)}
+                            onCheckedChange={() => toggleOrderSelection(order.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                        <div className="flex flex-col gap-1">
                          <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
@@ -1652,7 +1700,8 @@ function SalesPage() {
                         BDT {order.total_amount?.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
+                        {canEdit ? (
+                          <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-8 gap-1">
                               {getPaymentBadge(order.payment_status)}
@@ -1672,11 +1721,21 @@ function SalesPage() {
                               <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
                               Mark as Paid
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                            ) : (
+                            <Badge className={
+                            order.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
+                            order.payment_status === 'partial' ? 'bg-orange-100 text-orange-800' :
+                            'bg-yellow-100 text-yellow-800'
+                            }>
+                            {order.payment_status}
+                            </Badge>
+                            )}
+                            </TableCell>
+                            <TableCell>
+                            {canEdit ? (
+                            <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-8 gap-1">
                               {getStatusBadge(order.order_status)}
@@ -1714,12 +1773,15 @@ function SalesPage() {
                                 Cancel Order
                               </DropdownMenuItem>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                            ) : (
+                            getStatusBadge(order.order_status)
+                            )}
+                            </TableCell>
+                            <TableCell>
+                            <div className="flex items-center gap-1">
+                            <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewInvoice(order)}
@@ -1727,8 +1789,8 @@ function SalesPage() {
                             title="View Invoice"
                           >
                             <FileText className="w-4 h-4 text-blue-600" />
-                          </Button>
-                          {isAdmin && (
+                            </Button>
+                            {canEdit && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1738,8 +1800,9 @@ function SalesPage() {
                             >
                               <Edit className="w-4 h-4 text-purple-600" />
                             </Button>
-                          )}
-                          <Button
+                            )}
+                            {canExport && (
+                            <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
@@ -1754,10 +1817,11 @@ function SalesPage() {
                             }}
                             className="h-9 w-9 p-0 hover:bg-green-50"
                             title="Download Invoice"
-                          >
+                            >
                             <Download className="w-4 h-4 text-green-600" />
-                          </Button>
-                          {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
+                            </Button>
+                            )}
+                            {canApprove && ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
                             <Button
                               variant="ghost"
                               size="sm"
