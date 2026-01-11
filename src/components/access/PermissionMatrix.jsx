@@ -59,14 +59,14 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
   };
 
   const isPermissionDisabled = (moduleId, permissionId) => {
-    // Admin has all permissions and cannot be restricted
-    if (employee?.job_role === 'admin') return true;
+    // Super Admin has all permissions and cannot be restricted
+    if (employee?.job_role === 'super_admin') return true;
     
     // Get module permissions safely
     const modulePerms = safePermissions[moduleId] || {};
     
-    // View permission is required for all others
-    if (permissionId !== 'can_view' && !modulePerms.can_view) return true;
+    // View permission is required for all others (except for admin who can have all)
+    if (permissionId !== 'can_view' && !modulePerms.can_view && employee?.job_role !== 'admin') return true;
     
     return false;
   };
