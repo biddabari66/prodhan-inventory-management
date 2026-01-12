@@ -9,7 +9,7 @@ import {
   Plus, Package, Users, TrendingUp, DollarSign, Truck, Search,
   Filter, Download, Eye, Edit, Phone, Mail, MapPin, Calendar,
   CreditCard, CheckCircle, Clock, AlertCircle, XCircle, MoreVertical,
-  ShoppingCart, RefreshCw, Send, Printer, FileText, ArrowUpDown, Upload, FileSpreadsheet, Loader2, Shield, Trash2
+  ShoppingCart, RefreshCw, Send, Printer, FileText, ArrowUpDown, Upload, FileSpreadsheet, Loader2, Shield, Trash2, PackageCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from 'date-fns';
@@ -1845,7 +1845,89 @@ function SalesPage() {
                               <Send className="w-4 h-4 text-indigo-600" />
                             </Button>
                           )}
-
+                          {/* Send to Courier Button */}
+                          {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                const loadingToast = toast.loading('🚚 Sending to Courier...');
+                                try {
+                                  // Build item description
+                                  const itemDescription = order.order_items?.map(item => 
+                                    `${item.item_name} (×${item.quantity})`
+                                  ).join(', ') || 'Products';
+                                  
+                                  // Build full address
+                                  const address = order.shipping_address || {};
+                                  const fullAddress = [
+                                    address.address_line,
+                                    address.city,
+                                    address.district,
+                                    address.postal_code
+                                  ].filter(Boolean).join(', ');
+                                  
+                                  // Calculate total items
+                                  const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
+                                  
+                                  // Prepare payload as per Steadfast documentation
+                                  const courierPayload = {
+                                    invoice: order.order_number,
+                                    recipient_name: order.customer_name,
+                                    recipient_phone: order.customer_phone,
+                                    recipient_address: fullAddress || 'Address not provided',
+                                    cod_amount: order.payment_status === 'paid' ? 0 : (order.total_amount || 0),
+                                    note: order.customer_notes || '',
+                                    item_description: itemDescription,
+                                    total_lot: totalLot,
+                                    delivery_type: 0 // 0 = home delivery
+                                  };
+                                  
+                                  // Send to webhook
+                                  const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(courierPayload)
+                                  });
+                                  
+                                  toast.dismiss(loadingToast);
+                                  
+                                  if (response.ok) {
+                                    const result = await response.json();
+                                    
+                                    // Update order with courier info
+                                    await Order.update(order.id, {
+                                      courier_placed: true,
+                                      courier_placed_date: new Date().toISOString(),
+                                      courier_tracking_code: result?.consignment?.tracking_code || null,
+                                      courier_consignment_id: result?.consignment?.consignment_id || null
+                                    });
+                                    
+                                    queryClient.invalidateQueries(['orders']);
+                                    toast.success('✅ Order sent to courier successfully!');
+                                  } else {
+                                    const errorText = await response.text();
+                                    toast.error('Courier request failed: ' + (errorText || response.statusText));
+                                  }
+                                } catch (error) {
+                                  toast.dismiss(loadingToast);
+                                  toast.error('Failed to send to courier: ' + error.message);
+                                }
+                              }}
+                              className="h-9 w-9 p-0 hover:bg-orange-50"
+                              title="Send to Courier"
+                            >
+                              <Truck className="w-4 h-4 text-orange-600" />
+                            </Button>
+                          )}
+                          {order.courier_placed && (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
+                              <PackageCheck className="w-3 h-3 mr-1" />
+                              Courier
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
