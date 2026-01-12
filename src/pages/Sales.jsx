@@ -848,60 +848,38 @@ function SalesPage() {
     },
   });
 
-  // PRODUCTION: Auto-sync to Adprofit on confirmed status
+  // PRODUCTION: Auto-sync to Adprofit on confirmed status (SILENT - no loading toasts)
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
-      // CRITICAL: Auto-sync BEFORE updating status for immediate feedback
+      // Update order status immediately
+      const updatedOrder = await Order.update(orderId, { order_status: newStatus });
+      
+      // SILENT background sync to Adprofit for confirmed orders
       if (newStatus === 'confirmed') {
-        try {
-          const loadingToast = toast.loading('🔄 Confirming & syncing to Adprofit...');
-          
-          const syncResponse = await base44.functions.invoke('syncToAdprofit', { order_id: orderId });
-          
-          toast.dismiss(loadingToast);
-          
-          if (syncResponse.data?.success) {
-            const { synced_items, failed_items } = syncResponse.data;
-            
-            // Update order with sync info
-            const updatedOrder = await Order.update(orderId, { 
-              order_status: newStatus,
-              adprofit_synced: true,
-              adprofit_sync_date: new Date().toISOString(),
-              adprofit_synced_items: synced_items,
-              adprofit_failed_items: failed_items || 0
-            });
-            
-            if (failed_items > 0) {
-              toast.warning(`⚠️ Confirmed & partially synced (${synced_items}/${synced_items + failed_items} items)`);
-            } else {
-              toast.success(`✅ Order confirmed & synced to Adprofit (${synced_items} items)!`);
+        // Fire and forget - don't wait, don't show loading
+        base44.functions.invoke('syncToAdprofit', { order_id: orderId })
+          .then(async (syncResponse) => {
+            if (syncResponse.data?.success) {
+              const { synced_items, failed_items } = syncResponse.data;
+              await Order.update(orderId, { 
+                adprofit_synced: true,
+                adprofit_sync_date: new Date().toISOString(),
+                adprofit_synced_items: synced_items,
+                adprofit_failed_items: failed_items || 0
+              });
+              queryClient.invalidateQueries(['orders']);
             }
-            
-            return updatedOrder;
-          } else {
-            // Still confirm order even if sync fails
-            const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-            toast.warning('Order confirmed but Adprofit sync failed');
-            return updatedOrder;
-          }
-        } catch (syncError) {
-          console.error('Adprofit auto-sync error:', syncError);
-          // Still confirm order even if sync fails
-          const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-          toast.warning('Order confirmed but Adprofit sync failed: ' + syncError.message);
-          return updatedOrder;
-        }
-      } else {
-        // For other status changes, just update normally
-        return await Order.update(orderId, { order_status: newStatus });
+          })
+          .catch((error) => {
+            console.error('Adprofit background sync error:', error);
+          });
       }
+      
+      return updatedOrder;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries(['orders']);
-      if (variables.newStatus !== 'confirmed') {
-        toast.success('Order status updated!');
-      }
+      toast.success('Order status updated!');
     },
     onError: (error) => {
       toast.error('Failed to update order status: ' + error.message);
@@ -1897,16 +1875,25 @@ function SalesPage() {
                                   if (response.ok) {
                                     const result = await response.json();
                                     
-                                    // Update order with courier info
-                                    await Order.update(order.id, {
-                                      courier_placed: true,
-                                      courier_placed_date: new Date().toISOString(),
-                                      courier_tracking_code: result?.consignment?.tracking_code || null,
-                                      courier_consignment_id: result?.consignment?.consignment_id || null
-                                    });
+                                    // Handle response - can be array or object
+                                    const consignmentData = Array.isArray(result) ? result[0] : result;
+                                    const consignment = consignmentData?.consignment || consignmentData;
                                     
-                                    queryClient.invalidateQueries(['orders']);
-                                    toast.success('✅ Order sent to courier successfully!');
+                                    // Check if successful (status 200 or consignment exists)
+                                    if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
+                                      // Update order with courier info
+                                      await Order.update(order.id, {
+                                        courier_placed: true,
+                                        courier_placed_date: new Date().toISOString(),
+                                        courier_tracking_code: consignment?.tracking_code || null,
+                                        courier_consignment_id: String(consignment?.consignment_id || '')
+                                      });
+                                      
+                                      queryClient.invalidateQueries(['orders']);
+                                      toast.success('✅ Order sent to courier successfully!');
+                                    } else {
+                                      toast.error('Courier response invalid: ' + JSON.stringify(result));
+                                    }
                                   } else {
                                     const errorText = await response.text();
                                     toast.error('Courier request failed: ' + (errorText || response.statusText));
