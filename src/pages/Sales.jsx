@@ -1795,27 +1795,18 @@ function SalesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={async () => {
-                                const loadingToast = toast.loading('🔄 Syncing to Adprofit...');
-                                try {
-                                  const response = await base44.functions.invoke('syncToAdprofit', { order_id: order.id });
-                                  toast.dismiss(loadingToast);
-                                  
-                                  if (response.data?.success) {
-                                    queryClient.invalidateQueries(['orders']);
-                                    const { synced_items, failed_items } = response.data;
-                                    if (failed_items > 0) {
-                                      toast.warning(`⚠️ Partially synced: ${synced_items}/${synced_items + failed_items} items`);
-                                    } else {
-                                      toast.success(`✅ Synced ${synced_items} items to Adprofit!`);
+                              onClick={() => {
+                                // Silent background sync - no loading toast
+                                base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                  .then(async (response) => {
+                                    if (response.data?.success) {
+                                      queryClient.invalidateQueries(['orders']);
                                     }
-                                  } else {
-                                    toast.error('Sync failed: ' + (response.data?.error || 'Unknown error'));
-                                  }
-                                } catch (error) {
-                                  toast.dismiss(loadingToast);
-                                  toast.error('Sync failed: ' + error.message);
-                                }
+                                  })
+                                  .catch((error) => {
+                                    console.error('Adprofit sync error:', error);
+                                  });
+                                toast.success('Sync started in background');
                               }}
                               className="h-9 w-9 p-0 hover:bg-indigo-50"
                               title="Sync to Adprofit"
