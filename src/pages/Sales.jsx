@@ -848,34 +848,10 @@ function SalesPage() {
     },
   });
 
-  // PRODUCTION: Auto-sync to Adprofit on confirmed status (SILENT - no loading toasts)
+  // Update order status
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
-      // Update order status immediately
-      const updatedOrder = await Order.update(orderId, { order_status: newStatus });
-      
-      // SILENT background sync to Adprofit for confirmed orders
-      if (newStatus === 'confirmed') {
-        // Fire and forget - don't wait, don't show loading
-        base44.functions.invoke('syncToAdprofit', { order_id: orderId })
-          .then(async (syncResponse) => {
-            if (syncResponse.data?.success) {
-              const { synced_items, failed_items } = syncResponse.data;
-              await Order.update(orderId, { 
-                adprofit_synced: true,
-                adprofit_sync_date: new Date().toISOString(),
-                adprofit_synced_items: synced_items,
-                adprofit_failed_items: failed_items || 0
-              });
-              queryClient.invalidateQueries(['orders']);
-            }
-          })
-          .catch((error) => {
-            console.error('Adprofit background sync error:', error);
-          });
-      }
-      
-      return updatedOrder;
+      return await Order.update(orderId, { order_status: newStatus });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['orders']);
