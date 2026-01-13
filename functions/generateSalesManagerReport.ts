@@ -86,8 +86,10 @@ Deno.serve(async (req) => {
     ]);
 
     const inventoryMap = new Map(inventory.map(i => [i.id, i]));
-    const today = toBDTDate(new Date());
-    const todayOrders = orders.filter(o => toBDTDate(o.order_date || o.created_date) === today);
+    
+    // EXPERT: Use 7 PM to 7 PM BDT window for "today" calculation
+    const { windowStart, windowEnd, displayDate } = getTodayWindow();
+    const todayOrders = orders.filter(o => isInTodayWindow(o.order_date || o.created_date, windowStart, windowEnd));
     
     // CRITICAL FIX: Include ALL order statuses for accurate counts
     const pendingToday = todayOrders.filter(o => o.order_status === 'pending');
