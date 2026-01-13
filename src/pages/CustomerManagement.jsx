@@ -17,7 +17,6 @@ import { withPermission, usePermission } from '../components/common/PermissionGu
 import WelcomeCallList from '../components/customers/WelcomeCallList';
 import FeedbackCallList from '../components/customers/FeedbackCallList';
 import DynamicCSVImport from '../components/customers/DynamicCSVImport';
-import { Calendar } from 'lucide-react';
 
 function CustomerManagementPage() {
   // CRITICAL: Permission-based access control
