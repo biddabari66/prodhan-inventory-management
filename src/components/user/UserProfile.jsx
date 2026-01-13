@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
@@ -734,7 +733,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
               <Card className="border border-gray-200 dark:border-gray-700">
                 <CardHeader className="p-4 md:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                    <Clock className="w-5 h-5 text-violet-600" />
+                    <Clock className="w-5 h-5 text-blue-600" />
                     Attendance & Shift Settings
                   </CardTitle>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -752,6 +751,37 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                       showLabel={true}
                       className="w-full"
                     />
+                    
+                    {/* Shift Assignment (Admin only) */}
+                    {isAdmin() && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                          Admin: Assign Shift for {user?.full_name}
+                        </h4>
+                        <Select
+                          value={user?.assigned_shift || ''}
+                          onValueChange={async (shiftId) => {
+                            try {
+                              await User.update(user.id, { assigned_shift: shiftId });
+                              toast.success('Shift assigned successfully');
+                              if (onUpdate) onUpdate();
+                            } catch (error) {
+                              toast.error('Failed to assign shift');
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select shift..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="morning">Morning (9 AM - 6 PM)</SelectItem>
+                            <SelectItem value="evening">Evening (2 PM - 11 PM)</SelectItem>
+                            <SelectItem value="night">Night (10 PM - 7 AM)</SelectItem>
+                            <SelectItem value="flexible">Flexible</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     
                     <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <div className="space-y-2">
