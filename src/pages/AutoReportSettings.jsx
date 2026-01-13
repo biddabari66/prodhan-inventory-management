@@ -65,7 +65,7 @@ function AutoReportSettingsPage() {
   const reportTypeConfig = {
     sales_manager: {
       name: 'Sales Manager Report',
-      function: 'generateSalesManagerReport',
+      function: 'generateSalesManagerReportNotification',
       description: 'Daily sales manager report (7PM yesterday to 7PM today BDT) with PDF download notification'
     },
     daily_sales: {
@@ -187,7 +187,7 @@ function AutoReportSettingsPage() {
       description: 'Daily report (7PM-7PM BDT) with PDF notification for all employees',
       icon: TrendingUp,
       color: 'indigo',
-      function: 'generateSalesManagerReport',
+      function: 'generateSalesManagerReportNotification',
       frequencies: ['daily']
     },
     {
