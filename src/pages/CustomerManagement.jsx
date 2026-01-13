@@ -11,9 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2 } from 'lucide-react';
+import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2, PhoneCall, MessageSquare, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
+import WelcomeCallList from '../components/customers/WelcomeCallList';
+import FeedbackCallList from '../components/customers/FeedbackCallList';
 
 function CustomerManagementPage() {
   // CRITICAL: Permission-based access control
@@ -35,6 +37,8 @@ function CustomerManagementPage() {
     notes: '',
     tags: []
   });
+  const [activeMainTab, setActiveMainTab] = useState('customers');
+  const [isImportCustomersOpen, setIsImportCustomersOpen] = useState(false);
 
   useEffect(() => {
     loadCustomers();
@@ -121,6 +125,57 @@ function CustomerManagementPage() {
     totalRevenue: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
   };
 
+  const handleExportCustomers = () => {
+    const headers = ['Customer Name', 'Phone', 'Email', 'Type', 'Total Orders', 'Total Spent', 'Customer Since', 'Notes'];
+    const rows = filteredCustomers.map(c => [
+      c.customer_name, c.customer_phone, c.customer_email || '', c.customer_type || '',
+      c.total_orders || 0, c.total_spent || 0, c.customer_since || '', c.notes || ''
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Customers exported successfully');
+  };
+
+  const handleImportCustomers = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+      
+      let imported = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const entry = {
+          customer_name: values[headers.indexOf('customer name')] || values[0] || '',
+          customer_phone: values[headers.indexOf('phone')] || values[1] || '',
+          customer_email: values[headers.indexOf('email')] || values[2] || '',
+          customer_type: values[headers.indexOf('type')] || values[3] || 'retail',
+          total_orders: 0,
+          total_spent: 0,
+          customer_since: new Date().toISOString().split('T')[0]
+        };
+        if (entry.customer_name && entry.customer_phone) {
+          await base44.entities.Customer.create(entry);
+          imported++;
+        }
+      }
+      await loadCustomers();
+      toast.success(`Imported ${imported} customers`);
+      setIsImportCustomersOpen(false);
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/20">
       <div className="max-w-7xl mx-auto p-8 space-y-8">
@@ -135,17 +190,51 @@ function CustomerManagementPage() {
               <p className="text-slate-600 mt-1 text-base">Manage customers, track spending, and analyze behavior</p>
             </div>
           </div>
-          {canCreate && (
-            <Button 
-              onClick={() => setIsAddCustomerOpen(true)}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add New Customer
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCustomers}>
+              <Download className="w-4 h-4 mr-2" />Export
             </Button>
-          )}
+            <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />Import
+            </Button>
+            {canCreate && (
+              <Button 
+                onClick={() => setIsAddCustomerOpen(true)}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Add New Customer
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Main Tabs */}
+        <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 h-14 p-1 bg-slate-100 rounded-xl mb-6">
+            <TabsTrigger value="customers" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Customers</span>
+            </TabsTrigger>
+            <TabsTrigger value="welcome" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+              <PhoneCall className="w-4 h-4" />
+              <span className="hidden sm:inline">Welcome Calls</span>
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Feedback Calls</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="welcome">
+            <WelcomeCallList />
+          </TabsContent>
+
+          <TabsContent value="feedback">
+            <FeedbackCallList />
+          </TabsContent>
+
+          <TabsContent value="customers">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
@@ -338,7 +427,25 @@ function CustomerManagementPage() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Import Customers Dialog */}
+      <Dialog open={isImportCustomersOpen} onOpenChange={setIsImportCustomersOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Customers</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Upload a CSV file with columns: Customer Name, Phone, Email, Type
+            </p>
+            <Input type="file" accept=".csv,.xlsx" onChange={handleImportCustomers} />
+            <Button variant="outline" onClick={() => setIsImportCustomersOpen(false)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Customer Dialog */}
       <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
