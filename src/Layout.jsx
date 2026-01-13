@@ -1426,7 +1426,7 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-800 to-blue-600 flex items-center justify-center shadow-lg">
                   <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen &&
