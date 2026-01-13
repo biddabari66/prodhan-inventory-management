@@ -5,12 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign, TrendingUp, PieChart, Download, Loader2, BarChart3, Shield, Lock, Package } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DollarSign, TrendingUp, PieChart, Download, Loader2, BarChart3, Shield, Lock, Package, Facebook, Target, Megaphone } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Inventory } from '@/entities/Inventory';
+import { Order } from '@/entities/Order';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { withPermission } from '@/components/common/PermissionGuard';
+import { 
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, Legend, PieChart as RePieChart, Pie, Cell 
+} from 'recharts';
 
 /**
  * FINANCIAL REPORTS PAGE - ADMIN ONLY
@@ -23,12 +29,61 @@ function FinancialReportsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [category, setCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState('financial');
+  const [campaignName, setCampaignName] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState('all');
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => Inventory.list(),
     staleTime: 3 * 60 * 1000
   });
+
+  const { data: orders = [] } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => Order.list('-order_date', 1000),
+    staleTime: 3 * 60 * 1000
+  });
+
+  // Calculate Facebook Ads campaign data
+  const campaignData = React.useMemo(() => {
+    const campaigns = {};
+    orders.forEach(order => {
+      const campaign = order.utm_campaign || order.facebook_campaign_name || 'Organic';
+      if (!campaigns[campaign]) {
+        campaigns[campaign] = { name: campaign, orders: 0, revenue: 0, products: {} };
+      }
+      campaigns[campaign].orders++;
+      campaigns[campaign].revenue += order.total_amount || 0;
+      
+      (order.order_items || []).forEach(item => {
+        if (!campaigns[campaign].products[item.item_name]) {
+          campaigns[campaign].products[item.item_name] = { qty: 0, revenue: 0 };
+        }
+        campaigns[campaign].products[item.item_name].qty += item.quantity || 0;
+        campaigns[campaign].products[item.item_name].revenue += item.subtotal || 0;
+      });
+    });
+    return Object.values(campaigns).sort((a, b) => b.revenue - a.revenue);
+  }, [orders]);
+
+  // Product performance data
+  const productPerformance = React.useMemo(() => {
+    const products = {};
+    orders.forEach(order => {
+      (order.order_items || []).forEach(item => {
+        if (!products[item.item_name]) {
+          products[item.item_name] = { name: item.item_name, qty: 0, revenue: 0, orders: 0 };
+        }
+        products[item.item_name].qty += item.quantity || 0;
+        products[item.item_name].revenue += item.subtotal || 0;
+        products[item.item_name].orders++;
+      });
+    });
+    return Object.values(products).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
+  }, [orders]);
+
+  const CHART_COLORS = ['#1E40AF', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#10B981', '#F59E0B', '#EF4444'];
 
   const totalInventoryValue = inventory
     .filter(item => item.department === 'prodhan_com_e_commerce')
@@ -257,6 +312,149 @@ function FinancialReportsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Advanced Reports Builder */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="financial" className="gap-2">
+            <DollarSign className="w-4 h-4" />
+            Financial Reports
+          </TabsTrigger>
+          <TabsTrigger value="campaigns" className="gap-2">
+            <Facebook className="w-4 h-4" />
+            Campaign Analytics
+          </TabsTrigger>
+          <TabsTrigger value="products" className="gap-2">
+            <Package className="w-4 h-4" />
+            Product Reports
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="financial">
+          {/* Existing financial reports content stays here */}
+        </TabsContent>
+
+        <TabsContent value="campaigns" className="space-y-6">
+          {/* Campaign Analytics */}
+          <Card className="border-2 border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-blue-600" />
+                Facebook Ad Campaign Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={campaignData.slice(0, 10)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={10} />
+                    <YAxis yAxisId="left" orientation="left" stroke="#1E40AF" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#10B981" />
+                    <Tooltip formatter={(value, name) => [name === 'revenue' ? `৳${value.toLocaleString()}` : value, name]} />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="orders" fill="#1E40AF" name="Orders" />
+                    <Bar yAxisId="right" dataKey="revenue" fill="#10B981" name="Revenue (৳)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Campaign Table */}
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">Campaign</th>
+                      <th className="px-4 py-3 text-right font-semibold">Orders</th>
+                      <th className="px-4 py-3 text-right font-semibold">Revenue</th>
+                      <th className="px-4 py-3 text-right font-semibold">Avg Order Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campaignData.slice(0, 15).map((campaign, idx) => (
+                      <tr key={idx} className="border-t hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium">{campaign.name}</td>
+                        <td className="px-4 py-3 text-right">{campaign.orders}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-600">৳{campaign.revenue.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right">৳{Math.round(campaign.revenue / campaign.orders).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="products" className="space-y-6">
+          {/* Product Performance */}
+          <Card className="border-2 border-purple-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-purple-600" />
+                Product Performance Report
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Revenue by Product */}
+                <div className="h-[350px]">
+                  <h4 className="font-semibold mb-4 text-slate-700">Top Products by Revenue</h4>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={productPerformance.slice(0, 10)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" tickFormatter={(v) => `৳${(v/1000).toFixed(0)}K`} />
+                      <YAxis dataKey="name" type="category" width={120} fontSize={10} />
+                      <Tooltip formatter={(value) => [`৳${value.toLocaleString()}`, 'Revenue']} />
+                      <Bar dataKey="revenue" fill="#7C3AED" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Units Sold by Product */}
+                <div className="h-[350px]">
+                  <h4 className="font-semibold mb-4 text-slate-700">Top Products by Units Sold</h4>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={productPerformance.slice(0, 10)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" width={120} fontSize={10} />
+                      <Tooltip />
+                      <Bar dataKey="qty" fill="#1E40AF" name="Units Sold" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Product Table */}
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">Product</th>
+                      <th className="px-4 py-3 text-right font-semibold">Units Sold</th>
+                      <th className="px-4 py-3 text-right font-semibold">Revenue</th>
+                      <th className="px-4 py-3 text-right font-semibold">Avg Price</th>
+                      <th className="px-4 py-3 text-right font-semibold">Orders</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productPerformance.map((product, idx) => (
+                      <tr key={idx} className="border-t hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium max-w-[200px] truncate">{product.name}</td>
+                        <td className="px-4 py-3 text-right">{product.qty}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-600">৳{product.revenue.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right">৳{Math.round(product.revenue / product.qty).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right">{product.orders}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Security Notice */}
       <Card className="border-2 border-amber-200 bg-amber-50">
