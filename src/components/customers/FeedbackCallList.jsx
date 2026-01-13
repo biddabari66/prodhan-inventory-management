@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,18 +10,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Phone, Plus, Search, Smile, Frown, HelpCircle, Clock,
-  Download, Upload, Users, Star
+  Download, Upload, Users, Star, Pencil, Trash2, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export default function FeedbackCallList() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [feedbackNotes, setFeedbackNotes] = useState('');
   const [selectedCall, setSelectedCall] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [newEntry, setNewEntry] = useState({
     customer_name: '',
     customer_phone: '',
@@ -40,15 +46,82 @@ export default function FeedbackCallList() {
     queryFn: () => base44.auth.me()
   });
 
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    staleTime: 60000
+  });
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return [];
+    return customers.filter(c => 
+      c.customer_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      c.customer_phone?.includes(customerSearch)
+    ).slice(0, 10);
+  }, [customers, customerSearch]);
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.FeedbackCall.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['feedbackCalls']);
       toast.success('Feedback call entry added');
-      setIsAddOpen(false);
-      setNewEntry({ customer_name: '', customer_phone: '', product: '', order_number: '' });
+      closeForm();
     }
   });
+
+  const updateEntryMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.FeedbackCall.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['feedbackCalls']);
+      toast.success('Entry updated');
+      closeForm();
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.FeedbackCall.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['feedbackCalls']);
+      toast.success('Entry deleted');
+    }
+  });
+
+  const closeForm = () => {
+    setIsAddOpen(false);
+    setEditingEntry(null);
+    setNewEntry({ customer_name: '', customer_phone: '', product: '', order_number: '' });
+    setCustomerSearch('');
+  };
+
+  const openEditForm = (call) => {
+    setEditingEntry(call);
+    setNewEntry({
+      customer_name: call.customer_name || '',
+      customer_phone: call.customer_phone || '',
+      product: call.product || '',
+      order_number: call.order_number || ''
+    });
+    setCustomerSearch(call.customer_name || '');
+    setIsAddOpen(true);
+  };
+
+  const handleSelectCustomer = (customer) => {
+    setNewEntry({
+      ...newEntry,
+      customer_name: customer.customer_name,
+      customer_phone: customer.customer_phone || ''
+    });
+    setCustomerSearch(customer.customer_name);
+    setShowCustomerDropdown(false);
+  };
+
+  const handleSubmit = () => {
+    if (editingEntry) {
+      updateEntryMutation.mutate({ id: editingEntry.id, data: newEntry });
+    } else {
+      createMutation.mutate({ ...newEntry, feedback_status: 'pending' });
+    }
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status, notes }) => base44.entities.FeedbackCall.update(id, { 
@@ -71,7 +144,12 @@ export default function FeedbackCallList() {
       call.customer_phone?.includes(searchTerm) ||
       call.product?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || call.feedback_status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    const callDate = call.created_date ? new Date(call.created_date) : null;
+    const matchesDateFrom = !dateFrom || (callDate && callDate >= new Date(dateFrom));
+    const matchesDateTo = !dateTo || (callDate && callDate <= new Date(dateTo + 'T23:59:59'));
+    
+    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
   const stats = {
@@ -187,39 +265,68 @@ export default function FeedbackCallList() {
       </div>
 
       {/* Actions Bar */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between">
-        <div className="flex gap-3 flex-1">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 justify-between">
+          <div className="flex gap-3 flex-1 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search by name, phone, product..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="happy">Happy</option>
+              <option value="unhappy">Unhappy</option>
+              <option value="others">Others</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="w-4 h-4 mr-2" />Export
+            </Button>
+            <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />Import
+            </Button>
+            <Button onClick={() => setIsAddOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+              <Plus className="w-4 h-4 mr-2" />Add Entry
+            </Button>
+          </div>
+        </div>
+        {/* Date Filters */}
+        <div className="flex gap-3 items-center flex-wrap">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <span className="text-sm text-slate-600">From:</span>
             <Input
-              placeholder="Search by name, phone, product..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-40"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="happy">Happy</option>
-            <option value="unhappy">Unhappy</option>
-            <option value="others">Others</option>
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />Export
-          </Button>
-          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />Import
-          </Button>
-          <Button onClick={() => setIsAddOpen(true)} className="bg-purple-600 hover:bg-purple-700">
-            <Plus className="w-4 h-4 mr-2" />Add Entry
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">To:</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-40"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+              Clear Dates
+            </Button>
+          )}
         </div>
       </div>
 
@@ -280,6 +387,28 @@ export default function FeedbackCallList() {
                   </Button>
                 </div>
               )}
+              
+              {/* Edit/Delete Actions */}
+              <div className="flex gap-2 mt-3 pt-3 border-t">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="flex-1 text-blue-600 hover:bg-blue-50"
+                  onClick={() => openEditForm(call)}
+                >
+                  <Pencil className="w-4 h-4 mr-1" />Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="flex-1 text-red-600 hover:bg-red-50"
+                  onClick={() => {
+                    if (confirm('Delete this entry?')) deleteMutation.mutate(call.id);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />Delete
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -292,20 +421,39 @@ export default function FeedbackCallList() {
         )}
       </div>
 
-      {/* Add Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+      {/* Add/Edit Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={(open) => { if (!open) closeForm(); else setIsAddOpen(true); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Feedback Call Entry</DialogTitle>
+            <DialogTitle>{editingEntry ? 'Edit Feedback Call Entry' : 'Add Feedback Call Entry'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="relative">
               <Label>Customer Name *</Label>
               <Input
-                value={newEntry.customer_name}
-                onChange={(e) => setNewEntry({...newEntry, customer_name: e.target.value})}
-                placeholder="Enter name"
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setNewEntry({...newEntry, customer_name: e.target.value});
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                placeholder="Search or enter name..."
               />
+              {showCustomerDropdown && filteredCustomers.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredCustomers.map(c => (
+                    <div
+                      key={c.id}
+                      className="px-3 py-2 hover:bg-slate-100 cursor-pointer"
+                      onClick={() => handleSelectCustomer(c)}
+                    >
+                      <p className="font-medium text-sm">{c.customer_name}</p>
+                      <p className="text-xs text-slate-500">{c.customer_phone}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <Label>Phone Number *</Label>
@@ -332,13 +480,13 @@ export default function FeedbackCallList() {
               />
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={closeForm}>Cancel</Button>
               <Button 
-                onClick={() => createMutation.mutate({...newEntry, feedback_status: 'pending'})}
+                onClick={handleSubmit}
                 disabled={!newEntry.customer_name || !newEntry.customer_phone}
                 className="bg-purple-600"
               >
-                Add Entry
+                {editingEntry ? 'Update Entry' : 'Add Entry'}
               </Button>
             </div>
           </div>
