@@ -1497,8 +1497,8 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-800 to-blue-600 flex items-center justify-center shadow-lg">
-                  <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center shadow-lg">
+                      <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">
@@ -1582,7 +1582,7 @@ export default function Layout({ children, currentPageName }) {
                 </div> :
 
               <div className="relative group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-700 to-blue-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-blue-800 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-slate-400 transition-all">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
                   <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
@@ -1676,9 +1676,9 @@ export default function Layout({ children, currentPageName }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-12 w-12 lg:h-10 lg:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-blue-500/30">
+                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-slate-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-700 to-blue-500 text-white font-bold text-sm lg:text-xs">
+                        <AvatarFallback className="bg-gradient-to-br from-slate-800 to-blue-800 text-white font-bold text-sm lg:text-xs">
                           {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -1689,9 +1689,9 @@ export default function Layout({ children, currentPageName }) {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
                           <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-700 to-blue-500 text-white font-bold text-sm">
-                            {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
-                          </AvatarFallback>
+                          <AvatarFallback className="bg-gradient-to-br from-slate-800 to-blue-800 text-white font-bold text-sm">
+                              {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
+                            </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
