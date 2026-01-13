@@ -90,22 +90,20 @@ const CategoryForm = ({ category, department, categoryType, onSubmit, onCancel }
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Category Type *</Label>
-          <Select
-            value={formData.category_type}
-            onValueChange={(value) => setFormData({...formData, category_type: value})}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="product_category">Product Category</SelectItem>
-              <SelectItem value="book_subject">Book Subject</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <Label>Category Type *</Label>
+        <Select
+          value={formData.category_type}
+          onValueChange={(value) => setFormData({...formData, category_type: value})}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="product_category">Product Category</SelectItem>
+            <SelectItem value="book_subject">Book Subject</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -260,9 +258,7 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
   const bookSubjects = filteredCategories.filter(c => c.category_type === 'book_subject');
 
   const getDepartmentBadge = (dept) => {
-    if (dept === 'boibari') return <Badge className="bg-yellow-100 text-yellow-800">📚 Boibari</Badge>;
-    if (dept === 'prodhan_com_e_commerce') return <Badge className="bg-red-100 text-red-800">🛒 Prodhan</Badge>;
-    return <Badge className="bg-blue-100 text-blue-800">Both</Badge>;
+    return <Badge className="bg-blue-100 text-blue-800">🛒 Prodhan.com</Badge>;
   };
 
   return (
@@ -304,18 +300,7 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
                 />
               </div>
             </div>
-            {isAdmin && (
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="boibari">📚 Boibari Only</SelectItem>
-                  <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com Only</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            {/* Department filter removed - Only Prodhan.com E-commerce */}
           </div>
         </CardContent>
       </Card>
