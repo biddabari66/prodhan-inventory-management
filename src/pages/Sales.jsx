@@ -528,7 +528,7 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
           </div>
 
           {/* Order Summary */}
-          <div className="bg-gradient-to-br from-violet-50 to-pink-50 p-6 rounded-xl space-y-3">
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 rounded-xl space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Items Total:</span>
               <span className="font-medium">BDT {(calculations.subtotal || 0).toLocaleString()}</span>
@@ -546,7 +546,7 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total Amount:</span>
-              <span className="text-violet-600">BDT {(calculations.total || 0).toLocaleString()}</span>
+              <span className="text-red-600">BDT {(calculations.total || 0).toLocaleString()}</span>
             </div>
           </div>
 
@@ -567,7 +567,7 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-violet-600 hover:bg-violet-700">
+        <Button type="submit" className="bg-red-600 hover:bg-red-700">
           <CheckCircle className="w-4 h-4 mr-2" />
           {order ? 'Update Order' : 'Create Order'}
         </Button>
@@ -597,17 +597,18 @@ function SalesPage() {
     staleTime: 5 * 60 * 1000
   });
 
-  // CRITICAL FIX: Fetch ALL orders with large limit to show complete history
+  // CRITICAL FIX: Fetch ALL orders with NO limit to show complete history forever
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const allOrders = await Order.list('-order_date', 5000);
-      console.log('✅ Loaded all orders:', allOrders.length);
+      // Fetch ALL orders - no limit ensures complete history is preserved
+      const allOrders = await Order.list('-order_date', 99999);
+      console.log('✅ Loaded ALL orders (complete history):', allOrders.length);
       return allOrders;
     },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 60 * 1000, // 1 minute - faster refresh for real-time data
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 mins
+    refetchOnWindowFocus: true, // Auto-refresh when user returns
   });
 
   const { data: customers = [] } = useQuery({
@@ -1172,7 +1173,7 @@ function SalesPage() {
                 <Filter className="w-4 h-4" />
                 Filters
                 {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
-                  <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-violet-600 text-white text-xs">
+                  <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-600 text-white text-xs">
                     {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
                   </Badge>
                 )}
@@ -1312,7 +1313,7 @@ function SalesPage() {
                 setEditingOrder(null);
                 setIsOrderFormOpen(true);
               }}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg px-6 h-10 font-semibold"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg px-6 h-10 font-semibold"
             >
               <Plus className="w-5 h-5 mr-2" />
               Create Sale Order
@@ -1448,11 +1449,11 @@ function SalesPage() {
 
       {/* Bulk Actions Bar */}
       {selectedOrderIds.length > 0 && (
-        <Card className="bg-violet-50 border-violet-300">
+        <Card className="bg-red-50 border-red-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Badge className="bg-violet-600 text-white">
+                <Badge className="bg-red-600 text-white">
                   {selectedOrderIds.length} order(s) selected
                 </Badge>
                 <Button 
@@ -1522,7 +1523,7 @@ function SalesPage() {
                 variant="ghost"
                 size="sm"
                 onClick={toggleSelectAll}
-                className="text-violet-600 hover:text-violet-700"
+                className="text-red-600 hover:text-red-700"
               >
                 {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
               </Button>
@@ -1570,7 +1571,7 @@ function SalesPage() {
                       </TableCell>
                       <TableCell>
                        <div className="flex flex-col gap-1">
-                         <span className="font-mono font-semibold text-violet-600">{order.order_number}</span>
+                         <span className="font-mono font-semibold text-red-600">{order.order_number}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
                              <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
@@ -1592,7 +1593,7 @@ function SalesPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-violet-100 text-violet-700 text-xs">
+                            <AvatarFallback className="bg-red-100 text-red-700 text-xs">
                               {order.customer_name?.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -1644,7 +1645,7 @@ function SalesPage() {
 
                               return (
                                 <div key={idx} className="inline-flex items-center gap-1.5">
-                                  <span className="font-bold text-violet-600 text-base">×{actualQty}</span>
+                                  <span className="font-bold text-red-600 text-base">×{actualQty}</span>
                                   {isCombo && (
                                     <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
                                       {bundleCount}×{item.quantity}
