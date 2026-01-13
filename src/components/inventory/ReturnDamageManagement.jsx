@@ -330,24 +330,37 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
   const handleEdit = (movement) => {
     const metadata = movement.metadata || {};
+    const quantity = Math.abs(movement.quantity || 0);
+    
     setEditingMovement({
       id: movement.id,
       inventory_item_id: movement.inventory_item_id,
-      quantity: Math.abs(movement.quantity || 0),
+      quantity: quantity,
       type: movement.reference_type === 'return' ? 'return' : 'damage',
       return_type: metadata.return_type || 'sales_return',
       reason: metadata.reason || '',
       condition: metadata.condition || 'damaged',
-      action: metadata.action || 'write_off',
+      condition_breakdown: {
+        good: { 
+          quantity: metadata.good_qty || (metadata.action === 'restock' ? quantity : 0), 
+          action: metadata.action || 'restock' 
+        },
+        fair: { 
+          quantity: 0, 
+          action: 'return_to_supplier' 
+        },
+        damaged: { 
+          quantity: metadata.damaged_qty || (metadata.action === 'write_off' ? quantity : 0), 
+          action: 'write_off' 
+        }
+      },
       customer_name: metadata.customer_name || '',
       supplier_name: metadata.supplier_name || '',
       order_number: movement.reference_number || '',
       incident_date: movement.movement_date,
       financial_impact: Math.abs(movement.total_value || 0),
       restocking_fee: metadata.restocking_fee || 0,
-      notes: movement.notes || '',
-      good_condition_qty: metadata.good_qty || 0,
-      damaged_qty: metadata.damaged_qty || 0
+      notes: movement.notes || ''
     });
     setFormType(movement.reference_type === 'return' ? 'return' : 'damage');
     setIsFormOpen(true);
