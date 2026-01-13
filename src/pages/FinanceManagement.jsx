@@ -27,6 +27,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend 
 } from 'recharts';
+import SavedReportsTable from '../components/finance/SavedReportsTable';
 
 function FinanceManagementPage() {
   const queryClient = useQueryClient();
@@ -612,6 +613,16 @@ function FinanceManagementPage() {
 
         {/* ROI Calculator Tab */}
         <TabsContent value="roi" className="space-y-6">
+          {/* Saved Reports Component */}
+          <SavedReportsTable 
+            roiData={roiData}
+            roiResult={roiResult}
+            plData={manualPL}
+            plResult={plResult}
+            payrollData={payrollData}
+            totalPayroll={totalPayroll}
+          />
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* ROI Input */}
             <Card className="border-slate-200">
