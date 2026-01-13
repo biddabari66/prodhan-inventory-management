@@ -692,22 +692,22 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
 
     const baseModules = [
-          { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-blue-600', permission: 'inventory_overview' },
+          { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-red-600', permission: 'inventory_overview' },
           { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
-          { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-blue-500', permission: 'customer_management' },
+          { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
           { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-indigo-600', permission: 'purchase_orders' },
-          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-blue-500', permission: 'inventory_movements' },
+          { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-red-500', permission: 'inventory_movements' },
           { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-600', permission: 'inventory_returns' },
           { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
-          { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-blue-700', permission: 'inventory_suppliers' },
+          { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-red-700', permission: 'inventory_suppliers' },
           { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
-          { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-blue-600', permission: 'attendance' },
+          { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
           { label: t('Finance'), url: createPageUrl('FinanceManagement'), icon: DollarSign, colorClass: 'text-green-600', permission: 'finance' },
-          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-blue-500', permission: 'product_analytics' },
+          { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-red-500', permission: 'product_analytics' },
           { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
-          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-blue-600', permission: 'inventory_ai_insights' },
+          { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-red-600', permission: 'inventory_ai_insights' },
           { label: t('Financial Reports'), url: createPageUrl('FinancialReports'), icon: DollarSign, colorClass: 'text-green-600', permission: 'financial_analytics' },
-          { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-blue-600', permission: 'settings' },
+          { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'settings' },
           { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'settings' },
           { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'settings' },
           { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'settings' },
@@ -1732,14 +1732,14 @@ export default function Layout({ children, currentPageName }) {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
                           <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
-                          <p className="text-xs text-blue-600 font-medium mt-1 truncate">{currentUser?.designation}</p>
+                          <p className="text-xs text-red-600 font-medium mt-1 truncate">{currentUser?.designation}</p>
                         </div>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-white/10" />
                     <DropdownMenuItem
                       onClick={() => setIsProfileOpen(true)}
-                      className="text-muted-foreground hover:bg-blue-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
+                      className="text-muted-foreground hover:bg-red-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
 
                       <UserIcon className="mr-3 h-4 w-4" />
                       My Profile
@@ -1747,7 +1747,7 @@ export default function Layout({ children, currentPageName }) {
                     <DropdownMenuItem asChild>
                       <Link
                         to={createPageUrl("Settings")}
-                        className="flex items-center w-full text-muted-foreground hover:bg-blue-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
+                        className="flex items-center w-full text-muted-foreground hover:bg-red-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
 
                         <Settings className="mr-3 h-4 w-4" />
                         Settings
