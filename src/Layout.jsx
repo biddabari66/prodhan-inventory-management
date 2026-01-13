@@ -701,6 +701,8 @@ export default function Layout({ children, currentPageName }) {
           { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
           { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-blue-700', permission: 'inventory_suppliers' },
           { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
+          { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-blue-600', permission: 'attendance' },
+          { label: t('Finance'), url: createPageUrl('FinanceManagement'), icon: DollarSign, colorClass: 'text-green-600', permission: 'finance' },
           { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-blue-500', permission: 'product_analytics' },
           { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
           { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-blue-600', permission: 'inventory_ai_insights' },
