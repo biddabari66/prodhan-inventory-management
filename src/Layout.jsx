@@ -1474,7 +1474,7 @@ export default function Layout({ children, currentPageName }) {
             <div className={`border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
               {isSidebarOpen ?
               <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-700 to-blue-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -1511,7 +1511,7 @@ export default function Layout({ children, currentPageName }) {
                 </div> :
 
               <div className="relative group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-700 to-blue-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
                   <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
@@ -1605,9 +1605,9 @@ export default function Layout({ children, currentPageName }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-12 w-12 lg:h-10 lg:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-violet-500/30">
+                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-blue-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-violet-500 to-pink-500 text-white font-bold text-sm lg:text-xs">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-700 to-blue-500 text-white font-bold text-sm lg:text-xs">
                           {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -1618,21 +1618,21 @@ export default function Layout({ children, currentPageName }) {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
                           <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                          <AvatarFallback className="bg-gradient-to-br from-violet-500 to-pink-500 text-white font-bold text-sm">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-700 to-blue-500 text-white font-bold text-sm">
                             {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
                           <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
-                          <p className="text-xs text-violet-500 font-medium mt-1 truncate">{currentUser?.designation}</p>
+                          <p className="text-xs text-blue-600 font-medium mt-1 truncate">{currentUser?.designation}</p>
                         </div>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-white/10" />
                     <DropdownMenuItem
                       onClick={() => setIsProfileOpen(true)}
-                      className="text-muted-foreground hover:bg-violet-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
+                      className="text-muted-foreground hover:bg-blue-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
 
                       <UserIcon className="mr-3 h-4 w-4" />
                       My Profile
@@ -1640,7 +1640,7 @@ export default function Layout({ children, currentPageName }) {
                     <DropdownMenuItem asChild>
                       <Link
                         to={createPageUrl("Settings")}
-                        className="flex items-center w-full text-muted-foreground hover:bg-violet-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
+                        className="flex items-center w-full text-muted-foreground hover:bg-blue-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
 
                         <Settings className="mr-3 h-4 w-4" />
                         Settings
