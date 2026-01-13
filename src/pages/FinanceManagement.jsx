@@ -228,7 +228,7 @@ function FinanceManagementPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
               <DollarSign className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -313,20 +313,20 @@ function FinanceManagementPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-slate-100 p-1 rounded-xl">
-          <TabsTrigger value="payroll" className="gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+        <TabsList className="bg-red-50 p-1 rounded-xl border border-red-200">
+          <TabsTrigger value="payroll" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
             <Users className="w-4 h-4" />
             Payroll
           </TabsTrigger>
-          <TabsTrigger value="profitloss" className="gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="profitloss" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
             <TrendingUp className="w-4 h-4" />
             Profit & Loss
           </TabsTrigger>
-          <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
             <Target className="w-4 h-4" />
             ROI Calculator
           </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="settings" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
             <Settings className="w-4 h-4" />
             Settings
           </TabsTrigger>
@@ -871,7 +871,7 @@ function FinanceManagementPage() {
                 </div>
               </div>
               
-              <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+              <Button className="bg-red-600 hover:bg-red-700 text-white">
                 <Save className="w-4 h-4 mr-2" />
                 Save Settings
               </Button>
@@ -997,7 +997,7 @@ function FinanceManagementPage() {
             <Button variant="outline" onClick={() => setShowSalaryDialog(false)} className="border-slate-300">
               Cancel
             </Button>
-            <Button onClick={handleSaveAdjustment} disabled={isProcessing} className="bg-slate-800 hover:bg-slate-900">
+            <Button onClick={handleSaveAdjustment} disabled={isProcessing} className="bg-red-600 hover:bg-red-700">
               {isProcessing ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>
               ) : (

@@ -89,7 +89,7 @@ function InventoryReturnsPage() {
         {/* Professional Header - Deep Navy Theme */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
               <PackageX className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -105,8 +105,8 @@ function InventoryReturnsPage() {
           <Card 
             className={`cursor-pointer transition-all duration-200 hover:shadow-lg border-2 ${
               activeView === 'returns' 
-                ? 'border-slate-800 bg-slate-50 shadow-md' 
-                : 'border-slate-200 hover:border-slate-400'
+                ? 'border-red-600 bg-red-50 shadow-md' 
+                : 'border-slate-200 hover:border-red-400'
             }`}
             onClick={() => setActiveView('returns')}
           >
@@ -114,30 +114,30 @@ function InventoryReturnsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                    activeView === 'returns' ? 'bg-slate-800' : 'bg-slate-100'
+                    activeView === 'returns' ? 'bg-red-600' : 'bg-red-100'
                   }`}>
-                    <RotateCcw className={`w-6 h-6 ${activeView === 'returns' ? 'text-white' : 'text-slate-700'}`} />
+                    <RotateCcw className={`w-6 h-6 ${activeView === 'returns' ? 'text-white' : 'text-red-600'}`} />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900">Product Returns</h3>
                     <p className="text-sm text-slate-500">Customer & supplier returns</p>
                   </div>
                 </div>
-                <ChevronRight className={`w-5 h-5 transition-transform ${activeView === 'returns' ? 'text-slate-800 rotate-90' : 'text-slate-400'}`} />
+                <ChevronRight className={`w-5 h-5 transition-transform ${activeView === 'returns' ? 'text-red-600 rotate-90' : 'text-slate-400'}`} />
               </div>
               
               <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">This Month</p>
                   <div className="flex items-baseline gap-1">
-                    <p className="text-3xl font-bold text-slate-800">{stats.returnsCount}</p>
+                    <p className="text-3xl font-bold text-red-600">{stats.returnsCount}</p>
                     <span className="text-sm text-slate-500">items</span>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Value</p>
                   <div className="flex items-baseline gap-1">
-                    <p className="text-3xl font-bold text-blue-600">৳{stats.returnsValue.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-red-700">৳{stats.returnsValue.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
