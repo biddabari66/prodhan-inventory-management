@@ -667,17 +667,23 @@ export default function Integrations() {
       setCurrentUser(me);
       
       if (response.data) {
-        // Add WhatsApp Agent to integrations list
-        const integrationsWithAgent = [
+        // Add WhatsApp Agent and Employee Chat to integrations list
+        const integrationsWithExtras = [
           ...response.data,
           {
+            name: 'whatsapp_employee',
+            status: 'active',
+            is_configured_on_backend: true,
+            last_updated: new Date().toISOString()
+          },
+          {
             name: 'whatsapp_agent',
-            status: 'active', // Assuming AI Agent is always active if configured
-            is_configured_on_backend: true, // Assuming AI Agent is always configured
+            status: 'active',
+            is_configured_on_backend: true,
             last_updated: new Date().toISOString()
           }
         ];
-        setIntegrations(integrationsWithAgent);
+        setIntegrations(integrationsWithExtras);
         console.log('✅ Loaded integrations:', integrationsWithAgent);
       } else {
         throw new Error('Failed to load integration statuses');
