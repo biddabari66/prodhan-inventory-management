@@ -170,7 +170,7 @@ function FinancialReportsPage() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-blue-800 flex items-center justify-center shadow-lg">
               <DollarSign className="w-7 h-7 text-white" />
             </div>
             <div>

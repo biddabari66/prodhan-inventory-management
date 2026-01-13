@@ -315,7 +315,7 @@ function UserAccessManagerPage() {
         {/* Premium Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-blue-800 flex items-center justify-center shadow-lg shadow-slate-500/30">
               <Shield className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -442,7 +442,7 @@ function UserAccessManagerPage() {
                     <Button
                       onClick={handleSavePermissions}
                       disabled={isSaving}
-                      className="bg-violet-600 hover:bg-violet-700"
+                      className="bg-slate-800 hover:bg-slate-900"
                     >
                       {isSaving ? (
                         <>
