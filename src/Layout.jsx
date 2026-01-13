@@ -942,12 +942,26 @@ export default function Layout({ children, currentPageName }) {
               font-family: 'Anek Bangla', sans-serif;
             }
 
-            /* Modern Text Gradient - Deep Blue */
+            /* Modern Text Gradient - Deep Navy Blue */
             .text-gradient {
-              background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #3B82F6 100%);
+              background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #1E40AF 100%);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
               background-clip: text;
+            }
+
+            /* Deep Navy Theme Variables */
+            :root {
+              --navy-900: #0F172A;
+              --navy-800: #1E293B;
+              --navy-700: #334155;
+              --navy-600: #475569;
+              --navy-500: #64748B;
+              --navy-400: #94A3B8;
+              --navy-300: #CBD5E1;
+              --navy-200: #E2E8F0;
+              --navy-100: #F1F5F9;
+              --navy-50: #F8FAFC;
             }
 
             /* MOBILE-FIRST TOUCH OPTIMIZATIONS */
@@ -1039,10 +1053,15 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .nav-item.active {
-              background: rgba(30, 64, 175, 0.1);
+              background: rgba(15, 23, 42, 0.1);
               font-weight: 600;
-              border-color: rgba(30, 64, 175, 0.3);
-              box-shadow: 0 1px 3px rgba(30, 64, 175, 0.1);
+              border-color: rgba(15, 23, 42, 0.3);
+              box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+            }
+
+            .dark .nav-item.active {
+              background: rgba(30, 64, 175, 0.2);
+              border-color: rgba(30, 64, 175, 0.4);
             }
 
             .nav-item.active::before {
@@ -1053,8 +1072,12 @@ export default function Layout({ children, currentPageName }) {
               transform: translateY(-50%);
               width: 3px;
               height: 24px;
-              background: #1E40AF;
+              background: #0F172A;
               border-radius: 0 4px 4px 0;
+            }
+
+            .dark .nav-item.active::before {
+              background: #3B82F6;
             }
 
             /* Sub-navigation box styling */
@@ -1373,18 +1396,27 @@ export default function Layout({ children, currentPageName }) {
               animation: smoothFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Professional Button Styles - Deep Blue */
+            /* Professional Button Styles - Deep Navy Blue */
             .btn-primary {
-              background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%);
+              background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
               color: white;
               font-weight: 600;
-              box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+              box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
               transition: all 0.15s ease;
             }
 
             .btn-primary:hover {
-              box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+              box-shadow: 0 6px 20px rgba(15, 23, 42, 0.4);
               transform: translateY(-1px);
+            }
+
+            /* Premium Card Deep Navy Border */
+            .premium-card {
+              border-left: 3px solid #0F172A;
+            }
+
+            .dark .premium-card {
+              border-left: 3px solid #3B82F6;
             }
 
             /* Modern Badge Styles */
@@ -1403,7 +1435,7 @@ export default function Layout({ children, currentPageName }) {
               border-radius: 8px;
             }
 
-            /* Smooth Scrollbars - Deep Blue Professional */
+            /* Smooth Scrollbars - Deep Navy Professional */
             ::-webkit-scrollbar {
               width: 8px;
               height: 8px;
@@ -1415,13 +1447,22 @@ export default function Layout({ children, currentPageName }) {
             }
 
             ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #1E40AF, #3B82F6);
+              background: linear-gradient(180deg, #0F172A, #1E3A8A);
               border-radius: 8px;
               border: 2px solid #F1F5F9;
             }
 
             ::-webkit-scrollbar-thumb:hover {
-              background: linear-gradient(180deg, #1E3A8A, #1E40AF);
+              background: linear-gradient(180deg, #0F172A, #1E40AF);
+            }
+
+            .dark ::-webkit-scrollbar-track {
+              background: #1E293B;
+            }
+
+            .dark ::-webkit-scrollbar-thumb {
+              background: linear-gradient(180deg, #3B82F6, #60A5FA);
+              border: 2px solid #1E293B;
             }
 
             /* PERFORMANCE: 3x Faster Transitions */
