@@ -1,0 +1,406 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Phone, Plus, Search, Smile, Frown, HelpCircle, Clock,
+  Download, Upload, Users, Star
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+export default function FeedbackCallList() {
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [feedbackNotes, setFeedbackNotes] = useState('');
+  const [selectedCall, setSelectedCall] = useState(null);
+  const [newEntry, setNewEntry] = useState({
+    customer_name: '',
+    customer_phone: '',
+    product: '',
+    order_number: ''
+  });
+
+  const { data: feedbackCalls = [], isLoading } = useQuery({
+    queryKey: ['feedbackCalls'],
+    queryFn: () => base44.entities.FeedbackCall.list('-created_date', 500),
+    staleTime: 60000
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.FeedbackCall.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['feedbackCalls']);
+      toast.success('Feedback call entry added');
+      setIsAddOpen(false);
+      setNewEntry({ customer_name: '', customer_phone: '', product: '', order_number: '' });
+    }
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status, notes }) => base44.entities.FeedbackCall.update(id, { 
+      feedback_status: status,
+      feedback_notes: notes || '',
+      call_date: new Date().toISOString(),
+      called_by: currentUser?.full_name || 'Unknown'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['feedbackCalls']);
+      toast.success('Feedback recorded');
+      setSelectedCall(null);
+      setFeedbackNotes('');
+    }
+  });
+
+  const filteredCalls = feedbackCalls.filter(call => {
+    const matchesSearch = !searchTerm || 
+      call.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      call.customer_phone?.includes(searchTerm) ||
+      call.product?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || call.feedback_status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = {
+    total: feedbackCalls.length,
+    pending: feedbackCalls.filter(c => c.feedback_status === 'pending').length,
+    happy: feedbackCalls.filter(c => c.feedback_status === 'happy').length,
+    unhappy: feedbackCalls.filter(c => c.feedback_status === 'unhappy').length,
+    others: feedbackCalls.filter(c => c.feedback_status === 'others').length
+  };
+
+  const handleExport = () => {
+    const headers = ['Customer Name', 'Phone', 'Product', 'Order #', 'Status', 'Call Date', 'Feedback Notes'];
+    const rows = filteredCalls.map(c => [
+      c.customer_name, c.customer_phone, c.product || '', c.order_number || '',
+      c.feedback_status, c.call_date || '', c.feedback_notes || ''
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `feedback_calls_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Exported successfully');
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+      
+      let imported = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const entry = {
+          customer_name: values[headers.indexOf('customer name')] || values[0] || '',
+          customer_phone: values[headers.indexOf('phone')] || values[1] || '',
+          product: values[headers.indexOf('product')] || values[2] || '',
+          order_number: values[headers.indexOf('order #')] || values[3] || '',
+          feedback_status: 'pending'
+        };
+        if (entry.customer_name && entry.customer_phone) {
+          await base44.entities.FeedbackCall.create(entry);
+          imported++;
+        }
+      }
+      queryClient.invalidateQueries(['feedbackCalls']);
+      toast.success(`Imported ${imported} entries`);
+      setIsImportOpen(false);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleStatusUpdate = (call, status) => {
+    if (status === 'unhappy' || status === 'others') {
+      setSelectedCall({ ...call, newStatus: status });
+    } else {
+      updateStatusMutation.mutate({ id: call.id, status, notes: '' });
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const config = {
+      pending: { label: 'Pending', class: 'bg-yellow-100 text-yellow-800', icon: Clock },
+      happy: { label: 'Happy', class: 'bg-green-100 text-green-800', icon: Smile },
+      unhappy: { label: 'Unhappy', class: 'bg-red-100 text-red-800', icon: Frown },
+      others: { label: 'Others', class: 'bg-purple-100 text-purple-800', icon: HelpCircle }
+    };
+    const { label, class: cls, icon: Icon } = config[status] || config.pending;
+    return <Badge className={`${cls} gap-1`}><Icon className="w-3 h-3" />{label}</Badge>;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Total</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Pending</p>
+            <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Happy</p>
+            <p className="text-2xl font-bold text-green-600">{stats.happy}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Unhappy</p>
+            <p className="text-2xl font-bold text-red-600">{stats.unhappy}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Others</p>
+            <p className="text-2xl font-bold text-purple-600">{stats.others}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Actions Bar */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between">
+        <div className="flex gap-3 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search by name, phone, product..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="happy">Happy</option>
+            <option value="unhappy">Unhappy</option>
+            <option value="others">Others</option>
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />Export
+          </Button>
+          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />Import
+          </Button>
+          <Button onClick={() => setIsAddOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+            <Plus className="w-4 h-4 mr-2" />Add Entry
+          </Button>
+        </div>
+      </div>
+
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredCalls.map(call => (
+          <Card key={call.id} className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
+                  <p className="text-sm text-slate-500 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />{call.customer_phone}
+                  </p>
+                </div>
+                {getStatusBadge(call.feedback_status)}
+              </div>
+              
+              {call.product && (
+                <p className="text-sm text-slate-600 mb-2">
+                  <span className="font-medium">Product:</span> {call.product}
+                </p>
+              )}
+              {call.order_number && (
+                <p className="text-xs text-slate-500 mb-3">Order: {call.order_number}</p>
+              )}
+              
+              {call.feedback_notes && call.feedback_status !== 'pending' && (
+                <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded mb-3">
+                  {call.feedback_notes}
+                </p>
+              )}
+
+              {call.feedback_status === 'pending' && (
+                <div className="flex gap-2 mt-4 pt-3 border-t">
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    onClick={() => handleStatusUpdate(call, 'happy')}
+                  >
+                    <Smile className="w-4 h-4 mr-1" />Happy
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                    onClick={() => handleStatusUpdate(call, 'unhappy')}
+                  >
+                    <Frown className="w-4 h-4 mr-1" />Unhappy
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 border-purple-300 text-purple-600 hover:bg-purple-50"
+                    onClick={() => handleStatusUpdate(call, 'others')}
+                  >
+                    <HelpCircle className="w-4 h-4 mr-1" />Others
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+
+        {filteredCalls.length === 0 && (
+          <div className="col-span-full text-center py-12">
+            <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500">No feedback calls found</p>
+          </div>
+        )}
+      </div>
+
+      {/* Add Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Feedback Call Entry</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Customer Name *</Label>
+              <Input
+                value={newEntry.customer_name}
+                onChange={(e) => setNewEntry({...newEntry, customer_name: e.target.value})}
+                placeholder="Enter name"
+              />
+            </div>
+            <div>
+              <Label>Phone Number *</Label>
+              <Input
+                value={newEntry.customer_phone}
+                onChange={(e) => setNewEntry({...newEntry, customer_phone: e.target.value})}
+                placeholder="01XXXXXXXXX"
+              />
+            </div>
+            <div>
+              <Label>Product</Label>
+              <Input
+                value={newEntry.product}
+                onChange={(e) => setNewEntry({...newEntry, product: e.target.value})}
+                placeholder="Product name"
+              />
+            </div>
+            <div>
+              <Label>Order Number</Label>
+              <Input
+                value={newEntry.order_number}
+                onChange={(e) => setNewEntry({...newEntry, order_number: e.target.value})}
+                placeholder="ORD-XXXX"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={() => createMutation.mutate({...newEntry, feedback_status: 'pending'})}
+                disabled={!newEntry.customer_name || !newEntry.customer_phone}
+                className="bg-purple-600"
+              >
+                Add Entry
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Feedback Notes Dialog */}
+      <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCall?.newStatus === 'unhappy' ? 'Record Unhappy Feedback' : 'Record Other Feedback'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Customer: <strong>{selectedCall?.customer_name}</strong>
+            </p>
+            <div>
+              <Label>Feedback Notes *</Label>
+              <Textarea
+                value={feedbackNotes}
+                onChange={(e) => setFeedbackNotes(e.target.value)}
+                placeholder="Enter detailed feedback..."
+                rows={4}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => { setSelectedCall(null); setFeedbackNotes(''); }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => updateStatusMutation.mutate({ 
+                  id: selectedCall?.id, 
+                  status: selectedCall?.newStatus, 
+                  notes: feedbackNotes 
+                })}
+                disabled={!feedbackNotes.trim()}
+                className={selectedCall?.newStatus === 'unhappy' ? 'bg-red-600' : 'bg-purple-600'}
+              >
+                Save Feedback
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Feedback Calls</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Upload a CSV file with columns: Customer Name, Phone, Product, Order #
+            </p>
+            <Input type="file" accept=".csv,.xlsx" onChange={handleImport} />
+            <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
