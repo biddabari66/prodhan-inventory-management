@@ -76,7 +76,7 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
   return (
     <div className="h-full overflow-auto space-y-6">
       {Object.entries(modulesByCategory).map(([category, modules]) => (
-        <Card key={category} className="border-l-4 border-l-violet-500">
+        <Card key={category} className="border-l-4 border-l-slate-700">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>{category}</span>
@@ -92,7 +92,7 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
                 return (
                   <div key={module.id} className="border rounded-lg p-4 bg-gray-50/50">
                     <div className="flex items-center gap-3 mb-3">
-                      {ModuleIcon && <ModuleIcon className="w-5 h-5 text-violet-600" />}
+                      {ModuleIcon && <ModuleIcon className="w-5 h-5 text-slate-700" />}
                       <h4 className="font-medium">{module.name}</h4>
                     </div>
                     
