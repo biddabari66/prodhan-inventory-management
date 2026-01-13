@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
 import WelcomeCallList from '../components/customers/WelcomeCallList';
 import FeedbackCallList from '../components/customers/FeedbackCallList';
+import DynamicCSVImport from '../components/customers/DynamicCSVImport';
+import { Calendar } from 'lucide-react';
 
 function CustomerManagementPage() {
   // CRITICAL: Permission-based access control
@@ -39,6 +41,8 @@ function CustomerManagementPage() {
   });
   const [activeMainTab, setActiveMainTab] = useState('customers');
   const [isImportCustomersOpen, setIsImportCustomersOpen] = useState(false);
+  const [customerDateFrom, setCustomerDateFrom] = useState('');
+  const [customerDateTo, setCustomerDateTo] = useState('');
 
   useEffect(() => {
     loadCustomers();
@@ -46,7 +50,7 @@ function CustomerManagementPage() {
 
   useEffect(() => {
     filterCustomers();
-  }, [customers, searchTerm, segmentFilter]);
+  }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
 
   const loadCustomers = async () => {
     try {
@@ -82,6 +86,17 @@ function CustomerManagementPage() {
       } else if (segmentFilter === 'frequent') {
         filtered = filtered.filter(c => c.total_orders >= 10);
       }
+    }
+
+    // Date filter
+    if (customerDateFrom || customerDateTo) {
+      filtered = filtered.filter(c => {
+        const customerDate = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
+        if (!customerDate) return true;
+        const matchesFrom = !customerDateFrom || customerDate >= new Date(customerDateFrom);
+        const matchesTo = !customerDateTo || customerDate <= new Date(customerDateTo + 'T23:59:59');
+        return matchesFrom && matchesTo;
+      });
     }
 
     setFilteredCustomers(filtered);
@@ -290,7 +305,7 @@ function CustomerManagementPage() {
 
         {/* Search & Filters */}
         <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardContent className="p-5">
+          <CardContent className="p-5 space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -313,6 +328,33 @@ function CustomerManagementPage() {
                   <SelectItem value="frequent">Frequent (10+ orders)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            {/* Date Filters */}
+            <div className="flex gap-3 items-center flex-wrap">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-400" />
+                <span className="text-sm text-slate-600">From:</span>
+                <Input
+                  type="date"
+                  value={customerDateFrom}
+                  onChange={(e) => setCustomerDateFrom(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">To:</span>
+                <Input
+                  type="date"
+                  value={customerDateTo}
+                  onChange={(e) => setCustomerDateTo(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              {(customerDateFrom || customerDateTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setCustomerDateFrom(''); setCustomerDateTo(''); }}>
+                  Clear Dates
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -433,17 +475,33 @@ function CustomerManagementPage() {
 
       {/* Import Customers Dialog */}
       <Dialog open={isImportCustomersOpen} onOpenChange={setIsImportCustomersOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Customers</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Upload a CSV file with columns: Customer Name, Phone, Email, Type
-            </p>
-            <Input type="file" accept=".csv,.xlsx" onChange={handleImportCustomers} />
-            <Button variant="outline" onClick={() => setIsImportCustomersOpen(false)}>Cancel</Button>
-          </div>
+          <DynamicCSVImport
+            requiredFields={['customer_name', 'customer_phone']}
+            fieldOptions={[
+              { key: 'customer_name', label: 'Customer Name', required: true },
+              { key: 'customer_phone', label: 'Phone Number', required: true },
+              { key: 'customer_email', label: 'Email', required: false },
+              { key: 'customer_type', label: 'Customer Type', required: false },
+              { key: 'notes', label: 'Notes', required: false }
+            ]}
+            onImport={async (data) => {
+              for (const entry of data) {
+                await base44.entities.Customer.create({
+                  ...entry,
+                  customer_type: entry.customer_type || 'retail',
+                  total_orders: 0,
+                  total_spent: 0,
+                  customer_since: new Date().toISOString().split('T')[0]
+                });
+              }
+              await loadCustomers();
+            }}
+            onClose={() => setIsImportCustomersOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 

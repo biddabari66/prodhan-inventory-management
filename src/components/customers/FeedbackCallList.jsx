@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import DynamicCSVImport from './DynamicCSVImport';
 
 export default function FeedbackCallList() {
   const queryClient = useQueryClient();
@@ -536,17 +537,26 @@ export default function FeedbackCallList() {
 
       {/* Import Dialog */}
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Feedback Calls</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Upload a CSV file with columns: Customer Name, Phone, Product, Order #
-            </p>
-            <Input type="file" accept=".csv,.xlsx" onChange={handleImport} />
-            <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
-          </div>
+          <DynamicCSVImport
+            requiredFields={['customer_name', 'customer_phone']}
+            fieldOptions={[
+              { key: 'customer_name', label: 'Customer Name', required: true },
+              { key: 'customer_phone', label: 'Phone Number', required: true },
+              { key: 'product', label: 'Product', required: false },
+              { key: 'order_number', label: 'Order Number', required: false }
+            ]}
+            onImport={async (data) => {
+              for (const entry of data) {
+                await base44.entities.FeedbackCall.create({ ...entry, feedback_status: 'pending' });
+              }
+              queryClient.invalidateQueries(['feedbackCalls']);
+            }}
+            onClose={() => setIsImportOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

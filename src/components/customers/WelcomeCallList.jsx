@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import DynamicCSVImport from './DynamicCSVImport';
 
 export default function WelcomeCallList() {
   const queryClient = useQueryClient();
@@ -470,17 +471,27 @@ export default function WelcomeCallList() {
 
       {/* Import Dialog */}
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Welcome Calls</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Upload a CSV file with columns: Customer Name, Phone, Product, Order #
-            </p>
-            <Input type="file" accept=".csv,.xlsx" onChange={handleImport} />
-            <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
-          </div>
+          <DynamicCSVImport
+            requiredFields={['customer_name', 'customer_phone']}
+            fieldOptions={[
+              { key: 'customer_name', label: 'Customer Name', required: true },
+              { key: 'customer_phone', label: 'Phone Number', required: true },
+              { key: 'product', label: 'Product', required: false },
+              { key: 'order_number', label: 'Order Number', required: false },
+              { key: 'notes', label: 'Notes', required: false }
+            ]}
+            onImport={async (data) => {
+              for (const entry of data) {
+                await base44.entities.WelcomeCall.create({ ...entry, call_status: 'pending' });
+              }
+              queryClient.invalidateQueries(['welcomeCalls']);
+            }}
+            onClose={() => setIsImportOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
