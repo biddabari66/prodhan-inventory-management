@@ -34,6 +34,7 @@ const AttendanceAnalytics = React.lazy(() => import('../components/attendance/At
 const ManualAttendanceForm = React.lazy(() => import('../components/attendance/ManualAttendanceForm'));
 const ShiftManagement = React.lazy(() => import('../components/attendance/ShiftManagement'));
 const ShiftAssignmentManagement = React.lazy(() => import('../components/attendance/ShiftAssignmentManagement'));
+const OfficeLocationPicker = React.lazy(() => import('../components/attendance/OfficeLocationPicker'));
 
 // Rate limit retry utility
 const withRateLimitRetry = async (apiCall, maxRetries = 3, baseDelay = 1000) => {
@@ -69,7 +70,7 @@ const DigitalClock = React.memo(() => {
   }, []);
 
   return (
-    <Card className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 border-0 shadow-2xl overflow-hidden relative">
+    <Card className="bg-gradient-to-br from-red-600 via-red-700 to-red-800 border-0 shadow-2xl overflow-hidden relative">
       <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_85%)]"></div>
       <CardContent className="p-8 sm:p-10 text-center relative z-10">
         <div className="space-y-4">
@@ -661,7 +662,7 @@ export default function AttendancePage() {
       {/* Premium Header Section */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/30">
             <Clock className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -767,7 +768,7 @@ export default function AttendancePage() {
                   <Button
                     onClick={() => submitAttendance('check_in')}
                     disabled={isSubmitting || !!todayAttendance?.check_in_time}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 w-full h-16 text-lg font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-500/30 w-full h-16 text-lg font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isSubmitting ? (
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -844,9 +845,15 @@ export default function AttendancePage() {
           <TabsContent value="settings" className="space-y-6">
             <React.Suspense fallback={
               <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
               </div>
             }>
+              {/* Google Maps Office Location Picker */}
+              <OfficeLocationPicker
+                settings={settings}
+                onSettingsChange={setSettings}
+                currentLocation={currentLocation}
+              />
               <ShiftManagement />
               <ShiftAssignmentManagement />
             </React.Suspense>

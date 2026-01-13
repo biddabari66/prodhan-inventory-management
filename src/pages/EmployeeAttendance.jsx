@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Clock, MapPin, Wifi, LogIn, LogOut, Calendar, History, 
   Users, CheckCircle, XCircle, AlertTriangle, Loader2, 
-  Timer, TrendingUp, Shield, RefreshCw
+  Timer, TrendingUp, Shield, RefreshCw, Edit
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInMinutes, startOfMonth, endOfMonth, parseISO } from 'date-fns';
@@ -286,7 +286,7 @@ function EmployeeAttendancePage() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-blue-800 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
               <Clock className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -574,6 +574,7 @@ function EmployeeAttendancePage() {
                         <th className="px-4 py-3 text-left">Hours</th>
                         <th className="px-4 py-3 text-left">Status</th>
                         <th className="px-4 py-3 text-left">IP Address</th>
+                        <th className="px-4 py-3 text-center">Admin Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -585,7 +586,7 @@ function EmployeeAttendancePage() {
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage src={employee?.profile_picture_url} />
-                                  <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                                  <AvatarFallback className="bg-red-100 text-red-700 text-xs">
                                     {(employee?.full_name || 'U').charAt(0)}
                                   </AvatarFallback>
                                 </Avatar>
@@ -612,12 +613,43 @@ function EmployeeAttendancePage() {
                             <td className="px-4 py-3 text-xs font-mono text-slate-500">
                               {record.check_in_ip_address || '-'}
                             </td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="border-green-300 text-green-700 hover:bg-green-50 h-8 px-2"
+                                  onClick={async () => {
+                                    await Attendance.update(record.id, { status: 'present' });
+                                    queryClient.invalidateQueries(['allAttendance']);
+                                    toast.success('Attendance approved');
+                                  }}
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="border-red-300 text-red-700 hover:bg-red-50 h-8 px-2"
+                                  onClick={() => {
+                                    const newStatus = prompt('Enter new status (present, late, absent):', record.status);
+                                    if (newStatus && ['present', 'late', 'absent'].includes(newStatus)) {
+                                      Attendance.update(record.id, { status: newStatus });
+                                      queryClient.invalidateQueries(['allAttendance']);
+                                      toast.success('Status updated to ' + newStatus);
+                                    }
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
                       {allAttendance.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                          <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
                             No attendance records found
                           </td>
                         </tr>
