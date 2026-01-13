@@ -36,6 +36,42 @@ const toBDTDateTime = (date) => {
   }).format(d);
 };
 
+// EXPERT: Get 7 PM to 7 PM BDT window for "today" calculation
+// A "day" is counted from yesterday 7 PM BDT to today 7 PM BDT
+const getTodayWindow = () => {
+  const now = new Date();
+  
+  // Get current time in BDT (UTC+6)
+  const bdtOffset = 6 * 60; // 6 hours in minutes
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const bdtTime = new Date(utcTime + (bdtOffset * 60000));
+  
+  const bdtHour = bdtTime.getHours();
+  const bdtYear = bdtTime.getFullYear();
+  const bdtMonth = bdtTime.getMonth();
+  const bdtDay = bdtTime.getDate();
+  
+  let windowStart, windowEnd;
+  
+  if (bdtHour >= 19) {
+    // After 7 PM BDT: window is today 7 PM to tomorrow 7 PM
+    windowStart = new Date(Date.UTC(bdtYear, bdtMonth, bdtDay, 19 - 6, 0, 0)); // 7 PM BDT = 1 PM UTC
+    windowEnd = new Date(Date.UTC(bdtYear, bdtMonth, bdtDay + 1, 19 - 6, 0, 0));
+  } else {
+    // Before 7 PM BDT: window is yesterday 7 PM to today 7 PM
+    windowStart = new Date(Date.UTC(bdtYear, bdtMonth, bdtDay - 1, 19 - 6, 0, 0)); // Yesterday 7 PM BDT
+    windowEnd = new Date(Date.UTC(bdtYear, bdtMonth, bdtDay, 19 - 6, 0, 0)); // Today 7 PM BDT
+  }
+  
+  return { windowStart, windowEnd, displayDate: toBDTDate(bdtTime) };
+};
+
+// Check if an order falls within the 7 PM - 7 PM window
+const isInTodayWindow = (orderDate, windowStart, windowEnd) => {
+  const orderTime = new Date(orderDate).getTime();
+  return orderTime >= windowStart.getTime() && orderTime < windowEnd.getTime();
+};
+
 const getDisplayName = (item) => item.english_item_name || item.item_name || 'Unknown Item';
 
 Deno.serve(async (req) => {
