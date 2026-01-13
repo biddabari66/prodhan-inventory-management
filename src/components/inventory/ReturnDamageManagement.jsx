@@ -41,15 +41,17 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState(null);
 
-  // Fetch data
+  // Fetch data with optimized queries
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
-    queryFn: () => Inventory.list(),
+    queryFn: () => Inventory.list('-updated_date', 1000),
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
 
   const { data: movements = [] } = useQuery({
-    queryKey: ['movements'],
-    queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 500),
+    queryKey: ['movements-returns'],
+    queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 200),
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   const { data: currentUser } = useQuery({
@@ -191,7 +193,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       await base44.entities.InventoryMovement.create({
         inventory_item_id: data.inventory_item_id,
         movement_type: quantityChange > 0 ? 'in' : 'adjustment',
-        quantity: quantityChange,
+        quantity: data.quantity, // Store original quantity
         reference_type: data.type === 'return' ? 'return' : 'damage',
         reference_number: data.order_number || `${data.type.toUpperCase()}-${Date.now()}`,
         unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
@@ -209,7 +211,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           customer_name: data.customer_name,
           supplier_name: data.supplier_name,
           restocking_fee: data.restocking_fee,
-          financial_impact: data.financial_impact
+          financial_impact: data.financial_impact,
+          original_quantity: data.quantity
         }
       });
 
@@ -595,7 +598,12 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <Badge variant="outline">{Math.abs(movement.quantity)}</Badge>
+                              <Badge variant="outline">
+                                {metadata.is_partial 
+                                  ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
+                                  : Math.abs(movement.quantity) || metadata.financial_impact ? Math.round(Math.abs(movement.total_value) / (inventory.find(i => i.id === movement.inventory_item_id)?.selling_price || 1)) : 1
+                                }
+                              </Badge>
                               {metadata.is_partial && (
                                 <div className="text-xs text-muted-foreground">
                                   <p>Good: {metadata.good_qty || 0}</p>
@@ -685,7 +693,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           <TableCell>{format(new Date(movement.movement_date), 'MMM dd, yyyy')}</TableCell>
                           <TableCell className="font-medium">{getItemName(movement.inventory_item_id)}</TableCell>
                           <TableCell>
-                            <Badge variant="destructive">{Math.abs(movement.quantity)}</Badge>
+                            <Badge variant="destructive">
+                              {metadata.original_quantity || Math.abs(movement.quantity) || 1}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-sm">{metadata.reason || movement.reference_type}</TableCell>
                           <TableCell>
