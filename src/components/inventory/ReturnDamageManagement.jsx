@@ -453,7 +453,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         <div className="flex gap-3">
           <Button 
             onClick={() => handleOpenForm('return')} 
-            className="bg-blue-600 hover:bg-blue-700 shadow-sm"
+            className="bg-red-600 hover:bg-red-700 shadow-sm"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
             Record Return / Damage
@@ -466,24 +466,24 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         <Card className="border border-slate-200 hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <RotateCcw className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                <RotateCcw className="w-5 h-5 text-red-600" />
               </div>
             </div>
             <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Total Returns</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.returnCount}</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{stats.returnCount}</p>
           </CardContent>
         </Card>
 
         <Card className="border border-slate-200 hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-red-600" />
               </div>
             </div>
             <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Return Value</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">৳{stats.returnValue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">৳{stats.returnValue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -529,11 +529,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-slate-100 rounded-xl">
           <TabsTrigger 
             value="returns" 
-            className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 font-medium"
+            className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-red-700 font-medium"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Product Returns</span>
-            <Badge variant="secondary" className="ml-1 bg-blue-100 text-blue-700">
+            <Badge variant="secondary" className="ml-1 bg-red-100 text-red-700">
               {returnsData.length}
             </Badge>
           </TabsTrigger>
@@ -590,7 +590,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                               <Badge variant="outline" className={`ml-2 text-xs ${
                                 metadata.return_type === 'purchase_return' 
                                   ? 'bg-purple-100 text-purple-800' 
-                                  : 'bg-blue-100 text-blue-800'
+                                  : 'bg-red-100 text-red-800'
                               }`}>
                                 {metadata.return_type === 'purchase_return' ? 'Purchase' : 'Sales'}
                               </Badge>
@@ -633,7 +633,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                                 onClick={() => handleEdit(movement)}
                                 className="h-8 w-8 p-0"
                               >
-                                <Pencil className="w-4 h-4 text-blue-600" />
+                                <Pencil className="w-4 h-4 text-red-600" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -722,7 +722,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                                 onClick={() => handleEdit(movement)}
                                 className="h-8 w-8 p-0"
                               >
-                                <Pencil className="w-4 h-4 text-blue-600" />
+                                <Pencil className="w-4 h-4 text-red-600" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -756,7 +756,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             <DialogTitle className="flex items-center gap-2">
               {formType === 'return' ? (
                 <>
-                  <RotateCcw className="w-5 h-5 text-blue-600" />
+                  <RotateCcw className="w-5 h-5 text-red-600" />
                   {editingMovement ? 'Edit Product Return' : 'Record Product Return'}
                 </>
               ) : (
