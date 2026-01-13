@@ -265,7 +265,7 @@ const IntegrationCard = ({ integration, onToggle, onTest, onConfigure, currentUs
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg flex items-center gap-2">
               {meta.title}
-              {meta.isAgent && <Badge variant="outline" className="text-violet-600 border-violet-300"><Sparkles className="w-3 h-3 mr-1" />AI</Badge>}
+              {meta.isAgent && <Badge variant="outline" className="text-blue-700 border-blue-300"><Sparkles className="w-3 h-3 mr-1" />AI</Badge>}
             </CardTitle>
             <CardDescription className="text-sm mt-1">{meta.description}</CardDescription>
           </div>
@@ -274,7 +274,7 @@ const IntegrationCard = ({ integration, onToggle, onTest, onConfigure, currentUs
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           ) : meta.isAgent ? (
-            <Badge variant="default" className="bg-violet-600">
+            <Badge variant="default" className="bg-blue-700">
               <CheckCircle className="w-3 h-3 mr-1" />
               Configured
             </Badge>
@@ -757,7 +757,7 @@ export default function Integrations() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold font-display text-gradient flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-800 to-blue-800 flex items-center justify-center">
               <Zap className="w-6 h-6 text-white" />
             </div>
             System Integrations
