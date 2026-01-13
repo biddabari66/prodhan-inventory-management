@@ -861,9 +861,12 @@ export default function Layout({ children, currentPageName }) {
             @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
             :root {
-              /* Professional Color Palette - Deep Blue & Professional */
-              --primary-violet: #1E40AF;
-              --primary-indigo: #1E3A8A;
+              /* Professional Color Palette - RED & WHITE Theme */
+                --primary-red: #DC2626;
+                --primary-red-dark: #B91C1C;
+                --primary-red-light: #EF4444;
+                --primary-violet: #DC2626;
+                --primary-indigo: #B91C1C;
               --accent-emerald: #10B981;
               --accent-cyan: #0891B2;
               --accent-orange: #EA580C;
@@ -942,9 +945,9 @@ export default function Layout({ children, currentPageName }) {
               font-family: 'Anek Bangla', sans-serif;
             }
 
-            /* Modern Text Gradient - Deep Navy Blue */
+            /* Modern Text Gradient - RED Theme */
             .text-gradient {
-              background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #1E40AF 100%);
+              background: linear-gradient(135deg, #B91C1C 0%, #DC2626 50%, #EF4444 100%);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
               background-clip: text;
@@ -1053,15 +1056,15 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .nav-item.active {
-              background: rgba(15, 23, 42, 0.1);
+              background: rgba(220, 38, 38, 0.1);
               font-weight: 600;
-              border-color: rgba(15, 23, 42, 0.3);
-              box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+              border-color: rgba(220, 38, 38, 0.3);
+              box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
             }
 
             .dark .nav-item.active {
-              background: rgba(30, 64, 175, 0.2);
-              border-color: rgba(30, 64, 175, 0.4);
+              background: rgba(220, 38, 38, 0.2);
+              border-color: rgba(220, 38, 38, 0.4);
             }
 
             .nav-item.active::before {
@@ -1072,12 +1075,12 @@ export default function Layout({ children, currentPageName }) {
               transform: translateY(-50%);
               width: 3px;
               height: 24px;
-              background: #0F172A;
+              background: #DC2626;
               border-radius: 0 4px 4px 0;
             }
 
             .dark .nav-item.active::before {
-              background: #3B82F6;
+              background: #EF4444;
             }
 
             /* Sub-navigation box styling */
@@ -1396,27 +1399,27 @@ export default function Layout({ children, currentPageName }) {
               animation: smoothFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Professional Button Styles - Deep Navy Blue */
+            /* Professional Button Styles - RED Theme */
             .btn-primary {
-              background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+              background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
               color: white;
               font-weight: 600;
-              box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
-              transition: all 0.15s ease;
+              box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+              transition: all 0.08s ease;
             }
 
             .btn-primary:hover {
-              box-shadow: 0 6px 20px rgba(15, 23, 42, 0.4);
+              box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
               transform: translateY(-1px);
             }
 
-            /* Premium Card Deep Navy Border */
+            /* Premium Card RED Border */
             .premium-card {
-              border-left: 3px solid #0F172A;
+              border-left: 3px solid #DC2626;
             }
 
             .dark .premium-card {
-              border-left: 3px solid #3B82F6;
+              border-left: 3px solid #EF4444;
             }
 
             /* Modern Badge Styles */
@@ -1435,34 +1438,34 @@ export default function Layout({ children, currentPageName }) {
               border-radius: 8px;
             }
 
-            /* Smooth Scrollbars - Deep Navy Professional */
+            /* Smooth Scrollbars - RED Theme */
             ::-webkit-scrollbar {
-              width: 8px;
-              height: 8px;
+              width: 6px;
+              height: 6px;
             }
 
             ::-webkit-scrollbar-track {
-              background: #F1F5F9;
-              border-radius: 8px;
+              background: #FEF2F2;
+              border-radius: 6px;
             }
 
             ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #0F172A, #1E3A8A);
-              border-radius: 8px;
-              border: 2px solid #F1F5F9;
+              background: linear-gradient(180deg, #B91C1C, #DC2626);
+              border-radius: 6px;
+              border: 1px solid #FEF2F2;
             }
 
             ::-webkit-scrollbar-thumb:hover {
-              background: linear-gradient(180deg, #0F172A, #1E40AF);
+              background: linear-gradient(180deg, #991B1B, #B91C1C);
             }
 
             .dark ::-webkit-scrollbar-track {
-              background: #1E293B;
+              background: #1F1F1F;
             }
 
             .dark ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #3B82F6, #60A5FA);
-              border: 2px solid #1E293B;
+              background: linear-gradient(180deg, #DC2626, #EF4444);
+              border: 1px solid #1F1F1F;
             }
 
             /* PERFORMANCE: Ultra-Fast Transitions for Production */
@@ -1511,8 +1514,8 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center shadow-lg">
-                      <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
+                            <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">
@@ -1559,9 +1562,9 @@ export default function Layout({ children, currentPageName }) {
             <div className={`border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
               {isSidebarOpen ?
               <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-700 to-blue-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                    {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                        {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
+                      </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                       {currentUser?.display_name || currentUser?.full_name}
@@ -1596,7 +1599,7 @@ export default function Layout({ children, currentPageName }) {
                 </div> :
 
               <div className="relative group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-blue-800 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-slate-400 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-red-300 transition-all">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
                   <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
@@ -1690,9 +1693,9 @@ export default function Layout({ children, currentPageName }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-12 w-12 lg:h-10 lg:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-slate-500/30">
+                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-red-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-slate-800 to-blue-800 text-white font-bold text-sm lg:text-xs">
+                        <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm lg:text-xs">
                           {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -1703,7 +1706,7 @@ export default function Layout({ children, currentPageName }) {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
                           <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                          <AvatarFallback className="bg-gradient-to-br from-slate-800 to-blue-800 text-white font-bold text-sm">
+                          <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm">
                               {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
