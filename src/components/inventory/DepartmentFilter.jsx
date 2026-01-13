@@ -16,25 +16,11 @@ export default function DepartmentFilter({ currentUser, selectedDepartment, onDe
   // Get user's default department from User entity
   const userDepartment = currentUser?.department;
 
-  // Determine available departments
+  // Only Prodhan.com E-commerce Department
   const getAvailableDepartments = () => {
-    if (canViewAllDepartments) {
-      return [
-        { value: 'all', label: 'All Departments', restricted: false },
-        { value: 'boibari', label: 'Boibari.com (Books)', restricted: false },
-        { value: 'prodhan_com_e_commerce', label: 'Prodhan.com (E-commerce)', restricted: false }
-      ];
-    }
-
-    // Regular users can only see their own department
-    if (userDepartment === 'boibari') {
-      return [{ value: 'boibari', label: 'Boibari.com (Books)', restricted: true }];
-    } else if (userDepartment === 'prodhan_com_e_commerce') {
-      return [{ value: 'prodhan_com_e_commerce', label: 'Prodhan.com (E-commerce)', restricted: true }];
-    }
-
-    // Default fallback
-    return [{ value: 'all', label: 'No Department Access', restricted: true }];
+    return [
+      { value: 'prodhan_com_e_commerce', label: 'Prodhan.com (E-commerce)', restricted: false }
+    ];
   };
 
   const availableDepartments = getAvailableDepartments();

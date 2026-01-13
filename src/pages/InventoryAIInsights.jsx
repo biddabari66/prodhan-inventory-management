@@ -4,7 +4,7 @@ import { User } from '@/entities/User';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, RefreshCw } from 'lucide-react';
 import EnhancedAIInsights from '../components/inventory/EnhancedAIInsights';
-import DepartmentFilter from '../components/inventory/DepartmentFilter';
+// Department filter removed - only Prodhan.com E-commerce
 import { withPermission } from '../components/common/PermissionGuard';
 import { CacheManager } from '../components/common/PerformanceOptimizer';
 
@@ -12,19 +12,8 @@ function InventoryAIInsightsPage() {
   const [inventory, setInventory] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
-
-  const canViewAllDepartments = currentUser?.job_role === 'super_admin' ||
-                                 currentUser?.job_role === 'admin' ||
-                                 currentUser?.job_role === 'inventory_manager';
-
-  const userDepartment = canViewAllDepartments ? 'all' : (currentUser?.department || 'all');
-
-  useEffect(() => {
-    if (currentUser && !canViewAllDepartments) {
-      setSelectedDepartment(userDepartment);
-    }
-  }, [currentUser, canViewAllDepartments, userDepartment]);
+  // Only Prodhan.com E-commerce Department
+  const selectedDepartment = 'prodhan_com_e_commerce';
 
   useEffect(() => {
     loadData();
@@ -56,17 +45,9 @@ function InventoryAIInsightsPage() {
 
   const filteredInventory = useMemo(() => {
     if (!currentUser) return [];
-
-    let filtered = inventory;
-
-    if (!canViewAllDepartments) {
-      filtered = filtered.filter(item => item.department === userDepartment);
-    } else if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(item => item.department === selectedDepartment);
-    }
-
-    return filtered;
-  }, [inventory, selectedDepartment, currentUser, canViewAllDepartments, userDepartment]);
+    // Only Prodhan.com E-commerce products
+    return inventory.filter(item => item.department === 'prodhan_com_e_commerce');
+  }, [inventory, currentUser]);
 
   if (isLoading) {
     return (
@@ -91,16 +72,7 @@ function InventoryAIInsightsPage() {
             </div>
           </div>
 
-          <Card className="bg-white border border-slate-200 shadow-sm">
-            <CardContent className="p-5">
-              <DepartmentFilter
-                currentUser={currentUser}
-                selectedDepartment={selectedDepartment}
-                onDepartmentChange={setSelectedDepartment}
-              />
-            </CardContent>
-          </Card>
-        </div>
+          </div>
 
         <EnhancedAIInsights department={selectedDepartment} inventoryItems={filteredInventory} />
       </div>

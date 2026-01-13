@@ -31,11 +31,11 @@ const CategoryForm = ({ category, department, categoryType, onSubmit, onCancel }
   const [formData, setFormData] = useState({
     name: category?.name || '',
     slug: category?.slug || '',
-    department: category?.department || department || 'both',
+    department: category?.department || 'prodhan_com_e_commerce', // Only Prodhan.com
     category_type: category?.category_type || categoryType || 'product_category',
     description: category?.description || '',
     icon: category?.icon || '',
-    color: category?.color || '#3B82F6',
+    color: category?.color || '#1E40AF',
     sort_order: category?.sort_order || 0,
     is_active: category?.is_active !== undefined ? category.is_active : true,
   });
@@ -91,22 +91,6 @@ const CategoryForm = ({ category, department, categoryType, onSubmit, onCancel }
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Department *</Label>
-          <Select
-            value={formData.department}
-            onValueChange={(value) => setFormData({...formData, department: value})}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="boibari">📚 Boibari Only</SelectItem>
-              <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com Only</SelectItem>
-              <SelectItem value="both">Both Departments</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div>
           <Label>Category Type *</Label>
           <Select
