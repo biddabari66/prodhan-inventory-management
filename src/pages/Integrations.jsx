@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,12 +36,22 @@ const INTEGRATION_META = {
     hasConfig: true,
     docs: 'https://developers.facebook.com/docs/whatsapp'
   },
+  whatsapp_employee: {
+    icon: MessagesSquare,
+    title: 'Employee WhatsApp Chat',
+    description: 'All employees can connect their WhatsApp number for inventory chat & notifications.',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    hasConfig: true,
+    docs: null,
+    isEmployeeChat: true
+  },
   whatsapp_agent: {
     icon: Bot,
     title: 'WhatsApp AI Agent',
     description: 'Intelligent WhatsApp bot for automated employee communication and support.',
-    color: 'text-violet-500',
-    bgColor: 'bg-violet-50',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
     hasConfig: true,
     docs: null,
     isAgent: true
