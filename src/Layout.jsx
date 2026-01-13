@@ -859,17 +859,17 @@ export default function Layout({ children, currentPageName }) {
             @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
             :root {
-              /* Professional Color Palette - Vibrant yet Trustworthy */
-              --primary-violet: #6366F1;
-              --primary-indigo: #4F46E5;
+              /* Professional Color Palette - Deep Blue & Professional */
+              --primary-violet: #1E40AF;
+              --primary-indigo: #1E3A8A;
               --accent-emerald: #10B981;
-              --accent-cyan: #06B6D4;
-              --accent-orange: #F97316;
-              --accent-pink: #EC4899;
-              --accent-purple: #A855F7;
-              --accent-amber: #F59E0B;
-              --accent-rose: #F43F5E;
-              --accent-teal: #14B8A6;
+              --accent-cyan: #0891B2;
+              --accent-orange: #EA580C;
+              --accent-pink: #DB2777;
+              --accent-purple: #7C3AED;
+              --accent-amber: #D97706;
+              --accent-rose: #E11D48;
+              --accent-teal: #0D9488;
               
               --neutral-50: #F8FAFC;
               --neutral-100: #F1F5F9;
@@ -940,9 +940,9 @@ export default function Layout({ children, currentPageName }) {
               font-family: 'Anek Bangla', sans-serif;
             }
 
-            /* Modern Text Gradient */
+            /* Modern Text Gradient - Deep Blue */
             .text-gradient {
-              background: linear-gradient(135deg, var(--primary-indigo) 0%, var(--accent-purple) 50%, var(--accent-pink) 100%);
+              background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #3B82F6 100%);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
               background-clip: text;
@@ -1037,10 +1037,10 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .nav-item.active {
-              background: rgba(99, 102, 241, 0.1);
+              background: rgba(30, 64, 175, 0.1);
               font-weight: 600;
-              border-color: rgba(99, 102, 241, 0.3);
-              box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1);
+              border-color: rgba(30, 64, 175, 0.3);
+              box-shadow: 0 1px 3px rgba(30, 64, 175, 0.1);
             }
 
             .nav-item.active::before {
@@ -1051,7 +1051,7 @@ export default function Layout({ children, currentPageName }) {
               transform: translateY(-50%);
               width: 3px;
               height: 24px;
-              background: var(--primary-indigo);
+              background: #1E40AF;
               border-radius: 0 4px 4px 0;
             }
 
@@ -1130,14 +1130,14 @@ export default function Layout({ children, currentPageName }) {
 
             .premium-card:hover {
               transform: translateY(-2px);
-              box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
-              border-color: rgba(99, 102, 241, 0.25);
+              box-shadow: 0 8px 32px rgba(30, 64, 175, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+              border-color: rgba(30, 64, 175, 0.25);
             }
 
             @media (min-width: 1024px) {
               .premium-card:hover {
                 transform: translateY(-4px);
-                box-shadow: 0 16px 48px rgba(99, 102, 241, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 16px 48px rgba(30, 64, 175, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
               }
             }
 
@@ -1343,18 +1343,18 @@ export default function Layout({ children, currentPageName }) {
               animation: smoothFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Professional Button Styles */
+            /* Professional Button Styles - Deep Blue */
             .btn-primary {
-              background: linear-gradient(135deg, var(--primary-indigo) 0%, var(--accent-purple) 100%);
+              background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%);
               color: white;
               font-weight: 600;
-              box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-              transition: all 0.3s ease;
+              box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+              transition: all 0.15s ease;
             }
 
             .btn-primary:hover {
-              box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+              transform: translateY(-1px);
             }
 
             /* Modern Badge Styles */
@@ -1373,25 +1373,40 @@ export default function Layout({ children, currentPageName }) {
               border-radius: 8px;
             }
 
-            /* Smooth Scrollbars - Professional Look */
+            /* Smooth Scrollbars - Deep Blue Professional */
             ::-webkit-scrollbar {
-              width: 10px;
-              height: 10px;
+              width: 8px;
+              height: 8px;
             }
 
             ::-webkit-scrollbar-track {
-              background: var(--neutral-100);
-              border-radius: 10px;
+              background: #F1F5F9;
+              border-radius: 8px;
             }
 
             ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, var(--primary-indigo), var(--accent-purple));
-              border-radius: 10px;
-              border: 2px solid var(--neutral-100);
+              background: linear-gradient(180deg, #1E40AF, #3B82F6);
+              border-radius: 8px;
+              border: 2px solid #F1F5F9;
             }
 
             ::-webkit-scrollbar-thumb:hover {
-              background: linear-gradient(180deg, var(--accent-purple), var(--accent-pink));
+              background: linear-gradient(180deg, #1E3A8A, #1E40AF);
+            }
+
+            /* PERFORMANCE: 3x Faster Transitions */
+            * {
+              transition-duration: 0.1s !important;
+            }
+
+            button, a, .nav-item, .premium-card, input, select {
+              transition: all 0.1s ease-out !important;
+            }
+
+            /* Instant feedback on click */
+            button:active, a:active, .nav-item:active {
+              transform: scale(0.98) !important;
+              transition: transform 0.05s !important;
             }
           `}</style>
 
