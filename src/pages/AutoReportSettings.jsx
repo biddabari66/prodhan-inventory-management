@@ -63,6 +63,11 @@ function AutoReportSettingsPage() {
   };
 
   const reportTypeConfig = {
+    sales_manager: {
+      name: 'Sales Manager Report',
+      function: 'generateSalesManagerReport',
+      description: 'Daily sales manager report (7PM yesterday to 7PM today BDT) with PDF download notification'
+    },
     daily_sales: {
       name: 'Daily Sales Report',
       function: 'sendDailySalesEmail',
@@ -177,6 +182,15 @@ function AutoReportSettingsPage() {
 
   const reportTemplates = [
     {
+      id: 'sales_manager',
+      title: 'Sales Manager Report',
+      description: 'Daily report (7PM-7PM BDT) with PDF notification for all employees',
+      icon: TrendingUp,
+      color: 'indigo',
+      function: 'generateSalesManagerReport',
+      frequencies: ['daily']
+    },
+    {
       id: 'daily_sales',
       title: 'Daily Sales Report',
       description: 'Daily sales summary with order details and top products',
@@ -288,6 +302,7 @@ function AutoReportSettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="sales_manager">📋 Sales Manager Report (7PM-7PM)</SelectItem>
                   <SelectItem value="daily_sales">📊 Daily Sales Report</SelectItem>
                   <SelectItem value="weekly_sales">📈 Weekly Sales Report</SelectItem>
                   <SelectItem value="low_stock">⚠️ Low Stock Alert</SelectItem>
@@ -421,15 +436,16 @@ function AutoReportSettingsPage() {
             </div>
           ) : (
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-4">
+              <TabsList className="grid w-full grid-cols-6 mb-4">
                 <TabsTrigger value="all">All ({scheduledTasks.length})</TabsTrigger>
-                <TabsTrigger value="daily_sales">Daily Sales</TabsTrigger>
+                <TabsTrigger value="sales_manager">Manager</TabsTrigger>
+                <TabsTrigger value="daily_sales">Daily</TabsTrigger>
                 <TabsTrigger value="weekly_sales">Weekly</TabsTrigger>
                 <TabsTrigger value="low_stock">Alerts</TabsTrigger>
                 <TabsTrigger value="monthly_performance">Monthly</TabsTrigger>
               </TabsList>
 
-              {['all', 'daily_sales', 'weekly_sales', 'low_stock', 'monthly_performance'].map(tabValue => {
+              {['all', 'sales_manager', 'daily_sales', 'weekly_sales', 'low_stock', 'monthly_performance'].map(tabValue => {
                 const filteredTasks = tabValue === 'all' 
                   ? scheduledTasks 
                   : scheduledTasks.filter(t => {
