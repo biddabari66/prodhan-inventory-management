@@ -192,7 +192,11 @@ Deno.serve(async (req) => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(203, 213, 225);
-    doc.text(`Today: ${today}`, 16, 38);
+    doc.text(`Today: ${displayDate}`, 16, 38);
+    
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`(7 PM yesterday to 7 PM today BDT)`, 16, 44);
     
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
