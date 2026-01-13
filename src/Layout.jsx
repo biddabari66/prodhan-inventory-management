@@ -1465,19 +1465,33 @@ export default function Layout({ children, currentPageName }) {
               border: 2px solid #1E293B;
             }
 
-            /* PERFORMANCE: 3x Faster Transitions */
+            /* PERFORMANCE: Ultra-Fast Transitions for Production */
             * {
-              transition-duration: 0.1s !important;
+              transition-duration: 0.08s !important;
             }
 
             button, a, .nav-item, .premium-card, input, select {
-              transition: all 0.1s ease-out !important;
+              transition: all 0.08s ease-out !important;
             }
 
             /* Instant feedback on click */
             button:active, a:active, .nav-item:active {
-              transform: scale(0.98) !important;
-              transition: transform 0.05s !important;
+              transform: scale(0.97) !important;
+              transition: transform 0.03s !important;
+            }
+
+            /* Production-Ready: Optimize rendering */
+            .premium-card, [class*="Card"] {
+              contain: layout style;
+            }
+
+            /* Smooth icon animations */
+            svg {
+              transition: transform 0.1s ease-out, color 0.08s ease-out !important;
+            }
+
+            .nav-item:hover svg, button:hover svg {
+              transform: scale(1.05);
             }
           `}</style>
 
