@@ -156,39 +156,7 @@ function CustomerManagementPage() {
     toast.success('Customers exported successfully');
   };
 
-  const handleImportCustomers = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result;
-      const lines = text.split('\n').filter(l => l.trim());
-      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
-      
-      let imported = 0;
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
-        const entry = {
-          customer_name: values[headers.indexOf('customer name')] || values[0] || '',
-          customer_phone: values[headers.indexOf('phone')] || values[1] || '',
-          customer_email: values[headers.indexOf('email')] || values[2] || '',
-          customer_type: values[headers.indexOf('type')] || values[3] || 'retail',
-          total_orders: 0,
-          total_spent: 0,
-          customer_since: new Date().toISOString().split('T')[0]
-        };
-        if (entry.customer_name && entry.customer_phone) {
-          await base44.entities.Customer.create(entry);
-          imported++;
-        }
-      }
-      await loadCustomers();
-      toast.success(`Imported ${imported} customers`);
-      setIsImportCustomersOpen(false);
-    };
-    reader.readAsText(file);
-  };
+  // Legacy import removed - using DynamicCSVImport component instead
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/20">
@@ -488,16 +456,39 @@ function CustomerManagementPage() {
               { key: 'notes', label: 'Notes', required: false }
             ]}
             onImport={async (data) => {
-              for (const entry of data) {
-                await base44.entities.Customer.create({
+              // FAST BULK IMPORT - using bulkCreate for speed
+              const batchSize = 50;
+              const batches = [];
+              for (let i = 0; i < data.length; i += batchSize) {
+                batches.push(data.slice(i, i + batchSize));
+              }
+              
+              let totalImported = 0;
+              for (const batch of batches) {
+                const preparedData = batch.map(entry => ({
                   ...entry,
                   customer_type: entry.customer_type || 'retail',
                   total_orders: 0,
                   total_spent: 0,
                   customer_since: new Date().toISOString().split('T')[0]
-                });
+                }));
+                try {
+                  await base44.entities.Customer.bulkCreate(preparedData);
+                  totalImported += preparedData.length;
+                } catch (error) {
+                  // Fallback to individual creates if bulk fails
+                  for (const entry of preparedData) {
+                    try {
+                      await base44.entities.Customer.create(entry);
+                      totalImported++;
+                    } catch (e) {
+                      console.warn('Failed to create customer:', e);
+                    }
+                  }
+                }
               }
               await loadCustomers();
+              toast.success(`Imported ${totalImported} customers`);
             }}
             onClose={() => setIsImportCustomersOpen(false)}
           />
