@@ -684,7 +684,7 @@ export default function Integrations() {
           }
         ];
         setIntegrations(integrationsWithExtras);
-        console.log('✅ Loaded integrations:', integrationsWithAgent);
+        console.log('✅ Loaded integrations:', integrationsWithExtras);
       } else {
         throw new Error('Failed to load integration statuses');
       }
