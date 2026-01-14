@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Search, Check, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, Search, Check, Loader2, Save, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { AttendanceSetting } from '@/entities/AttendanceSetting';
 
 export default function OfficeLocationPicker({ settings, onSettingsChange, currentLocation }) {
+  const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [mapUrl, setMapUrl] = useState('');
