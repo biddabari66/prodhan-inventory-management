@@ -1073,12 +1073,13 @@ function SalesPage() {
   }, [filteredOrders.length]);
 
   // PRODUCTION-READY: ALL TIME stats + Today stats using BD timezone
+  // Stats are computed from ALL orders (not filtered) and update in real-time
   const stats = useMemo(() => {
     // Get today's date in BD timezone (Asia/Dhaka)
     const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     
-    // ALL TIME STATS - Use ALL orders (not filtered by date)
-    const allTimeOrders = orders; // Use raw orders for all-time stats
+    // ALL TIME STATS - Use ALL orders (not filtered by any filter)
+    const allTimeOrders = orders; // Raw orders for all-time stats
     
     // All-time totals
     const totalOrders = allTimeOrders.length;
@@ -1097,7 +1098,7 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // TODAY's stats using BD timezone
+    // TODAY's stats using BD timezone - always shows today regardless of filters
     const todayOrders = allTimeOrders.filter(o => {
       const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
         timeZone: 'Asia/Dhaka' 
