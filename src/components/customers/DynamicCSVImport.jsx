@@ -146,56 +146,68 @@ export default function DynamicCSVImport({
 
   return (
     <div className="space-y-6">
-      {/* Step Indicator */}
-      <div className="flex items-center justify-center gap-2">
+      {/* Step Indicator - Professional Design */}
+      <div className="flex items-center justify-center gap-3">
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step >= s ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm transition-all ${
+              step >= s ? 'bg-red-600 text-white shadow-red-200' : 'bg-slate-100 text-slate-400 border border-slate-200'
             }`}>
-              {step > s ? <Check className="w-4 h-4" /> : s}
+              {step > s ? <Check className="w-5 h-5" /> : s}
             </div>
-            {s < 3 && <ArrowRight className={`w-4 h-4 mx-2 ${step > s ? 'text-blue-600' : 'text-slate-300'}`} />}
+            {s < 3 && (
+              <div className={`w-12 h-1 mx-2 rounded-full ${step > s ? 'bg-red-600' : 'bg-slate-200'}`} />
+            )}
           </div>
         ))}
       </div>
-      <div className="flex justify-center gap-8 text-xs text-slate-500">
-        <span>Upload File</span>
-        <span>Map Columns</span>
-        <span>Preview & Import</span>
+      <div className="flex justify-center gap-12 text-sm font-medium">
+        <span className={step >= 1 ? 'text-red-600' : 'text-slate-400'}>Upload File</span>
+        <span className={step >= 2 ? 'text-red-600' : 'text-slate-400'}>Map Columns</span>
+        <span className={step >= 3 ? 'text-red-600' : 'text-slate-400'}>Preview & Import</span>
       </div>
 
       {/* Step 1: Upload */}
       {step === 1 && (
         <div className="space-y-4">
-          <Card className="border-2 border-dashed border-slate-300 hover:border-blue-400 transition-colors">
-            <CardContent className="p-8">
-              <label className="flex flex-col items-center cursor-pointer">
-                <FileSpreadsheet className="w-12 h-12 text-slate-400 mb-3" />
-                <p className="text-sm font-medium text-slate-700 mb-1">Drop your CSV file here or click to browse</p>
-                <p className="text-xs text-slate-500">Supports .csv files</p>
-                <Input 
+          <Card className="border-2 border-dashed border-red-200 hover:border-red-400 transition-all bg-gradient-to-br from-red-50/50 to-white">
+            <CardContent className="p-10">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+                  <FileSpreadsheet className="w-8 h-8 text-red-600" />
+                </div>
+                <p className="text-base font-semibold text-slate-800 mb-1">Drop your CSV file here or click to browse</p>
+                <p className="text-sm text-slate-500 mb-4">Supports .csv files up to 10MB</p>
+                <input 
                   type="file" 
-                  accept=".csv" 
+                  accept=".csv"
+                  id="csv-file-input"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
-                <Button variant="outline" className="mt-4">
+                <Button 
+                  type="button"
+                  onClick={() => document.getElementById('csv-file-input').click()}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 h-11"
+                >
                   <Upload className="w-4 h-4 mr-2" />
-                  Select File
+                  Select CSV File
                 </Button>
-              </label>
+              </div>
             </CardContent>
           </Card>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm font-medium text-blue-800 mb-2">Required Fields:</p>
+          <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-5">
+            <p className="text-sm font-semibold text-red-800 mb-3 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Required Fields:
+            </p>
             <div className="flex gap-2 flex-wrap">
               {fieldOptions.filter(f => f.required).map(f => (
-                <Badge key={f.key} className="bg-blue-100 text-blue-800">{f.label}</Badge>
+                <Badge key={f.key} className="bg-red-100 text-red-700 border border-red-200">{f.label}</Badge>
               ))}
             </div>
-            <p className="text-xs text-blue-600 mt-2">
+            <p className="text-xs text-red-600 mt-3">
               Your CSV should have columns that can be mapped to these fields
             </p>
           </div>
@@ -255,7 +267,7 @@ export default function DynamicCSVImport({
 
           <div className="flex justify-between pt-4">
             <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-            <Button onClick={() => setStep(3)} disabled={!isValidMapping()}>
+            <Button onClick={() => setStep(3)} disabled={!isValidMapping()} className="bg-red-600 hover:bg-red-700">
               Continue to Preview
             </Button>
           </div>
@@ -318,7 +330,7 @@ export default function DynamicCSVImport({
             <Button 
               onClick={handleImport} 
               disabled={isImporting || getMappedData().length === 0}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-red-600 hover:bg-red-700"
             >
               {isImporting ? 'Importing...' : `Import ${getMappedData().length} Entries`}
             </Button>
