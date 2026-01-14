@@ -24,15 +24,22 @@ export default function SearchableProductSelect({
 
   const filteredItems = useMemo(() => {
     if (!inventory || inventory.length === 0) return [];
-    if (!searchQuery) return inventory.slice(0, 100);
+    // Show fewer items initially for faster rendering
+    if (!searchQuery) return inventory.slice(0, 30);
     const query = searchQuery.toLowerCase();
+    // Fast path: exact SKU or ISBN match first
+    const exactMatch = inventory.find(item => 
+      item.isbn === query || item.barcode === query
+    );
+    if (exactMatch) return [exactMatch];
+    // Regular search - limit to 50 for speed
     return inventory.filter(item => 
       item.item_name?.toLowerCase().includes(query) ||
       item.english_item_name?.toLowerCase().includes(query) ||
       item.isbn?.includes(query) ||
       item.barcode?.includes(query) ||
       item.category?.toLowerCase().includes(query)
-    ).slice(0, 100);
+    ).slice(0, 50);
   }, [inventory, searchQuery]);
 
   // Close dropdown when clicking outside
