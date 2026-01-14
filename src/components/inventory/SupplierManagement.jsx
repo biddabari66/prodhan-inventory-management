@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Plus, Phone, Mail, MapPin, Edit, Trash2, Star, Building2, Package, 
-  TrendingUp, Clock, CreditCard, AlertCircle, CheckCircle, Upload, Download, FileSpreadsheet
+  TrendingUp, Clock, CreditCard, AlertCircle, CheckCircle, Upload, Download, FileSpreadsheet, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
