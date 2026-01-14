@@ -86,38 +86,54 @@ const DigitalClock = () => {
   );
 };
 
-// Location & IP Display Component
+// Location & IP Display Component with real-time indicator
 const LocationInfo = ({ location, ipAddress, accuracy }) => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-        <MapPin className="w-5 h-5 text-blue-600" />
+  <div className="space-y-3">
+    <div className="flex items-center gap-2 text-sm">
+      <div className={`w-2 h-2 rounded-full ${location ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></div>
+      <span className={location ? 'text-green-700 font-medium' : 'text-amber-700'}>
+        {location ? '📍 Real-time location active' : '⏳ Waiting for location permission...'}
+      </span>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-lg ${location ? 'bg-green-100 dark:bg-green-900' : 'bg-amber-100 dark:bg-amber-900'} flex items-center justify-center`}>
+          <MapPin className={`w-5 h-5 ${location ? 'text-green-600' : 'text-amber-600'}`} />
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">GPS Location</p>
+          <p className="text-sm font-semibold truncate max-w-[150px]">
+            {location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'Requesting...'}
+          </p>
+        </div>
       </div>
-      <div>
-        <p className="text-xs text-slate-500">Location</p>
-        <p className="text-sm font-semibold truncate max-w-[150px]">
-          {location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : 'Fetching...'}
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+          <Wifi className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">IP Address</p>
+          <p className="text-sm font-semibold">{ipAddress || 'Detecting...'}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-lg ${accuracy && accuracy <= 50 ? 'bg-green-100' : accuracy && accuracy <= 150 ? 'bg-amber-100' : 'bg-red-100'} flex items-center justify-center`}>
+          <Shield className={`w-5 h-5 ${accuracy && accuracy <= 50 ? 'text-green-600' : accuracy && accuracy <= 150 ? 'text-amber-600' : 'text-red-600'}`} />
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">GPS Accuracy</p>
+          <p className="text-sm font-semibold">
+            {accuracy ? `${Math.round(accuracy)}m` : 'N/A'}
+            {accuracy && accuracy <= 50 && <span className="text-green-600 ml-1">✓</span>}
+          </p>
+        </div>
       </div>
     </div>
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center">
-        <Wifi className="w-5 h-5 text-green-600" />
+    {!location && (
+      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+        <strong>📱 Please allow location access</strong> when prompted by your browser or device to enable attendance check-in.
       </div>
-      <div>
-        <p className="text-xs text-slate-500">IP Address</p>
-        <p className="text-sm font-semibold">{ipAddress || 'Detecting...'}</p>
-      </div>
-    </div>
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
-        <Shield className="w-5 h-5 text-amber-600" />
-      </div>
-      <div>
-        <p className="text-xs text-slate-500">Accuracy</p>
-        <p className="text-sm font-semibold">{accuracy ? `${Math.round(accuracy)}m` : 'N/A'}</p>
-      </div>
-    </div>
+    )}
   </div>
 );
 
