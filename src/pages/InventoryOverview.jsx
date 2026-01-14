@@ -536,7 +536,7 @@ function InventoryOverviewPage() {
                           <div className="text-xs text-slate-500">৳{(item.damaged_value || 0).toLocaleString()}</div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="font-semibold text-slate-900">৳{item.selling_price?.toLocaleString()}</span>
+                          <span className="font-semibold text-slate-900">৳{(item.selling_price || 0).toLocaleString()}</span>
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge className={`${todaySalesData[item.id] > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'} rounded-full px-3 text-xs font-medium`}>
