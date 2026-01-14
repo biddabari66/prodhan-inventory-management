@@ -69,12 +69,21 @@ function InventoryOverviewPage() {
     loadUserAndInventory();
     loadTodaySales();
 
-    // Reduced refresh to 60 seconds for better performance
+    // Subscribe to real-time Order updates for instant Today's Sales refresh
+    const unsubscribeOrders = base44.entities.Order.subscribe((event) => {
+      // Refresh today's sales on any order change
+      loadTodaySales();
+    });
+
+    // Fallback refresh every 60 seconds
     const interval = setInterval(() => {
       loadTodaySales();
     }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      unsubscribeOrders();
+      clearInterval(interval);
+    };
   }, []);
 
   // 🚀 OPTIMIZED: Load only today's orders for sales data

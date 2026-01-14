@@ -1072,25 +1072,29 @@ function SalesPage() {
     setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
   }, [filteredOrders.length]);
 
-  // PRODUCTION-READY: ALL TIME stats + Today stats using BD timezone
-  // Stats are computed from ALL orders (not filtered) and update in real-time
+  // Check if date filter is applied to determine which stats to show
+  const hasDateFilter = dateRange.from !== undefined;
+
+  // PRODUCTION-READY: Stats based on filter state
+  // If date filter is applied -> show filtered stats, otherwise show all-time + today
   const stats = useMemo(() => {
     // Get today's date in BD timezone (Asia/Dhaka)
     const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     
-    // ALL TIME STATS - Use ALL orders (not filtered by any filter)
-    const allTimeOrders = orders; // Raw orders for all-time stats
+    // Determine which orders to use for main stats
+    // If date filter is active, use filteredOrders for main cards
+    const statsOrders = hasDateFilter ? filteredOrders : orders;
     
-    // All-time totals
-    const totalOrders = allTimeOrders.length;
-    const totalRevenue = allTimeOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-    const pendingOrders = allTimeOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrders = allTimeOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
-    const shippedOrders = allTimeOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
-    const totalReturns = allTimeOrders.filter(o => o.order_status === 'returned').length;
+    // Main stats (filtered if date filter applied, otherwise all-time)
+    const totalOrders = statsOrders.length;
+    const totalRevenue = statsOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const pendingOrders = statsOrders.filter(o => o.order_status === 'pending').length;
+    const confirmedOrders = statsOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
+    const shippedOrders = statsOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
+    const totalReturns = statsOrders.filter(o => o.order_status === 'returned').length;
     
-    // All-time product quantity
-    const totalProductQuantity = allTimeOrders.reduce((totalSum, order) => {
+    // Product quantity for main stats
+    const totalProductQuantity = statsOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1098,8 +1102,8 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // TODAY's stats using BD timezone - always shows today regardless of filters
-    const todayOrders = allTimeOrders.filter(o => {
+    // TODAY's stats using BD timezone - always calculated from all orders
+    const todayOrders = orders.filter(o => {
       const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
         timeZone: 'Asia/Dhaka' 
       }).format(new Date(o.order_date || o.created_date));
@@ -1133,9 +1137,10 @@ function SalesPage() {
       todayConfirmed,
       todayShipped,
       todayReturns,
-      todayProductQty
+      todayProductQty,
+      isFiltered: hasDateFilter
     };
-  }, [orders, inventory]);
+  }, [orders, inventory, filteredOrders, hasDateFilter]);
 
   // Premium Pill Badges
   const getStatusBadge = (status) => {
@@ -1365,6 +1370,14 @@ function SalesPage() {
       </div>
 
       {/* Premium Minimalist Stats Cards */}
+      {stats.isFiltered && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
+          <Filter className="w-4 h-4 text-blue-600" />
+          <span className="text-sm text-blue-700 font-medium">
+            Showing stats for filtered date range: {dateRange.from} {dateRange.to && dateRange.to !== dateRange.from ? `to ${dateRange.to}` : ''}
+          </span>
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Total Orders */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
@@ -1373,10 +1386,12 @@ function SalesPage() {
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
                 <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
+              )}
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalOrders}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Total Orders</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">{stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}</p>
           </CardContent>
         </Card>
 
@@ -1387,7 +1402,9 @@ function SalesPage() {
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
                 <Package className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
+              )}
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalProductQuantity}</p>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Products Sold</p>
@@ -1401,7 +1418,9 @@ function SalesPage() {
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
                 <RefreshCw className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
+              )}
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalReturns}</p>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Returns</p>
@@ -1415,7 +1434,9 @@ function SalesPage() {
               <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
                 <Clock className="w-5 h-5 text-amber-600" />
               </div>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
+              )}
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pendingOrders}</p>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Pending</p>
@@ -1429,7 +1450,9 @@ function SalesPage() {
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-emerald-600" />
               </div>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
+              )}
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.confirmedOrders}</p>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Confirmed</p>
@@ -1443,7 +1466,9 @@ function SalesPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
                 <Truck className="w-5 h-5 text-blue-600" />
               </div>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
+              )}
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.shippedOrders}</p>
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Shipped</p>
