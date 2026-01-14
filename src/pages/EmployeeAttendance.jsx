@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Clock, MapPin, Wifi, LogIn, LogOut, Calendar, History, 
   Users, CheckCircle, XCircle, AlertTriangle, Loader2, 
-  Timer, TrendingUp, Shield, RefreshCw, Edit
+  Timer, TrendingUp, Shield, RefreshCw, Edit, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInMinutes, startOfMonth, endOfMonth, parseISO } from 'date-fns';
@@ -19,6 +19,11 @@ import { Attendance } from '@/entities/Attendance';
 import { Shift } from '@/entities/Shift';
 import { withPermission } from '@/components/common/PermissionGuard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+// Lazy load admin components
+const OfficeLocationPicker = React.lazy(() => import('../components/attendance/OfficeLocationPicker'));
+const ShiftManagement = React.lazy(() => import('../components/attendance/ShiftManagement'));
+const ShiftAssignmentManagement = React.lazy(() => import('../components/attendance/ShiftAssignmentManagement'));
 
 // Digital Clock Component
 const DigitalClock = () => {
@@ -302,7 +307,7 @@ function EmployeeAttendancePage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-3'} mb-6`}>
           <TabsTrigger value="checkin" className="gap-2">
             <LogIn className="w-4 h-4" />
             Check In/Out
@@ -315,6 +320,18 @@ function EmployeeAttendancePage() {
             <TabsTrigger value="admin" className="gap-2">
               <Users className="w-4 h-4" />
               All Employees
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger value="location" className="gap-2">
+              <MapPin className="w-4 h-4" />
+              📍 Location
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="w-4 h-4" />
+              ⚙️ Settings
             </TabsTrigger>
           )}
         </TabsList>
@@ -659,6 +676,37 @@ function EmployeeAttendancePage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {/* Admin Location Tab */}
+        {isAdmin && (
+          <TabsContent value="location" className="space-y-6">
+            <React.Suspense fallback={
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+              </div>
+            }>
+              <OfficeLocationPicker
+                settings={{}}
+                onSettingsChange={() => {}}
+                currentLocation={currentLocation}
+              />
+            </React.Suspense>
+          </TabsContent>
+        )}
+
+        {/* Admin Settings Tab */}
+        {isAdmin && (
+          <TabsContent value="settings" className="space-y-6">
+            <React.Suspense fallback={
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+              </div>
+            }>
+              <ShiftManagement />
+              <ShiftAssignmentManagement />
+            </React.Suspense>
           </TabsContent>
         )}
       </Tabs>
