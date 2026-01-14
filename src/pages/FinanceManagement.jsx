@@ -1025,6 +1025,7 @@ function FinanceManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
