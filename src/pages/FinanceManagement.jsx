@@ -82,14 +82,19 @@ function FinanceManagementPage() {
   const { data: allUsers = [] } = useQuery({
     queryKey: ['ecommerceUsers'],
     queryFn: async () => {
-      const users = await User.list();
-      return users.filter(u => 
-        u.department === 'prodhan_com_e_commerce' || 
-        u.department === 'prodhan.com' ||
-        u.job_role === 'admin' ||
-        u.job_role === 'super_admin'
-      );
-    }
+      const users = await User.filter({ department: 'prodhan_com_e_commerce' });
+      // Include admins from any department
+      const admins = await User.filter({ job_role: 'admin' });
+      const superAdmins = await User.filter({ job_role: 'super_admin' });
+      
+      const allRelevant = [...users, ...admins, ...superAdmins];
+      // Remove duplicates by id
+      const uniqueMap = new Map();
+      allRelevant.forEach(u => uniqueMap.set(u.id, u));
+      return Array.from(uniqueMap.values());
+    },
+    staleTime: 30 * 60 * 1000, // 30 min cache for faster loads
+    gcTime: 60 * 60 * 1000
   });
 
   // Fetch products for ROI calculation
