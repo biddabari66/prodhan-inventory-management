@@ -1064,37 +1064,24 @@ function SalesPage() {
     setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
   }, [filteredOrders.length]);
 
-  // PRODUCTION-READY: 100% accurate stats using BD timezone (12:00am to 12:00am)
+  // PRODUCTION-READY: ALL TIME stats + Today stats using BD timezone
   const stats = useMemo(() => {
-    // Get today's date in BD timezone (Asia/Dhaka) - 12:00am to 11:59:59pm
+    // Get today's date in BD timezone (Asia/Dhaka)
     const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     
-    // CRITICAL FIX: If date filter is active, "Today" cards = filtered data
-    const isDateFilterActive = dateRange.from !== undefined;
+    // ALL TIME STATS - Use ALL orders (not filtered by date)
+    const allTimeOrders = orders; // Use raw orders for all-time stats
     
-    // If date filter active, use filtered orders; otherwise calculate actual today using BD timezone
-    const todayOrders = isDateFilterActive 
-      ? filteredOrders 
-      : filteredOrders.filter(o => {
-          // Convert order date to BD timezone for accurate comparison
-          const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
-            timeZone: 'Asia/Dhaka' 
-          }).format(new Date(o.order_date || o.created_date));
-          return orderDateBDT === todayBDT;
-        });
+    // All-time totals
+    const totalOrders = allTimeOrders.length;
+    const totalRevenue = allTimeOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const pendingOrders = allTimeOrders.filter(o => o.order_status === 'pending').length;
+    const confirmedOrders = allTimeOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
+    const shippedOrders = allTimeOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
+    const totalReturns = allTimeOrders.filter(o => o.order_status === 'returned').length;
     
-    // CRITICAL FIX: Total Orders = ALL orders (pending + confirmed + shipped + everything)
-    const totalOrders = filteredOrders.length;
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-    
-    // Status breakdown - ALL orders
-    const pendingOrders = filteredOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrders = filteredOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
-    const shippedOrders = filteredOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
-    const totalReturns = filteredOrders.filter(o => o.order_status === 'returned').length;
-    
-    // CRITICAL: Total Product Qty = sum actual quantities from ALL orders (including pending)
-    const totalProductQuantity = filteredOrders.reduce((totalSum, order) => {
+    // All-time product quantity
+    const totalProductQuantity = allTimeOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
         const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
@@ -1102,14 +1089,20 @@ function SalesPage() {
       }, 0);
     }, 0);
 
-    // Today's stats using BD timezone (matches filtered data when date filter active)
+    // TODAY's stats using BD timezone
+    const todayOrders = allTimeOrders.filter(o => {
+      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
+        timeZone: 'Asia/Dhaka' 
+      }).format(new Date(o.order_date || o.created_date));
+      return orderDateBDT === todayBDT;
+    });
+    
     const todayOrdersCount = todayOrders.length;
     const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
     const todayConfirmed = todayOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
     const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
     const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
     
-    // Today's product quantity using BD timezone (matches filtered data when date filter active)
     const todayProductQty = todayOrders.reduce((totalSum, order) => {
       return totalSum + (order.order_items || []).reduce((orderSum, item) => {
         const inventoryItem = inventory.find(i => i.id === item.inventory_id);
@@ -1133,7 +1126,7 @@ function SalesPage() {
       todayReturns,
       todayProductQty
     };
-  }, [filteredOrders, inventory, dateRange.from]);
+  }, [orders, inventory]);
 
   // Premium Pill Badges
   const getStatusBadge = (status) => {

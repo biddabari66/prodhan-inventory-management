@@ -65,7 +65,7 @@ export default function Employees() {
     try {
       const [user, employeeList] = await Promise.all([
         User.me(),
-        User.list('-created_date')
+        User.filter({ department: 'prodhan_com_e_commerce' }, '-created_date')
       ]);
       setCurrentUser(user);
       setEmployees(employeeList);
