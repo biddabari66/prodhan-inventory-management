@@ -424,8 +424,8 @@ function EmployeeAttendancePage() {
                     <Timer className="w-5 h-5 text-blue-600" />
                   </div>
                   <p className="text-3xl font-bold text-blue-700">
-                    {todayAttendance?.working_hours ? 
-                      `${todayAttendance.working_hours.toFixed(2)} hrs` : 
+                    {todayAttendance?.working_hours != null ? 
+                      `${Number(todayAttendance.working_hours).toFixed(2)} hrs` : 
                       '--:--'
                     }
                   </p>
@@ -480,7 +480,7 @@ function EmployeeAttendancePage() {
                   <Timer className="w-5 h-5 text-blue-600" />
                   <span className="text-sm text-blue-700">Total Hours</span>
                 </div>
-                <p className="text-2xl font-bold text-blue-800">{myStats.totalHours.toFixed(1)}</p>
+                <p className="text-2xl font-bold text-blue-800">{(myStats.totalHours || 0).toFixed(1)}</p>
               </CardContent>
             </Card>
           </div>
@@ -519,7 +519,7 @@ function EmployeeAttendancePage() {
                         <td className="px-4 py-3">{record.check_in_time || '-'}</td>
                         <td className="px-4 py-3">{record.check_out_time || '-'}</td>
                         <td className="px-4 py-3 font-semibold">
-                          {record.working_hours ? `${record.working_hours.toFixed(2)}h` : '-'}
+                          {record.working_hours != null ? `${Number(record.working_hours).toFixed(2)}h` : '-'}
                         </td>
                         <td className="px-4 py-3">
                           <Badge className={`${
@@ -616,7 +616,7 @@ function EmployeeAttendancePage() {
                             <td className="px-4 py-3">{record.check_in_time || '-'}</td>
                             <td className="px-4 py-3">{record.check_out_time || '-'}</td>
                             <td className="px-4 py-3 font-semibold">
-                              {record.working_hours ? `${record.working_hours.toFixed(2)}h` : '-'}
+                              {record.working_hours != null ? `${Number(record.working_hours).toFixed(2)}h` : '-'}
                             </td>
                             <td className="px-4 py-3">
                               <Badge className={`${
