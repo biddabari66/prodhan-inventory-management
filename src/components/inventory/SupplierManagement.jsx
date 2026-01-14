@@ -680,10 +680,6 @@ export default function SupplierManagement({ selectedDepartment }) {
     <div className="space-y-6">
       {/* Enhanced Header with Department Filter */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Supplier Management</h2>
-          <p className="text-muted-foreground">Manage your suppliers and vendors</p>
-        </div>
         <div className="flex gap-2 flex-wrap">
           <Button onClick={downloadTemplate} variant="outline" className="gap-2">
             <FileSpreadsheet className="w-4 h-4" />
@@ -697,7 +693,7 @@ export default function SupplierManagement({ selectedDepartment }) {
             <Download className="w-4 h-4" />
             Export
           </Button>
-          <Button onClick={() => { setEditingSupplier(null); setIsFormOpen(true); }} className="bg-violet-600">
+          <Button onClick={() => { setEditingSupplier(null); setIsFormOpen(true); }} className="bg-[#D32F2F] hover:bg-[#B71C1C]">
             <Plus className="w-4 h-4 mr-2" />
             Add Supplier
           </Button>
@@ -705,51 +701,44 @@ export default function SupplierManagement({ selectedDepartment }) {
       </div>
 
       {/* Enhanced Search and Stats with Department Filter */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="md:col-span-2">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="md:col-span-2 bg-white border-0 shadow-sm rounded-xl">
           <CardContent className="pt-6">
-            <Input
-              placeholder="Search suppliers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <Label className="text-xs text-muted-foreground mb-2 block">Department Filter</Label>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="boibari">📚 Boibari Only</SelectItem>
-                <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com Only</SelectItem>
-                <SelectItem value="both">📦 Both</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Total Suppliers</p>
-              <p className="text-2xl font-bold text-violet-600">{filteredSuppliers.length}</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search suppliers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10 border-slate-200 rounded-lg"
+              />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Active</p>
-              <p className="text-2xl font-bold text-green-600">
-                {filteredSuppliers.filter(s => s.status === 'active').length}
-              </p>
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-[#D32F2F]" />
+              </div>
             </div>
+            <p className="text-3xl font-bold text-[#111827]">{filteredSuppliers.length}</p>
+            <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-emerald-600">
+              {filteredSuppliers.filter(s => s.status === 'active').length}
+            </p>
+            <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Active</p>
           </CardContent>
         </Card>
       </div>
@@ -782,8 +771,11 @@ export default function SupplierManagement({ selectedDepartment }) {
       )}
 
       {/* Suppliers Table */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="bg-white border-0 shadow-sm rounded-xl">
+        <CardHeader className="border-b border-slate-100 px-5 py-4">
+          <CardTitle className="text-lg font-semibold text-slate-900">Suppliers</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0"><div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -863,6 +855,7 @@ export default function SupplierManagement({ selectedDepartment }) {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

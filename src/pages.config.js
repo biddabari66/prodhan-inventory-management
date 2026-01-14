@@ -57,6 +57,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
 import ReportGenerator from './pages/ReportGenerator';
 import Reports from './pages/Reports';
+import Sales from './pages/Sales';
 import ScheduledReports from './pages/ScheduledReports';
 import SendEmail from './pages/SendEmail';
 import Settings from './pages/Settings';
@@ -74,7 +75,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import Sales from './pages/Sales';
 import __Layout from './Layout.jsx';
 
 
@@ -138,6 +138,7 @@ export const PAGES = {
     "ReportBuilder": ReportBuilder,
     "ReportGenerator": ReportGenerator,
     "Reports": Reports,
+    "Sales": Sales,
     "ScheduledReports": ScheduledReports,
     "SendEmail": SendEmail,
     "Settings": Settings,
@@ -155,7 +156,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "Sales": Sales,
 }
 
 export const pagesConfig = {

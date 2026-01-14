@@ -163,6 +163,28 @@ export default function OfficeLocationPicker({ settings, onSettingsChange, curre
           </div>
         </div>
 
+        {/* IP Address Management */}
+        <div className="space-y-4">
+          <h3 className="font-medium">IP Address Verification (Optional)</h3>
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800 mb-3">
+              Enable IP verification to only allow check-ins from approved IP addresses (PC/Mobile).
+              Employees can still check in from office location via GPS regardless of IP settings.
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="require_ip"
+                checked={settings.require_ip_verification || false}
+                onChange={(e) => onSettingsChange({ ...settings, require_ip_verification: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="require_ip" className="text-sm font-medium text-blue-900">
+                Require IP Verification (In addition to GPS)
+              </Label>
+            </div>
+        </div>
+
         {/* Map Preview */}
         {settings.office_latitude && settings.office_longitude && (
           <div className="space-y-3">

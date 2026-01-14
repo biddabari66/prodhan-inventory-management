@@ -265,54 +265,38 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-            <FolderTree className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Category Management</h2>
-            <p className="text-slate-500 text-sm">
-              {isAdmin ? 'সকল বিভাগের ক্যাটাগরি পরিচালনা করুন' : `${userDepartment === 'boibari' ? 'বইবাড়ি' : 'প্রধান.কম'} এর ক্যাটাগরি পরিচালনা করুন`}
-            </p>
-          </div>
-        </div>
         <Button 
           onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}
-          className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-lg shadow-violet-500/30"
+          className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-sm h-10 px-4 rounded-lg"
         >
           <Plus className="w-4 h-4 mr-2" />
-          ক্যাটাগরি যোগ করুন
+          Add Category
         </Button>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white border-0 shadow-sm rounded-xl">
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search categories..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            {/* Department filter removed - Only Prodhan.com E-commerce */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10 border-slate-200 rounded-lg"
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="product_category" className="gap-2">
+        <TabsList className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+          <TabsTrigger value="product_category" className="gap-2 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">
             <Package className="w-4 h-4" />
             Product Categories
           </TabsTrigger>
-          <TabsTrigger value="book_subject" className="gap-2">
+          <TabsTrigger value="book_subject" className="gap-2 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">
             <BookOpen className="w-4 h-4" />
             Book Subjects
           </TabsTrigger>
@@ -397,7 +381,7 @@ function CategoryGrid({ categories, onEdit, onDelete, getDepartmentBadge, isLoad
       {categories.map((category) => (
         <Card 
           key={category.id} 
-          className={`hover:shadow-md transition-all ${!category.is_active ? 'opacity-60' : ''}`}
+          className={`bg-white border-0 shadow-sm rounded-xl hover:shadow-md transition-all ${!category.is_active ? 'opacity-60' : ''}`}
         >
           <CardContent className="pt-6">
             <div className="flex items-start justify-between mb-3">

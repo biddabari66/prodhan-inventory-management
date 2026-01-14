@@ -252,7 +252,43 @@ function FinanceManagementPage() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-48 h-10 border-slate-200 rounded-lg"
             />
-            <Button variant="outline" className="h-10 bg-white border-slate-200 rounded-lg">
+            <Button 
+              variant="outline" 
+              className="h-10 bg-white border-slate-200 rounded-lg"
+              onClick={async () => {
+                try {
+                  const exportData = payrollData.map(emp => ({
+                    Name: emp.full_name,
+                    Designation: emp.designation || 'Staff',
+                    'Base Salary': emp.baseSalary,
+                    'Present Days': emp.presentDays,
+                    'Late Days': emp.lateDays,
+                    'Absent Days': emp.absentDays,
+                    'Deductions': emp.totalDeductions,
+                    'Net Salary': emp.netSalary
+                  }));
+                  
+                  const headers = Object.keys(exportData[0] || {});
+                  const csvContent = [
+                    headers.join(','),
+                    ...exportData.map(row => 
+                      headers.map(h => `"${row[h]}"`).join(',')
+                    )
+                  ].join('\n');
+                  
+                  const blob = new Blob([csvContent], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `Payroll_${selectedMonth}.csv`;
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  toast.success('Payroll exported!');
+                } catch (error) {
+                  toast.error('Export failed: ' + error.message);
+                }
+              }}
+            >
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>

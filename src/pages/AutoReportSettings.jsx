@@ -11,6 +11,9 @@ import { base44 } from '@/api/base44Client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { withPermission } from '../components/common/PermissionGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SearchableUserSelect from '../components/common/SearchableUserSelect';
+import { useQuery } from '@tanstack/react-query';
+import { User } from '@/entities/User';
 
 function AutoReportSettingsPage() {
   const [scheduledTasks, setScheduledTasks] = useState([]);
@@ -22,6 +25,13 @@ function AutoReportSettingsPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [reportType, setReportType] = useState('daily_sales');
   const [frequency, setFrequency] = useState('daily');
+  const [selectedUserId, setSelectedUserId] = useState('');
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['all-users'],
+    queryFn: () => User.list(),
+    staleTime: 5 * 60 * 1000
+  });
 
   useEffect(() => {
     loadScheduledTasks();
@@ -56,6 +66,25 @@ function AutoReportSettingsPage() {
     }
     setRecipients([...recipients, email]);
     setEmailInput('');
+  };
+
+  const addEmployeeBySelection = () => {
+    if (!selectedUserId) {
+      toast.error('Please select an employee');
+      return;
+    }
+    const user = allUsers.find(u => u.id === selectedUserId);
+    if (!user || !user.email) {
+      toast.error('Employee email not found');
+      return;
+    }
+    if (recipients.includes(user.email)) {
+      toast.error('Employee already added');
+      return;
+    }
+    setRecipients([...recipients, user.email]);
+    setSelectedUserId('');
+    toast.success(`Added ${user.full_name}`);
   };
 
   const removeRecipient = (email) => {
@@ -329,13 +358,37 @@ function AutoReportSettingsPage() {
           {/* Email Recipients */}
           <div>
             <Label className="font-semibold mb-2 block">Email Recipients *</Label>
+            
+            {/* Search Employee */}
+            <div className="flex gap-2 mb-3 p-3 bg-slate-50 rounded-lg border">
+              <div className="flex-1">
+                <Label className="text-xs text-slate-600 mb-1 block">Search Employee</Label>
+                <SearchableUserSelect
+                  users={allUsers}
+                  value={selectedUserId}
+                  onValueChange={setSelectedUserId}
+                  placeholder="Search by name or email..."
+                />
+              </div>
+              <Button 
+                type="button" 
+                onClick={addEmployeeBySelection} 
+                size="sm" 
+                className="bg-green-600 hover:bg-green-700 self-end"
+                disabled={!selectedUserId}
+              >
+                <Plus className="w-4 h-4 mr-1" /> Add Employee
+              </Button>
+            </div>
+
+            {/* Manual Email Entry */}
             <div className="flex gap-2 mb-3">
               <Input
                 type="email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRecipient())}
-                placeholder="admin@example.com"
+                placeholder="Or enter email manually..."
                 className="flex-1"
               />
               <Button type="button" onClick={addRecipient} size="sm" className="bg-blue-600">

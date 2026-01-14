@@ -1583,7 +1583,7 @@ function SalesPage() {
                       </TableCell>
                       <TableCell>
                        <div className="flex flex-col gap-1">
-                         <span className="font-mono font-semibold text-[#D32F2F] text-sm">{order.order_number}</span>
+                         <span className="font-mono font-semibold text-[#111827] text-sm">{order.order_number}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
                              <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
@@ -1675,14 +1675,14 @@ function SalesPage() {
                         <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-1">
-                              {getPaymentBadge(order.payment_status)}
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center">
+                       <DropdownMenu modal={false}>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="outline" size="sm" className="h-8 gap-1">
+                             {getPaymentBadge(order.payment_status)}
+                             <ChevronDown className="w-3 h-3" />
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="center" sideOffset={4}>
                             <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
                               <Clock className="w-4 h-4 mr-2 text-yellow-600" />
                               Mark as Pending
@@ -1699,14 +1699,14 @@ function SalesPage() {
                         </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-1">
-                              {getStatusBadge(order.order_status)}
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center">
+                       <DropdownMenu modal={false}>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="outline" size="sm" className="h-8 gap-1">
+                             {getStatusBadge(order.order_status)}
+                             <ChevronDown className="w-3 h-3" />
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="center" sideOffset={4}>
                             {order.order_status === 'pending' && (
                               <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
                                 <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />

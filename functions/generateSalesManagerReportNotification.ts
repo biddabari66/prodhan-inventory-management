@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { recipient_emails = [], notify_all_employees = false } = body;
+    const { recipient_emails = [], notify_all_employees = true } = body;
 
     // Generate the Sales Manager Report PDF
     const reportResponse = await base44.functions.invoke('generateSalesManagerReport', {});
