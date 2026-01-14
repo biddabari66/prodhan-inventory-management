@@ -17,12 +17,14 @@ import Dashboard from './pages/Dashboard';
 import DocumentCenter from './pages/DocumentCenter';
 import Documentation from './pages/Documentation';
 import EmailNotifications from './pages/EmailNotifications';
+import EmployeeAttendance from './pages/EmployeeAttendance';
 import Employees from './pages/Employees';
 import ExpenseApprovals from './pages/ExpenseApprovals';
 import Expenses from './pages/Expenses';
 import ExportCenter from './pages/ExportCenter';
 import FacebookLeadsWebhook from './pages/FacebookLeadsWebhook';
 import FeludaAnalytics from './pages/FeludaAnalytics';
+import FinanceManagement from './pages/FinanceManagement';
 import FinanceReports from './pages/FinanceReports';
 import FinancialReports from './pages/FinancialReports';
 import FollowUp from './pages/FollowUp';
@@ -73,8 +75,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import EmployeeAttendance from './pages/EmployeeAttendance';
-import FinanceManagement from './pages/FinanceManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -98,12 +98,14 @@ export const PAGES = {
     "DocumentCenter": DocumentCenter,
     "Documentation": Documentation,
     "EmailNotifications": EmailNotifications,
+    "EmployeeAttendance": EmployeeAttendance,
     "Employees": Employees,
     "ExpenseApprovals": ExpenseApprovals,
     "Expenses": Expenses,
     "ExportCenter": ExportCenter,
     "FacebookLeadsWebhook": FacebookLeadsWebhook,
     "FeludaAnalytics": FeludaAnalytics,
+    "FinanceManagement": FinanceManagement,
     "FinanceReports": FinanceReports,
     "FinancialReports": FinancialReports,
     "FollowUp": FollowUp,
@@ -154,8 +156,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "EmployeeAttendance": EmployeeAttendance,
-    "FinanceManagement": FinanceManagement,
 }
 
 export const pagesConfig = {
