@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, AlertTriangle, BookOpen, Package, Trash2, Shield, RefreshCw, Filter, X, Loader2 } from 'lucide-react';
+import { Plus, AlertTriangle, BookOpen, Package, Trash2, Shield, RefreshCw, Filter, X, Loader2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';
