@@ -597,35 +597,37 @@ function SalesPage() {
     staleTime: 5 * 60 * 1000
   });
 
-  // 🚀 3X FASTER: Parallel data loading with aggressive caching
+  // 🚀 ULTRA-FAST: Only load 500 most recent orders initially
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders-sales'],
-    queryFn: () => Order.list('-order_date', 5000),
-    staleTime: 5 * 60 * 1000, // 5 min cache
-    gcTime: 30 * 60 * 1000, // 30 min gc
+    queryFn: () => Order.list('-order_date', 500),
+    staleTime: 10 * 60 * 1000, // 10 min cache
+    gcTime: 60 * 60 * 1000, // 1 hour gc
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
   });
 
-  // 🚀 Lazy load customers only when needed
+  // 🚀 Lazy load customers - only when form opens
   const { data: customers = [] } = useQuery({
     queryKey: ['customers-sales'],
-    queryFn: () => Customer.list('-created_date', 2000),
-    staleTime: 15 * 60 * 1000, // 15 min cache
+    queryFn: () => Customer.list('-created_date', 1000),
+    staleTime: 30 * 60 * 1000, // 30 min cache
     gcTime: 60 * 60 * 1000, // 1 hour gc
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    enabled: isOrderFormOpen, // Only load when form is open
   });
 
-  // 🚀 Inventory with long cache
+  // 🚀 Inventory with very long cache
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-sales'],
-    queryFn: () => Inventory.list('-updated_date', 2000),
-    staleTime: 15 * 60 * 1000, // 15 min cache
+    queryFn: () => Inventory.list('-updated_date', 1000),
+    staleTime: 30 * 60 * 1000, // 30 min cache
     gcTime: 60 * 60 * 1000, // 1 hour gc
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    enabled: isOrderFormOpen, // Only load when form is open
   });
 
   const canViewAllDepartments = useMemo(() => {
@@ -1133,63 +1135,80 @@ function SalesPage() {
     };
   }, [filteredOrders, inventory, dateRange.from]);
 
+  // Premium Pill Badges
   const getStatusBadge = (status) => {
     const config = {
-      pending: { label: 'Pending', class: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: 'Confirmed', class: 'bg-blue-100 text-blue-800' },
-      processing: { label: 'Processing', class: 'bg-indigo-100 text-indigo-800' },
-      packed: { label: 'Packed', class: 'bg-purple-100 text-purple-800' },
-      shipped: { label: 'Shipped', class: 'bg-cyan-100 text-cyan-800' },
-      out_for_delivery: { label: 'Out for Delivery', class: 'bg-orange-100 text-orange-800' },
-      delivered: { label: 'Delivered', class: 'bg-green-100 text-green-800' },
-      cancelled: { label: 'Cancelled', class: 'bg-red-100 text-red-800' },
-      returned: { label: 'Returned', class: 'bg-gray-100 text-gray-800' },
+      pending: { label: 'Pending', class: 'bg-slate-100 text-slate-700 border border-slate-200' },
+      confirmed: { label: 'Confirmed', class: 'bg-white text-[#D32F2F] border-2 border-[#D32F2F]' },
+      processing: { label: 'Processing', class: 'bg-blue-50 text-blue-700 border border-blue-200' },
+      packed: { label: 'Packed', class: 'bg-purple-50 text-purple-700 border border-purple-200' },
+      shipped: { label: 'Shipped', class: 'bg-cyan-50 text-cyan-700 border border-cyan-200' },
+      out_for_delivery: { label: 'Out for Delivery', class: 'bg-orange-50 text-orange-700 border border-orange-200' },
+      delivered: { label: 'Delivered', class: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+      cancelled: { label: 'Cancelled', class: 'bg-red-50 text-red-700 border border-red-200' },
+      returned: { label: 'Returned', class: 'bg-slate-100 text-slate-600 border border-slate-200' },
     };
     const { label, class: className } = config[status] || config.pending;
-    return <Badge className={className}>{label}</Badge>;
+    return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
   };
 
   const getPaymentBadge = (status) => {
     const config = {
-      pending: { label: 'Pending', class: 'bg-yellow-100 text-yellow-800' },
-      partial: { label: 'Partial', class: 'bg-orange-100 text-orange-800' },
-      paid: { label: 'Paid', class: 'bg-green-100 text-green-800' },
-      refunded: { label: 'Refunded', class: 'bg-red-100 text-red-800' },
+      pending: { label: 'Pending', class: 'bg-slate-100 text-slate-600 border border-slate-200' },
+      partial: { label: 'Partial', class: 'bg-amber-50 text-amber-700 border border-amber-200' },
+      paid: { label: 'Paid', class: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+      refunded: { label: 'Refunded', class: 'bg-red-50 text-red-600 border border-red-200' },
     };
     const { label, class: className } = config[status] || config.pending;
-    return <Badge className={className}>{label}</Badge>;
+    return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
   };
 
   if (ordersLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <CardSkeleton count={3} />
-        <TableSkeleton rows={10} columns={8} />
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto animate-pulse">
+            <ShoppingCart className="w-6 h-6 text-red-600" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading sales data...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
+    <div className="min-h-screen bg-[#F8F9FA]">
       <div className="w-full px-6 py-6 space-y-6">
-      {/* Compact Header with Search & Filter */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Sales Management</h1>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+      
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <span>Dashboard</span>
+        <span>/</span>
+        <span className="text-slate-900 font-medium">Sales Management</span>
+      </div>
+
+      {/* Premium Header with Glassmorphism Search */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sales Management</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Track and manage all your sales orders</p>
+        </div>
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          {/* Glassmorphism Search Bar */}
+          <div className="relative flex-1 lg:w-96">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
-              placeholder="Search by order number, customer..."
+              placeholder="Search orders... ⌘K"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-11 h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
             />
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 h-10">
-                <Filter className="w-4 h-4" />
-                Filters
+              <Button variant="outline" className="gap-2 h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50">
+                <Filter className="w-4 h-4 text-slate-600" />
+                <span className="hidden sm:inline text-slate-700">Filters</span>
                 {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
                   <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-600 text-white text-xs">
                     {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
@@ -1331,155 +1350,120 @@ function SalesPage() {
                 setEditingOrder(null);
                 setIsOrderFormOpen(true);
               }}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg px-6 h-10 font-semibold"
+              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Create Sale Order
+              Create Sale
             </Button>
           )}
         </div>
       </div>
 
-      {/* Stats Cards with Today's Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      {/* Premium Minimalist Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Total Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <ShoppingCart className="w-5 h-5 text-emerald-600" />
-                </div>
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Orders</p>
-              <p className="text-3xl font-bold text-emerald-600">{stats.totalOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-emerald-700 font-medium">Today: {stats.todayOrders}</p>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Total Orders</p>
+          </CardContent>
+        </Card>
 
         {/* Total Product Qty */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-indigo-600" />
-                </div>
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <Package className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Product Qty</p>
-              <p className="text-3xl font-bold text-indigo-600">{stats.totalProductQuantity}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-indigo-700 font-medium">Today: {stats.todayProductQty}</p>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalProductQuantity}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Products Sold</p>
+          </CardContent>
+        </Card>
 
         {/* Total Returns */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5 text-red-600" />
-                </div>
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Returns</p>
-              <p className="text-3xl font-bold text-red-600">{stats.totalReturns}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-red-700 font-medium">Today: {stats.todayReturns}</p>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalReturns}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Returns</p>
+          </CardContent>
+        </Card>
 
         {/* Pending Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                </div>
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pending Orders</p>
-              <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-amber-700 font-medium">Today: {stats.todayPending}</p>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pendingOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Pending</p>
+          </CardContent>
+        </Card>
 
         {/* Confirmed Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
-                </div>
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Confirmed Orders</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.confirmedOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-blue-700 font-medium">Today: {stats.todayConfirmed}</p>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.confirmedOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Confirmed</p>
+          </CardContent>
+        </Card>
 
         {/* Shipped Orders */}
-        <div className="space-y-2">
-          <Card className="bg-white border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Truck className="w-5 h-5 text-purple-600" />
-                </div>
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <Truck className="w-5 h-5 text-blue-600" />
               </div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Shipped Orders</p>
-              <p className="text-3xl font-bold text-purple-600">{stats.shippedOrders}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
-            <CardContent className="py-2 px-3">
-              <p className="text-xs text-purple-700 font-medium">Today: {stats.todayShipped}</p>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.shippedOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Shipped</p>
+          </CardContent>
+        </Card>
       </div>
 
 
 
-      {/* Bulk Actions Bar */}
+      {/* Premium Bulk Actions Bar */}
       {selectedOrderIds.length > 0 && (
-        <Card className="bg-red-50 border-red-300">
+        <Card className="bg-white border-0 shadow-lg rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Badge className="bg-red-600 text-white">
-                  {selectedOrderIds.length} order(s) selected
+                <Badge className="bg-[#D32F2F] text-white rounded-full px-4 py-1">
+                  {selectedOrderIds.length} selected
                 </Badge>
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm"
                   onClick={() => setSelectedOrderIds([])}
+                  className="text-slate-600 hover:text-slate-900 rounded-lg"
                 >
-                  Clear Selection
+                  Clear
                 </Button>
               </div>
               <div className="flex gap-2">
@@ -1531,43 +1515,52 @@ function SalesPage() {
         </Card>
       )}
 
-      {/* Orders Table */}
-      <Card className="bg-white border border-slate-200 shadow-sm">
-        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-          <CardTitle className="flex items-center justify-between text-xl font-semibold text-slate-900">
-            <span>Sales Orders ({filteredOrders.length}) {displayedOrders.length < filteredOrders.length && <span className="text-sm font-normal text-slate-500">showing {displayedOrders.length}</span>}</span>
+      {/* Premium Orders Table */}
+      <Card className="bg-white border-0 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="border-b border-slate-100 bg-white px-6 py-4">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-slate-900">Sales Orders</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
+                {filteredOrders.length}
+              </Badge>
+              {displayedOrders.length < filteredOrders.length && (
+                <span className="text-sm text-slate-400">showing {displayedOrders.length}</span>
+              )}
+            </div>
             {filteredOrders.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={toggleSelectAll}
-                className="text-red-600 hover:text-red-700"
+                className="text-[#D32F2F] hover:text-[#B71C1C] hover:bg-red-50 rounded-lg"
               >
                 {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
               </Button>
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
+                <TableRow className="bg-slate-50/50 border-b border-slate-100">
+                  <TableHead className="w-12 pl-6">
                     <Checkbox
                       checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
                       onCheckedChange={toggleSelectAll}
+                      className="border-slate-300"
                     />
                   </TableHead>
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Item Names</TableHead>
-                  <TableHead className="text-center">Quantity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Options</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Order #</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Items</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-center">Qty</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">Amount</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1580,16 +1573,17 @@ function SalesPage() {
                   </TableRow>
                 ) : (
                   displayedOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-gray-50">
-                      <TableCell>
+                    <TableRow key={order.id} className="hover:bg-slate-50/50 border-b border-slate-100 transition-colors h-16">
+                      <TableCell className="pl-6">
                         <Checkbox
                           checked={selectedOrderIds.includes(order.id)}
                           onCheckedChange={() => toggleOrderSelection(order.id)}
+                          className="border-slate-300"
                         />
                       </TableCell>
                       <TableCell>
                        <div className="flex flex-col gap-1">
-                         <span className="font-mono font-semibold text-red-600">{order.order_number}</span>
+                         <span className="font-mono font-semibold text-[#D32F2F] text-sm">{order.order_number}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
                              <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
@@ -1677,8 +1671,8 @@ function SalesPage() {
                           <span className="text-slate-500">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        BDT {order.total_amount?.toLocaleString()}
+                      <TableCell className="text-right">
+                        <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
