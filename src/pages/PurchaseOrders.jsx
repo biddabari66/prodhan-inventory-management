@@ -22,7 +22,7 @@ import {
 import SearchableProductSelect from '../components/common/SearchableProductSelect';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
 
 // Purchase Order Form Component
@@ -884,17 +884,24 @@ function PurchaseOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <span>Inventory</span>
+        <span>/</span>
+        <span className="text-slate-900 font-medium">Purchase Orders</span>
+      </div>
+
       {/* Premium Header Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
-        <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <Package className="w-8 h-8 text-white" />
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <Package className="w-6 h-6 text-[#D32F2F]" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Purchase Management</h1>
-            <p className="text-slate-600 mt-1 text-base">সাপ্লায়ার ম্যানেজমেন্ট ও ইনভেন্টরি সংগ্রহ ট্র্যাকিং</p>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Purchase Management</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">সাপ্লায়ার ম্যানেজমেন্ট ও ইনভেন্টরি সংগ্রহ ট্র্যাকিং</p>
           </div>
         </div>
         {canCreate && (
@@ -903,65 +910,61 @@ function PurchaseOrdersPage() {
               setEditingOrder(null);
               setIsFormOpen(true);
             }}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/30 px-6 py-6 text-base font-semibold"
+            className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-sm h-10 px-4 rounded-lg"
           >
-            <Plus className="w-5 h-5 mr-2" />
+            <Plus className="w-4 h-4 mr-2" />
             Create Purchase Order
           </Button>
         )}
       </div>
 
-      {/* Enhanced Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white border-l-4 border-l-violet-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-6 pb-6">
+      {/* Stats Grid - Premium Design */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-violet-600" />
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <Badge className="bg-violet-100 text-violet-800 font-semibold">Total</Badge>
             </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Purchase Orders</p>
-            <p className="text-4xl font-bold text-violet-600">{stats.totalOrders}</p>
+            <p className="text-3xl font-bold text-[#111827]">{stats.totalOrders}</p>
+            <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Orders</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-l-4 border-l-emerald-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-6 pb-6">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-emerald-600" />
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <Badge className="bg-emerald-100 text-emerald-800 font-semibold">Value</Badge>
             </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Investment</p>
-            <p className="text-4xl font-bold text-emerald-600">৳{stats.totalValue.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-[#111827]">৳{stats.totalValue.toLocaleString()}</p>
+            <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Investment</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-l-4 border-l-amber-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-6 pb-6">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-amber-600" />
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <Badge className="bg-amber-100 text-amber-800 font-semibold">Pending</Badge>
             </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Awaiting Action</p>
-            <p className="text-4xl font-bold text-amber-600">{stats.pendingOrders}</p>
+            <p className="text-3xl font-bold text-amber-600">{stats.pendingOrders}</p>
+            <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Pending</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-all">
-          <CardContent className="pt-6 pb-6">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-blue-600" />
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-[#D32F2F]" />
               </div>
-              <Badge className="bg-blue-100 text-blue-800 font-semibold">Complete</Badge>
             </div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Received</p>
-            <p className="text-4xl font-bold text-blue-600">{stats.receivedOrders}</p>
+            <p className="text-3xl font-bold text-emerald-600">{stats.receivedOrders}</p>
+            <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Received</p>
           </CardContent>
         </Card>
       </div>
@@ -1097,13 +1100,13 @@ function PurchaseOrdersPage() {
                       </TableCell>
                       <TableCell>{getStatusBadge(order.order_status)}</TableCell>
                       <TableCell className="text-center">
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" sideOffset={4}>
                             {canEdit && (
                               <DropdownMenuItem onClick={() => handleEdit(order)}>
                                 <Edit className="w-4 h-4 mr-2" />
