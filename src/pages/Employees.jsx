@@ -36,16 +36,9 @@ import EmployeeForm from "../components/employees/EmployeeForm";
 import EmployeeImportExport from "../components/employees/EmployeeImportExport";
 import { toast } from "sonner";
 
+// Only Prodhan.com E-commerce department is active in this ERP
 const DEPARTMENTS = [
-  { value: 'biddabari_publication', label: 'Biddabari Publication' },
-  { value: 'it', label: 'IT' },
-  { value: 'boibari', label: 'Boibari' },
-  { value: 'admission', label: 'Admission' },
-  { value: 'service', label: 'Service' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'prodhan_com_e_commerce', label: 'Prodhan.com (E-commerce)' },
-  { value: 'sales', label: 'Sales' },
-  { value: 'r_and_d', label: 'R & D' }
+  { value: 'prodhan_com_e_commerce', label: 'Prodhan.com (E-commerce)' }
 ];
 
 export default function Employees() {
