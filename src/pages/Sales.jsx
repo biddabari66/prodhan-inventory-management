@@ -608,26 +608,26 @@ function SalesPage() {
     refetchOnReconnect: false,
   });
 
-  // 🚀 Lazy load customers - only when form opens
+  // 🚀 Prefetch customers and inventory on mount for faster dropdown loading
   const { data: customers = [] } = useQuery({
     queryKey: ['customers-sales'],
-    queryFn: () => Customer.list('-created_date', 1000),
-    staleTime: 30 * 60 * 1000, // 30 min cache
-    gcTime: 60 * 60 * 1000, // 1 hour gc
+    queryFn: () => Customer.list('-created_date', 500),
+    staleTime: 60 * 60 * 1000, // 1 hour cache - customers don't change often
+    gcTime: 2 * 60 * 60 * 1000, // 2 hour gc
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    enabled: isOrderFormOpen, // Only load when form is open
+    refetchOnReconnect: false,
   });
 
-  // 🚀 Inventory with very long cache
+  // 🚀 Inventory prefetched on mount with very long cache
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-sales'],
-    queryFn: () => Inventory.list('-updated_date', 1000),
-    staleTime: 30 * 60 * 1000, // 30 min cache
-    gcTime: 60 * 60 * 1000, // 1 hour gc
+    queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500),
+    staleTime: 60 * 60 * 1000, // 1 hour cache
+    gcTime: 2 * 60 * 60 * 1000, // 2 hour gc
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    enabled: isOrderFormOpen, // Only load when form is open
+    refetchOnReconnect: false,
   });
 
   const canViewAllDepartments = useMemo(() => {
