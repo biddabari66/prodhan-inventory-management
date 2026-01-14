@@ -297,52 +297,72 @@ function InventoryOverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
-      </div>);
-
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto">
+            <Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading inventory...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F8F9FA]">
       <div className="pt-3 pb-3 pl-1 w-full space-y-6">
-        {/* Compact Header */}
+        
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Dashboard</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">Inventory Overview</span>
+        </div>
+
+        {/* Premium Header */}
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Inventory Overview</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">Manage all your products and stock</p>
           </div>
           {canCreate && (
             <Button
-              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/30 px-6 py-6 text-base font-semibold"
+              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
               onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
-
               <Plus className="w-5 h-5 mr-2" /> Add New Item
             </Button>
           )}
         </div>
 
-        {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Card className="bg-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Total Products</p>
-              <p className="text-3xl font-bold text-blue-600">{departmentStats.total}</p>
+        {/* Premium Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-[#D32F2F]" />
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-[#111827]">{departmentStats.total}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Products</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-l-4 border-l-red-500 border-t border-r border-b border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Low Stock Alerts</p>
-              <p className="text-3xl font-bold text-red-600">{departmentStats.low_stock}</p>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-[#D32F2F]" />
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-[#111827]">{departmentStats.low_stock}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Low Stock Alerts</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Search & Category Filter Section */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
           <CardContent className="p-5 space-y-4">
             <SmartInventorySearch
               value={searchTerm}
@@ -406,11 +426,11 @@ function InventoryOverviewPage() {
 
         {/* Low Stock Alert Banner */}
         {lowStockItems.length > 0 &&
-        <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-red-900 flex items-center gap-3 text-lg">
-                <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-white" />
+        <Card className="bg-white border border-red-200 shadow-sm rounded-xl">
+            <CardHeader className="pb-3 border-b border-red-100">
+              <CardTitle className="text-[#111827] flex items-center gap-3 text-base font-semibold">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-[#D32F2F]" />
                 </div>
                 Low Stock Alerts — {lowStockItems.length} Items Require Attention
               </CardTitle>
@@ -433,12 +453,15 @@ function InventoryOverviewPage() {
         }
 
         {/* Main Inventory Table */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-            <CardTitle className="text-xl font-semibold text-slate-900">
-              All Inventory Items ({filteredInventory.length})
+        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
+          <CardHeader className="border-b border-slate-100 px-6 py-4">
+            <CardTitle className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-[#111827]">All Inventory Items</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
+                {filteredInventory.length}
+              </Badge>
               {displayedInventory.length < filteredInventory.length && (
-                <span className="text-sm font-normal text-slate-500 ml-2">showing {displayedInventory.length}</span>
+                <span className="text-sm text-slate-400">showing {displayedInventory.length}</span>
               )}
             </CardTitle>
           </CardHeader>
@@ -446,16 +469,16 @@ function InventoryOverviewPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50 border-b border-slate-200">
-                    <TableHead className="font-semibold text-slate-700">Item Name</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Category</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Stock Level</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Returns</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Damages</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Price</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Today's Sales</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Status</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Actions</TableHead>
+                  <TableRow className="bg-slate-50/50 border-b border-slate-100">
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-6">Item Name</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Category</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-center">Stock Level</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Returns</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Damages</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Price</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-center">Today's Sales</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-center">Status</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-center pr-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -471,9 +494,9 @@ function InventoryOverviewPage() {
                   displayedInventory.map((item, idx) =>
                   <TableRow
                     key={item.id}
-                    className="hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer">
+                    className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 h-16">
 
-                        <TableCell className="py-4">
+                        <TableCell className="py-4 pl-6">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                         item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'}`
@@ -494,7 +517,7 @@ function InventoryOverviewPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-300">
+                          <Badge className="bg-slate-100 text-slate-700 border border-slate-200 rounded-full px-3 text-xs font-medium">
                             {item.category}
                           </Badge>
                         </TableCell>
@@ -516,29 +539,23 @@ function InventoryOverviewPage() {
                           <span className="font-semibold text-slate-900">৳{item.selling_price?.toLocaleString()}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge className={todaySalesData[item.id] > 0 ? 'bg-green-100 text-green-800 font-semibold' : 'bg-slate-100 text-slate-600'}>
+                          <Badge className={`${todaySalesData[item.id] > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'} rounded-full px-3 text-xs font-medium`}>
                             {todaySalesData[item.id] || 0} units
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge
-                        variant={item.current_stock < item.minimum_stock ? 'destructive' : 'default'}
-                        className={item.current_stock < item.minimum_stock ?
-                        'bg-red-100 text-red-800 border-red-300' :
-                        'bg-green-100 text-green-800 border-green-300'
-                        }>
-
+                          <Badge className={`${item.current_stock < item.minimum_stock ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} rounded-full px-3 text-xs font-medium`}>
                             {item.current_stock < item.minimum_stock ? 'Low Stock' : 'In Stock'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center pr-6">
                           <div className="flex gap-2 justify-center">
                             {canEdit && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => {e.stopPropagation();handleEdit(item);}}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                className="text-slate-600 hover:text-[#111827] hover:bg-slate-50 rounded-lg">
                                 Edit
                               </Button>
                             )}
@@ -547,7 +564,7 @@ function InventoryOverviewPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => {e.stopPropagation();handleDeleteClick(item);}}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                className="text-[#D32F2F] hover:text-[#B71C1C] hover:bg-red-50 rounded-lg">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             )}

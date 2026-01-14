@@ -73,9 +73,11 @@ function InventoryReturnsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="text-center">
-          <RefreshCw className="w-10 h-10 animate-spin text-slate-700 mx-auto mb-3" />
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto">
+            <Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" />
+          </div>
           <p className="text-slate-600 font-medium">Loading...</p>
         </div>
       </div>
@@ -83,30 +85,35 @@ function InventoryReturnsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto p-4 lg:p-6 space-y-5">
         
-        {/* Professional Header - Deep Navy Theme */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-              <PackageX className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Returns & Damages</h1>
-              <p className="text-slate-500 text-sm mt-0.5">Complete tracking & management</p>
-            </div>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Inventory</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">Returns & Damages</span>
+        </div>
+
+        {/* Professional Header */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <PackageX className="w-6 h-6 text-[#D32F2F]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Returns & Damages</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">Complete tracking & management</p>
           </div>
         </div>
 
-        {/* Stats Cards - Fixed with Real Data */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Returns Card */}
           <Card 
-            className={`cursor-pointer transition-all duration-200 hover:shadow-lg border-2 ${
+            className={`cursor-pointer transition-all duration-200 hover:shadow-md border-0 shadow-sm rounded-xl ${
               activeView === 'returns' 
-                ? 'border-red-600 bg-red-50 shadow-md' 
-                : 'border-slate-200 hover:border-red-400'
+                ? 'ring-2 ring-[#D32F2F] bg-red-50' 
+                : 'bg-white'
             }`}
             onClick={() => setActiveView('returns')}
           >
@@ -146,10 +153,10 @@ function InventoryReturnsPage() {
 
           {/* Damages Card */}
           <Card 
-            className={`cursor-pointer transition-all duration-200 hover:shadow-lg border-2 ${
+            className={`cursor-pointer transition-all duration-200 hover:shadow-md border-0 shadow-sm rounded-xl ${
               activeView === 'damages' 
-                ? 'border-red-600 bg-red-50 shadow-md' 
-                : 'border-slate-200 hover:border-red-300'
+                ? 'ring-2 ring-[#D32F2F] bg-red-50' 
+                : 'bg-white'
             }`}
             onClick={() => setActiveView('damages')}
           >
@@ -189,16 +196,16 @@ function InventoryReturnsPage() {
         </div>
 
         {/* Main Content Area */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border-0 shadow-sm overflow-hidden">
           {activeView === 'dashboard' ? (
             <div className="p-12 text-center">
-              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-5">
-                <Package className="w-10 h-10 text-slate-400" />
+              <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-5">
+                <Package className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">
+              <h3 className="text-lg font-semibold text-[#111827] mb-2">
                 Select a Category Above
               </h3>
-              <p className="text-slate-500 max-w-md mx-auto">
+              <p className="text-sm text-[#6B7280] max-w-md mx-auto">
                 Click on "Product Returns" or "Damaged Products" to view and manage records
               </p>
             </div>
@@ -208,7 +215,7 @@ function InventoryReturnsPage() {
                 <Button 
                   variant="ghost" 
                   onClick={() => setActiveView('dashboard')}
-                  className="gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  className="gap-2 text-slate-600 hover:text-[#111827] hover:bg-slate-50 rounded-lg"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to Overview

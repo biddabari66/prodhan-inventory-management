@@ -159,33 +159,41 @@ function CustomerManagementPage() {
   // Legacy import removed - using DynamicCSVImport component instead
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/20">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="max-w-7xl mx-auto p-8 space-y-6">
+        
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Dashboard</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">Customer Management</span>
+        </div>
+
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Users className="w-8 h-8 text-white" />
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+              <Users className="w-6 h-6 text-[#D32F2F]" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Customer Management</h1>
-              <p className="text-slate-600 mt-1 text-base">Manage customers, track spending, and analyze behavior</p>
+              <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Customer Management</h1>
+              <p className="text-sm text-[#6B7280] mt-0.5">Manage customers, track spending, and analyze behavior</p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportCustomers}>
+            <Button variant="outline" onClick={handleExportCustomers} className="h-10 bg-white border-slate-200 rounded-lg">
               <Download className="w-4 h-4 mr-2" />Export
             </Button>
-            <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)}>
+            <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)} className="h-10 bg-white border-slate-200 rounded-lg">
               <Upload className="w-4 h-4 mr-2" />Import
             </Button>
             {canCreate && (
               <Button 
                 onClick={() => setIsAddCustomerOpen(true)}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 h-10 rounded-xl"
               >
                 <Plus className="w-5 h-5 mr-2" />
-                Add New Customer
+                Add Customer
               </Button>
             )}
           </div>
@@ -193,8 +201,8 @@ function CustomerManagementPage() {
 
         {/* Main Tabs */}
         <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-14 p-1 bg-slate-100 rounded-xl mb-6">
-            <TabsTrigger value="customers" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+          <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <TabsTrigger value="customers" className="gap-2 h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white font-medium">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Customers</span>
             </TabsTrigger>
@@ -217,61 +225,61 @@ function CustomerManagementPage() {
           </TabsContent>
 
           <TabsContent value="customers">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Customers</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
+        {/* Stats Grid - Minimalist White */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#D32F2F]" />
                 </div>
-                <Users className="w-10 h-10 text-blue-500 opacity-20" />
               </div>
+              <p className="text-3xl font-bold text-[#111827]">{stats.total}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Customers</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">VIP Customers</p>
-                  <p className="text-3xl font-bold text-amber-600">{stats.vip}</p>
-                  <p className="text-xs text-slate-500 mt-1">৳50K+ spent</p>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-[#D32F2F]" />
                 </div>
-                <TrendingUp className="w-10 h-10 text-amber-500 opacity-20" />
               </div>
+              <p className="text-3xl font-bold text-[#111827]">{stats.vip}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">VIP Customers</p>
+              <p className="text-xs text-slate-400 mt-0.5">৳50K+ spent</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Regular Customers</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.regular}</p>
-                  <p className="text-xs text-slate-500 mt-1">৳10K-50K spent</p>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-[#D32F2F]" />
                 </div>
-                <Package className="w-10 h-10 text-green-500 opacity-20" />
               </div>
+              <p className="text-3xl font-bold text-[#111827]">{stats.regular}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Regular Customers</p>
+              <p className="text-xs text-slate-400 mt-0.5">৳10K-50K spent</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-l-4 border-l-violet-500 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Revenue</p>
-                  <p className="text-3xl font-bold text-violet-600">৳{(stats.totalRevenue / 1000).toFixed(1)}K</p>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-[#D32F2F]" />
                 </div>
-                <DollarSign className="w-10 h-10 text-violet-500 opacity-20" />
               </div>
+              <p className="text-3xl font-bold text-[#111827]">৳{(stats.totalRevenue / 1000).toFixed(1)}K</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Revenue</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Search & Filters */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
           <CardContent className="p-5 space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
@@ -327,22 +335,27 @@ function CustomerManagementPage() {
         </Card>
 
         {/* Customers Table */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-            <CardTitle className="text-xl font-semibold text-slate-900">All Customers ({filteredCustomers.length})</CardTitle>
+        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
+          <CardHeader className="border-b border-slate-100 px-6 py-4">
+            <CardTitle className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-[#111827]">All Customers</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
+                {filteredCustomers.length}
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">Customer</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Contact</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Type</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Total Orders</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Total Spent</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Segment</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Actions</TableHead>
+                  <TableRow className="bg-slate-50/50 border-b border-slate-100">
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-6">Customer</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Contact</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Type</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Total Orders</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Total Spent</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Segment</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-center pr-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -361,8 +374,8 @@ function CustomerManagementPage() {
                                      customer.total_orders <= 2 ? 'New' : 'Standard';
                       
                       return (
-                        <TableRow key={customer.id} className="hover:bg-slate-50 transition-colors">
-                          <TableCell>
+                        <TableRow key={customer.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 h-16">
+                          <TableCell className="pl-6">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
                                 {customer.customer_name.charAt(0).toUpperCase()}

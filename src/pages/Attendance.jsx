@@ -657,17 +657,25 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="max-w-7xl mx-auto p-8 space-y-6">
+      
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <span>Dashboard</span>
+        <span>/</span>
+        <span className="text-slate-900 font-medium">Attendance System</span>
+      </div>
+
       {/* Premium Header Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200">
-        <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/30">
-            <Clock className="w-8 h-8 text-white" />
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <Clock className="w-6 h-6 text-[#D32F2F]" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Attendance System</h1>
-            <p className="text-slate-600 mt-1 text-base">🇧🇩 Bangladesh timezone-verified attendance tracking with GPS verification</p>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Attendance System</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">🇧🇩 Bangladesh timezone-verified attendance tracking with GPS verification</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -681,7 +689,7 @@ export default function AttendancePage() {
             size="sm" 
             onClick={handleRefreshAttendance}
             disabled={isDataLoading}
-            className="border-slate-300 hover:border-blue-500 hover:bg-blue-50 min-w-[48px] min-h-[48px] rounded-xl"
+            className="bg-white border-slate-200 hover:bg-slate-50 h-10 rounded-lg"
           >
             <RefreshCw className={`w-4 h-4 ${isDataLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -709,13 +717,12 @@ export default function AttendancePage() {
         </Card>
       )}
 
-      <Tabs defaultValue="checkinout" className="space-y-4 sm:space-y-6">
-        <TabsList className={`grid w-full ${isAdmin() ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'} text-xs sm:text-sm`}>
-          <TabsTrigger value="checkinout" className="px-2 py-2 sm:px-4 sm:py-3">Check In/Out</TabsTrigger>
-          <TabsTrigger value="analytics" className="px-2 py-2 sm:px-4 sm:py-3">Analytics</TabsTrigger>
-          <TabsTrigger value="manual" className="px-2 py-2 sm:px-4 sm:py-3">Manual Entry</TabsTrigger>
-          {/* Only show Settings tab for admins */}
-          {isAdmin() && <TabsTrigger value="settings" className="px-2 py-2 sm:px-4 sm:py-3">Settings</TabsTrigger>}
+      <Tabs defaultValue="checkinout" className="space-y-6">
+        <TabsList className={`grid w-full ${isAdmin() ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'} h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm`}>
+          <TabsTrigger value="checkinout" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Check In/Out</TabsTrigger>
+          <TabsTrigger value="analytics" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Analytics</TabsTrigger>
+          <TabsTrigger value="manual" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Manual Entry</TabsTrigger>
+          {isAdmin() && <TabsTrigger value="settings" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Settings</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="checkinout" className="space-y-6">
@@ -768,7 +775,7 @@ export default function AttendancePage() {
                   <Button
                     onClick={() => submitAttendance('check_in')}
                     disabled={isSubmitting || !!todayAttendance?.check_in_time}
-                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-500/30 w-full h-16 text-lg font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isSubmitting ? (
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -781,7 +788,7 @@ export default function AttendancePage() {
                   <Button
                     onClick={() => submitAttendance('check_out')}
                     disabled={isSubmitting || !todayAttendance?.check_in_time || !!todayAttendance?.check_out_time}
-                    className="bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-300 hover:border-red-500 w-full h-16 text-lg font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-[#D32F2F] w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isSubmitting ? (
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -1001,7 +1008,7 @@ export default function AttendancePage() {
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button onClick={saveAttendanceSettings} className="flex-1 bg-red-600 hover:bg-red-700 h-12 text-base font-semibold">
+                  <Button onClick={saveAttendanceSettings} className="flex-1 bg-[#D32F2F] hover:bg-[#B71C1C] h-12 text-base font-semibold rounded-lg shadow-sm">
                     <Shield className="w-4 h-4 mr-2" />
                     Save Settings (Admin)
                   </Button>

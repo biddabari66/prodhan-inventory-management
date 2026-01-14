@@ -125,18 +125,41 @@ function ProductAnalyticsDashboard() {
 
   if (inventoryLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-10 h-10 animate-spin text-violet-600" />
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto">
+            <Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading analytics...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F8F9FA]">
       <div className="w-full p-6 space-y-6">
 
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Inventory</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">Product Analytics</span>
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <BarChart3 className="w-6 h-6 text-[#D32F2F]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Product Analytics</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">Deep-dive analytics for inventory performance</p>
+          </div>
+        </div>
+
         {/* Filters Row */}
-        <Card className="bg-white border border-slate-200">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
@@ -165,9 +188,9 @@ function ProductAnalyticsDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Product Selection */}
-          <Card className="bg-white border border-slate-200">
-            <CardHeader className="pb-2 border-b border-slate-100">
-              <CardTitle className="text-sm font-semibold text-slate-800 flex items-center justify-between">
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardHeader className="pb-3 border-b border-slate-100 px-4 pt-4">
+              <CardTitle className="text-sm font-semibold text-[#111827] flex items-center justify-between">
                 <span>Select Products</span>
                 <Badge variant="outline">{selectedProductIds.length} selected</Badge>
               </CardTitle>
@@ -306,9 +329,9 @@ function ProductAnalyticsDashboard() {
 
                 {/* Product Details */}
                 {safeAnalyticsData.map((metric, index) => (
-                  <Card key={metric.product_id} className="bg-white border border-slate-200 border-l-4" style={{ borderLeftColor: COLORS[index % COLORS.length] }}>
-                    <CardHeader className="pb-2 border-b border-slate-100">
-                      <CardTitle className="text-base font-semibold text-slate-800 flex items-center justify-between">
+                  <Card key={metric.product_id} className="bg-white border-0 shadow-sm rounded-xl">
+                    <CardHeader className="pb-3 border-b border-slate-100 px-5 pt-5">
+                      <CardTitle className="text-sm font-semibold text-[#111827] flex items-center justify-between">
                         <span>{metric.product_name}</span>
                         <Badge className={metric.department === 'boibari' ? 'bg-cyan-100 text-cyan-800' : 'bg-purple-100 text-purple-800'}>
                           {metric.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan'}

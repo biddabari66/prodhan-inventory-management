@@ -224,17 +224,25 @@ function FinanceManagementPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-4 lg:p-6">
-      {/* Header - Deep Navy Theme */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="max-w-7xl mx-auto space-y-6 p-4 lg:p-6">
+        
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Dashboard</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">Finance Management</span>
+        </div>
+
+        {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-              <DollarSign className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-[#D32F2F]" />
             </div>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Finance Management</h1>
-              <p className="text-slate-500 text-sm">Payroll, Profit & Loss, ROI Analysis</p>
+              <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Finance Management</h1>
+              <p className="text-sm text-[#6B7280] mt-0.5">Payroll, Profit & Loss, ROI Analysis</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -242,92 +250,91 @@ function FinanceManagementPage() {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-48 border-slate-300"
+              className="w-48 h-10 border-slate-200 rounded-lg"
             />
-            <Button variant="outline" className="border-slate-300">
+            <Button variant="outline" className="h-10 bg-white border-slate-200 rounded-lg">
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Summary Cards - Clean Design */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="bg-white border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-green-600" />
+        {/* Summary Cards - Minimalist White */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-[#D32F2F]" />
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase">Revenue</span>
-            </div>
-            <p className="text-2xl font-bold text-slate-900">৳{(manualPL.revenue || 0).toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <TrendingDown className="w-4 h-4 text-red-600" />
+              <p className="text-3xl font-bold text-[#111827]">৳{(manualPL.revenue || 0).toLocaleString()}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Revenue</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <TrendingDown className="w-5 h-5 text-[#D32F2F]" />
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase">Expenses</span>
-            </div>
-            <p className="text-2xl font-bold text-slate-900">৳{plResult.totalExpenses.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Users className="w-4 h-4 text-blue-600" />
+              <p className="text-3xl font-bold text-[#111827]">৳{plResult.totalExpenses.toLocaleString()}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Expenses</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#D32F2F]" />
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase">Payroll</span>
-            </div>
-            <p className="text-2xl font-bold text-slate-900">৳{totalPayroll.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className={`bg-white border-slate-200 hover:shadow-md transition-shadow ${plResult.netProfit >= 0 ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`w-8 h-8 rounded-lg ${plResult.netProfit >= 0 ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center`}>
-                <Calculator className={`w-4 h-4 ${plResult.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <p className="text-3xl font-bold text-[#111827]">৳{totalPayroll.toLocaleString()}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Payroll</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Calculator className="w-5 h-5 text-[#D32F2F]" />
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase">Net Profit</span>
-            </div>
-            <p className={`text-2xl font-bold ${plResult.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ৳{plResult.netProfit.toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Target className="w-4 h-4 text-purple-600" />
+              <p className={`text-3xl font-bold ${plResult.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                ৳{plResult.netProfit.toLocaleString()}
+              </p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Net Profit</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-[#D32F2F]" />
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase">Margin</span>
-            </div>
-            <p className="text-2xl font-bold text-slate-900">{plResult.profitMargin.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-3xl font-bold text-[#111827]">{plResult.profitMargin.toFixed(1)}%</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Margin</p>
+            </CardContent>
+          </Card>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-red-50 p-1 rounded-xl border border-red-200">
-          <TabsTrigger value="payroll" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
+        <TabsList className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+          <TabsTrigger value="payroll" className="gap-2 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">
             <Users className="w-4 h-4" />
             Payroll
           </TabsTrigger>
-          <TabsTrigger value="profitloss" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="profitloss" className="gap-2 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">
             <TrendingUp className="w-4 h-4" />
             Profit & Loss
           </TabsTrigger>
-          <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">
             <Target className="w-4 h-4" />
             ROI Calculator
           </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="settings" className="gap-2 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">
             <Settings className="w-4 h-4" />
             Settings
           </TabsTrigger>
@@ -335,8 +342,8 @@ function FinanceManagementPage() {
 
         {/* Payroll Tab */}
         <TabsContent value="payroll" className="space-y-6">
-          <Card className="border-slate-200">
-            <CardHeader className="bg-slate-50 border-b border-slate-200">
+          <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardHeader className="border-b border-slate-100 px-5 py-4">
               <CardTitle className="flex items-center gap-2 text-slate-900">
                 <Users className="w-5 h-5 text-slate-700" />
                 Employee Payroll - {format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy')}
@@ -882,7 +889,7 @@ function FinanceManagementPage() {
                 </div>
               </div>
               
-              <Button className="bg-red-600 hover:bg-red-700 text-white">
+              <Button className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-lg shadow-sm">
                 <Save className="w-4 h-4 mr-2" />
                 Save Settings
               </Button>

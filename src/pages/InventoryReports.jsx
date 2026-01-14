@@ -138,11 +138,29 @@ function InventoryReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F8F9FA]">
       <div className="w-full p-6 space-y-6">
 
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Inventory</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">Reports</span>
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <FileText className="w-6 h-6 text-[#D32F2F]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Inventory Reports</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">Generate comprehensive inventory reports</p>
+          </div>
+        </div>
+
         {/* Filters */}
-        <Card className="bg-white border border-slate-200">
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -186,9 +204,9 @@ function InventoryReportsPage() {
         </Card>
 
         {/* Stock Reports */}
-        <Card className="bg-white border border-slate-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-800">Stock Reports</CardTitle>
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardHeader className="border-b border-slate-100 pb-3 px-5 pt-5">
+            <CardTitle className="text-sm font-semibold text-[#111827]">Stock Reports</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -221,9 +239,9 @@ function InventoryReportsPage() {
         </Card>
 
         {/* Sales & Loss Reports */}
-        <Card className="bg-white border border-slate-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-800">Sales & Loss Reports</CardTitle>
+        <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <CardHeader className="border-b border-slate-100 pb-3 px-5 pt-5">
+            <CardTitle className="text-sm font-semibold text-[#111827]">Sales & Loss Reports</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -264,10 +282,10 @@ function InventoryReportsPage() {
             </Card>
 
             {/* Enhanced Reports - NEW */}
-            <Card className="premium-card border-2 border-violet-300">
-            <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-violet-600" />
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <CardHeader className="border-b border-slate-100 px-5 py-4">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+              <BarChart3 className="w-5 h-5 text-[#D32F2F]" />
               Advanced Analytics Reports
             </CardTitle>
             </CardHeader>
