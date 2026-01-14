@@ -19,13 +19,18 @@ export default function SearchableCustomerSelect({
 
   const filteredCustomers = useMemo(() => {
     if (!customers || customers.length === 0) return [];
-    if (!searchQuery) return customers.slice(0, 100);
+    // Fewer items initially for faster dropdown
+    if (!searchQuery) return customers.slice(0, 30);
     const query = searchQuery.toLowerCase();
+    // Exact phone match first (common use case)
+    const exactPhone = customers.find(c => c.customer_phone === query);
+    if (exactPhone) return [exactPhone];
+    // Regular search - limit to 50
     return customers.filter(customer => 
       customer.customer_name?.toLowerCase().includes(query) ||
       customer.customer_phone?.includes(query) ||
       customer.customer_email?.toLowerCase().includes(query)
-    ).slice(0, 100);
+    ).slice(0, 50);
   }, [customers, searchQuery]);
 
   // Close dropdown when clicking outside
