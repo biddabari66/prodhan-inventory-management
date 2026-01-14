@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Inventory } from '@/entities/Inventory';
 import { User } from '@/entities/User';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, RefreshCw, Loader2 } from 'lucide-react';
+import { Brain, Loader2 } from 'lucide-react';
 import EnhancedAIInsights from '../components/inventory/EnhancedAIInsights';
 import { withPermission } from '../components/common/PermissionGuard';
 import { CacheManager } from '../components/common/PerformanceOptimizer';
