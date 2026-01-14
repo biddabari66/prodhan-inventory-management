@@ -1227,8 +1227,9 @@ function SalesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        setDateRange({ from: today, to: today });
+                        // Use Bangladesh timezone (Asia/Dhaka) for today
+                        const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+                        setDateRange({ from: todayBDT, to: todayBDT });
                       }}
                       className="text-sm"
                     >
@@ -1238,10 +1239,12 @@ function SalesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const yesterday = new Date();
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yesterdayStr = yesterday.toISOString().split('T')[0];
-                        setDateRange({ from: yesterdayStr, to: yesterdayStr });
+                        // Use Bangladesh timezone for yesterday
+                        const now = new Date();
+                        const bdtNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+                        bdtNow.setDate(bdtNow.getDate() - 1);
+                        const yesterdayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
+                        setDateRange({ from: yesterdayBDT, to: yesterdayBDT });
                       }}
                       className="text-sm"
                     >
