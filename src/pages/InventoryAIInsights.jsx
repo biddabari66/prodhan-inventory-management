@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Inventory } from '@/entities/Inventory';
 import { User } from '@/entities/User';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, RefreshCw } from 'lucide-react';
+import { Brain, RefreshCw, Loader2 } from 'lucide-react';
 import EnhancedAIInsights from '../components/inventory/EnhancedAIInsights';
-// Department filter removed - only Prodhan.com E-commerce
 import { withPermission } from '../components/common/PermissionGuard';
 import { CacheManager } from '../components/common/PerformanceOptimizer';
 
@@ -12,7 +11,6 @@ function InventoryAIInsightsPage() {
   const [inventory, setInventory] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Only Prodhan.com E-commerce Department
   const selectedDepartment = 'prodhan_com_e_commerce';
 
   useEffect(() => {
@@ -45,34 +43,43 @@ function InventoryAIInsightsPage() {
 
   const filteredInventory = useMemo(() => {
     if (!currentUser) return [];
-    // Only Prodhan.com E-commerce products
     return inventory.filter(item => item.department === 'prodhan_com_e_commerce');
   }, [inventory, currentUser]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto">
+            <Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading AI insights...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
-        {/* Premium Header Section */}
-        <div className="flex flex-col gap-6 pb-6 border-b border-slate-200">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <Brain className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">AI Inventory Insights</h1>
-              <p className="text-slate-600 mt-1 text-base">বুদ্ধিমান চাহিদা পূর্বাভাস, প্রেডিক্টিভ বিশ্লেষণ এবং স্বয়ংক্রিয় সুপারিশ</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="max-w-7xl mx-auto p-8 space-y-6">
+        
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span>Inventory</span>
+          <span>/</span>
+          <span className="text-slate-900 font-medium">AI Insights</span>
+        </div>
 
+        {/* Premium Header Section */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <Brain className="w-6 h-6 text-[#D32F2F]" />
           </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">AI Inventory Insights</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">বুদ্ধিমান চাহিদা পূর্বাভাস, প্রেডিক্টিভ বিশ্লেষণ এবং স্বয়ংক্রিয় সুপারিশ</p>
+          </div>
+        </div>
 
         <EnhancedAIInsights department={selectedDepartment} inventoryItems={filteredInventory} />
       </div>
