@@ -271,6 +271,31 @@ export default function OfficeLocationPicker({ settings, onSettingsChange, curre
             </div>
           </div>
         )}
+
+        {/* Save Button */}
+        <div className="pt-4 border-t border-slate-200">
+          <Button 
+            onClick={handleSaveSettings}
+            disabled={isSaving || !settings.office_latitude || !settings.office_longitude}
+            className="w-full h-12 bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5 mr-2" />
+                Save Office Location Settings
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-slate-500 text-center mt-2">
+            <Shield className="w-3 h-3 inline mr-1" />
+            These settings will apply to all employee attendance check-ins
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
