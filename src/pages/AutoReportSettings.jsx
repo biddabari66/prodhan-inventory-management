@@ -397,16 +397,19 @@ function AutoReportSettingsPage() {
             </div>
             
             {recipients.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-3 bg-white rounded-lg border">
-                {recipients.map((email, idx) => (
-                  <Badge key={idx} className="bg-blue-100 text-blue-800 pr-1">
-                    {email}
-                    <X 
-                      className="w-3 h-3 ml-1 cursor-pointer" 
-                      onClick={() => removeRecipient(email)}
-                    />
-                  </Badge>
-                ))}
+              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <Label className="text-xs text-slate-600 mb-2 block">Selected Recipients ({recipients.length})</Label>
+                <div className="flex flex-wrap gap-2">
+                  {recipients.map((email, idx) => (
+                    <Badge key={idx} className="bg-blue-100 text-blue-800 pr-1 py-1">
+                      {email}
+                      <X 
+                        className="w-3 h-3 ml-1 cursor-pointer hover:text-red-600" 
+                        onClick={() => removeRecipient(email)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>

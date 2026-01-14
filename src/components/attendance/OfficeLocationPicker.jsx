@@ -183,6 +183,8 @@ export default function OfficeLocationPicker({ settings, onSettingsChange, curre
                 Require IP Verification (In addition to GPS)
               </Label>
             </div>
+          </div>
+        </div>
         </div>
 
         {/* Map Preview */}
