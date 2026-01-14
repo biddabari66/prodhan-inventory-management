@@ -73,6 +73,44 @@ export default function OfficeLocationPicker({ settings, onSettingsChange, curre
     window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
   };
 
+  // Save settings to database
+  const handleSaveSettings = async () => {
+    if (!settings.office_latitude || !settings.office_longitude) {
+      toast.error('Please set office latitude and longitude first');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const settingsList = await AttendanceSetting.list();
+      
+      const settingsData = {
+        office_latitude: parseFloat(settings.office_latitude),
+        office_longitude: parseFloat(settings.office_longitude),
+        radius_meters: parseInt(settings.radius_meters) || 100,
+        working_hours_start: settings.working_hours_start || '09:00',
+        working_hours_end: settings.working_hours_end || '18:00',
+        late_threshold_minutes: parseInt(settings.late_threshold_minutes) || 15,
+        max_gps_accuracy_meters: parseInt(settings.max_gps_accuracy_meters) || 150,
+        require_ip_verification: settings.require_ip_verification || false,
+        allowed_ip_addresses: settings.allowed_ip_addresses || []
+      };
+
+      if (settingsList && settingsList.length > 0) {
+        await AttendanceSetting.update(settingsList[0].id, settingsData);
+      } else {
+        await AttendanceSetting.create(settingsData);
+      }
+
+      toast.success('✅ Office location settings saved successfully!');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Card className="border-slate-200">
       <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-100">
