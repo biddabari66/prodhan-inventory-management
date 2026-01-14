@@ -718,11 +718,10 @@ export default function AttendancePage() {
       )}
 
       <Tabs defaultValue="checkinout" className="space-y-6">
-        <TabsList className={`grid w-full ${isAdmin() ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-3'} h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm`}>
+        <TabsList className={`grid w-full ${isAdmin() ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'} h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm`}>
           <TabsTrigger value="checkinout" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Check In/Out</TabsTrigger>
           <TabsTrigger value="analytics" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Analytics</TabsTrigger>
           <TabsTrigger value="manual" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Manual Entry</TabsTrigger>
-          {isAdmin() && <TabsTrigger value="location" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white gap-1"><MapPin className="w-4 h-4" />Location</TabsTrigger>}
           {isAdmin() && <TabsTrigger value="settings" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Settings</TabsTrigger>}
         </TabsList>
 
@@ -848,25 +847,6 @@ export default function AttendancePage() {
           </React.Suspense>
         </TabsContent>
 
-        {/* Location Tab - Admin Only - Dedicated for setting office location */}
-        {isAdmin() && (
-          <TabsContent value="location" className="space-y-6">
-            <React.Suspense fallback={
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
-              </div>
-            }>
-              <OfficeLocationPicker
-                settings={settings}
-                onSettingsChange={setSettings}
-                currentLocation={currentLocation}
-                attendanceSettings={attendanceSettings}
-                onSaveSettings={saveAttendanceSettings}
-              />
-            </React.Suspense>
-          </TabsContent>
-        )}
-
         {/* Settings Tab - Admin Only */}
         {isAdmin() && (
           <TabsContent value="settings" className="space-y-6">
@@ -875,6 +855,12 @@ export default function AttendancePage() {
                 <Loader2 className="w-8 h-8 animate-spin text-red-600" />
               </div>
             }>
+              {/* Google Maps Office Location Picker */}
+              <OfficeLocationPicker
+                settings={settings}
+                onSettingsChange={setSettings}
+                currentLocation={currentLocation}
+              />
               <ShiftManagement />
               <ShiftAssignmentManagement />
             </React.Suspense>
