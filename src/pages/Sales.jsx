@@ -1682,70 +1682,40 @@ function SalesPage() {
                         <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell>
-                       <DropdownMenu modal={false}>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="outline" size="sm" className="h-8 gap-1">
-                             {getPaymentBadge(order.payment_status)}
-                             <ChevronDown className="w-3 h-3" />
-                           </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent align="center" sideOffset={4}>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
-                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
-                              Mark as Pending
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
-                              <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
-                              Mark as Partial
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                              Mark as Paid
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                       <Select 
+                         value={order.payment_status} 
+                         onValueChange={(value) => handlePaymentStatusChange(order, value)}
+                       >
+                         <SelectTrigger className="h-8 w-[110px] text-xs">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="pending">Pending</SelectItem>
+                           <SelectItem value="partial">Partial</SelectItem>
+                           <SelectItem value="paid">Paid</SelectItem>
+                         </SelectContent>
+                       </Select>
                       </TableCell>
                       <TableCell>
-                       <DropdownMenu modal={false}>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="outline" size="sm" className="h-8 gap-1">
-                             {getStatusBadge(order.order_status)}
-                             <ChevronDown className="w-3 h-3" />
-                           </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent align="center" sideOffset={4}>
-                            {order.order_status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                Confirm Order
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                Mark as Processing
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                <Truck className="w-4 h-4 mr-2 text-purple-600" />
-                                Mark as Shipped
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Mark as Delivered
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
-                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                                Cancel Order
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                       <Select 
+                         value={order.order_status} 
+                         onValueChange={(value) => handleQuickStatusChange(order, value)}
+                       >
+                         <SelectTrigger className="h-8 w-[130px] text-xs">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="pending">Pending</SelectItem>
+                           <SelectItem value="confirmed">Confirmed</SelectItem>
+                           <SelectItem value="processing">Processing</SelectItem>
+                           <SelectItem value="packed">Packed</SelectItem>
+                           <SelectItem value="shipped">Shipped</SelectItem>
+                           <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                           <SelectItem value="delivered">Delivered</SelectItem>
+                           <SelectItem value="cancelled">Cancelled</SelectItem>
+                           <SelectItem value="returned">Returned</SelectItem>
+                         </SelectContent>
+                       </Select>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
