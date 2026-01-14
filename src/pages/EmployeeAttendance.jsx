@@ -201,11 +201,28 @@ function EmployeeAttendancePage() {
     enabled: currentUser?.job_role === 'admin' || currentUser?.job_role === 'super_admin'
   });
 
-  // Get location and IP on mount
+  // Get real-time location tracking and IP on mount
   useEffect(() => {
-    // Get geolocation
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+    let watchId = null;
+
+    // Request location permission and start real-time tracking
+    const startLocationTracking = () => {
+      if (!navigator.geolocation) {
+        toast.error('Geolocation is not supported by your browser');
+        return;
+      }
+
+      // First, request permission explicitly
+      navigator.permissions?.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'denied') {
+          toast.error('Location permission denied. Please enable location access in your browser/device settings.');
+        }
+      }).catch(() => {
+        // Permissions API not supported, proceed anyway
+      });
+
+      // Use watchPosition for continuous real-time tracking
+      watchId = navigator.geolocation.watchPosition(
         (position) => {
           setCurrentLocation({
             lat: position.coords.latitude,
@@ -215,17 +232,42 @@ function EmployeeAttendancePage() {
         },
         (error) => {
           console.error('Geolocation error:', error);
-          toast.error('Could not get your location. Please enable location services.');
+          let errorMessage = 'Could not get your location.';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = '📍 Location permission denied. Please enable location in your browser/device settings.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = '📍 Location unavailable. Please check your GPS/network settings.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = '📍 Location request timed out. Retrying...';
+              break;
+          }
+          toast.error(errorMessage);
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { 
+          enableHighAccuracy: true, 
+          timeout: 15000, 
+          maximumAge: 0 // Always get fresh location
+        }
       );
-    }
+    };
+
+    startLocationTracking();
 
     // Get IP address
     fetch('https://api.ipify.org?format=json')
       .then(res => res.json())
       .then(data => setIpAddress(data.ip))
       .catch(() => setIpAddress('Unknown'));
+
+    // Cleanup: stop watching location when component unmounts
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
   }, []);
 
   // Check-in handler
