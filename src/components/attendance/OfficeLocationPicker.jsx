@@ -185,7 +185,6 @@ export default function OfficeLocationPicker({ settings, onSettingsChange, curre
             </div>
           </div>
         </div>
-        </div>
 
         {/* Map Preview */}
         {settings.office_latitude && settings.office_longitude && (
