@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
@@ -57,447 +57,358 @@ Deno.serve(async (req) => {
         const paidOrders = orders.filter(o => o.payment_status === 'paid').length;
         const codOrders = orders.filter(o => o.payment_method === 'cod').length;
 
+        // Calculate revenue
+        const totalRevenue = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+        // Get BDT formatted date
+        const reportDateBDT = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Dhaka',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).format(new Date());
+
         // Generate HTML report WITH PRODUCT DETAILS & PRICES
         const reportHTML = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Orders Report - ${department === 'boibari' ? 'Boibari' : department === 'prodhan_com_e_commerce' ? 'Prodhan.com' : 'All Departments'}</title>
+    <title>Sales Report - ${department === 'boibari' ? 'Boibari' : department === 'prodhan_com_e_commerce' ? 'Prodhan.com' : 'All Departments'}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            padding: 30px; 
-            color: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 0;
+            color: #1e293b;
             background: white;
-            line-height: 1.6;
+            line-height: 1.5;
         }
         .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #7C3AED;
-            padding-bottom: 20px;
-        }
-        .header h1 { 
-            color: #7C3AED; 
-            font-size: 32px; 
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-        .header .subtitle {
-            color: #666;
-            font-size: 16px;
-            margin-top: 8px;
-        }
-        .header .department-badge {
-            display: inline-block;
-            background: #7C3AED;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-        .meta-info {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 30px 40px;
             margin-bottom: 30px;
+        }
+        .header-top {
             display: flex;
             justify-content: space-between;
-            flex-wrap: wrap;
+            align-items: flex-start;
+            margin-bottom: 20px;
         }
-        .meta-item {
-            flex: 1;
-            min-width: 200px;
-            margin: 5px;
-        }
-        .meta-label {
-            color: #666;
+        .brand {
             font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            font-weight: 700;
+            color: #f87171;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
         }
-        .meta-value {
-            color: #1a1a1a;
+        .header h1 { 
+            color: white; 
+            font-size: 28px; 
+            font-weight: 700;
+            margin: 0;
+        }
+        .header .subtitle {
+            color: #94a3b8;
             font-size: 14px;
+            margin-top: 6px;
+        }
+        .header-meta {
+            text-align: right;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .header-meta .date {
+            color: white;
             font-weight: 600;
+            font-size: 13px;
+        }
+        .realtime-badge {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+        .content {
+            padding: 0 40px 40px;
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 30px;
         }
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 16px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .stat-card.green {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        }
-        .stat-card.orange {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-        .stat-card.blue {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-        .stat-card.purple {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            color: #333;
-        }
-        .stat-card.red {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-        }
-        .stat-value {
-            font-size: 32px;
+        .stat-card .value {
+            font-size: 28px;
             font-weight: 700;
-            margin-bottom: 5px;
+            color: #0f172a;
         }
-        .stat-label {
-            font-size: 12px;
-            opacity: 0.9;
+        .stat-card .label {
+            font-size: 10px;
+            color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        .stat-card.primary { border-top: 3px solid #dc2626; }
+        .stat-card.green { border-top: 3px solid #10b981; }
+        .stat-card.amber { border-top: 3px solid #f59e0b; }
+        .stat-card.blue { border-top: 3px solid #3b82f6; }
+        .stat-card.purple { border-top: 3px solid #8b5cf6; }
+        .stat-card.red { border-top: 3px solid #ef4444; }
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 30px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
         }
         .order-card {
             background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
             page-break-inside: avoid;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .order-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f8f9fa;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
         }
-        .order-number-badge {
-            font-size: 18px;
+        .order-number {
+            font-size: 14px;
             font-weight: 700;
-            color: #7C3AED;
-            font-family: 'Courier New', monospace;
+            color: #dc2626;
+            font-family: 'SF Mono', 'Courier New', monospace;
         }
         .order-date {
-            color: #6c757d;
-            font-size: 13px;
-        }
-        .customer-info {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .customer-name {
-            font-weight: 700;
-            font-size: 15px;
-            color: #1a1a1a;
-            margin-bottom: 5px;
-        }
-        .customer-details {
-            color: #6c757d;
+            color: #64748b;
             font-size: 12px;
         }
-        .products-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        .products-table thead {
-            background: #7C3AED;
-            color: white;
-        }
-        .products-table th {
-            padding: 10px;
-            text-align: left;
-            font-size: 11px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-        .products-table td {
-            padding: 10px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 12px;
-        }
-        .products-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        .product-name {
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        .price-cell {
-            text-align: right;
-            font-weight: 600;
-            color: #10b981;
-        }
-        .qty-cell {
-            text-align: center;
-            font-weight: 600;
-        }
-        .order-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #f8f9fa;
-        }
-        .order-total {
-            font-size: 16px;
-            font-weight: 700;
-            color: #7C3AED;
-        }
+        .badges { display: flex; gap: 6px; flex-wrap: wrap; }
         .badge {
             display: inline-block;
-            padding: 5px 12px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin: 0 3px;
         }
-        .badge.delivered { background: #d4edda; color: #155724; }
-        .badge.pending { background: #fff3cd; color: #856404; }
-        .badge.confirmed { background: #cce5ff; color: #004085; }
-        .badge.cancelled { background: #f8d7da; color: #721c24; }
-        .badge.shipped { background: #d1ecf1; color: #0c5460; }
-        .badge.processing { background: #e7e3ff; color: #5b21b6; }
-        .badge.packed { background: #d1ecf1; color: #0c5460; }
-        .badge.out_for_delivery { background: #cfe2ff; color: #084298; }
-        .badge.paid { background: #d4edda; color: #155724; }
-        .badge.unpaid { background: #f8d7da; color: #721c24; }
-        .badge.partial { background: #fff3cd; color: #856404; }
-        .badge.cod { background: #e7f3ff; color: #0369a1; }
-        .badge.bkash { background: #fce7f3; color: #9f1239; }
-        .badge.nagad { background: #fef3c7; color: #92400e; }
-        .footer {
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 2px solid #e9ecef;
-            text-align: center;
-            color: #6c757d;
+        .badge.delivered { background: #dcfce7; color: #166534; }
+        .badge.pending { background: #fef3c7; color: #92400e; }
+        .badge.confirmed { background: #dbeafe; color: #1e40af; }
+        .badge.cancelled { background: #fee2e2; color: #991b1b; }
+        .badge.shipped { background: #e0e7ff; color: #3730a3; }
+        .badge.processing { background: #f3e8ff; color: #6b21a8; }
+        .badge.paid { background: #dcfce7; color: #166534; }
+        .badge.unpaid { background: #fee2e2; color: #991b1b; }
+        .badge.cod { background: #e0f2fe; color: #0369a1; }
+        .customer-row {
+            display: flex;
+            justify-content: space-between;
+            background: #f8fafc;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
             font-size: 12px;
         }
-        .footer .company-name {
-            font-weight: 700;
-            color: #7C3AED;
+        .customer-name { font-weight: 600; color: #0f172a; }
+        .customer-contact { color: #64748b; }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 11px;
+        }
+        .items-table thead {
+            background: #0f172a;
+            color: white;
+        }
+        .items-table th {
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .items-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .items-table .product { font-weight: 500; }
+        .items-table .qty { text-align: center; }
+        .items-table .price { text-align: right; color: #10b981; font-weight: 600; }
+        .order-total {
+            text-align: right;
             font-size: 16px;
-            margin-bottom: 8px;
+            font-weight: 700;
+            color: #dc2626;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer {
+            margin-top: 40px;
+            padding: 20px 40px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+        }
+        .footer .brand-footer {
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 14px;
+            margin-bottom: 6px;
         }
         .no-orders {
             text-align: center;
-            padding: 60px 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            color: #6c757d;
-            font-size: 16px;
-        }
-        .security-notice {
-            background: #e0f2fe;
-            border: 2px solid #0ea5e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            text-align: center;
-            font-size: 13px;
-            color: #075985;
-        }
-        .security-notice strong {
-            color: #7C3AED;
+            padding: 60px;
+            background: #f8fafc;
+            border-radius: 12px;
+            color: #64748b;
         }
         @media print {
-            body { padding: 20px; }
             .order-card { page-break-inside: avoid; }
+            .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📦 Detailed Order Report</h1>
-        ${department && department !== 'all' ? 
-            `<div class="department-badge">${department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com E-Commerce'}</div>` 
-            : '<div class="department-badge">📊 All Departments</div>'}
-        <div class="subtitle">Complete Order Details with Product Information</div>
+        <div class="header-top">
+            <div>
+                <div class="brand">PRODHAN.COM</div>
+                <h1>Sales Report</h1>
+                <div class="subtitle">${department === 'boibari' ? 'Boibari Department' : department === 'prodhan_com_e_commerce' ? 'E-Commerce Department' : 'All Departments'}</div>
+            </div>
+            <div class="header-meta">
+                <div class="date">${reportDateBDT}</div>
+                <div>Generated by: ${user.full_name}</div>
+                <div class="realtime-badge">● REAL-TIME DATA</div>
+            </div>
+        </div>
     </div>
 
-    <div class="security-notice">
-        <strong>ℹ️ ORDER REPORT</strong> - This report includes individual order details and product prices for operational transparency. Aggregate revenue/profit data is admin-only.
-    </div>
+    <div class="content">
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="value">${totalOrders}</div>
+                <div class="label">Total Orders</div>
+            </div>
+            <div class="stat-card green">
+                <div class="value">${deliveredOrders}</div>
+                <div class="label">Delivered</div>
+            </div>
+            <div class="stat-card amber">
+                <div class="value">${pendingOrders}</div>
+                <div class="label">Pending</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="value">${shippedOrders}</div>
+                <div class="label">Shipped</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="value">${paidOrders}</div>
+                <div class="label">Paid</div>
+            </div>
+            <div class="stat-card red">
+                <div class="value">${cancelledOrders}</div>
+                <div class="label">Cancelled</div>
+            </div>
+        </div>
 
-    <div class="meta-info">
-        <div class="meta-item">
-            <div class="meta-label">Report Generated</div>
-            <div class="meta-value">${new Date().toLocaleString('en-GB', { 
-                day: '2-digit', 
-                month: 'long', 
-                year: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            })}</div>
-        </div>
-        <div class="meta-item">
-            <div class="meta-label">Generated By</div>
-            <div class="meta-value">${user.full_name}</div>
-        </div>
-        <div class="meta-item">
-            <div class="meta-label">Report Type</div>
-            <div class="meta-value">Detailed Order Report</div>
-        </div>
         ${dateRange && dateRange.from ? `
-        <div class="meta-item">
-            <div class="meta-label">Date Range</div>
-            <div class="meta-value">${new Date(dateRange.from).toLocaleDateString()} - ${new Date(dateRange.to).toLocaleDateString()}</div>
+        <div style="background: #fef3c7; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: #92400e;">
+            <strong>Date Filter Applied:</strong> ${new Date(dateRange.from).toLocaleDateString('en-GB')} - ${new Date(dateRange.to).toLocaleDateString('en-GB')}
         </div>
         ` : ''}
-    </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-value">${totalOrders}</div>
-            <div class="stat-label">Total Orders</div>
-        </div>
-        <div class="stat-card green">
-            <div class="stat-value">${deliveredOrders}</div>
-            <div class="stat-label">Delivered</div>
-        </div>
-        <div class="stat-card orange">
-            <div class="stat-value">${pendingOrders}</div>
-            <div class="stat-label">Pending/Confirmed</div>
-        </div>
-        <div class="stat-card blue">
-            <div class="stat-value">${processingOrders}</div>
-            <div class="stat-label">Processing/Packed</div>
-        </div>
-        <div class="stat-card purple">
-            <div class="stat-value">${shippedOrders}</div>
-            <div class="stat-label">Shipped/In Transit</div>
-        </div>
-        <div class="stat-card red">
-            <div class="stat-value">${cancelledOrders}</div>
-            <div class="stat-label">Cancelled</div>
-        </div>
-    </div>
+        <div class="section-title">Order Details (${orders.length} orders)</div>
 
-    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
-        <h3 style="color: #7C3AED; margin-bottom: 10px; font-size: 16px;">📊 Payment Overview</h3>
-        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
-            <div>
-                <div style="color: #666; font-size: 12px; margin-bottom: 3px;">Paid Orders</div>
-                <div style="font-size: 20px; font-weight: 700; color: #10b981;">${paidOrders}</div>
-            </div>
-            <div>
-                <div style="color: #666; font-size: 12px; margin-bottom: 3px;">COD Orders</div>
-                <div style="font-size: 20px; font-weight: 700; color: #3b82f6;">${codOrders}</div>
-            </div>
-            <div>
-                <div style="color: #666; font-size: 12px; margin-bottom: 3px;">Pending Payment</div>
-                <div style="font-size: 20px; font-weight: 700; color: #f59e0b;">${totalOrders - paidOrders}</div>
-            </div>
-        </div>
-    </div>
-
-    <h2 style="color: #7C3AED; margin: 30px 0 20px 0; font-size: 22px;">📋 Detailed Order List</h2>
-
-    ${orders.length > 0 ? orders.map(order => `
+    ${orders.length > 0 ? orders.slice(0, 100).map(order => `
         <div class="order-card">
             <div class="order-header">
                 <div>
-                    <div class="order-number-badge">ORDER #${order.order_number || 'N/A'}</div>
-                    <div class="order-date">📅 ${new Date(order.order_date).toLocaleDateString('en-GB', { 
-                        day: '2-digit', 
-                        month: 'long', 
-                        year: 'numeric' 
-                    })}</div>
+                    <div class="order-number">${order.order_number || 'N/A'}</div>
+                    <div class="order-date">${new Date(order.order_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                 </div>
-                <div style="text-align: right;">
+                <div class="badges">
                     <span class="badge ${order.order_status}">${order.order_status?.replace(/_/g, ' ') || 'pending'}</span>
-                    <span class="badge ${order.payment_status === 'paid' ? 'paid' : order.payment_status === 'partial' ? 'partial' : 'unpaid'}">
-                        ${order.payment_status || 'pending'}
-                    </span>
-                    <span class="badge ${order.payment_method}">${order.payment_method?.toUpperCase() || 'COD'}</span>
+                    <span class="badge ${order.payment_status === 'paid' ? 'paid' : 'unpaid'}">${order.payment_status || 'pending'}</span>
+                    <span class="badge cod">${order.payment_method?.toUpperCase() || 'COD'}</span>
                 </div>
             </div>
 
-            <div class="customer-info">
-                <div class="customer-name">👤 ${order.customer_name || 'N/A'}</div>
-                <div class="customer-details">
-                    📞 ${order.customer_phone || 'N/A'} ${order.customer_email ? `| ✉️ ${order.customer_email}` : ''}
+            <div class="customer-row">
+                <div>
+                    <span class="customer-name">${order.customer_name || 'N/A'}</span>
+                    <span class="customer-contact"> • ${order.customer_phone || ''}</span>
                 </div>
-                ${order.shipping_address?.address_line ? `
-                <div class="customer-details" style="margin-top: 5px;">
-                    📍 ${order.shipping_address.address_line}, ${order.shipping_address.city || ''} ${order.shipping_address.district || ''}
+                <div class="customer-contact">
+                    ${order.shipping_address?.city || ''} ${order.shipping_address?.district || ''}
                 </div>
-                ` : ''}
             </div>
 
             ${order.order_items && order.order_items.length > 0 ? `
-            <table class="products-table">
+            <table class="items-table">
                 <thead>
                     <tr>
-                        <th style="width: 50%;">Product Name</th>
-                        <th style="width: 15%; text-align: center;">Quantity</th>
-                        <th style="width: 15%; text-align: right;">Unit Price</th>
-                        <th style="width: 10%; text-align: right;">Discount</th>
-                        <th style="width: 10%; text-align: right;">Subtotal</th>
+                        <th>Product</th>
+                        <th style="text-align: center;">Qty</th>
+                        <th style="text-align: right;">Price</th>
+                        <th style="text-align: right;">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${order.order_items.map(item => `
                         <tr>
-                            <td class="product-name">📦 ${item.item_name || 'N/A'}</td>
-                            <td class="qty-cell">${item.quantity || 1}</td>
-                            <td class="price-cell">৳${(item.unit_price || 0).toLocaleString()}</td>
-                            <td class="price-cell" style="color: #f59e0b;">৳${(item.discount || 0).toLocaleString()}</td>
-                            <td class="price-cell">৳${(item.subtotal || 0).toLocaleString()}</td>
+                            <td class="product">${item.item_name || 'N/A'}</td>
+                            <td class="qty">${item.quantity || 1}</td>
+                            <td class="price">৳${(item.unit_price || 0).toLocaleString()}</td>
+                            <td class="price">৳${(item.subtotal || 0).toLocaleString()}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-            ` : '<p style="color: #6c757d; font-size: 13px; text-align: center; padding: 15px;">No items available</p>'}
-
-            <div class="order-footer">
-                <div style="font-size: 13px; color: #6c757d;">
-                    ${order.department === 'boibari' ? '📚 Boibari' : '🛒 Prodhan.com'} 
-                    ${order.tracking_code ? `| 🚚 Tracking: ${order.tracking_code}` : ''}
-                </div>
-                <div class="order-total">
-                    Total: ৳${(order.total_amount || 0).toLocaleString()}
-                    ${order.shipping_cost ? ` (Shipping: ৳${order.shipping_cost})` : ''}
-                </div>
-            </div>
-
-            ${order.customer_notes ? `
-            <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 6px; font-size: 12px;">
-                <strong>📝 Customer Notes:</strong> ${order.customer_notes}
-            </div>
             ` : ''}
+
+            <div class="order-total">Total: ৳${(order.total_amount || 0).toLocaleString()}</div>
         </div>
     `).join('') : `
     <div class="no-orders">
-        <h2>📭 No Orders Found</h2>
-        <p style="margin-top: 10px;">No orders match the selected filters.</p>
+        <h2>No Orders Found</h2>
+        <p>No orders match the selected filters.</p>
     </div>
     `}
+    </div>
 
     <div class="footer">
-        <div class="company-name">🐝 Bee ERP - Order Management System</div>
-        <p>This is a computer-generated report and does not require a signature.</p>
-        <p style="margin-top: 5px;"><strong>Note:</strong> This report shows individual order details for operational purposes. Aggregate financial analytics are available in the admin dashboard.</p>
-        <p style="margin-top: 5px;">Report ID: RPT-${Date.now()} | Document Version: 3.0</p>
-        <p style="margin-top: 5px;">© ${new Date().getFullYear()} Biddabari. All rights reserved.</p>
+        <div class="brand-footer">PRODHAN.COM</div>
+        <p>Inventory Management System • Report ID: RPT-${Date.now()}</p>
+        <p>© ${new Date().getFullYear()} Prodhan.com. All rights reserved.</p>
     </div>
 </body>
 </html>
