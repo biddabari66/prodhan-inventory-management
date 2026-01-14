@@ -1616,21 +1616,28 @@ function SalesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[250px]">
+                        <div className="max-w-[300px]">
                           {order.order_items && order.order_items.length > 0 ? (
-                            <div className="text-sm space-y-1">
+                            <div className="text-sm space-y-1.5">
                               {order.order_items.map((item, idx) => {
                                 const inventoryItem = inventory.find(i => i.id === item.inventory_id);
                                 const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
 
                                 return (
-                                  <div key={idx}>
-                                    <p className="font-medium text-slate-800 truncate" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
-                                      {item.item_name.substring(0, 30)}
-                                      {item.item_name.length > 30 ? '...' : ''}
+                                  <div key={idx} className="border-l-2 border-slate-200 pl-2">
+                                    <p className="font-medium text-slate-800" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
+                                      {item.item_name}
                                     </p>
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      <span className="text-xs text-slate-500">×{item.quantity}</span>
+                                      <span className="text-xs text-slate-500">@৳{item.unit_price?.toLocaleString()}</span>
+                                      {item.discount > 0 && (
+                                        <span className="text-xs text-red-500">-৳{item.discount}</span>
+                                      )}
+                                      <span className="text-xs font-medium text-emerald-600">= ৳{item.subtotal?.toLocaleString()}</span>
+                                    </div>
                                     {isCombo && (
-                                      <p className="text-xs text-blue-600 ml-2">
+                                      <p className="text-xs text-blue-600 mt-0.5">
                                         🎁 Combo: {inventoryItem.bundle_items.map(bi => {
                                           const comp = inventory.find(i => i.id === bi.inventory_id);
                                           return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
