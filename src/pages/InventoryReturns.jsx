@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  PackageX, RefreshCw, RotateCcw, AlertOctagon, TrendingDown, 
-  DollarSign, ChevronRight, ArrowLeft, Package, AlertTriangle
+  PackageX, RotateCcw, AlertOctagon, 
+  ChevronRight, ArrowLeft, Package, Loader2
 } from 'lucide-react';
 import ReturnDamageManagement from '../components/inventory/ReturnDamageManagement';
 import { withPermission } from '../components/common/PermissionGuard';
