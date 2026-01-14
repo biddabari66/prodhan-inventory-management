@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, X, AlertTriangle, Info, CheckCircle, ExternalLink, Loader2, AlertCircle as AlertCircleIcon, Settings } from 'lucide-react';
+import { Bell, Check, X, AlertTriangle, Info, CheckCircle, ExternalLink, Loader2, AlertCircle as AlertCircleIcon, Settings, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Notification } from '@/entities/Notification';
+import { User } from '@/entities/User';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { createPageUrl } from '@/utils';
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import ActionableNotification from './ActionableNotification';
+import SendNotificationDialog from './SendNotificationDialog';
 
 const getCategoryIcon = (category) => {
   const icons = {
@@ -110,11 +112,28 @@ export default function NotificationCenter({ currentUser }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [user, setUser] = useState(currentUser);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!currentUser) {
+        try {
+          const u = await User.me();
+          setUser(u);
+        } catch (err) {
+          console.error('Failed to load user:', err);
+        }
+      }
+    };
+    loadUser();
+  }, [currentUser]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const loadNotifications = useCallback(async () => {
-    if (!currentUser?.id) {
+    const activeUser = user || currentUser;
+    if (!activeUser?.id) {
       setNotifications([]);
       setIsLoading(false);
       return;
@@ -124,7 +143,7 @@ export default function NotificationCenter({ currentUser }) {
     setError(null);
     try {
       const userNotifications = await Notification.filter(
-        { user_id: currentUser.id },
+        { user_id: activeUser.id },
         '-created_date',
         50
       );
@@ -136,7 +155,7 @@ export default function NotificationCenter({ currentUser }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, user]);
 
   useEffect(() => {
     if (isOpen) {
@@ -185,18 +204,32 @@ export default function NotificationCenter({ currentUser }) {
     }
   };
 
+  const isAdmin = user?.job_role === 'admin' || user?.job_role === 'super_admin';
+
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative min-w-[48px] min-h-[48px]">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <div className="absolute top-2 right-2 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center border-2 border-background">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </div>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
+    <>
+      <div className="flex items-center gap-2">
+        {isAdmin && (
+          <Button 
+            variant="ghost" 
+            className="h-9 px-3 hover:bg-red-50 rounded-xl text-[#D32F2F]"
+            onClick={() => setSendDialogOpen(true)}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Send</span>
+          </Button>
+        )}
+        <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative min-w-[48px] min-h-[48px]">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <div className="absolute top-2 right-2 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center border-2 border-background">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </div>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-80 md:w-[420px] p-0 premium-card z-50">
         <div className="flex items-center justify-between p-3 border-b border-border bg-gradient-to-r from-violet-50 to-purple-50">
@@ -262,6 +295,18 @@ export default function NotificationCenter({ currentUser }) {
         </div>
 
       </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenu>
+      </div>
+
+      <SendNotificationDialog 
+        open={sendDialogOpen} 
+        onOpenChange={(open) => {
+          setSendDialogOpen(open);
+          if (!open) {
+            loadNotifications();
+          }
+        }} 
+      />
+    </>
   );
 }
