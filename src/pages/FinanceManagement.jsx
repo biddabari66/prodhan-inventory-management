@@ -355,7 +355,7 @@ function FinanceManagementPage() {
                   <Target className="w-5 h-5 text-[#D32F2F]" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[#111827]">{plResult.profitMargin.toFixed(1)}%</p>
+              <p className="text-3xl font-bold text-[#111827]">{(plResult.profitMargin || 0).toFixed(1)}%</p>
               <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Margin</p>
             </CardContent>
           </Card>
@@ -854,14 +854,14 @@ function FinanceManagementPage() {
                       Profit Per Unit
                     </span>
                     <span className={`text-lg font-bold ${roiResult.grossProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      ৳{roiResult.profitPerUnit.toFixed(2)}
+                      ৳{(roiResult.profitPerUnit || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
 
                 <div className={`p-6 rounded-xl text-center ${roiResult.roi >= 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'}`}>
                   <p className="text-white/80 text-sm font-medium mb-1">Return on Investment</p>
-                  <p className="text-4xl font-bold text-white">{roiResult.roi.toFixed(2)}%</p>
+                  <p className="text-4xl font-bold text-white">{(roiResult.roi || 0).toFixed(2)}%</p>
                   <p className="text-white/70 text-xs mt-2">
                     {roiResult.roi >= 20 ? '✓ Excellent ROI' : roiResult.roi >= 10 ? '◉ Good ROI' : roiResult.roi >= 0 ? '△ Low ROI' : '✗ Negative ROI'}
                   </p>
