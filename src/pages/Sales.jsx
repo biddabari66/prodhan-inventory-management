@@ -597,16 +597,24 @@ function SalesPage() {
     staleTime: 5 * 60 * 1000
   });
 
-  // 🚀 ULTRA-FAST: Only load 500 most recent orders initially
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+  // 🚀 Load orders with real-time updates enabled
+  const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
     queryKey: ['orders-sales'],
-    queryFn: () => Order.list('-order_date', 500),
-    staleTime: 10 * 60 * 1000, // 10 min cache
-    gcTime: 60 * 60 * 1000, // 1 hour gc
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    queryFn: () => Order.list('-order_date', 2000), // Load more for accurate all-time stats
+    staleTime: 30 * 1000, // 30 seconds - more frequent updates
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: true, // Refresh when user comes back
+    refetchOnMount: true,
   });
+
+  // Subscribe to real-time order updates
+  useEffect(() => {
+    const unsubscribe = Order.subscribe((event) => {
+      // Invalidate and refetch on any order change
+      queryClient.invalidateQueries(['orders-sales']);
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
 
   // 🚀 Prefetch customers and inventory on mount for faster dropdown loading
   const { data: customers = [] } = useQuery({
