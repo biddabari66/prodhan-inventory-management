@@ -25,6 +25,46 @@ const OfficeLocationPicker = React.lazy(() => import('../components/attendance/O
 const ShiftManagement = React.lazy(() => import('../components/attendance/ShiftManagement'));
 const ShiftAssignmentManagement = React.lazy(() => import('../components/attendance/ShiftAssignmentManagement'));
 
+// Location Tab Content with its own state management
+const LocationTabContent = ({ currentLocation, locationAccuracy }) => {
+  const [locationSettings, setLocationSettings] = useState({
+    office_latitude: null,
+    office_longitude: null,
+    radius_meters: 100,
+    require_ip_verification: false
+  });
+
+  // Load existing settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await base44.entities.AttendanceSetting.list();
+        if (settings && settings.length > 0) {
+          setLocationSettings(settings[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load attendance settings:', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // Transform currentLocation to expected format
+  const formattedLocation = currentLocation ? {
+    latitude: currentLocation.lat,
+    longitude: currentLocation.lng,
+    accuracy: locationAccuracy || 0
+  } : null;
+
+  return (
+    <OfficeLocationPicker
+      settings={locationSettings}
+      onSettingsChange={setLocationSettings}
+      currentLocation={formattedLocation}
+    />
+  );
+};
+
 // Digital Clock Component
 const DigitalClock = () => {
   const [time, setTime] = useState(new Date());
@@ -687,11 +727,7 @@ function EmployeeAttendancePage() {
                 <Loader2 className="w-8 h-8 animate-spin text-red-600" />
               </div>
             }>
-              <OfficeLocationPicker
-                settings={{}}
-                onSettingsChange={() => {}}
-                currentLocation={currentLocation}
-              />
+              <LocationTabContent currentLocation={currentLocation} locationAccuracy={locationAccuracy} />
             </React.Suspense>
           </TabsContent>
         )}
