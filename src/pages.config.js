@@ -2,6 +2,7 @@ import ActivityLog from './pages/ActivityLog';
 import AdmissionReports from './pages/AdmissionReports';
 import Admissions from './pages/Admissions';
 import AlertsConfiguration from './pages/AlertsConfiguration';
+import Attendance from './pages/Attendance';
 import AttendanceMy from './pages/AttendanceMy';
 import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
@@ -56,6 +57,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
 import ReportGenerator from './pages/ReportGenerator';
 import Reports from './pages/Reports';
+import Sales from './pages/Sales';
 import ScheduledReports from './pages/ScheduledReports';
 import SendEmail from './pages/SendEmail';
 import Settings from './pages/Settings';
@@ -73,8 +75,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import Attendance from './pages/Attendance';
-import Sales from './pages/Sales';
 import __Layout from './Layout.jsx';
 
 
@@ -83,6 +83,7 @@ export const PAGES = {
     "AdmissionReports": AdmissionReports,
     "Admissions": Admissions,
     "AlertsConfiguration": AlertsConfiguration,
+    "Attendance": Attendance,
     "AttendanceMy": AttendanceMy,
     "AuditTrailViewer": AuditTrailViewer,
     "Auth": Auth,
@@ -137,6 +138,7 @@ export const PAGES = {
     "ReportBuilder": ReportBuilder,
     "ReportGenerator": ReportGenerator,
     "Reports": Reports,
+    "Sales": Sales,
     "ScheduledReports": ScheduledReports,
     "SendEmail": SendEmail,
     "Settings": Settings,
@@ -154,8 +156,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "Attendance": Attendance,
-    "Sales": Sales,
 }
 
 export const pagesConfig = {

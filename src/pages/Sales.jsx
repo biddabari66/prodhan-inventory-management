@@ -591,51 +591,60 @@ function SalesPage() {
   const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
   const [productFilter, setProductFilter] = useState('all');
 
+  // 🚀 LIGHTNING FAST: Cached current user
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => User.me(),
-    staleTime: 5 * 60 * 1000
+    staleTime: 10 * 60 * 1000, // 10 min cache
+    gcTime: 30 * 60 * 1000,
   });
 
-  // 🚀 Load orders with real-time updates enabled
-  const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
+  // 🚀 LIGHTNING FAST: Orders with aggressive caching + background refresh
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders-sales'],
-    queryFn: () => Order.list('-order_date', 2000), // Load more for accurate all-time stats
-    staleTime: 30 * 1000, // 30 seconds - more frequent updates
-    gcTime: 60 * 60 * 1000,
-    refetchOnWindowFocus: true, // Refresh when user comes back
-    refetchOnMount: true,
+    queryFn: () => Order.list('-order_date', 2000),
+    staleTime: 60 * 1000, // 1 min stale - show cached instantly
+    gcTime: 60 * 60 * 1000, // 1 hour gc
+    refetchOnWindowFocus: false, // Don't refetch on focus - too slow
+    refetchOnMount: 'always', // Always refetch in background on mount
+    refetchInterval: 60 * 1000, // Auto-refresh every 60s in background
+    placeholderData: (prev) => prev, // Keep showing old data while fetching
   });
 
-  // Subscribe to real-time order updates
+  // 🚀 LIGHTNING FAST: Real-time subscription with debounce
   useEffect(() => {
-    const unsubscribe = Order.subscribe((event) => {
-      // Invalidate and refetch on any order change
-      queryClient.invalidateQueries(['orders-sales']);
+    let timeoutId = null;
+    const unsubscribe = Order.subscribe(() => {
+      // Debounce to avoid rapid refetches
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['orders-sales'] });
+      }, 500);
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [queryClient]);
 
-  // 🚀 Prefetch customers and inventory on mount for faster dropdown loading
+  // 🚀 LIGHTNING FAST: Customers with very long cache
   const { data: customers = [] } = useQuery({
     queryKey: ['customers-sales'],
     queryFn: () => Customer.list('-created_date', 500),
-    staleTime: 60 * 60 * 1000, // 1 hour cache - customers don't change often
-    gcTime: 2 * 60 * 60 * 1000, // 2 hour gc
+    staleTime: 30 * 60 * 1000, // 30 min cache
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: false,
   });
 
-  // 🚀 Inventory prefetched on mount with very long cache
+  // 🚀 LIGHTNING FAST: Inventory with very long cache
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-sales'],
     queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500),
-    staleTime: 60 * 60 * 1000, // 1 hour cache
-    gcTime: 2 * 60 * 60 * 1000, // 2 hour gc
+    staleTime: 30 * 60 * 1000, // 30 min cache
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: false,
   });
 
   const canViewAllDepartments = useMemo(() => {
@@ -656,16 +665,14 @@ function SalesPage() {
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
 
-  // CRITICAL: Check user permissions from UserPermission entity (passed via withPermission HOC)
+  // 🚀 LIGHTNING FAST: Permissions with long cache
   const { data: rawUserPermissions = [] } = useQuery({
     queryKey: ['user-permissions', currentUser?.id],
-    queryFn: async () => {
-      if (!currentUser?.id) return [];
-      const perms = await base44.entities.UserPermission.filter({ user_id: currentUser.id });
-      return perms;
-    },
+    queryFn: () => base44.entities.UserPermission.filter({ user_id: currentUser.id }),
     enabled: !!currentUser?.id,
-    staleTime: 5 * 60 * 1000
+    staleTime: 15 * 60 * 1000, // 15 min cache
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const userPermissions = useMemo(() => {
@@ -1002,32 +1009,30 @@ function SalesPage() {
     setDepartmentFilter(value);
   };
 
-  // 🚀 3X FASTER: Optimized filtering with pagination display
-  const [displayLimit, setDisplayLimit] = useState(100);
+  // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
+  const [displayLimit, setDisplayLimit] = useState(50); // Start with less for instant render
+  
+  // Pre-compute BDT date formatter once
+  const bdtFormatter = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }), []);
   
   const filteredOrders = useMemo(() => {
     if (!orders || orders.length === 0) return [];
     
-    // Fast path: no filters
-    const hasFilters = searchQuery || statusFilter !== 'all' || paymentFilter !== 'all' || 
-                       productFilter !== 'all' || dateRange.from || departmentFilter !== 'all';
-    
     let filtered = orders;
     
-    // Department filter first (most selective)
+    // 🚀 Fast path: Department filter first (most selective)
     if (!canViewAllDepartments) {
       filtered = filtered.filter(o => o.department === userDepartment);
     } else if (departmentFilter !== 'all') {
       filtered = filtered.filter(o => o.department === departmentFilter);
     }
 
-    // Date filter (very selective)
+    // 🚀 Date filter - optimized with pre-computed formatter
     if (dateRange.from) {
       const fromDateStr = dateRange.from;
       const toDateStr = dateRange.to || dateRange.from;
       filtered = filtered.filter(o => {
-        const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' })
-          .format(new Date(o.order_date || o.created_date));
+        const orderDateBDT = bdtFormatter.format(new Date(o.order_date || o.created_date));
         return orderDateBDT >= fromDateStr && orderDateBDT <= toDateStr;
       });
     }
@@ -1042,7 +1047,7 @@ function SalesPage() {
       filtered = filtered.filter(o => o.payment_status === paymentFilter);
     }
 
-    // Search filter (expensive - do last)
+    // 🚀 Search filter - only if query exists (expensive)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(o =>
@@ -1060,7 +1065,7 @@ function SalesPage() {
     }
 
     return filtered;
-  }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
+  }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter, bdtFormatter]);
 
   // 🚀 Display only limited rows for smooth scrolling
   const displayedOrders = useMemo(() => {
@@ -1075,72 +1080,60 @@ function SalesPage() {
   // Check if date filter is applied to determine which stats to show
   const hasDateFilter = dateRange.from !== undefined;
 
-  // PRODUCTION-READY: Stats based on filter state
-  // If date filter is applied -> show filtered stats, otherwise show all-time + today
+  // 🚀 LIGHTNING FAST: Pre-compute inventory map for O(1) lookups
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    inventory.forEach(i => map.set(i.id, i));
+    return map;
+  }, [inventory]);
+
+  // 🚀 LIGHTNING FAST: Stats with optimized calculations
   const stats = useMemo(() => {
-    // Get today's date in BD timezone (Asia/Dhaka)
-    const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
-    
-    // Determine which orders to use for main stats
-    // If date filter is active, use filteredOrders for main cards
+    const todayBDT = bdtFormatter.format(new Date());
     const statsOrders = hasDateFilter ? filteredOrders : orders;
     
-    // Main stats (filtered if date filter applied, otherwise all-time)
-    const totalOrders = statsOrders.length;
-    const totalRevenue = statsOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-    const pendingOrders = statsOrders.filter(o => o.order_status === 'pending').length;
-    const confirmedOrders = statsOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
-    const shippedOrders = statsOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
-    const totalReturns = statsOrders.filter(o => o.order_status === 'returned').length;
+    // Single pass for main stats
+    let pendingOrders = 0, confirmedOrders = 0, shippedOrders = 0, totalReturns = 0, totalProductQuantity = 0;
     
-    // Product quantity for main stats
-    const totalProductQuantity = statsOrders.reduce((totalSum, order) => {
-      return totalSum + (order.order_items || []).reduce((orderSum, item) => {
-        const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
-        return orderSum + actualQty;
-      }, 0);
-    }, 0);
+    for (const o of statsOrders) {
+      if (o.order_status === 'pending') pendingOrders++;
+      else if (['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)) confirmedOrders++;
+      if (['shipped', 'out_for_delivery'].includes(o.order_status)) shippedOrders++;
+      if (o.order_status === 'returned') totalReturns++;
+      
+      // Product qty with O(1) lookup
+      for (const item of (o.order_items || [])) {
+        const invItem = inventoryMap.get(item.inventory_id);
+        totalProductQuantity += getActualQuantity(item.quantity || 0, invItem, item);
+      }
+    }
 
-    // TODAY's stats using BD timezone - always calculated from all orders
-    const todayOrders = orders.filter(o => {
-      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { 
-        timeZone: 'Asia/Dhaka' 
-      }).format(new Date(o.order_date || o.created_date));
-      return orderDateBDT === todayBDT;
-    });
+    // Today's stats - single pass
+    let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
     
-    const todayOrdersCount = todayOrders.length;
-    const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
-    const todayConfirmed = todayOrders.filter(o => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)).length;
-    const todayShipped = todayOrders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status)).length;
-    const todayReturns = todayOrders.filter(o => o.order_status === 'returned').length;
-    
-    const todayProductQty = todayOrders.reduce((totalSum, order) => {
-      return totalSum + (order.order_items || []).reduce((orderSum, item) => {
-        const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        const actualQty = getActualQuantity(item.quantity || 0, inventoryItem, item);
-        return orderSum + actualQty;
-      }, 0);
-    }, 0);
+    for (const o of orders) {
+      const orderDateBDT = bdtFormatter.format(new Date(o.order_date || o.created_date));
+      if (orderDateBDT !== todayBDT) continue;
+      
+      todayOrdersCount++;
+      if (o.order_status === 'pending') todayPending++;
+      else if (['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)) todayConfirmed++;
+      if (['shipped', 'out_for_delivery'].includes(o.order_status)) todayShipped++;
+      if (o.order_status === 'returned') todayReturns++;
+      
+      for (const item of (o.order_items || [])) {
+        const invItem = inventoryMap.get(item.inventory_id);
+        todayProductQty += getActualQuantity(item.quantity || 0, invItem, item);
+      }
+    }
 
     return { 
-      totalOrders, 
-      totalRevenue, 
-      pendingOrders, 
-      confirmedOrders, 
-      shippedOrders, 
-      totalProductQuantity,
-      totalReturns,
-      todayOrders: todayOrdersCount,
-      todayPending,
-      todayConfirmed,
-      todayShipped,
-      todayReturns,
-      todayProductQty,
+      totalOrders: statsOrders.length, 
+      pendingOrders, confirmedOrders, shippedOrders, totalProductQuantity, totalReturns,
+      todayOrders: todayOrdersCount, todayPending, todayConfirmed, todayShipped, todayReturns, todayProductQty,
       isFiltered: hasDateFilter
     };
-  }, [orders, inventory, filteredOrders, hasDateFilter]);
+  }, [orders, filteredOrders, hasDateFilter, inventoryMap, bdtFormatter]);
 
   // Premium Pill Badges
   const getStatusBadge = (status) => {
@@ -1170,7 +1163,8 @@ function SalesPage() {
     return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
   };
 
-  if (ordersLoading) {
+  // 🚀 LIGHTNING FAST: Show skeleton only on first load, not on refetch
+  if (ordersLoading && orders.length === 0) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -1650,7 +1644,7 @@ function SalesPage() {
                           {order.order_items && order.order_items.length > 0 ? (
                             <div className="text-sm space-y-1.5">
                               {order.order_items.map((item, idx) => {
-                                const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+                                const inventoryItem = inventoryMap.get(item.inventory_id);
                                 const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
 
                                 return (
@@ -1669,7 +1663,7 @@ function SalesPage() {
                                     {isCombo && (
                                       <p className="text-xs text-blue-600 mt-0.5">
                                         🎁 Combo: {inventoryItem.bundle_items.map(bi => {
-                                          const comp = inventory.find(i => i.id === bi.inventory_id);
+                                          const comp = inventoryMap.get(bi.inventory_id);
                                           return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
                                         }).join(' + ')}
                                       </p>
@@ -1687,7 +1681,7 @@ function SalesPage() {
                         {order.order_items && order.order_items.length > 0 ? (
                           <div className="flex flex-col gap-1">
                             {order.order_items.map((item, idx) => {
-                              const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+                              const inventoryItem = inventoryMap.get(item.inventory_id);
                               const bundleCount = getComboCount(inventoryItem, item);
                               const isCombo = bundleCount > 1;
                               const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
