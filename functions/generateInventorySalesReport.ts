@@ -830,7 +830,10 @@ function generateReturnedReport(inventory, movements, inventoryIds, department, 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  let returnedMovements = movements.filter(m => m.movement_type === 'return' && inventoryIds.has(m.inventory_item_id));
+  let returnedMovements = movements.filter(m => 
+    (m.reference_type === 'return' || m.movement_type === 'return') && 
+    inventoryIds.has(m.inventory_item_id)
+  );
   if (dateFrom) returnedMovements = returnedMovements.filter(m => toBDTDate(m.movement_date) >= dateFrom);
   if (dateTo) returnedMovements = returnedMovements.filter(m => toBDTDate(m.movement_date) <= dateTo);
 
@@ -901,6 +904,172 @@ function generateReturnedReport(inventory, movements, inventoryIds, department, 
       3: { halign: 'center', cellWidth: 28 },
       4: { halign: 'left', cellWidth: 'auto' }
     },
+    margin: { left: 16, right: 16 },
+    didDrawPage: () => addModernFooter(doc, pageWidth, pageHeight)
+  });
+
+  return doc;
+}
+
+// ===== PURCHASE REPORT =====
+function generatePurchaseReport(purchaseOrders, inventory, department, dateFrom, dateTo, user) {
+  const doc = new jsPDF('landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  let filteredPOs = [...purchaseOrders];
+  if (dateFrom) filteredPOs = filteredPOs.filter(po => toBDTDate(po.order_date) >= dateFrom);
+  if (dateTo) filteredPOs = filteredPOs.filter(po => toBDTDate(po.order_date) <= dateTo);
+
+  const totalAmount = filteredPOs.reduce((sum, po) => sum + (po.total_amount || 0), 0);
+  const totalOrders = filteredPOs.length;
+  const totalPaid = filteredPOs.reduce((sum, po) => sum + (po.amount_paid || 0), 0);
+
+  const dateText = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : 'All Time';
+  addModernHeader(doc, 'Purchase Report', `Procurement Analysis • ${dateText}`, user, pageWidth);
+
+  const cardY = 60;
+  const cardWidth = (pageWidth - 40) / 3;
+  const cardHeight = 30;
+  
+  createSummaryCard(doc, 16, cardY, cardWidth, cardHeight, 'TOTAL ORDERS', totalOrders.toLocaleString(), [59, 130, 246]);
+  createSummaryCard(doc, 16 + cardWidth + 12, cardY, cardWidth, cardHeight, 'TOTAL AMOUNT', formatCurrency(totalAmount), [168, 85, 247]);
+  createSummaryCard(doc, 16 + (cardWidth + 12) * 2, cardY, cardWidth, cardHeight, 'AMOUNT PAID', formatCurrency(totalPaid), [16, 185, 129]);
+
+  const tableColumns = ['PO Number', 'Supplier', 'Order Date', 'Items', 'Total Amount', 'Paid', 'Status'];
+  const tableRows = filteredPOs.map(po => [
+    po.po_number || 'N/A',
+    (po.supplier_name || 'Unknown').substring(0, 25),
+    toBDTDate(po.order_date),
+    (po.order_items?.length || 0).toString(),
+    (po.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+    (po.amount_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+    po.order_status || 'draft'
+  ]);
+
+  doc.autoTable({
+    head: [tableColumns],
+    body: tableRows,
+    startY: cardY + cardHeight + 16,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 3.5, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, cellPadding: 4 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 16, right: 16 },
+    didDrawPage: () => addModernFooter(doc, pageWidth, pageHeight)
+  });
+
+  return doc;
+}
+
+// ===== SUPPLIER REPORT =====
+function generateSupplierReport(purchaseOrders, suppliers, department, dateFrom, dateTo, user) {
+  const doc = new jsPDF('portrait');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  let filteredPOs = [...purchaseOrders];
+  if (dateFrom) filteredPOs = filteredPOs.filter(po => toBDTDate(po.order_date) >= dateFrom);
+  if (dateTo) filteredPOs = filteredPOs.filter(po => toBDTDate(po.order_date) <= dateTo);
+
+  const supplierStats = {};
+  filteredPOs.forEach(po => {
+    const sid = po.supplier_id || 'unknown';
+    if (!supplierStats[sid]) {
+      supplierStats[sid] = { name: po.supplier_name || 'Unknown', orders: 0, totalAmount: 0, amountPaid: 0 };
+    }
+    supplierStats[sid].orders += 1;
+    supplierStats[sid].totalAmount += po.total_amount || 0;
+    supplierStats[sid].amountPaid += po.amount_paid || 0;
+  });
+
+  const supplierData = Object.values(supplierStats).sort((a, b) => b.totalAmount - a.totalAmount);
+  const totalSuppliers = supplierData.length;
+  const totalSpent = supplierData.reduce((sum, s) => sum + s.totalAmount, 0);
+
+  const dateText = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : 'All Time';
+  addModernHeader(doc, 'Supplier Report', `Vendor Analysis • ${dateText}`, user, pageWidth);
+
+  const cardY = 60;
+  const cardWidth = (pageWidth - 28) / 2;
+  const cardHeight = 30;
+  
+  createSummaryCard(doc, 16, cardY, cardWidth, cardHeight, 'ACTIVE SUPPLIERS', totalSuppliers.toLocaleString(), [168, 85, 247]);
+  createSummaryCard(doc, 16 + cardWidth + 6, cardY, cardWidth, cardHeight, 'TOTAL SPENT', formatCurrency(totalSpent), [16, 185, 129]);
+
+  const tableColumns = ['Supplier Name', 'Orders', 'Total Amount', 'Amount Paid', 'Balance'];
+  const tableRows = supplierData.map(s => [
+    s.name.substring(0, 30),
+    s.orders.toString(),
+    (s.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+    (s.amountPaid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+    ((s.totalAmount || 0) - (s.amountPaid || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })
+  ]);
+
+  doc.autoTable({
+    head: [tableColumns],
+    body: tableRows,
+    startY: cardY + cardHeight + 16,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 4, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
+    headStyles: { fillColor: [168, 85, 247], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, cellPadding: 4 },
+    alternateRowStyles: { fillColor: [245, 243, 255] },
+    margin: { left: 16, right: 16 },
+    didDrawPage: () => addModernFooter(doc, pageWidth, pageHeight)
+  });
+
+  return doc;
+}
+
+// ===== MOVEMENT REPORT =====
+function generateMovementReport(movements, inventory, inventoryIds, department, dateFrom, dateTo, user) {
+  const doc = new jsPDF('landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  let filteredMovements = movements.filter(m => inventoryIds.has(m.inventory_item_id));
+  if (dateFrom) filteredMovements = filteredMovements.filter(m => toBDTDate(m.movement_date) >= dateFrom);
+  if (dateTo) filteredMovements = filteredMovements.filter(m => toBDTDate(m.movement_date) <= dateTo);
+
+  const inventoryMap = new Map(inventory.map(i => [i.id, i]));
+  
+  const inMovements = filteredMovements.filter(m => m.movement_type === 'in');
+  const outMovements = filteredMovements.filter(m => m.movement_type === 'out');
+  const totalIn = inMovements.reduce((sum, m) => sum + Math.abs(m.quantity || 0), 0);
+  const totalOut = outMovements.reduce((sum, m) => sum + Math.abs(m.quantity || 0), 0);
+
+  const dateText = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : 'All Time';
+  addModernHeader(doc, 'Movement Summary Report', `Inventory Flow • ${dateText}`, user, pageWidth);
+
+  const cardY = 60;
+  const cardWidth = (pageWidth - 40) / 3;
+  const cardHeight = 30;
+  
+  createSummaryCard(doc, 16, cardY, cardWidth, cardHeight, 'TOTAL MOVEMENTS', filteredMovements.length.toLocaleString(), [59, 130, 246]);
+  createSummaryCard(doc, 16 + cardWidth + 12, cardY, cardWidth, cardHeight, 'STOCK IN', totalIn.toLocaleString(), [16, 185, 129]);
+  createSummaryCard(doc, 16 + (cardWidth + 12) * 2, cardY, cardWidth, cardHeight, 'STOCK OUT', totalOut.toLocaleString(), [239, 68, 68]);
+
+  const tableColumns = ['Date', 'Product', 'Type', 'Quantity', 'Reference', 'Notes'];
+  const tableRows = filteredMovements.slice(0, 100).map(m => {
+    const item = inventoryMap.get(m.inventory_item_id);
+    return [
+      toBDTDate(m.movement_date),
+      (item ? getDisplayName(item) : 'Unknown').substring(0, 35),
+      m.movement_type?.toUpperCase() || 'N/A',
+      Math.abs(m.quantity || 0).toString(),
+      m.reference_number?.substring(0, 20) || '-',
+      (m.notes || '').substring(0, 25)
+    ];
+  });
+
+  doc.autoTable({
+    head: [tableColumns],
+    body: tableRows,
+    startY: cardY + cardHeight + 16,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [203, 213, 225], lineWidth: 0.3, font: 'helvetica', textColor: [15, 23, 42] },
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: 16, right: 16 },
     didDrawPage: () => addModernFooter(doc, pageWidth, pageHeight)
   });
