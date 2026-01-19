@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Inventory } from '@/entities/Inventory';
-import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,199 +11,243 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   Factory, Package, Truck, CheckCircle, Clock, AlertTriangle,
-  ArrowRight, Recycle, Trash2, Eye, Play, Check, X
+  ArrowRight, Recycle, Trash2, Eye, Play, Send, User, History,
+  Scale, Box, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { withPermission } from '../components/common/PermissionGuard';
 
-// Process Batch Form Component
-const ProcessBatchForm = ({ batch, inventory, currentUser, onComplete, onCancel }) => {
-  const [items, setItems] = useState(
-    batch.items.map(item => ({
-      ...item,
-      waste_quantity: item.waste_quantity || 0,
-      usable_quantity: item.usable_quantity || (item.quantity_received - (item.waste_quantity || 0)),
-      waste_reason: item.waste_reason || ''
-    }))
-  );
-  const [notes, setNotes] = useState(batch.notes || '');
+// Transfer to Inventory Form
+const TransferToInventoryForm = ({ batch, inventory, currentUser, onTransfer, onCancel }) => {
+  const [selectedItem, setSelectedItem] = useState('');
+  const [transferQuantity, setTransferQuantity] = useState('');
+  const [transferUnit, setTransferUnit] = useState('');
+  const [productType, setProductType] = useState('');
+  const [notes, setNotes] = useState('');
 
-  const updateItem = (index, field, value) => {
-    const updated = [...items];
-    updated[index] = { ...updated[index], [field]: value };
-    
-    // Auto-calculate usable quantity when waste changes
-    if (field === 'waste_quantity') {
-      const waste = parseFloat(value) || 0;
-      updated[index].usable_quantity = updated[index].quantity_received - waste;
-    }
-    
-    setItems(updated);
-  };
+  const selectedBatchItem = batch.items?.find(i => i.inventory_id === selectedItem || i.item_name === selectedItem);
+  const maxQuantity = selectedBatchItem?.quantity_remaining || 0;
 
-  const totalReceived = items.reduce((sum, i) => sum + (i.quantity_received || 0), 0);
-  const totalWaste = items.reduce((sum, i) => sum + (parseFloat(i.waste_quantity) || 0), 0);
-  const totalUsable = items.reduce((sum, i) => sum + (parseFloat(i.usable_quantity) || 0), 0);
-  const wastePercentage = totalReceived > 0 ? ((totalWaste / totalReceived) * 100).toFixed(2) : 0;
-
-  const handleComplete = () => {
-    // Validate all items have been processed
-    const hasNegativeUsable = items.some(i => i.usable_quantity < 0);
-    if (hasNegativeUsable) {
-      toast.error('Usable quantity cannot be negative');
+  const handleTransfer = () => {
+    if (!selectedItem || !transferQuantity || parseFloat(transferQuantity) <= 0) {
+      toast.error('Please select item and enter quantity');
       return;
     }
 
-    onComplete({
-      items: items.map(i => ({ ...i, is_processed: true })),
-      total_received_quantity: totalReceived,
-      total_waste_quantity: totalWaste,
-      total_usable_quantity: totalUsable,
-      waste_percentage: parseFloat(wastePercentage),
+    if (parseFloat(transferQuantity) > maxQuantity) {
+      toast.error(`Cannot transfer more than ${maxQuantity} ${transferUnit}`);
+      return;
+    }
+
+    onTransfer({
+      itemName: selectedBatchItem?.item_name,
+      inventoryId: selectedBatchItem?.inventory_id,
+      quantity: parseFloat(transferQuantity),
+      unit: transferUnit || selectedBatchItem?.unit || 'pc',
+      productType,
       notes,
-      processed_by_id: currentUser?.id,
-      processed_by_name: currentUser?.full_name,
-      completed_date: new Date().toISOString(),
-      status: 'completed'
+      transferredById: currentUser?.id,
+      transferredByName: currentUser?.full_name
     });
   };
 
   return (
-    <div className="space-y-6 max-h-[75vh] overflow-y-auto px-2">
-      {/* Batch Info */}
-      <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-bold text-lg text-indigo-900">{batch.batch_number}</h3>
-            <p className="text-sm text-indigo-700">PO: {batch.po_number}</p>
-            <p className="text-sm text-indigo-600">Supplier: {batch.supplier_name}</p>
-          </div>
-          <Badge className="bg-indigo-600">{batch.status}</Badge>
+    <div className="space-y-4">
+      <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+        <h3 className="font-semibold text-indigo-900 mb-2">Transfer Raw Material to Main Inventory</h3>
+        <p className="text-sm text-indigo-700">Convert raw material into finished products and send to inventory</p>
+      </div>
+
+      <div>
+        <Label>Select Raw Material *</Label>
+        <Select value={selectedItem} onValueChange={(val) => {
+          setSelectedItem(val);
+          const item = batch.items?.find(i => i.inventory_id === val || i.item_name === val);
+          setTransferUnit(item?.unit || 'kg');
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select item to transfer..." />
+          </SelectTrigger>
+          <SelectContent>
+            {batch.items?.filter(i => (i.quantity_remaining || 0) > 0).map((item, idx) => (
+              <SelectItem key={idx} value={item.inventory_id || item.item_name}>
+                {item.item_name} - Remaining: {item.quantity_remaining || 0} {item.unit || 'kg'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selectedBatchItem && (
+        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+          <p className="text-sm">
+            <span className="font-semibold">Available:</span> {selectedBatchItem.quantity_remaining || 0} {selectedBatchItem.unit || 'kg'}
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Quantity to Transfer *</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            max={maxQuantity}
+            value={transferQuantity}
+            onChange={(e) => setTransferQuantity(e.target.value)}
+            placeholder={`Max: ${maxQuantity}`}
+          />
+        </div>
+        <div>
+          <Label>Unit</Label>
+          <Select value={transferUnit} onValueChange={setTransferUnit}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="kg">KG</SelectItem>
+              <SelectItem value="gm">Grams</SelectItem>
+              <SelectItem value="pc">Pieces</SelectItem>
+              <SelectItem value="jar">Jars</SelectItem>
+              <SelectItem value="litre">Litre</SelectItem>
+              <SelectItem value="ml">ML</SelectItem>
+              <SelectItem value="box">Box</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Items Processing */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Recycle className="w-5 h-5 text-green-600" />
-            Process Items - Enter Waste Quantities
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {items.map((item, index) => (
-            <div key={index} className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h4 className="font-semibold text-slate-900">{item.item_name}</h4>
-                  <p className="text-xs text-slate-500">Received: {item.quantity_received} units</p>
-                </div>
-                <Badge className={item.waste_quantity > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}>
-                  {item.waste_quantity > 0 ? `${((item.waste_quantity / item.quantity_received) * 100).toFixed(1)}% waste` : 'No waste'}
-                </Badge>
-              </div>
+      <div>
+        <Label>Product Type (e.g., 500gm Jar, 250gm Packet)</Label>
+        <Input
+          value={productType}
+          onChange={(e) => setProductType(e.target.value)}
+          placeholder="e.g., 500gm Jar, 1kg Pack"
+        />
+      </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-xs font-semibold">Received Qty</Label>
-                  <Input
-                    value={item.quantity_received}
-                    disabled
-                    className="bg-slate-100 mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold text-red-600">Waste Qty *</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={item.waste_quantity}
-                    onChange={(e) => updateItem(index, 'waste_quantity', e.target.value)}
-                    placeholder="0"
-                    className="mt-1 border-red-200 focus:border-red-400"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold text-green-600">Usable Qty</Label>
-                  <Input
-                    value={item.usable_quantity}
-                    disabled
-                    className="bg-green-50 mt-1 font-bold text-green-700"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold">Waste Reason</Label>
-                  <Select
-                    value={item.waste_reason}
-                    onValueChange={(value) => updateItem(index, 'waste_reason', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select reason..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="damaged">Damaged</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                      <SelectItem value="defective">Defective</SelectItem>
-                      <SelectItem value="quality_issue">Quality Issue</SelectItem>
-                      <SelectItem value="refining_loss">Refining Loss</SelectItem>
-                      <SelectItem value="packaging_damage">Packaging Damage</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <div>
+        <Label>Notes</Label>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Additional notes..."
+          rows={2}
+        />
+      </div>
 
-      {/* Summary */}
-      <Card className="border-2 border-green-300">
-        <CardContent className="pt-6">
-          <h3 className="font-semibold mb-4">Processing Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 rounded-xl text-center">
-              <p className="text-2xl font-bold text-blue-600">{totalReceived}</p>
-              <p className="text-xs text-blue-800">Total Received</p>
-            </div>
-            <div className="p-4 bg-red-50 rounded-xl text-center">
-              <p className="text-2xl font-bold text-red-600">{totalWaste}</p>
-              <p className="text-xs text-red-800">Total Waste</p>
-            </div>
-            <div className="p-4 bg-green-50 rounded-xl text-center">
-              <p className="text-2xl font-bold text-green-600">{totalUsable}</p>
-              <p className="text-xs text-green-800">Usable Stock</p>
-            </div>
-            <div className="p-4 bg-amber-50 rounded-xl text-center">
-              <p className="text-2xl font-bold text-amber-600">{wastePercentage}%</p>
-              <p className="text-xs text-amber-800">Waste Rate</p>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <Label>Processing Notes</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes about this batch processing..."
-              rows={2}
-              className="mt-1"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <div className="flex justify-end gap-3 sticky bottom-0 bg-white p-4 border-t">
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleTransfer} className="bg-green-600 hover:bg-green-700">
+          <Send className="w-4 h-4 mr-2" />
+          Transfer to Inventory
         </Button>
-        <Button onClick={handleComplete} className="bg-green-600 hover:bg-green-700">
-          <CheckCircle className="w-4 h-4 mr-2" />
-          Complete Processing & Add to Inventory
+      </div>
+    </div>
+  );
+};
+
+// Mark as Waste Dialog
+const MarkAsWasteForm = ({ batch, currentUser, onMarkWaste, onCancel }) => {
+  const [selectedItem, setSelectedItem] = useState('');
+  const [wasteReason, setWasteReason] = useState('end_of_batch');
+  const [notes, setNotes] = useState('');
+
+  const selectedBatchItem = batch.items?.find(i => i.inventory_id === selectedItem || i.item_name === selectedItem);
+  const wasteQuantity = selectedBatchItem?.quantity_remaining || 0;
+
+  const handleWaste = () => {
+    if (!selectedItem || wasteQuantity <= 0) {
+      toast.error('Please select an item with remaining quantity');
+      return;
+    }
+
+    onMarkWaste({
+      itemName: selectedBatchItem?.item_name,
+      inventoryId: selectedBatchItem?.inventory_id,
+      wasteQuantity,
+      unit: selectedBatchItem?.unit || 'kg',
+      wasteReason,
+      notes,
+      recordedById: currentUser?.id,
+      recordedByName: currentUser?.full_name
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+        <h3 className="font-semibold text-red-900 mb-2 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" />
+          Mark Remaining as Waste
+        </h3>
+        <p className="text-sm text-red-700">This will record the remaining quantity as waste and update reports</p>
+      </div>
+
+      <div>
+        <Label>Select Item to Mark as Waste *</Label>
+        <Select value={selectedItem} onValueChange={setSelectedItem}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select item..." />
+          </SelectTrigger>
+          <SelectContent>
+            {batch.items?.filter(i => (i.quantity_remaining || 0) > 0).map((item, idx) => (
+              <SelectItem key={idx} value={item.inventory_id || item.item_name}>
+                {item.item_name} - Remaining: {item.quantity_remaining || 0} {item.unit || 'kg'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selectedBatchItem && (
+        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <p className="text-lg font-bold text-amber-800">
+            Waste Quantity: {wasteQuantity} {selectedBatchItem.unit || 'kg'}
+          </p>
+          <p className="text-sm text-amber-600">
+            Value: ৳{((wasteQuantity || 0) * (selectedBatchItem.unit_price || 0)).toLocaleString()}
+          </p>
+        </div>
+      )}
+
+      <div>
+        <Label>Waste Reason *</Label>
+        <Select value={wasteReason} onValueChange={setWasteReason}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="end_of_batch">End of Batch (Natural)</SelectItem>
+            <SelectItem value="damaged">Damaged</SelectItem>
+            <SelectItem value="expired">Expired</SelectItem>
+            <SelectItem value="quality_issue">Quality Issue</SelectItem>
+            <SelectItem value="refining_loss">Refining Loss</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Notes</Label>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Additional notes about this waste..."
+          rows={2}
+        />
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleWaste} className="bg-red-600 hover:bg-red-700">
+          <Trash2 className="w-4 h-4 mr-2" />
+          Mark as Waste
         </Button>
       </div>
     </div>
@@ -216,13 +258,16 @@ const ProcessBatchForm = ({ batch, inventory, currentUser, onComplete, onCancel 
 function ProductionHousePage() {
   const queryClient = useQueryClient();
   const [selectedBatch, setSelectedBatch] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [transferDialog, setTransferDialog] = useState(false);
+  const [wasteDialog, setWasteDialog] = useState(false);
+  const [viewBatchDialog, setViewBatchDialog] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [receiveDialog, setReceiveDialog] = useState(null);
 
   // Fetch data
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => User.me(),
+    queryFn: () => base44.auth.me(),
   });
 
   const { data: productionBatches = [], isLoading: batchesLoading } = useQuery({
@@ -239,16 +284,22 @@ function ProductionHousePage() {
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-production'],
-    queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: wasteLog = [] } = useQuery({
+    queryKey: ['wasteLog'],
+    queryFn: () => base44.entities.ProductionWasteLog.list('-waste_date', 100),
     staleTime: 5 * 60 * 1000,
   });
 
   // Send PO to Production mutation
   const sendToProductionMutation = useMutation({
-    mutationFn: async (po) => {
+    mutationFn: async ({ po, receiverName }) => {
       const batchNumber = `BATCH-${Date.now()}`;
       
-      // Create production batch from PO
+      // Create production batch from PO with tracking
       const batch = await base44.entities.ProductionBatch.create({
         batch_number: batchNumber,
         purchase_order_id: po.id,
@@ -260,17 +311,23 @@ function ProductionHousePage() {
           inventory_id: item.inventory_id,
           item_name: item.item_name,
           quantity_received: item.quantity_ordered,
+          quantity_remaining: item.quantity_ordered,
+          quantity_transferred: 0,
           waste_quantity: 0,
-          usable_quantity: item.quantity_ordered,
-          waste_reason: '',
+          unit: item.unit || 'kg',
           unit_price: item.unit_price,
           is_processed: false
         })),
         total_received_quantity: po.order_items.reduce((sum, i) => sum + i.quantity_ordered, 0),
+        total_transferred_quantity: 0,
         total_waste_quantity: 0,
-        total_usable_quantity: po.order_items.reduce((sum, i) => sum + i.quantity_ordered, 0),
+        total_remaining_quantity: po.order_items.reduce((sum, i) => sum + i.quantity_ordered, 0),
         waste_percentage: 0,
-        notes: `Auto-created from PO: ${po.po_number}`
+        received_by_id: currentUser?.id,
+        received_by_name: currentUser?.full_name,
+        received_date: new Date().toISOString(),
+        transfer_history: [],
+        notes: `Received from PO: ${po.po_number}`
       });
 
       // Update PO status
@@ -280,78 +337,214 @@ function ProductionHousePage() {
         sent_to_production_date: new Date().toISOString()
       });
 
+      // Create audit log
+      await base44.entities.AuditLog.create({
+        user_id: currentUser?.id,
+        user_name: currentUser?.full_name,
+        action: 'create',
+        entity_type: 'ProductionBatch',
+        entity_id: batch.id,
+        module: 'production',
+        description: `Received PO ${po.po_number} into Production House. Created batch ${batchNumber}`,
+        new_values: { batch_number: batchNumber, po_number: po.po_number },
+        timestamp: new Date().toISOString()
+      });
+
       return batch;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['productionBatches']);
       queryClient.invalidateQueries(['purchaseOrdersForProduction']);
-      toast.success('Purchase Order sent to Production!');
+      toast.success('PO received into Production House!');
+      setReceiveDialog(null);
     },
     onError: (error) => {
-      toast.error('Failed to send to production: ' + error.message);
+      toast.error('Failed to receive: ' + error.message);
     },
   });
 
-  // Complete batch processing mutation
-  const completeBatchMutation = useMutation({
-    mutationFn: async ({ batchId, data }) => {
+  // Transfer to inventory mutation
+  const transferToInventoryMutation = useMutation({
+    mutationFn: async ({ batch, transferData }) => {
+      const { itemName, inventoryId, quantity, unit, productType, notes, transferredById, transferredByName } = transferData;
+
+      // Find the batch item
+      const batchItem = batch.items.find(i => i.inventory_id === inventoryId || i.item_name === itemName);
+      if (!batchItem) throw new Error('Item not found in batch');
+
+      const newRemaining = (batchItem.quantity_remaining || 0) - quantity;
+      if (newRemaining < 0) throw new Error('Cannot transfer more than remaining quantity');
+
+      // Update batch items
+      const updatedItems = batch.items.map(item => {
+        if (item.inventory_id === inventoryId || item.item_name === itemName) {
+          return {
+            ...item,
+            quantity_remaining: newRemaining,
+            quantity_transferred: (item.quantity_transferred || 0) + quantity
+          };
+        }
+        return item;
+      });
+
+      // Add to transfer history
+      const transferHistory = [...(batch.transfer_history || []), {
+        date: new Date().toISOString(),
+        item_name: itemName,
+        inventory_id: inventoryId,
+        quantity,
+        unit,
+        product_type: productType,
+        transferred_by_id: transferredById,
+        transferred_by_name: transferredByName,
+        notes
+      }];
+
+      // Calculate new totals
+      const totalRemaining = updatedItems.reduce((sum, i) => sum + (i.quantity_remaining || 0), 0);
+      const totalTransferred = updatedItems.reduce((sum, i) => sum + (i.quantity_transferred || 0), 0);
+
       // Update batch
-      await base44.entities.ProductionBatch.update(batchId, data);
+      await base44.entities.ProductionBatch.update(batch.id, {
+        items: updatedItems,
+        total_remaining_quantity: totalRemaining,
+        total_transferred_quantity: totalTransferred,
+        transfer_history: transferHistory,
+        status: totalRemaining === 0 ? 'completed' : 'in_progress'
+      });
 
-      // Get the batch to find PO
-      const batch = productionBatches.find(b => b.id === batchId);
-      
-      // Update inventory with usable quantities
-      for (const item of data.items) {
-        if (item.inventory_id && item.usable_quantity > 0) {
-          const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-          if (inventoryItem) {
-            const newStock = (inventoryItem.current_stock || 0) + item.usable_quantity;
-            await Inventory.update(item.inventory_id, {
-              current_stock: newStock,
-              last_purchase_date: new Date().toISOString().split('T')[0],
-              last_purchase_quantity: item.usable_quantity
-            });
+      // Update main inventory
+      if (inventoryId) {
+        const invItem = inventory.find(i => i.id === inventoryId);
+        if (invItem) {
+          const newStock = (invItem.current_stock || 0) + quantity;
+          await base44.entities.Inventory.update(inventoryId, {
+            current_stock: newStock,
+            last_purchase_date: new Date().toISOString().split('T')[0]
+          });
 
-            // Record inventory movement
-            await base44.entities.InventoryMovement.create({
-              inventory_item_id: item.inventory_id,
-              movement_type: 'in',
-              quantity: item.usable_quantity,
-              reference_type: 'production',
-              reference_id: batchId,
-              reference_number: batch?.batch_number,
-              unit_cost: item.unit_price,
-              total_value: item.usable_quantity * item.unit_price,
-              performed_by: data.processed_by_id || 'system',
-              notes: `Production batch: ${batch?.batch_number}. Waste: ${item.waste_quantity}`,
-              movement_date: new Date().toISOString().split('T')[0],
-              balance_after: newStock
-            });
-          }
+          // Create inventory movement
+          await base44.entities.InventoryMovement.create({
+            inventory_item_id: inventoryId,
+            movement_type: 'in',
+            quantity: quantity,
+            reference_type: 'production',
+            reference_id: batch.id,
+            reference_number: batch.batch_number,
+            unit_cost: batchItem.unit_price,
+            total_value: quantity * batchItem.unit_price,
+            performed_by: transferredById,
+            notes: `Production transfer: ${productType || itemName}. ${notes}`,
+            movement_date: new Date().toISOString().split('T')[0],
+            balance_after: newStock
+          });
         }
       }
 
-      // Update PO status to completed
-      if (batch?.purchase_order_id) {
-        await base44.entities.PurchaseOrder.update(batch.purchase_order_id, {
-          order_status: 'completed'
-        });
-      }
+      // Create audit log
+      await base44.entities.AuditLog.create({
+        user_id: transferredById,
+        user_name: transferredByName,
+        action: 'update',
+        entity_type: 'ProductionBatch',
+        entity_id: batch.id,
+        module: 'production',
+        description: `Transferred ${quantity} ${unit} of ${itemName} to main inventory (${productType || 'N/A'})`,
+        new_values: { quantity, unit, product_type: productType },
+        timestamp: new Date().toISOString()
+      });
 
-      return data;
+      return batch;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['productionBatches']);
       queryClient.invalidateQueries(['inventory-production']);
       queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['purchaseOrdersForProduction']);
-      toast.success('Batch processed! Inventory updated with usable quantities.');
+      toast.success('Transferred to main inventory successfully!');
+      setTransferDialog(false);
       setSelectedBatch(null);
-      setIsProcessing(false);
     },
     onError: (error) => {
-      toast.error('Failed to process batch: ' + error.message);
+      toast.error('Failed to transfer: ' + error.message);
+    },
+  });
+
+  // Mark as waste mutation
+  const markAsWasteMutation = useMutation({
+    mutationFn: async ({ batch, wasteData }) => {
+      const { itemName, inventoryId, wasteQuantity, unit, wasteReason, notes, recordedById, recordedByName } = wasteData;
+
+      // Find the batch item
+      const batchItem = batch.items.find(i => i.inventory_id === inventoryId || i.item_name === itemName);
+      if (!batchItem) throw new Error('Item not found in batch');
+
+      // Update batch items
+      const updatedItems = batch.items.map(item => {
+        if (item.inventory_id === inventoryId || item.item_name === itemName) {
+          return {
+            ...item,
+            quantity_remaining: 0,
+            waste_quantity: (item.waste_quantity || 0) + wasteQuantity
+          };
+        }
+        return item;
+      });
+
+      // Calculate new totals
+      const totalRemaining = updatedItems.reduce((sum, i) => sum + (i.quantity_remaining || 0), 0);
+      const totalWaste = updatedItems.reduce((sum, i) => sum + (i.waste_quantity || 0), 0);
+      const totalReceived = batch.total_received_quantity || 0;
+      const wastePercentage = totalReceived > 0 ? ((totalWaste / totalReceived) * 100).toFixed(2) : 0;
+
+      // Update batch
+      await base44.entities.ProductionBatch.update(batch.id, {
+        items: updatedItems,
+        total_remaining_quantity: totalRemaining,
+        total_waste_quantity: totalWaste,
+        waste_percentage: parseFloat(wastePercentage),
+        status: totalRemaining === 0 ? 'completed' : batch.status
+      });
+
+      // Create waste log entry
+      await base44.entities.ProductionWasteLog.create({
+        batch_id: batch.id,
+        batch_number: batch.batch_number,
+        item_name: itemName,
+        inventory_id: inventoryId,
+        waste_quantity: wasteQuantity,
+        unit,
+        waste_value: wasteQuantity * (batchItem.unit_price || 0),
+        waste_reason: wasteReason,
+        waste_date: new Date().toISOString().split('T')[0],
+        recorded_by_id: recordedById,
+        recorded_by_name: recordedByName,
+        notes
+      });
+
+      // Create audit log
+      await base44.entities.AuditLog.create({
+        user_id: recordedById,
+        user_name: recordedByName,
+        action: 'create',
+        entity_type: 'ProductionWasteLog',
+        entity_id: batch.id,
+        module: 'production',
+        description: `Marked ${wasteQuantity} ${unit} of ${itemName} as waste. Reason: ${wasteReason}`,
+        new_values: { waste_quantity: wasteQuantity, waste_reason: wasteReason },
+        timestamp: new Date().toISOString()
+      });
+
+      return batch;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['productionBatches']);
+      queryClient.invalidateQueries(['wasteLog']);
+      toast.success('Waste recorded successfully');
+      setWasteDialog(false);
+      setSelectedBatch(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to record waste: ' + error.message);
     },
   });
 
@@ -361,18 +554,22 @@ function ProductionHousePage() {
     return productionBatches.filter(b => b.status === statusFilter);
   }, [productionBatches, statusFilter]);
 
+  // Batches with remaining stock (active production)
+  const activeBatches = useMemo(() => {
+    return productionBatches.filter(b => (b.total_remaining_quantity || 0) > 0);
+  }, [productionBatches]);
+
   // Stats
   const stats = useMemo(() => {
     return {
       pending: productionBatches.filter(b => b.status === 'pending').length,
-      inProgress: productionBatches.filter(b => b.status === 'in_progress').length,
+      inProgress: activeBatches.length,
       completed: productionBatches.filter(b => b.status === 'completed').length,
-      totalWaste: productionBatches.reduce((sum, b) => sum + (b.total_waste_quantity || 0), 0),
-      avgWasteRate: productionBatches.length > 0 
-        ? (productionBatches.reduce((sum, b) => sum + (b.waste_percentage || 0), 0) / productionBatches.length).toFixed(2)
-        : 0
+      totalWaste: wasteLog.reduce((sum, w) => sum + (w.waste_quantity || 0), 0),
+      totalWasteValue: wasteLog.reduce((sum, w) => sum + (w.waste_value || 0), 0),
+      totalRemaining: productionBatches.reduce((sum, b) => sum + (b.total_remaining_quantity || 0), 0)
     };
-  }, [productionBatches]);
+  }, [productionBatches, activeBatches, wasteLog]);
 
   const getStatusBadge = (status) => {
     const config = {
@@ -413,13 +610,13 @@ function ProductionHousePage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Production House</h1>
-              <p className="text-slate-500 text-sm">Process received goods, track waste & add to inventory</p>
+              <p className="text-slate-500 text-sm">Receive POs → Store raw materials → Transfer to inventory</p>
             </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
           <Card className="bg-white border-0 shadow-sm">
             <CardContent className="p-5">
               <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center mb-3">
@@ -430,13 +627,13 @@ function ProductionHousePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-sm">
+          <Card className="bg-white border-0 shadow-sm border-l-4 border-l-blue-500">
             <CardContent className="p-5">
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-                <Play className="w-5 h-5 text-blue-600" />
+                <Scale className="w-5 h-5 text-blue-600" />
               </div>
-              <p className="text-3xl font-bold text-slate-900">{stats.inProgress}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase">In Progress</p>
+              <p className="text-3xl font-bold text-blue-600">{stats.inProgress}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase">Active Batches</p>
             </CardContent>
           </Card>
 
@@ -450,12 +647,22 @@ function ProductionHousePage() {
             </CardContent>
           </Card>
 
+          <Card className="bg-white border-0 shadow-sm border-l-4 border-l-purple-500">
+            <CardContent className="p-5">
+              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3">
+                <Box className="w-5 h-5 text-purple-600" />
+              </div>
+              <p className="text-3xl font-bold text-purple-600">{stats.totalRemaining.toLocaleString()}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase">In Stock (Raw)</p>
+            </CardContent>
+          </Card>
+
           <Card className="bg-white border-0 shadow-sm">
             <CardContent className="p-5">
               <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center mb-3">
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
-              <p className="text-3xl font-bold text-red-600">{stats.totalWaste}</p>
+              <p className="text-3xl font-bold text-red-600">{stats.totalWaste.toLocaleString()}</p>
               <p className="text-xs font-medium text-slate-500 uppercase">Total Waste</p>
             </CardContent>
           </Card>
@@ -465,24 +672,201 @@ function ProductionHousePage() {
               <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
-              <p className="text-3xl font-bold text-amber-600">{stats.avgWasteRate}%</p>
-              <p className="text-xs font-medium text-slate-500 uppercase">Avg Waste Rate</p>
+              <p className="text-3xl font-bold text-amber-600">৳{stats.totalWasteValue.toLocaleString()}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase">Waste Value</p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="batches" className="space-y-4">
+        <Tabs defaultValue="inventory" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="batches">Production Batches</TabsTrigger>
-            <TabsTrigger value="pending_pos">Pending POs ({purchaseOrders.length})</TabsTrigger>
+            <TabsTrigger value="inventory">🏭 Production Inventory ({activeBatches.length})</TabsTrigger>
+            <TabsTrigger value="pending_pos">📦 Pending POs ({purchaseOrders.length})</TabsTrigger>
+            <TabsTrigger value="history">📜 All Batches</TabsTrigger>
+            <TabsTrigger value="waste">🗑️ Waste Log</TabsTrigger>
           </TabsList>
 
-          {/* Production Batches Tab */}
-          <TabsContent value="batches">
+          {/* Production Inventory - Main View */}
+          <TabsContent value="inventory">
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <Factory className="w-5 h-5 text-indigo-600" />
+                  Production House Inventory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {activeBatches.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Box className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                    <p className="font-medium">No raw materials in production house</p>
+                    <p className="text-sm">Receive purchase orders to add stock</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch #</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead className="text-center">Received</TableHead>
+                        <TableHead className="text-center">Remaining</TableHead>
+                        <TableHead className="text-center">Transferred</TableHead>
+                        <TableHead className="text-center">Waste</TableHead>
+                        <TableHead>Received By</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activeBatches.map((batch) => (
+                        batch.items?.filter(item => (item.quantity_remaining || 0) > 0).map((item, idx) => (
+                          <TableRow key={`${batch.id}-${idx}`} className="hover:bg-slate-50">
+                            <TableCell className="font-mono text-indigo-600 font-semibold">
+                              {batch.batch_number}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium">{item.item_name}</p>
+                              <p className="text-xs text-slate-500">Unit: {item.unit || 'kg'}</p>
+                            </TableCell>
+                            <TableCell>{batch.supplier_name}</TableCell>
+                            <TableCell className="text-center font-semibold">
+                              {item.quantity_received} {item.unit}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge className="bg-blue-100 text-blue-800 font-bold">
+                                {item.quantity_remaining || 0} {item.unit}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center text-green-600 font-semibold">
+                              {item.quantity_transferred || 0} {item.unit}
+                            </TableCell>
+                            <TableCell className="text-center text-red-600">
+                              {item.waste_quantity || 0} {item.unit}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm">
+                                <User className="w-3 h-3" />
+                                {batch.received_by_name || 'N/A'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex gap-2 justify-center">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBatch(batch);
+                                    setTransferDialog(true);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Send className="w-4 h-4 mr-1" />
+                                  Transfer
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedBatch(batch);
+                                    setWasteDialog(true);
+                                  }}
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Pending POs Tab */}
+          <TabsContent value="pending_pos">
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="w-5 h-5" />
+                  Received Purchase Orders - Ready for Production
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>PO Number</TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Received By (PO)</TableHead>
+                      <TableHead className="text-right">Total Value</TableHead>
+                      <TableHead className="text-center">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {purchaseOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                          <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                          <p>No received POs waiting for production</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      purchaseOrders.map((po) => (
+                        <TableRow key={po.id} className="hover:bg-slate-50">
+                          <TableCell className="font-mono font-semibold text-violet-600">
+                            {po.po_number}
+                          </TableCell>
+                          <TableCell>{po.supplier_name}</TableCell>
+                          <TableCell>{format(new Date(po.order_date), 'dd MMM yyyy')}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {po.order_items?.slice(0, 2).map((item, idx) => (
+                                <p key={idx}>{item.item_name} ({item.quantity_ordered} {item.unit || 'pc'})</p>
+                              ))}
+                              {po.order_items?.length > 2 && (
+                                <p className="text-slate-400">+{po.order_items.length - 2} more</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm">
+                              <User className="w-3 h-3" />
+                              {po.received_by_name || 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            ৳{po.total_amount?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              onClick={() => setReceiveDialog(po)}
+                              className="bg-indigo-600 hover:bg-indigo-700"
+                            >
+                              <ArrowRight className="w-4 h-4 mr-1" />
+                              Receive to Production
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* All Batches History */}
+          <TabsContent value="history">
             <Card>
               <CardHeader className="border-b">
                 <div className="flex justify-between items-center">
-                  <CardTitle>Production Batches</CardTitle>
+                  <CardTitle>All Production Batches</CardTitle>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by status" />
@@ -504,10 +888,9 @@ function ProductionHousePage() {
                       <TableHead>PO #</TableHead>
                       <TableHead>Supplier</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead className="text-center">Items</TableHead>
                       <TableHead className="text-center">Received</TableHead>
+                      <TableHead className="text-center">Transferred</TableHead>
                       <TableHead className="text-center">Waste</TableHead>
-                      <TableHead className="text-center">Usable</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-center">Action</TableHead>
                     </TableRow>
@@ -515,7 +898,7 @@ function ProductionHousePage() {
                   <TableBody>
                     {filteredBatches.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-slate-500">
+                        <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                           <Factory className="w-12 h-12 mx-auto mb-2 opacity-30" />
                           <p>No production batches found</p>
                         </TableCell>
@@ -529,104 +912,25 @@ function ProductionHousePage() {
                           <TableCell className="font-mono text-sm">{batch.po_number}</TableCell>
                           <TableCell>{batch.supplier_name}</TableCell>
                           <TableCell>{format(new Date(batch.batch_date), 'dd MMM yyyy')}</TableCell>
-                          <TableCell className="text-center">{batch.items?.length || 0}</TableCell>
                           <TableCell className="text-center font-semibold">{batch.total_received_quantity || 0}</TableCell>
+                          <TableCell className="text-center text-green-600 font-semibold">
+                            {batch.total_transferred_quantity || 0}
+                          </TableCell>
                           <TableCell className="text-center">
                             <span className="text-red-600 font-semibold">{batch.total_waste_quantity || 0}</span>
                             {batch.waste_percentage > 0 && (
                               <span className="text-xs text-slate-500 ml-1">({batch.waste_percentage}%)</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-center text-green-600 font-semibold">
-                            {batch.total_usable_quantity || 0}
-                          </TableCell>
                           <TableCell>{getStatusBadge(batch.status)}</TableCell>
-                          <TableCell className="text-center">
-                            {batch.status === 'pending' || batch.status === 'in_progress' ? (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBatch(batch);
-                                  setIsProcessing(true);
-                                }}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Play className="w-4 h-4 mr-1" />
-                                Process
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedBatch(batch);
-                                  setIsProcessing(false);
-                                }}
-                              >
-                                <Eye className="w-4 h-4 mr-1" />
-                                View
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Pending POs Tab */}
-          <TabsContent value="pending_pos">
-            <Card>
-              <CardHeader className="border-b">
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="w-5 h-5" />
-                  Received Purchase Orders - Ready for Production
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>PO Number</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-center">Items</TableHead>
-                      <TableHead className="text-right">Total Value</TableHead>
-                      <TableHead className="text-center">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {purchaseOrders.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                          <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                          <p>No received POs waiting for production</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      purchaseOrders.map((po) => (
-                        <TableRow key={po.id} className="hover:bg-slate-50">
-                          <TableCell className="font-mono font-semibold text-violet-600">
-                            {po.po_number}
-                          </TableCell>
-                          <TableCell>{po.supplier_name}</TableCell>
-                          <TableCell>{format(new Date(po.order_date), 'dd MMM yyyy')}</TableCell>
-                          <TableCell className="text-center">{po.order_items?.length || 0}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            ৳{po.total_amount?.toLocaleString()}
-                          </TableCell>
                           <TableCell className="text-center">
                             <Button
                               size="sm"
-                              onClick={() => sendToProductionMutation.mutate(po)}
-                              disabled={sendToProductionMutation.isPending}
-                              className="bg-indigo-600 hover:bg-indigo-700"
+                              variant="outline"
+                              onClick={() => setViewBatchDialog(batch)}
                             >
-                              <ArrowRight className="w-4 h-4 mr-1" />
-                              Send to Production
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -637,103 +941,227 @@ function ProductionHousePage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Waste Log */}
+          <TabsContent value="waste">
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center gap-2 text-red-700">
+                  <Trash2 className="w-5 h-5" />
+                  Waste Log
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Batch #</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-center">Quantity</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Recorded By</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {wasteLog.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                          <Recycle className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                          <p>No waste records found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      wasteLog.map((waste) => (
+                        <TableRow key={waste.id}>
+                          <TableCell>{format(new Date(waste.waste_date), 'dd MMM yyyy')}</TableCell>
+                          <TableCell className="font-mono text-sm">{waste.batch_number}</TableCell>
+                          <TableCell>{waste.item_name}</TableCell>
+                          <TableCell className="text-center font-semibold text-red-600">
+                            {waste.waste_quantity} {waste.unit}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            ৳{waste.waste_value?.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{waste.waste_reason?.replace('_', ' ')}</Badge>
+                          </TableCell>
+                          <TableCell>{waste.recorded_by_name}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
-        {/* Process Batch Dialog */}
-        <Dialog open={!!selectedBatch && isProcessing} onOpenChange={() => { setSelectedBatch(null); setIsProcessing(false); }}>
-          <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0">
-            <DialogHeader className="px-6 pt-6">
-              <DialogTitle className="text-xl flex items-center gap-2">
-                <Recycle className="w-6 h-6 text-green-600" />
-                Process Production Batch
-              </DialogTitle>
-            </DialogHeader>
-            <div className="px-6 pb-6">
-              {selectedBatch && (
-                <ProcessBatchForm
-                  batch={selectedBatch}
-                  inventory={inventory}
-                  currentUser={currentUser}
-                  onComplete={(data) => completeBatchMutation.mutate({ batchId: selectedBatch.id, data })}
-                  onCancel={() => { setSelectedBatch(null); setIsProcessing(false); }}
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* View Batch Dialog */}
-        <Dialog open={!!selectedBatch && !isProcessing} onOpenChange={() => setSelectedBatch(null)}>
-          <DialogContent className="max-w-3xl">
+        {/* Transfer to Inventory Dialog */}
+        <Dialog open={transferDialog} onOpenChange={setTransferDialog}>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Batch Details: {selectedBatch?.batch_number}
+                <Send className="w-5 h-5 text-green-600" />
+                Transfer to Main Inventory
               </DialogTitle>
             </DialogHeader>
             {selectedBatch && (
+              <TransferToInventoryForm
+                batch={selectedBatch}
+                inventory={inventory}
+                currentUser={currentUser}
+                onTransfer={(data) => transferToInventoryMutation.mutate({ batch: selectedBatch, transferData: data })}
+                onCancel={() => {
+                  setTransferDialog(false);
+                  setSelectedBatch(null);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Mark as Waste Dialog */}
+        <Dialog open={wasteDialog} onOpenChange={setWasteDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-red-600" />
+                Mark as Waste
+              </DialogTitle>
+            </DialogHeader>
+            {selectedBatch && (
+              <MarkAsWasteForm
+                batch={selectedBatch}
+                currentUser={currentUser}
+                onMarkWaste={(data) => markAsWasteMutation.mutate({ batch: selectedBatch, wasteData: data })}
+                onCancel={() => {
+                  setWasteDialog(false);
+                  setSelectedBatch(null);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* View Batch Details Dialog */}
+        <Dialog open={!!viewBatchDialog} onOpenChange={() => setViewBatchDialog(null)}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Batch Details: {viewBatchDialog?.batch_number}
+              </DialogTitle>
+            </DialogHeader>
+            {viewBatchDialog && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">PO Number</p>
-                    <p className="font-semibold">{selectedBatch.po_number}</p>
+                    <p className="font-semibold">{viewBatchDialog.po_number}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Supplier</p>
-                    <p className="font-semibold">{selectedBatch.supplier_name}</p>
+                    <p className="font-semibold">{viewBatchDialog.supplier_name}</p>
                   </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-xs text-green-600">Usable Quantity</p>
-                    <p className="font-bold text-green-700 text-xl">{selectedBatch.total_usable_quantity}</p>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-600">Received By</p>
+                    <p className="font-semibold">{viewBatchDialog.received_by_name || 'N/A'}</p>
                   </div>
-                  <div className="p-4 bg-red-50 rounded-lg">
-                    <p className="text-xs text-red-600">Waste ({selectedBatch.waste_percentage}%)</p>
-                    <p className="font-bold text-red-700 text-xl">{selectedBatch.total_waste_quantity}</p>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-600">Transferred</p>
+                    <p className="font-bold text-green-700">{viewBatchDialog.total_transferred_quantity || 0}</p>
                   </div>
                 </div>
 
+                {/* Items */}
                 <div>
-                  <h4 className="font-semibold mb-2">Processed Items</h4>
+                  <h4 className="font-semibold mb-2">Batch Items</h4>
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item</TableHead>
                         <TableHead className="text-center">Received</TableHead>
+                        <TableHead className="text-center">Remaining</TableHead>
+                        <TableHead className="text-center">Transferred</TableHead>
                         <TableHead className="text-center">Waste</TableHead>
-                        <TableHead className="text-center">Usable</TableHead>
-                        <TableHead>Reason</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedBatch.items?.map((item, idx) => (
+                      {viewBatchDialog.items?.map((item, idx) => (
                         <TableRow key={idx}>
                           <TableCell className="font-medium">{item.item_name}</TableCell>
-                          <TableCell className="text-center">{item.quantity_received}</TableCell>
+                          <TableCell className="text-center">{item.quantity_received} {item.unit}</TableCell>
+                          <TableCell className="text-center text-blue-600 font-semibold">{item.quantity_remaining || 0}</TableCell>
+                          <TableCell className="text-center text-green-600 font-semibold">{item.quantity_transferred || 0}</TableCell>
                           <TableCell className="text-center text-red-600">{item.waste_quantity || 0}</TableCell>
-                          <TableCell className="text-center text-green-600 font-semibold">{item.usable_quantity}</TableCell>
-                          <TableCell>{item.waste_reason || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
 
-                {selectedBatch.notes && (
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1">Notes</p>
-                    <p className="text-sm">{selectedBatch.notes}</p>
-                  </div>
-                )}
-
-                {selectedBatch.processed_by_name && (
-                  <div className="text-sm text-slate-500">
-                    Processed by: {selectedBatch.processed_by_name} on {selectedBatch.completed_date ? format(new Date(selectedBatch.completed_date), 'dd MMM yyyy HH:mm') : '-'}
+                {/* Transfer History */}
+                {viewBatchDialog.transfer_history?.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <History className="w-4 h-4" />
+                      Transfer History
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {viewBatchDialog.transfer_history.map((transfer, idx) => (
+                        <div key={idx} className="p-3 bg-green-50 rounded-lg border border-green-200 text-sm">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{transfer.item_name}</span>
+                            <span className="text-green-700 font-semibold">
+                              {transfer.quantity} {transfer.unit} → {transfer.product_type || 'Main Inventory'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            By {transfer.transferred_by_name} on {format(new Date(transfer.date), 'dd MMM yyyy HH:mm')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Receive PO Dialog */}
+        <AlertDialog open={!!receiveDialog} onOpenChange={() => setReceiveDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Receive PO to Production House</AlertDialogTitle>
+              <AlertDialogDescription>
+                <div className="space-y-3 mt-2">
+                  <p>You are receiving <strong>{receiveDialog?.po_number}</strong> into the Production House.</p>
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-sm"><strong>Supplier:</strong> {receiveDialog?.supplier_name}</p>
+                    <p className="text-sm"><strong>Items:</strong> {receiveDialog?.order_items?.length}</p>
+                    <p className="text-sm"><strong>Total Value:</strong> ৳{receiveDialog?.total_amount?.toLocaleString()}</p>
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    <User className="w-4 h-4 inline mr-1" />
+                    You ({currentUser?.full_name}) will be recorded as the Production House receiver.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => sendToProductionMutation.mutate({ po: receiveDialog })}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Receive to Production House
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
