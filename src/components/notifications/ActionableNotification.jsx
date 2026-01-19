@@ -3,8 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { Expense } from '@/entities/Expense';
-import { Task } from '@/entities/Task';
 import { base44 } from '@/api/base44Client';
 
 /**
@@ -35,7 +33,7 @@ export default function ActionableNotification({ notification, onActionComplete 
         return;
       }
 
-      const expense = await Expense.get(expenseId);
+      const expense = await base44.entities.Expense.get(expenseId);
       const user = await base44.auth.me();
 
       let updateData = {};
@@ -56,7 +54,7 @@ export default function ActionableNotification({ notification, onActionComplete 
         };
       }
 
-      await Expense.update(expenseId, updateData);
+      await base44.entities.Expense.update(expenseId, updateData);
       toast.success('✅ Expense approved successfully!');
       
       if (onActionComplete) {
@@ -84,7 +82,7 @@ export default function ActionableNotification({ notification, onActionComplete 
       const user = await base44.auth.me();
       const reason = prompt('Rejection reason (optional):') || 'No reason provided';
 
-      await Expense.update(expenseId, {
+      await base44.entities.Expense.update(expenseId, {
         status: 'rejected',
         manager_rejection_reason: reason,
         manager_approved_by: user.id,
@@ -120,7 +118,7 @@ export default function ActionableNotification({ notification, onActionComplete 
         'complete': 'submitted'
       };
 
-      await Task.update(taskId, {
+      await base44.entities.Task.update(taskId, {
         status: statusMap[action] || 'in_progress'
       });
 
