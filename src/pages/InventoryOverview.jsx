@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Inventory } from '@/entities/Inventory';
-import { InventoryMovement } from '@/entities/InventoryMovement';
-import { User } from '@/entities/User';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -138,8 +136,8 @@ function InventoryOverviewPage() {
         // Background refresh after 100ms
         setTimeout(async () => {
           const [user, data, movements] = await Promise.all([
-            User.me(),
-            Inventory.list('-updated_date', 2000),
+            base44.auth.me(),
+            base44.entities.Inventory.list('-updated_date', 2000),
             base44.entities.InventoryMovement.list('-movement_date', 500)
           ]);
           setCurrentUser(user);
@@ -152,8 +150,8 @@ function InventoryOverviewPage() {
       } else {
         // Fresh load - parallel requests
         const [user, data, movements] = await Promise.all([
-          User.me(),
-          Inventory.list('-updated_date', 2000),
+          base44.auth.me(),
+          base44.entities.Inventory.list('-updated_date', 2000),
           base44.entities.InventoryMovement.list('-movement_date', 500)
         ]);
         setCurrentUser(user);
@@ -245,10 +243,10 @@ function InventoryOverviewPage() {
 
     try {
       if (editingItem) {
-        await Inventory.update(editingItem.id, data);
+        await base44.entities.Inventory.update(editingItem.id, data);
         toast.success('Product updated successfully');
       } else {
-        await Inventory.create(data);
+        await base44.entities.Inventory.create(data);
         toast.success('Product added successfully');
       }
       setIsFormOpen(false);
@@ -275,7 +273,7 @@ function InventoryOverviewPage() {
     if (!itemToDelete) return;
 
     try {
-      await Inventory.delete(itemToDelete.id);
+      await base44.entities.Inventory.delete(itemToDelete.id);
       toast.success(`${itemToDelete.item_name} deleted successfully`);
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
