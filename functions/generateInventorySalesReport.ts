@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { reportType, department, dateFrom, dateTo, category, orders: passedOrders, inventory: passedInventory, movements: passedMovements } = body;
+    const { reportType, department, dateFrom, dateTo, category, orders: passedOrders, inventory: passedInventory, movements: passedMovements, purchaseOrders: passedPurchaseOrders } = body;
 
     // Use passed data if available (real-time), otherwise fetch
     const [inventory, orders, movements] = await Promise.all([
@@ -112,6 +112,20 @@ Deno.serve(async (req) => {
         doc = generateReturnedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
       } else if (reportType === 'sales_manager') {
         doc = generateSalesManagerReport(filteredOrders, filteredInventory, inventoryMap, inventoryIds, movements, department, user);
+      } else if (reportType === 'sales') {
+        doc = generateSalesSummaryReport(filteredInventory, filteredOrders, inventoryMap, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'purchase') {
+        doc = generatePurchaseReport(passedPurchaseOrders || [], filteredInventory, department, dateFrom, dateTo, user);
+      } else if (reportType === 'waste') {
+        doc = generateDamagedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'returns') {
+        doc = generateReturnedReport(filteredInventory, movements, inventoryIds, department, dateFrom, dateTo, user);
+      } else if (reportType === 'supplier') {
+        doc = generateSupplierReport(passedPurchaseOrders || [], body.suppliers || [], department, dateFrom, dateTo, user);
+      } else if (reportType === 'stock') {
+        doc = generateStockValuationReport(filteredInventory, department, user);
+      } else if (reportType === 'movement') {
+        doc = generateMovementReport(movements, filteredInventory, inventoryIds, department, dateFrom, dateTo, user);
       } else {
         return Response.json({ error: 'Invalid report type' }, { status: 400 });
       }

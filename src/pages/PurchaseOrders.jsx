@@ -48,6 +48,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
   const [selectedItem, setSelectedItem] = useState('');
   const [itemQuantity, setItemQuantity] = useState(1);
   const [itemPrice, setItemPrice] = useState(0);
+  const [itemUnit, setItemUnit] = useState('pc');
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [newProduct, setNewProduct] = useState({
     item_name: '',
@@ -60,19 +61,21 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
 
   // Packaging/Bundling elements
   const [packagingItems, setPackagingItems] = useState(order?.packaging_items || []);
-  const [newPackaging, setNewPackaging] = useState({ name: '', quantity: 1, unit_cost: 0 });
+  const [newPackaging, setNewPackaging] = useState({ name: '', quantity: 1, unit_cost: 0, unit: 'pc' });
 
   const packagingOptions = [
-    { name: 'Sticker', icon: '🏷️' },
-    { name: 'Packaging Box', icon: '📦' },
-    { name: 'Jar/Container', icon: '🫙' },
-    { name: 'Plastic Wrap', icon: '🎁' },
-    { name: 'Bubble Wrap', icon: '🔵' },
-    { name: 'Label', icon: '🪧' },
-    { name: 'Tape', icon: '📎' },
-    { name: 'Bag', icon: '👜' },
-    { name: 'Other', icon: '📋' }
+    { name: 'Sticker', icon: '🏷️', units: ['pc', 'sheet', 'roll'] },
+    { name: 'Packaging Box', icon: '📦', units: ['pc', 'bundle'] },
+    { name: 'Jar/Container', icon: '🫙', units: ['pc', 'litre', 'ml'] },
+    { name: 'Plastic Wrap', icon: '🎁', units: ['kg', 'roll', 'meter'] },
+    { name: 'Bubble Wrap', icon: '🔵', units: ['kg', 'roll', 'meter'] },
+    { name: 'Label', icon: '🪧', units: ['pc', 'sheet', 'roll'] },
+    { name: 'Tape', icon: '📎', units: ['pc', 'roll'] },
+    { name: 'Bag', icon: '👜', units: ['pc', 'kg', 'bundle'] },
+    { name: 'Other', icon: '📋', units: ['pc', 'kg', 'litre', 'meter'] }
   ];
+
+  const unitOptions = ['pc', 'kg', 'gm', 'litre', 'ml', 'roll', 'sheet', 'bundle', 'meter'];
 
   const addPackagingItem = () => {
     if (!newPackaging.name) {
@@ -80,7 +83,12 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       return;
     }
     setPackagingItems([...packagingItems, { ...newPackaging, id: Date.now() }]);
-    setNewPackaging({ name: '', quantity: 1, unit_cost: 0 });
+    setNewPackaging({ name: '', quantity: 1, unit_cost: 0, unit: 'pc' });
+  };
+
+  const getPackagingUnits = (name) => {
+    const opt = packagingOptions.find(o => o.name === name);
+    return opt?.units || ['pc', 'kg', 'litre'];
   };
 
   const removePackagingItem = (id) => {
@@ -134,6 +142,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       quantity_received: 0,
       unit_price: itemPrice,
       total_price: totalPrice,
+      unit: itemUnit,
       is_new_product: false
     };
 
@@ -150,6 +159,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     setSelectedItem('');
     setItemQuantity(1);
     setItemPrice(0);
+    setItemUnit('pc');
   };
 
   const handleAddNewProduct = async () => {
@@ -376,7 +386,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add Existing Item */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-gray-50 rounded-lg border">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-3 p-4 bg-gray-50 rounded-lg border">
             <div className="md:col-span-2">
               <Label>Select Existing Product</Label>
               <SearchableProductSelect
@@ -385,7 +395,10 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
                 onValueChange={(value) => {
                   setSelectedItem(value);
                   const item = departmentFilteredInventory.find(i => i.id === value);
-                  if (item) setItemPrice(item.purchase_price || 0);
+                  if (item) {
+                    setItemPrice(item.purchase_price || 0);
+                    setItemUnit(item.weight_unit === 'kg' ? 'kg' : 'pc');
+                  }
                 }}
                 placeholder="Search and select product..."
               />
@@ -394,10 +407,24 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
               <Label>Quantity</Label>
               <Input
                 type="number"
-                min="1"
+                min="0.01"
+                step="0.01"
                 value={itemQuantity}
-                onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+                onChange={(e) => setItemQuantity(parseFloat(e.target.value) || 1)}
               />
+            </div>
+            <div>
+              <Label>Unit</Label>
+              <Select value={itemUnit} onValueChange={setItemUnit}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions.map(u => (
+                    <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Unit Price (BDT)</Label>
@@ -422,7 +449,8 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
-                  <TableHead className="text-center">Qty Ordered</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead className="text-center">Unit</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-center">Action</TableHead>
@@ -440,6 +468,9 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
                       </div>
                     </TableCell>
                     <TableCell className="text-center">{item.quantity_ordered}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{(item.unit || 'pc').toUpperCase()}</Badge>
+                    </TableCell>
                     <TableCell className="text-right">BDT {item.unit_price.toLocaleString()}</TableCell>
                     <TableCell className="text-right font-semibold">BDT {item.total_price.toLocaleString()}</TableCell>
                     <TableCell className="text-center">
@@ -581,12 +612,12 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
           </p>
           
           {/* Add Packaging Item */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
             <div>
               <Label>Packaging Item</Label>
               <Select
                 value={newPackaging.name}
-                onValueChange={(value) => setNewPackaging({...newPackaging, name: value})}
+                onValueChange={(value) => setNewPackaging({...newPackaging, name: value, unit: packagingOptions.find(o => o.name === value)?.units[0] || 'pc'})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select item..." />
@@ -604,10 +635,27 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
               <Label>Quantity</Label>
               <Input
                 type="number"
-                min="1"
+                min="0.01"
+                step="0.01"
                 value={newPackaging.quantity}
-                onChange={(e) => setNewPackaging({...newPackaging, quantity: parseInt(e.target.value) || 1})}
+                onChange={(e) => setNewPackaging({...newPackaging, quantity: parseFloat(e.target.value) || 1})}
               />
+            </div>
+            <div>
+              <Label>Unit</Label>
+              <Select
+                value={newPackaging.unit}
+                onValueChange={(value) => setNewPackaging({...newPackaging, unit: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getPackagingUnits(newPackaging.name).map(u => (
+                    <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Unit Cost (BDT)</Label>
@@ -638,7 +686,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
                     <div>
                       <p className="font-medium">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.quantity} × ৳{item.unit_cost} = ৳{(item.quantity * item.unit_cost).toLocaleString()}
+                        {item.quantity} {(item.unit || 'pc').toUpperCase()} × ৳{item.unit_cost} = ৳{(item.quantity * item.unit_cost).toLocaleString()}
                       </p>
                     </div>
                   </div>

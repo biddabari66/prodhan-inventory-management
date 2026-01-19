@@ -55,18 +55,36 @@ function InventoryReturnsPage() {
     const monthEnd = endOfMonth(now);
 
     const thisMonthMovements = movements.filter(m => {
-      const date = parseISO(m.created_date);
-      return date >= monthStart && date <= monthEnd;
+      try {
+        const dateStr = m.movement_date || m.created_date;
+        if (!dateStr) return false;
+        const date = parseISO(dateStr);
+        return date >= monthStart && date <= monthEnd;
+      } catch {
+        return false;
+      }
     });
 
-    const returns = thisMonthMovements.filter(m => m.movement_type === 'return' || m.reason?.toLowerCase().includes('return'));
-    const damages = thisMonthMovements.filter(m => m.movement_type === 'damage' || m.reason?.toLowerCase().includes('damage') || m.reason?.toLowerCase().includes('damaged'));
+    // Filter returns - check reference_type for returns
+    const returns = thisMonthMovements.filter(m => 
+      m.reference_type === 'return' || 
+      m.movement_type === 'return' || 
+      m.notes?.toLowerCase().includes('return')
+    );
+    
+    // Filter damages - check reference_type for damage/expired
+    const damages = thisMonthMovements.filter(m => 
+      m.reference_type === 'damage' || 
+      m.reference_type === 'expired' ||
+      m.movement_type === 'damage' || 
+      m.notes?.toLowerCase().includes('damage')
+    );
 
     const returnsCount = returns.length;
-    const returnsValue = returns.reduce((sum, r) => sum + Math.abs(r.quantity || 0) * (r.unit_cost || 0), 0);
+    const returnsValue = returns.reduce((sum, r) => sum + Math.abs(r.total_value || 0), 0);
     
     const damagesCount = damages.length;
-    const damagesLoss = damages.reduce((sum, d) => sum + Math.abs(d.quantity || 0) * (d.unit_cost || 0), 0);
+    const damagesLoss = damages.reduce((sum, d) => sum + Math.abs(d.total_value || 0), 0);
 
     return { returnsCount, returnsValue, damagesCount, damagesLoss };
   }, [movements]);
