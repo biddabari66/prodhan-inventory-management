@@ -803,7 +803,7 @@ function ProductionHousePage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Items</TableHead>
                       <TableHead>Received By (PO)</TableHead>
-                      <TableHead className="text-right">Total Value</TableHead>
+                      {isAdmin && <TableHead className="text-right">Total Value</TableHead>}
                       <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -839,9 +839,11 @@ function ProductionHousePage() {
                               {po.received_by_name || 'N/A'}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            ৳{po.total_amount?.toLocaleString()}
-                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right font-semibold">
+                              ৳{po.total_amount?.toLocaleString()}
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">
                             <Button
                               size="sm"
@@ -959,7 +961,7 @@ function ProductionHousePage() {
                       <TableHead>Batch #</TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead className="text-right">Value</TableHead>
+                      {isAdmin && <TableHead className="text-right">Value</TableHead>}
                       <TableHead>Reason</TableHead>
                       <TableHead>Recorded By</TableHead>
                     </TableRow>
@@ -981,9 +983,11 @@ function ProductionHousePage() {
                           <TableCell className="text-center font-semibold text-red-600">
                             {waste.waste_quantity} {waste.unit}
                           </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            ৳{waste.waste_value?.toLocaleString()}
-                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right font-semibold">
+                              ৳{waste.waste_value?.toLocaleString()}
+                            </TableCell>
+                          )}
                           <TableCell>
                             <Badge variant="outline">{waste.waste_reason?.replace('_', ' ')}</Badge>
                           </TableCell>
