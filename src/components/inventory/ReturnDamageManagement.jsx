@@ -598,10 +598,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <Badge variant="outline">
+                              <Badge variant="outline" className="font-semibold">
                                 {metadata.is_partial 
                                   ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
-                                  : Math.abs(movement.quantity) || metadata.financial_impact ? Math.round(Math.abs(movement.total_value) / (inventory.find(i => i.id === movement.inventory_item_id)?.selling_price || 1)) : 1
+                                  : metadata.original_quantity || Math.abs(movement.quantity) || 1
                                 }
                               </Badge>
                               {metadata.is_partial && (

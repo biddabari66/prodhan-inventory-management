@@ -115,7 +115,7 @@ function InventoryReturnsPage() {
                 ? 'ring-2 ring-[#D32F2F] bg-red-50' 
                 : 'bg-white'
             }`}
-            onClick={() => setActiveView('returns')}
+            onClick={() => activeView === 'returns' ? setActiveView('dashboard') : setActiveView('returns')}
           >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -158,7 +158,7 @@ function InventoryReturnsPage() {
                 ? 'ring-2 ring-[#D32F2F] bg-red-50' 
                 : 'bg-white'
             }`}
-            onClick={() => setActiveView('damages')}
+            onClick={() => activeView === 'damages' ? setActiveView('dashboard') : setActiveView('damages')}
           >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">

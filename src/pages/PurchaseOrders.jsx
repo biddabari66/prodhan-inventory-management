@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Plus, Package, ShoppingCart, Building2, Truck, DollarSign,
   CheckCircle, Clock, AlertCircle, XCircle, Edit, Trash2, Eye,
-  FileText, Download, Search, Filter, MoreVertical, CreditCard
+  FileText, Download, Search, Filter, MoreVertical, CreditCard, Box
 } from 'lucide-react';
 import SearchableProductSelect from '../components/common/SearchableProductSelect';
 import { toast } from 'sonner';
@@ -57,6 +57,37 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     current_stock: 0,
     minimum_stock: 10
   });
+
+  // Packaging/Bundling elements
+  const [packagingItems, setPackagingItems] = useState(order?.packaging_items || []);
+  const [newPackaging, setNewPackaging] = useState({ name: '', quantity: 1, unit_cost: 0 });
+
+  const packagingOptions = [
+    { name: 'Sticker', icon: '🏷️' },
+    { name: 'Packaging Box', icon: '📦' },
+    { name: 'Jar/Container', icon: '🫙' },
+    { name: 'Plastic Wrap', icon: '🎁' },
+    { name: 'Bubble Wrap', icon: '🔵' },
+    { name: 'Label', icon: '🪧' },
+    { name: 'Tape', icon: '📎' },
+    { name: 'Bag', icon: '👜' },
+    { name: 'Other', icon: '📋' }
+  ];
+
+  const addPackagingItem = () => {
+    if (!newPackaging.name) {
+      toast.error('Please select a packaging item');
+      return;
+    }
+    setPackagingItems([...packagingItems, { ...newPackaging, id: Date.now() }]);
+    setNewPackaging({ name: '', quantity: 1, unit_cost: 0 });
+  };
+
+  const removePackagingItem = (id) => {
+    setPackagingItems(packagingItems.filter(item => item.id !== id));
+  };
+
+  const packagingTotal = packagingItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
 
   // Always filter inventory for prodhan_com_e_commerce department
   const departmentFilteredInventory = useMemo(() => {
@@ -211,7 +242,9 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       po_number: order?.po_number || `PO-${Date.now()}`,
       created_by_id: currentUser?.id,
       created_by_name: currentUser?.full_name,
-      amount_due: formData.total_amount - (formData.amount_paid || 0)
+      amount_due: formData.total_amount - (formData.amount_paid || 0),
+      packaging_items: packagingItems,
+      packaging_cost: packagingTotal
     };
 
     onSubmit(orderData);
@@ -531,6 +564,99 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Packaging & Bundling Elements */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Box className="w-5 h-5 text-amber-600" />
+            Packaging & Bundling Elements
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Record packaging materials like stickers, boxes, jars, labels etc. associated with this order.
+          </p>
+          
+          {/* Add Packaging Item */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <div>
+              <Label>Packaging Item</Label>
+              <Select
+                value={newPackaging.name}
+                onValueChange={(value) => setNewPackaging({...newPackaging, name: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select item..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {packagingOptions.map(opt => (
+                    <SelectItem key={opt.name} value={opt.name}>
+                      {opt.icon} {opt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                value={newPackaging.quantity}
+                onChange={(e) => setNewPackaging({...newPackaging, quantity: parseInt(e.target.value) || 1})}
+              />
+            </div>
+            <div>
+              <Label>Unit Cost (BDT)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newPackaging.unit_cost}
+                onChange={(e) => setNewPackaging({...newPackaging, unit_cost: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="button" onClick={addPackagingItem} variant="outline" className="w-full border-amber-400 text-amber-700 hover:bg-amber-100">
+                <Plus className="w-4 h-4 mr-1" /> Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Packaging Items List */}
+          {packagingItems.length > 0 && (
+            <div className="space-y-2">
+              {packagingItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {packagingOptions.find(o => o.name === item.name)?.icon || '📦'}
+                    </span>
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.quantity} × ৳{item.unit_cost} = ৳{(item.quantity * item.unit_cost).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removePackagingItem(item.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+              <div className="p-3 bg-amber-100 rounded-lg text-right">
+                <span className="font-semibold">Packaging Total: ৳{packagingTotal.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
