@@ -667,15 +667,17 @@ function ProductionHousePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-sm">
-            <CardContent className="p-5">
-              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <p className="text-3xl font-bold text-amber-600">৳{stats.totalWasteValue.toLocaleString()}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase">Waste Value</p>
-            </CardContent>
-          </Card>
+          {isAdmin && (
+            <Card className="bg-white border-0 shadow-sm">
+              <CardContent className="p-5">
+                <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                </div>
+                <p className="text-3xl font-bold text-amber-600">৳{stats.totalWasteValue.toLocaleString()}</p>
+                <p className="text-xs font-medium text-slate-500 uppercase">Waste Value</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <Tabs defaultValue="inventory" className="space-y-4">
