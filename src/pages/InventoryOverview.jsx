@@ -16,7 +16,6 @@ import SmartInventorySearch from '../components/inventory/SmartInventorySearch';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { usePerformanceMonitor, CacheManager } from '../components/common/PerformanceOptimizer';
-import { base44 } from '@/api/base44Client';
 import { withPermission, usePermission, PermissionGate } from '../components/common/PermissionGuard';
 
 function InventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
