@@ -251,7 +251,8 @@ export default function AdvancedVariantManager({
                     <div>
                       <Label className="text-xs">Quantity *</Label>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={variant.quantity}
                         onChange={(e) => updateVariant(index, 'quantity', parseInt(e.target.value) || 0)}
                         className="h-9 text-xs"
@@ -260,7 +261,8 @@ export default function AdvancedVariantManager({
                     <div>
                       <Label className="text-xs">Price (৳) *</Label>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={variant.price}
                         onChange={(e) => updateVariant(index, 'price', parseFloat(e.target.value) || 0)}
                         className="h-9 text-xs"
@@ -269,8 +271,8 @@ export default function AdvancedVariantManager({
                     <div>
                       <Label className="text-xs">Weight (kg)</Label>
                       <Input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={variant.weight_kg}
                         onChange={(e) => updateVariant(index, 'weight_kg', parseFloat(e.target.value) || 0)}
                         className="h-9 text-xs"

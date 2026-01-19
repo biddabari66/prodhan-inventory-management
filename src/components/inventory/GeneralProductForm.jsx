@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Check, X, Sparkles, Loader2, Link2, Wand2, Palette, Plus, AlertCircle, Layers, Trash2, Recycle } from 'lucide-react';
+import { Package, Check, X, Sparkles, Loader2, Link2, Wand2, Palette, Plus, AlertCircle, Layers, Trash2 } from 'lucide-react';
 import { Inventory } from '@/entities/Inventory';
 import { ProductCategory } from '@/entities/ProductCategory';
 import { toast } from 'sonner';
@@ -62,11 +62,11 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     product_source_url: product?.product_source_url || '',
     is_bundle: product?.is_bundle || false,
     bundle_items: product?.bundle_items || [],
-    requires_refining: product?.requires_refining || false,
-    raw_quantity: product?.raw_quantity || 0,
-    yield_percentage: product?.yield_percentage || 100,
-    usable_quantity: product?.usable_quantity || 0,
-    waste_quantity: product?.waste_quantity || 0
+    requires_refining: false,
+    raw_quantity: 0,
+    yield_percentage: 100,
+    usable_quantity: 0,
+    waste_quantity: 0
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -142,24 +142,7 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     }
   }, [formData.weight_value, formData.weight_unit]);
 
-  // Auto-calculate waste/yield
-  useEffect(() => {
-    if (formData.requires_refining && formData.raw_quantity > 0 && formData.yield_percentage > 0) {
-      const usable = (formData.raw_quantity * formData.yield_percentage) / 100;
-      const waste = formData.raw_quantity - usable;
-      setFormData(prev => ({ 
-        ...prev, 
-        usable_quantity: usable,
-        waste_quantity: waste
-      }));
-    } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        usable_quantity: 0,
-        waste_quantity: 0
-      }));
-    }
-  }, [formData.requires_refining, formData.raw_quantity, formData.yield_percentage]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -981,78 +964,7 @@ Return ONLY valid JSON with no additional text.`,
             )}
           </div>
 
-          {/* Waste/Yield Tracking */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <Recycle className="w-5 h-5 text-green-600" />
-              Waste/Yield Tracking
-            </h3>
-            
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <Checkbox
-                  id="requires_refining"
-                  checked={formData.requires_refining}
-                  onCheckedChange={(checked) => setFormData({...formData, requires_refining: checked})}
-                />
-                <Label htmlFor="requires_refining" className="font-semibold cursor-pointer">
-                  This product requires refining/processing
-                </Label>
-              </div>
-              <p className="text-xs text-green-800">
-                Track waste during refining. Example: 1kg raw tea with 90% yield = 900g usable + 100g waste.
-              </p>
-            </div>
 
-            {formData.requires_refining && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="raw_quantity">Raw Quantity (kg)</Label>
-                  <Input
-                    id="raw_quantity"
-                    type="text"
-                    inputMode="decimal"
-                    value={formData.raw_quantity}
-                    onChange={(e) => setFormData({...formData, raw_quantity: parseFloat(e.target.value) || 0})}
-                    placeholder="e.g., 10"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="yield_percentage">Yield Percentage (%)</Label>
-                  <Input
-                    id="yield_percentage"
-                    type="text"
-                    inputMode="decimal"
-                    value={formData.yield_percentage}
-                    onChange={(e) => setFormData({...formData, yield_percentage: parseFloat(e.target.value) || 100})}
-                    placeholder="e.g., 90"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-
-                <div className="col-span-1 md:col-span-3">
-                  <div className="p-4 bg-white rounded-lg border-2 border-green-300">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">Usable Quantity</p>
-                        <p className="text-lg font-bold text-green-600">
-                          {formData.usable_quantity.toFixed(3)} kg
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">Waste</p>
-                        <p className="text-lg font-bold text-red-600">
-                          {formData.waste_quantity.toFixed(3)} kg
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* E-commerce Settings */}
           <div className="space-y-4">
