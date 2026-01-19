@@ -32,7 +32,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     supplier_name: '',
     order_date: new Date().toISOString().split('T')[0],
     expected_delivery_date: '',
-    department: 'boibari',
+    department: 'prodhan_com_e_commerce',
     order_items: [],
     subtotal: 0,
     tax_amount: 0,
@@ -58,16 +58,19 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     minimum_stock: 10
   });
 
+  // Always filter inventory for prodhan_com_e_commerce department
   const departmentFilteredInventory = useMemo(() => {
-    return inventory.filter(item => item.department === formData.department);
-  }, [inventory, formData.department]);
+    if (!inventory || inventory.length === 0) return [];
+    return inventory.filter(item => item.department === 'prodhan_com_e_commerce');
+  }, [inventory]);
 
+  // Always filter suppliers for prodhan_com_e_commerce department
   const departmentFilteredSuppliers = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return [];
     return suppliers.filter(s => 
-      s.department === formData.department || s.department === 'both'
+      s.department === 'prodhan_com_e_commerce' || s.department === 'both' || !s.department
     );
-  }, [suppliers, formData.department]);
+  }, [suppliers]);
 
   const handleSupplierChange = (supplierId) => {
     const supplier = departmentFilteredSuppliers.find(s => s.id === supplierId);
@@ -228,18 +231,11 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Department *</Label>
-              <Select
-                value={formData.department}
-                onValueChange={(value) => setFormData({...formData, department: value, order_items: [], supplier_id: '', supplier_name: ''})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="boibari">📚 Boibari</SelectItem>
-                  <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="p-3 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-purple-600 text-white">🛒 Prodhan.com E-commerce</Badge>
+                </div>
+              </div>
             </div>
             <div>
               <Label>Supplier *</Label>
@@ -687,10 +683,10 @@ function PurchaseOrdersPage() {
   });
 
   const { data: inventory = [] } = useQuery({
-    queryKey: ['inventory'],
-    queryFn: () => Inventory.list(),
-    staleTime: 3 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    queryKey: ['inventory-purchase'],
+    queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 1000),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
