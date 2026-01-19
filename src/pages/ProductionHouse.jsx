@@ -270,6 +270,8 @@ function ProductionHousePage() {
     queryFn: () => base44.auth.me(),
   });
 
+  const isAdmin = currentUser?.job_role === 'admin' || currentUser?.role === 'admin';
+
   const { data: productionBatches = [], isLoading: batchesLoading } = useQuery({
     queryKey: ['productionBatches'],
     queryFn: () => base44.entities.ProductionBatch.list('-batch_date', 500),
