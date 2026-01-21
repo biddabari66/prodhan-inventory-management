@@ -158,6 +158,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               condition: 'damaged',
               action: 'write_off',
               customer_name: data.customer_name,
+              customer_phone: data.customer_phone,
               supplier_name: data.supplier_name,
               financial_impact: (data.financial_impact / data.quantity) * damagedQty,
               is_partial: true,
@@ -273,6 +274,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           condition: data.condition,
           action: data.action,
           customer_name: data.customer_name,
+          customer_phone: data.customer_phone,
           restocking_fee: data.restocking_fee,
           financial_impact: data.financial_impact
         }
@@ -398,6 +400,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               reason: data.reason,
               order_number: data.order_number,
               customer_name: data.customer_name,
+              customer_phone: data.customer_phone,
               supplier_name: data.supplier_name,
               condition_breakdown: item.condition_breakdown,
               financial_impact: item.financial_impact,
