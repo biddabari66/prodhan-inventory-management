@@ -91,6 +91,20 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       const item = inventory.find(i => i.id === initialData.inventory_item_id);
       if (item) {
         setSelectedProduct(item);
+        // If editing, add the item to the product list
+        if (initialData.id) {
+          setProductItems([{
+            id: initialData.id,
+            inventory_item_id: initialData.inventory_item_id,
+            product_name: item.item_name,
+            quantity: initialData.quantity,
+            return_type: initialData.return_type,
+            condition_breakdown: initialData.condition_breakdown,
+            financial_impact: initialData.financial_impact,
+            restocking_fee: initialData.restocking_fee,
+            unit_price: item.selling_price || 0
+          }]);
+        }
       }
     }
   }, [initialData, inventory]);
@@ -179,8 +193,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       return;
     }
 
-    if (!formData.reason || !formData.notes) {
-      toast.error('Please provide reason and detailed notes');
+    if (!formData.reason) {
+      toast.error('Please provide a reason');
       return;
     }
 
