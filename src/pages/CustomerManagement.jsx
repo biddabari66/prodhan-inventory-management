@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2, PhoneCall, MessageSquare, Download, Upload } from 'lucide-react';
+import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2, PhoneCall, MessageSquare, Download, Upload, Truck, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
 import WelcomeCallList from '../components/customers/WelcomeCallList';
@@ -604,32 +604,50 @@ function CustomerManagementPage() {
 
 function CustomerDetails({ customer }) {
   const [orders, setOrders] = useState([]);
+  const [returns, setReturns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadCustomerOrders();
+    loadCustomerData();
   }, [customer]);
 
-  const loadCustomerOrders = async () => {
+  const loadCustomerData = async () => {
     setIsLoading(true);
     try {
+      // Load orders
       const allOrders = await base44.entities.Order.filter({
         customer_phone: customer.customer_phone
       });
       setOrders(allOrders.sort((a, b) => new Date(b.order_date) - new Date(a.order_date)));
+      
+      // Load returns by customer phone
+      const movements = await base44.entities.InventoryMovement.list('-movement_date', 500);
+      const customerReturns = movements.filter(m => 
+        m.reference_type === 'return' && 
+        m.metadata?.customer_phone === customer.customer_phone
+      );
+      setReturns(customerReturns);
     } catch (error) {
-      console.error('Error loading orders:', error);
-      toast.error('Failed to load customer orders');
+      console.error('Error loading customer data:', error);
+      toast.error('Failed to load customer data');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Calculate stats
+  const shippedOrders = orders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));
+  const deliveredOrders = orders.filter(o => o.order_status === 'delivered');
+  const totalReturns = returns.length;
+  const returnValue = returns.reduce((sum, r) => sum + Math.abs(r.total_value || 0), 0);
+
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="info">Customer Info</TabsTrigger>
-        <TabsTrigger value="orders">Order History ({orders.length})</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="info">Info</TabsTrigger>
+        <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
+        <TabsTrigger value="shipped">Shipped ({shippedOrders.length})</TabsTrigger>
+        <TabsTrigger value="returns">Returns ({totalReturns})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="info" className="space-y-4 mt-4">
@@ -721,6 +739,118 @@ function CustomerDetails({ customer }) {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="shipped" className="mt-4">
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-slate-500">Loading...</p>
+          </div>
+        ) : shippedOrders.length === 0 ? (
+          <div className="text-center py-12">
+            <Truck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500">No shipped orders</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {shippedOrders.map(order => (
+              <Card key={order.id} className="hover:shadow-md transition-shadow border-l-4 border-l-cyan-500">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-cyan-100 text-cyan-800">
+                          {order.order_number}
+                        </Badge>
+                        <Badge className="bg-orange-100 text-orange-800">
+                          {order.order_status === 'out_for_delivery' ? 'Out for Delivery' : 'Shipped'}
+                        </Badge>
+                        {order.courier_tracking_code && (
+                          <Badge variant="outline" className="text-xs">
+                            Tracking: {order.courier_tracking_code}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {(order.order_items || []).map((item, idx) => (
+                          <span key={idx}>
+                            {item.item_name} (×{item.quantity}){idx < order.order_items.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        ৳{order.total_amount?.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Ordered: {new Date(order.order_date).toLocaleDateString()}
+                        {order.courier_placed_date && ` • Shipped: ${new Date(order.courier_placed_date).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="returns" className="mt-4">
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-slate-500">Loading...</p>
+          </div>
+        ) : returns.length === 0 ? (
+          <div className="text-center py-12">
+            <RotateCcw className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500">No returns recorded</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Total Returns</p>
+                    <p className="text-2xl font-bold text-red-600">{totalReturns}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-red-800">Return Value</p>
+                    <p className="text-2xl font-bold text-red-600">৳{returnValue.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {returns.map(ret => {
+              const metadata = ret.metadata || {};
+              return (
+                <Card key={ret.id} className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-red-100 text-red-800">
+                          {ret.reference_number}
+                        </Badge>
+                        <Badge variant="outline">
+                          {metadata.reason || 'Return'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        Qty: {metadata.original_quantity || Math.abs(ret.quantity) || 1}
+                      </p>
+                      <p className="text-sm font-semibold text-red-600">
+                        -৳{Math.abs(ret.total_value || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(ret.movement_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </TabsContent>
