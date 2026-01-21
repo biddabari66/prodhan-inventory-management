@@ -28,8 +28,20 @@ export default function DynamicCSVImport({
   const [isImporting, setIsImporting] = useState(false);
 
   const parseCSV = (text) => {
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return { headers: [], data: [] };
+    // Normalize line endings and handle BOM
+    let normalizedText = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = normalizedText.split('\n').filter(l => l.trim());
+    
+    if (lines.length < 1) return { headers: [], data: [] };
+    
+    // Detect delimiter (comma, semicolon, or tab)
+    const firstLine = lines[0];
+    let delimiter = ',';
+    if (firstLine.split(';').length > firstLine.split(',').length) {
+      delimiter = ';';
+    } else if (firstLine.split('\t').length > firstLine.split(',').length) {
+      delimiter = '\t';
+    }
     
     const parseRow = (row) => {
       const result = [];
@@ -39,27 +51,46 @@ export default function DynamicCSVImport({
       for (let i = 0; i < row.length; i++) {
         const char = row[i];
         if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          result.push(current.trim());
+          if (inQuotes && row[i + 1] === '"') {
+            current += '"';
+            i++; // Skip escaped quote
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current.trim().replace(/^"|"$/g, ''));
           current = '';
         } else {
           current += char;
         }
       }
-      result.push(current.trim());
+      result.push(current.trim().replace(/^"|"$/g, ''));
       return result;
     };
 
-    const headers = parseRow(lines[0]);
-    const data = lines.slice(1).map(line => {
+    const headers = parseRow(lines[0]).map(h => h.trim()).filter(h => h);
+    
+    if (headers.length === 0) return { headers: [], data: [] };
+    
+    const data = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      
       const values = parseRow(line);
       const row = {};
-      headers.forEach((h, i) => {
-        row[h] = values[i] || '';
+      let hasValue = false;
+      
+      headers.forEach((h, idx) => {
+        const val = (values[idx] || '').trim();
+        row[h] = val;
+        if (val) hasValue = true;
       });
-      return row;
-    }).filter(row => Object.values(row).some(v => v));
+      
+      if (hasValue) {
+        data.push(row);
+      }
+    }
 
     return { headers, data };
   };
@@ -82,14 +113,32 @@ export default function DynamicCSVImport({
       setCsvHeaders(headers);
       setCsvData(data);
       
-      // Auto-map columns based on header names
+      // Auto-map columns based on header names with fuzzy matching
       const autoMapping = {};
       fieldOptions.forEach(field => {
-        const matchingHeader = headers.find(h => 
-          h.toLowerCase().includes(field.key.replace('_', ' ').toLowerCase()) ||
-          h.toLowerCase().includes(field.label.toLowerCase()) ||
-          h.toLowerCase() === field.key.toLowerCase()
-        );
+        const fieldKeyLower = field.key.replace(/_/g, ' ').toLowerCase();
+        const fieldLabelLower = field.label.toLowerCase();
+        const fieldKeyNoUnder = field.key.replace(/_/g, '').toLowerCase();
+        
+        const matchingHeader = headers.find(h => {
+          const headerLower = h.toLowerCase().trim();
+          const headerNoSpace = headerLower.replace(/[\s_-]/g, '');
+          
+          return (
+            headerLower === field.key.toLowerCase() ||
+            headerLower === fieldKeyLower ||
+            headerLower === fieldLabelLower ||
+            headerLower.includes(fieldKeyLower) ||
+            headerLower.includes(fieldLabelLower) ||
+            headerNoSpace === fieldKeyNoUnder ||
+            headerNoSpace.includes(fieldKeyNoUnder) ||
+            // Common aliases
+            (field.key === 'customer_name' && (headerLower.includes('name') || headerLower === 'নাম')) ||
+            (field.key === 'customer_phone' && (headerLower.includes('phone') || headerLower.includes('mobile') || headerLower.includes('contact') || headerLower === 'ফোন')) ||
+            (field.key === 'customer_email' && (headerLower.includes('email') || headerLower.includes('mail'))) ||
+            (field.key === 'notes' && (headerLower.includes('note') || headerLower.includes('comment') || headerLower.includes('remark')))
+          );
+        });
         if (matchingHeader) {
           autoMapping[field.key] = matchingHeader;
         }
