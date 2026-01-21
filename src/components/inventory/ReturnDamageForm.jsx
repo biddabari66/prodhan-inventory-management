@@ -149,7 +149,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
     setProductItems([...productItems, newItem]);
     
-    // Reset product selection
+    // Reset product selection but keep customer info
     setFormData({
       ...formData,
       inventory_item_id: '',
