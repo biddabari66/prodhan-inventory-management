@@ -53,7 +53,8 @@ function CustomerManagementPage() {
 
   const loadCustomers = async () => {
     try {
-      const customerData = await base44.entities.Customer.list('-total_spent');
+      // Limit to 500 for faster load, sorted by most valuable
+      const customerData = await base44.entities.Customer.list('-total_spent', 500);
       setCustomers(customerData);
     } catch (error) {
       console.error('Error loading customers:', error);
@@ -603,37 +604,24 @@ function CustomerManagementPage() {
 }
 
 function CustomerDetails({ customer }) {
-  const [orders, setOrders] = useState([]);
-  const [returns, setReturns] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use React Query for parallel fast loading
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['customer-orders', customer.customer_phone],
+    queryFn: () => base44.entities.Order.filter({ customer_phone: customer.customer_phone }),
+    staleTime: 30000,
+    select: (data) => data.sort((a, b) => new Date(b.order_date) - new Date(a.order_date))
+  });
 
-  useEffect(() => {
-    loadCustomerData();
-  }, [customer]);
+  const { data: returns = [], isLoading: returnsLoading } = useQuery({
+    queryKey: ['customer-returns', customer.customer_phone],
+    queryFn: async () => {
+      const movements = await base44.entities.InventoryMovement.filter({ reference_type: 'return' }, '-movement_date', 100);
+      return movements.filter(m => m.metadata?.customer_phone === customer.customer_phone);
+    },
+    staleTime: 30000
+  });
 
-  const loadCustomerData = async () => {
-    setIsLoading(true);
-    try {
-      // Load orders
-      const allOrders = await base44.entities.Order.filter({
-        customer_phone: customer.customer_phone
-      });
-      setOrders(allOrders.sort((a, b) => new Date(b.order_date) - new Date(a.order_date)));
-      
-      // Load returns by customer phone
-      const movements = await base44.entities.InventoryMovement.list('-movement_date', 500);
-      const customerReturns = movements.filter(m => 
-        m.reference_type === 'return' && 
-        m.metadata?.customer_phone === customer.customer_phone
-      );
-      setReturns(customerReturns);
-    } catch (error) {
-      console.error('Error loading customer data:', error);
-      toast.error('Failed to load customer data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const isLoading = ordersLoading || returnsLoading;
 
   // Calculate stats
   const shippedOrders = orders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));

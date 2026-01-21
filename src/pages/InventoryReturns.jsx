@@ -41,19 +41,20 @@ function InventoryReturnsPage() {
     }
   };
 
-  // Fetch inventory movements for stats
-  const { data: movements = [] } = useQuery({
-    queryKey: ['inventoryMovements'],
-    queryFn: () => InventoryMovement.list('-created_date', 1000),
-    staleTime: 30000
+  // Fetch inventory movements for stats - optimized with limited fetch
+  const { data: movements = [], isLoading: movementsLoading } = useQuery({
+    queryKey: ['movements-returns-page'],
+    queryFn: () => InventoryMovement.list('-movement_date', 200),
+    staleTime: 60000 // 1 minute cache
   });
 
-  // Calculate this month's stats
+  // Calculate this month's stats - MATCHING ReturnDamageManagement logic exactly
   const stats = useMemo(() => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
+    // Filter to this month only
     const thisMonthMovements = movements.filter(m => {
       try {
         const dateStr = m.movement_date || m.created_date;
@@ -65,19 +66,10 @@ function InventoryReturnsPage() {
       }
     });
 
-    // Filter returns - check reference_type for returns
-    const returns = thisMonthMovements.filter(m => 
-      m.reference_type === 'return' || 
-      m.movement_type === 'return' || 
-      m.notes?.toLowerCase().includes('return')
-    );
-    
-    // Filter damages - check reference_type for damage/expired
+    // EXACT same filter logic as ReturnDamageManagement component
+    const returns = thisMonthMovements.filter(m => m.reference_type === 'return');
     const damages = thisMonthMovements.filter(m => 
-      m.reference_type === 'damage' || 
-      m.reference_type === 'expired' ||
-      m.movement_type === 'damage' || 
-      m.notes?.toLowerCase().includes('damage')
+      m.reference_type === 'damage' || m.reference_type === 'expired'
     );
 
     const returnsCount = returns.length;
@@ -89,7 +81,7 @@ function InventoryReturnsPage() {
     return { returnsCount, returnsValue, damagesCount, damagesLoss };
   }, [movements]);
 
-  if (isLoading) {
+  if (isLoading && !currentUser) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
         <div className="text-center space-y-4">
