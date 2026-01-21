@@ -23,6 +23,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     reason: '',
     order_number: '',
     customer_name: '',
+    customer_phone: '',
     supplier_name: '',
     condition: type === 'return' ? 'good' : 'damaged',
     financial_impact: 0,
@@ -142,7 +143,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       return_type: formData.return_type,
       condition_breakdown: {...formData.condition_breakdown},
       financial_impact: formData.financial_impact,
-      restocking_fee: formData.restocking_fee
+      restocking_fee: formData.restocking_fee,
+      unit_price: product.selling_price || 0
     };
 
     setProductItems([...productItems, newItem]);
@@ -190,6 +192,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       reason: formData.reason,
       order_number: formData.order_number,
       customer_name: formData.customer_name,
+      customer_phone: formData.customer_phone,
       supplier_name: formData.supplier_name,
       notes: formData.notes,
       incident_date: formData.incident_date
@@ -242,21 +245,23 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
           <CardContent>
             <div className="space-y-2">
               {productItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-violet-200">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{item.product_name}</p>
-                    <p className="text-xs text-muted-foreground">Qty: {item.quantity} • Impact: ৳{item.financial_impact.toLocaleString()}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveProduct(item.id)}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </Button>
+              <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-violet-200">
+                <div className="flex-1">
+                  <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{item.product_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Qty: {item.quantity} • Unit: ৳{(item.unit_price || 0).toLocaleString()} • Impact: ৳{(item.financial_impact || 0).toLocaleString()}
+                  </p>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveProduct(item.id)}
+                  className="text-red-600 hover:bg-red-50"
+                >
+                  <XCircle className="w-4 h-4" />
+                </Button>
+              </div>
               ))}
             </div>
           </CardContent>
@@ -321,6 +326,16 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                 value={formData.customer_name}
                 onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
                 placeholder="Customer name"
+              />
+            </div>
+
+            <div>
+              <Label>Customer Phone *</Label>
+              <Input
+                value={formData.customer_phone}
+                onChange={(e) => setFormData({...formData, customer_phone: e.target.value})}
+                placeholder="01XXXXXXXXX"
+                required
               />
             </div>
           </>
