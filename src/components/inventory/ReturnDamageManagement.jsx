@@ -209,11 +209,12 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           condition: data.condition,
           action: data.action,
           customer_name: data.customer_name,
+          customer_phone: data.customer_phone,
           supplier_name: data.supplier_name,
           restocking_fee: data.restocking_fee,
           financial_impact: data.financial_impact,
           original_quantity: data.quantity
-        }
+          }
       });
 
       return { item, newStock };
@@ -358,6 +359,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         }
       },
       customer_name: metadata.customer_name || '',
+      customer_phone: metadata.customer_phone || '',
       supplier_name: metadata.supplier_name || '',
       order_number: movement.reference_number || '',
       incident_date: movement.movement_date,
@@ -564,6 +566,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                     <TableHead>Quantity</TableHead>
                     <TableHead>Order #</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead className="text-right">Impact</TableHead>
@@ -619,6 +622,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                             {metadata.return_type === 'purchase_return' 
                               ? metadata.supplier_name || '-'
                               : metadata.customer_name || '-'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {metadata.customer_phone || '-'}
                           </TableCell>
                           <TableCell className="text-sm">{metadata.reason || '-'}</TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
