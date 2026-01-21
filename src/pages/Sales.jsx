@@ -34,6 +34,7 @@ import SearchableProductSelect from '../components/common/SearchableProductSelec
 import { ChevronDown } from 'lucide-react';
 import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
@@ -590,6 +591,14 @@ function SalesPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
   const [productFilter, setProductFilter] = useState('all');
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    includeCustomerDetails: true,
+    includeProductDetails: true,
+    includeShippingAddress: true,
+    includePaymentInfo: true,
+    onlyFiltered: true
+  });
 
   // 🚀 LIGHTNING FAST: Cached current user
   const { data: currentUser } = useQuery({
@@ -1077,6 +1086,133 @@ function SalesPage() {
     setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
   }, [filteredOrders.length]);
 
+  // Fast Excel Export Function
+  const handleExportExcel = useCallback(() => {
+    const ordersToExport = exportOptions.onlyFiltered ? filteredOrders : orders;
+    
+    if (ordersToExport.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+    
+    toast.loading('Generating Excel...', { id: 'export' });
+    
+    // Use setTimeout to not block UI
+    setTimeout(() => {
+      try {
+        // Build headers dynamically
+        const headers = ['Order #', 'Date', 'Status', 'Payment Status'];
+        
+        if (exportOptions.includeCustomerDetails) {
+          headers.push('Customer Name', 'Customer Phone', 'Customer Email');
+        }
+        
+        if (exportOptions.includeShippingAddress) {
+          headers.push('Address', 'City', 'District', 'Postal Code');
+        }
+        
+        if (exportOptions.includeProductDetails) {
+          headers.push('Products', 'Total Items', 'Subtotal');
+        }
+        
+        if (exportOptions.includePaymentInfo) {
+          headers.push('Payment Method', 'Discount', 'Shipping', 'Total Amount', 'Paid Amount');
+        }
+        
+        headers.push('Notes', 'Created Date');
+        
+        // Build rows
+        const rows = ordersToExport.map(order => {
+          const row = [
+            order.order_number || '',
+            order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
+            order.order_status || '',
+            order.payment_status || ''
+          ];
+          
+          if (exportOptions.includeCustomerDetails) {
+            row.push(
+              order.customer_name || '',
+              order.customer_phone || '',
+              order.customer_email || ''
+            );
+          }
+          
+          if (exportOptions.includeShippingAddress) {
+            const addr = order.shipping_address || {};
+            row.push(
+              addr.address_line || '',
+              addr.city || '',
+              addr.district || '',
+              addr.postal_code || ''
+            );
+          }
+          
+          if (exportOptions.includeProductDetails) {
+            const products = (order.order_items || []).map(item => 
+              `${item.item_name} (×${item.quantity})`
+            ).join('; ');
+            const totalItems = (order.order_items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+            row.push(
+              products,
+              totalItems,
+              order.subtotal || 0
+            );
+          }
+          
+          if (exportOptions.includePaymentInfo) {
+            row.push(
+              order.payment_method || '',
+              (order.discount_amount || 0) + (order.coupon_discount || 0),
+              order.shipping_cost || 0,
+              order.total_amount || 0,
+              order.paid_amount || 0
+            );
+          }
+          
+          row.push(
+            order.customer_notes || '',
+            order.created_date ? format(new Date(order.created_date), 'yyyy-MM-dd HH:mm') : ''
+          );
+          
+          return row;
+        });
+        
+        // Generate CSV content (Excel compatible)
+        const escapeCSV = (val) => {
+          if (val === null || val === undefined) return '';
+          const str = String(val);
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+        
+        const csvContent = [
+          headers.map(escapeCSV).join(','),
+          ...rows.map(row => row.map(escapeCSV).join(','))
+        ].join('\n');
+        
+        // Add BOM for Excel UTF-8 compatibility
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sales_orders_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.success(`Exported ${ordersToExport.length} orders`, { id: 'export' });
+        setIsExportDialogOpen(false);
+      } catch (error) {
+        toast.error('Export failed: ' + error.message, { id: 'export' });
+      }
+    }, 100);
+  }, [filteredOrders, orders, exportOptions]);
+
   // Check if date filter is applied to determine which stats to show
   const hasDateFilter = dateRange.from !== undefined;
 
@@ -1348,6 +1484,16 @@ function SalesPage() {
               </div>
             </PopoverContent>
           </Popover>
+          {canExport && (
+            <Button
+              variant="outline"
+              onClick={() => setIsExportDialogOpen(true)}
+              className="h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          )}
           {canCreate && (
             <Button
               onClick={() => {
@@ -1979,6 +2125,85 @@ function SalesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Export Dialog */}
+      <AlertDialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-green-600" />
+              Export Sales Orders
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose what data to include in your export.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <Label className="font-medium">Export filtered orders only</Label>
+              <Checkbox
+                checked={exportOptions.onlyFiltered}
+                onCheckedChange={(checked) => setExportOptions({...exportOptions, onlyFiltered: checked})}
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              {exportOptions.onlyFiltered 
+                ? `Will export ${filteredOrders.length} filtered orders`
+                : `Will export all ${orders.length} orders`}
+            </p>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Include in Export:</Label>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Customer Details (Name, Phone, Email)</Label>
+                <Checkbox
+                  checked={exportOptions.includeCustomerDetails}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeCustomerDetails: checked})}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Shipping Address</Label>
+                <Checkbox
+                  checked={exportOptions.includeShippingAddress}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeShippingAddress: checked})}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Product Details</Label>
+                <Checkbox
+                  checked={exportOptions.includeProductDetails}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeProductDetails: checked})}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Payment Info (Method, Amounts)</Label>
+                <Checkbox
+                  checked={exportOptions.includePaymentInfo}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includePaymentInfo: checked})}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleExportExcel}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Invoice Dialog */}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
