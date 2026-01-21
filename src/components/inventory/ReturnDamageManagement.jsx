@@ -127,6 +127,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               condition: 'good',
               action: 'restock',
               customer_name: data.customer_name,
+              customer_phone: data.customer_phone,
               supplier_name: data.supplier_name,
               restocking_fee: data.restocking_fee,
               financial_impact: (data.financial_impact / data.quantity) * goodQty,
