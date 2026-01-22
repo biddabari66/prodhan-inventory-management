@@ -27,43 +27,29 @@ export default function ActionableNotification({ notification, onActionComplete 
     setIsProcessing(true);
     try {
       const actionData = parseActionData();
-      const pdfUrl = actionData.pdf_url || actionData.file_url || notification.action_url;
+      let pdfUrl = actionData.pdf_url || actionData.file_url || notification.action_url;
       
       if (!pdfUrl) {
         toast.error('No PDF URL found');
         return;
       }
 
-      // Fetch the PDF and download it
-      const response = await fetch(pdfUrl);
-      if (!response.ok) throw new Error('Failed to fetch PDF');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = actionData.filename || `report_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      
-      toast.success('PDF downloaded successfully!');
+      // If URL is a relative path, it won't work - open in new tab
+      if (pdfUrl.startsWith('/')) {
+        toast.info('Report URL not available. Please regenerate the report.');
+        return;
+      }
+
+      // Open in new tab directly (most reliable for cross-origin PDFs)
+      window.open(pdfUrl, '_blank');
+      toast.success('Opening PDF...');
       
       if (onActionComplete) {
         onActionComplete();
       }
     } catch (error) {
       console.error('PDF download failed:', error);
-      // Fallback: open in new tab
-      const actionData = parseActionData();
-      const pdfUrl = actionData.pdf_url || actionData.file_url || notification.action_url;
-      if (pdfUrl) {
-        window.open(pdfUrl, '_blank');
-        toast.info('Opening PDF in new tab...');
-      } else {
-        toast.error('Failed to download PDF');
-      }
+      toast.error('Failed to open PDF');
     } finally {
       setIsProcessing(false);
     }
