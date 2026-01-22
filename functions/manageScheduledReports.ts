@@ -2,7 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
  * SCHEDULED REPORTS MANAGEMENT
- * Backend function to manage scheduled task creation, listing, toggling, and deletion
+ * Uses ScheduledReport entity to store scheduled report configurations
+ * Actual scheduling is done via platform automations
  */
 
 Deno.serve(async (req) => {
@@ -29,8 +30,9 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'list': {
-        const tasks = await base44.asServiceRole.scheduledTasks.list();
-        return Response.json({ success: true, tasks });
+        // List from ScheduledReport entity
+        const tasks = await base44.asServiceRole.entities.ScheduledReport.list('-created_date');
+        return Response.json({ success: true, tasks: tasks || [] });
       }
 
       case 'create': {
@@ -40,9 +42,10 @@ Deno.serve(async (req) => {
         
         const { name, description, function_name, function_args, repeat_interval, repeat_unit, start_time, is_active, repeat_on_days, repeat_on_day_of_month } = task_data;
         
-        console.log('📝 Creating task:', name, 'Function:', function_name);
+        console.log('📝 Creating scheduled report:', name, 'Function:', function_name);
         
-        const taskConfig = {
+        // Store in ScheduledReport entity
+        const task = await base44.asServiceRole.entities.ScheduledReport.create({
           name,
           description,
           function_name,
@@ -50,29 +53,34 @@ Deno.serve(async (req) => {
           repeat_interval: repeat_interval || 1,
           repeat_unit: repeat_unit || 'days',
           start_time: start_time || '09:00',
-          is_active: is_active !== undefined ? is_active : true
-        };
-
-        // Add weekly/monthly config if provided
-        if (repeat_on_days) taskConfig.repeat_on_days = repeat_on_days;
-        if (repeat_on_day_of_month) taskConfig.repeat_on_day_of_month = repeat_on_day_of_month;
+          is_active: is_active !== undefined ? is_active : true,
+          repeat_on_days: repeat_on_days || null,
+          repeat_on_day_of_month: repeat_on_day_of_month || null,
+          created_by_id: user.id,
+          created_by_name: user.full_name
+        });
         
-        console.log('🚀 Creating with config:', taskConfig);
-        
-        const task = await base44.asServiceRole.scheduledTasks.create(taskConfig);
-        
-        console.log('✅ Task created:', task.id);
+        console.log('✅ Scheduled report created:', task.id);
         
         return Response.json({ success: true, task });
       }
 
       case 'toggle': {
-        const task = await base44.asServiceRole.scheduledTasks.toggle(task_id);
-        return Response.json({ success: true, task });
+        if (!task_id) {
+          return Response.json({ error: 'task_id is required' }, { status: 400 });
+        }
+        const existingTask = await base44.asServiceRole.entities.ScheduledReport.get(task_id);
+        const updatedTask = await base44.asServiceRole.entities.ScheduledReport.update(task_id, {
+          is_active: !existingTask.is_active
+        });
+        return Response.json({ success: true, task: updatedTask });
       }
 
       case 'delete': {
-        await base44.asServiceRole.scheduledTasks.delete(task_id);
+        if (!task_id) {
+          return Response.json({ error: 'task_id is required' }, { status: 400 });
+        }
+        await base44.asServiceRole.entities.ScheduledReport.delete(task_id);
         return Response.json({ success: true });
       }
 
