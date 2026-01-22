@@ -22,6 +22,53 @@ export default function ActionableNotification({ notification, onActionComplete 
     }
   };
 
+  // Handle PDF download from notification
+  const handleDownloadPDF = async () => {
+    setIsProcessing(true);
+    try {
+      const actionData = parseActionData();
+      const pdfUrl = actionData.pdf_url || actionData.file_url || notification.action_url;
+      
+      if (!pdfUrl) {
+        toast.error('No PDF URL found');
+        return;
+      }
+
+      // Fetch the PDF and download it
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error('Failed to fetch PDF');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = actionData.filename || `report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      
+      toast.success('PDF downloaded successfully!');
+      
+      if (onActionComplete) {
+        onActionComplete();
+      }
+    } catch (error) {
+      console.error('PDF download failed:', error);
+      // Fallback: open in new tab
+      const actionData = parseActionData();
+      const pdfUrl = actionData.pdf_url || actionData.file_url || notification.action_url;
+      if (pdfUrl) {
+        window.open(pdfUrl, '_blank');
+        toast.info('Opening PDF in new tab...');
+      } else {
+        toast.error('Failed to download PDF');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleApproveExpense = async () => {
     setIsProcessing(true);
     try {
@@ -195,6 +242,31 @@ export default function ActionableNotification({ notification, onActionComplete 
             View
           </Button>
         </div>
+      );
+    }
+
+    // PDF/Report download action - check for report-related notifications
+    const isPDFDownload = notification.title?.toLowerCase().includes('report') || 
+                          actionData.pdf_url || 
+                          actionData.file_url ||
+                          notification.action_url?.includes('.pdf');
+    
+    if (isPDFDownload) {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleDownloadPDF}
+          disabled={isProcessing}
+          className="mt-3"
+        >
+          {isProcessing ? (
+            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+          ) : (
+            <ExternalLink className="w-4 h-4 mr-1" />
+          )}
+          Download PDF
+        </Button>
       );
     }
 

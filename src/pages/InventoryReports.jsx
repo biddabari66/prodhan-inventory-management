@@ -35,6 +35,8 @@ function InventoryReportsPage() {
   // Quick report filters
   const [startDate, setStartDate] = useState(toBDTDate(subDays(new Date(), 30)));
   const [endDate, setEndDate] = useState(toBDTDate());
+  const [startTime, setStartTime] = useState('00:00');
+  const [endTime, setEndTime] = useState('23:59');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Custom report builder state
@@ -180,6 +182,8 @@ function InventoryReportsPage() {
         department: 'prodhan_com_e_commerce',
         dateFrom: startDate,
         dateTo: endDate,
+        timeFrom: startTime,
+        timeTo: endTime,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
         orders,
         inventory,
@@ -334,7 +338,7 @@ function InventoryReportsPage() {
             {/* Filters */}
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
                     <Label className="text-xs text-slate-600 font-medium">Start Date</Label>
                     <Input 
@@ -354,6 +358,24 @@ function InventoryReportsPage() {
                     />
                   </div>
                   <div>
+                    <Label className="text-xs text-slate-600 font-medium">Start Time</Label>
+                    <Input 
+                      type="time" 
+                      value={startTime} 
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-600 font-medium">End Time</Label>
+                    <Input 
+                      type="time" 
+                      value={endTime} 
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
                     <Label className="text-xs text-slate-600 font-medium">Category</Label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                       <SelectTrigger className="mt-1">
@@ -367,6 +389,49 @@ function InventoryReportsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                {/* Quick Time Presets */}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => { setStartTime('00:00'); setEndTime('23:59'); }}
+                    className="text-xs"
+                  >
+                    Full Day
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => { setStartTime('09:00'); setEndTime('18:00'); }}
+                    className="text-xs"
+                  >
+                    Office Hours (9AM-6PM)
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => { setStartTime('19:00'); setEndTime('19:00'); }}
+                    className="text-xs"
+                  >
+                    7PM Report
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => { setStartTime('06:00'); setEndTime('12:00'); }}
+                    className="text-xs"
+                  >
+                    Morning (6AM-12PM)
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => { setStartTime('12:00'); setEndTime('18:00'); }}
+                    className="text-xs"
+                  >
+                    Afternoon (12PM-6PM)
+                  </Button>
                 </div>
               </CardContent>
             </Card>
