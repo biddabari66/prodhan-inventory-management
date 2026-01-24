@@ -776,6 +776,11 @@ function PurchaseOrdersPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: packagingExpenses = [] } = useQuery({
+    queryKey: ['packagingExpenses'],
+    queryFn: () => base44.entities.PackagingExpense.list('-created_date', 500),
+  });
+
   // Create purchase order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
