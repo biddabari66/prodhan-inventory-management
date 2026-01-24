@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Phone, Plus, Search, CheckCircle, XCircle, Clock, 
-  Download, Upload, Users, Pencil, Trash2, Calendar, CheckSquare, Square
+  Download, Upload, Users, Pencil, Trash2, Calendar
 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import DynamicCSVImport from './DynamicCSVImport';
@@ -28,7 +27,6 @@ export default function WelcomeCallList() {
   const [editingEntry, setEditingEntry] = useState(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [newEntry, setNewEntry] = useState({
     customer_name: '',
     customer_phone: '',
@@ -87,36 +85,6 @@ export default function WelcomeCallList() {
       toast.success('Entry deleted');
     }
   });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(ids.map(id => base44.entities.WelcomeCall.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['welcomeCalls']);
-      setSelectedIds([]);
-      toast.success('Selected entries deleted');
-    }
-  });
-
-  const toggleSelection = (id) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === filteredCalls.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredCalls.map(c => c.id));
-    }
-  };
-
-  const handleBulkDelete = () => {
-    if (selectedIds.length === 0) return;
-    if (confirm(`Delete ${selectedIds.length} selected entries?`)) {
-      bulkDeleteMutation.mutate(selectedIds);
-    }
-  };
 
   const closeForm = () => {
     setIsAddOpen(false);
@@ -302,12 +270,7 @@ export default function WelcomeCallList() {
               <option value="not_received">Not Received</option>
             </select>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {selectedIds.length > 0 && (
-              <Button variant="outline" onClick={handleBulkDelete} className="text-red-600 border-red-200 hover:bg-red-50">
-                <Trash2 className="w-4 h-4 mr-2" />Delete ({selectedIds.length})
-              </Button>
-            )}
+          <div className="flex gap-2">
             <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />Export
             </Button>
@@ -348,42 +311,17 @@ export default function WelcomeCallList() {
         </div>
       </div>
 
-      {/* Bulk Selection Header */}
-      {filteredCalls.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
-          <Checkbox
-            checked={selectedIds.length === filteredCalls.length && filteredCalls.length > 0}
-            onCheckedChange={toggleSelectAll}
-          />
-          <span className="text-sm text-slate-600">
-            {selectedIds.length > 0 ? `${selectedIds.length} selected` : 'Select all'}
-          </span>
-          {selectedIds.length > 0 && (
-            <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])} className="text-slate-500 h-7">
-              Clear
-            </Button>
-          )}
-        </div>
-      )}
-
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCalls.map(call => (
-          <Card key={call.id} className={`hover:shadow-lg transition-shadow ${selectedIds.includes(call.id) ? 'ring-2 ring-blue-500' : ''}`}>
+          <Card key={call.id} className="hover:shadow-lg transition-shadow">
             <CardContent className="p-5">
               <div className="flex justify-between items-start mb-3">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={selectedIds.includes(call.id)}
-                    onCheckedChange={() => toggleSelection(call.id)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
-                    <p className="text-sm text-slate-500 flex items-center gap-1">
-                      <Phone className="w-3 h-3" />{call.customer_phone}
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
+                  <p className="text-sm text-slate-500 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />{call.customer_phone}
+                  </p>
                 </div>
                 {getStatusBadge(call.call_status)}
               </div>
