@@ -1376,10 +1376,10 @@ function PurchaseOrdersPage() {
           <TabsContent value="purchase_orders">
             {/* Orders Table */}
             <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-            <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
