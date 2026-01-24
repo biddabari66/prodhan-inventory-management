@@ -967,6 +967,129 @@ function PurchaseOrdersPage() {
     },
   });
 
+  // Create packaging expense mutation
+  const createPackagingExpenseMutation = useMutation({
+    mutationFn: async (expenseData) => {
+      const expense = await base44.entities.PackagingExpense.create(expenseData);
+
+      // Create notification for admin
+      await base44.entities.Notification.create({
+        user_id: 'admin',
+        title: '📦 New Packaging Expense Pending Approval',
+        message: `Packaging expense ${expenseData.expense_number} worth ৳${expenseData.total_amount?.toLocaleString()} submitted by ${expenseData.created_by_name}`,
+        category: 'inventory',
+        priority: 'high',
+        is_actionable: true,
+        action_text: 'Review Expense',
+        action_url: `/PurchaseOrders?tab=packaging`
+      });
+
+      return expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packagingExpenses']);
+      toast.success('Packaging expense submitted for approval!');
+      setIsPackagingFormOpen(false);
+      setEditingPackagingExpense(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to create expense: ' + error.message);
+    },
+  });
+
+  // Update packaging expense mutation
+  const updatePackagingExpenseMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      const expense = await base44.entities.PackagingExpense.update(id, data);
+      return expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packagingExpenses']);
+      toast.success('Packaging expense updated!');
+      setIsPackagingFormOpen(false);
+      setEditingPackagingExpense(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to update expense: ' + error.message);
+    },
+  });
+
+  // Approve packaging expense mutation
+  const approvePackagingExpenseMutation = useMutation({
+    mutationFn: async (expense) => {
+      await base44.entities.PackagingExpense.update(expense.id, {
+        status: 'approved',
+        approved_by_id: currentUser?.id,
+        approved_by_name: currentUser?.full_name,
+        approval_date: new Date().toISOString()
+      });
+
+      // Notify creator
+      if (expense.created_by_id) {
+        await base44.entities.Notification.create({
+          user_id: expense.created_by_id,
+          title: '✅ Packaging Expense Approved',
+          message: `Your packaging expense ${expense.expense_number} has been approved by ${currentUser?.full_name}`,
+          category: 'inventory',
+          priority: 'medium'
+        });
+      }
+
+      return expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packagingExpenses']);
+      toast.success('Packaging expense approved!');
+      setPackagingApprovalDialog(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to approve: ' + error.message);
+    },
+  });
+
+  // Reject packaging expense mutation
+  const rejectPackagingExpenseMutation = useMutation({
+    mutationFn: async ({ expense, reason }) => {
+      await base44.entities.PackagingExpense.update(expense.id, {
+        status: 'rejected',
+        rejection_reason: reason,
+        approved_by_id: currentUser?.id,
+        approved_by_name: currentUser?.full_name,
+        approval_date: new Date().toISOString()
+      });
+
+      // Notify creator
+      if (expense.created_by_id) {
+        await base44.entities.Notification.create({
+          user_id: expense.created_by_id,
+          title: '❌ Packaging Expense Rejected',
+          message: `Your packaging expense ${expense.expense_number} has been rejected. Reason: ${reason}`,
+          category: 'inventory',
+          priority: 'high'
+        });
+      }
+
+      return expense;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packagingExpenses']);
+      toast.success('Packaging expense rejected');
+      setPackagingApprovalDialog(null);
+      setPackagingRejectionReason('');
+    },
+    onError: (error) => {
+      toast.error('Failed to reject: ' + error.message);
+    },
+  });
+
+  const handlePackagingExpenseSubmit = (expenseData) => {
+    if (editingPackagingExpense) {
+      updatePackagingExpenseMutation.mutate({ id: editingPackagingExpense.id, data: expenseData });
+    } else {
+      createPackagingExpenseMutation.mutate(expenseData);
+    }
+  };
+
   const handleOrderSubmit = (orderData) => {
     if (editingOrder) {
       updateOrderMutation.mutate({ id: editingOrder.id, data: orderData });
