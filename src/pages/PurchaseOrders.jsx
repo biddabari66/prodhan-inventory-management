@@ -1230,18 +1230,33 @@ function PurchaseOrdersPage() {
               <p className="text-sm text-[#6B7280] mt-0.5">Create orders with invoice upload & admin approval</p>
             </div>
           </div>
-          {canCreate && (
-            <Button
-              onClick={() => {
-                setEditingOrder(null);
-                setIsFormOpen(true);
-              }}
-              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-sm h-10 px-4 rounded-lg"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Purchase Order
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {canCreate && (
+              <Button
+                onClick={() => {
+                  setEditingPackagingExpense(null);
+                  setIsPackagingFormOpen(true);
+                }}
+                variant="outline"
+                className="border-amber-500 text-amber-700 hover:bg-amber-50 h-10 px-4 rounded-lg"
+              >
+                <Box className="w-4 h-4 mr-2" />
+                Packaging Expense
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                onClick={() => {
+                  setEditingOrder(null);
+                  setIsFormOpen(true);
+                }}
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-sm h-10 px-4 rounded-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Purchase Order
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stats Grid */}
