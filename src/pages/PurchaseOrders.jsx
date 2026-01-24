@@ -19,7 +19,6 @@ import {
   Upload, Image, ShieldCheck, ShieldX, User
 } from 'lucide-react';
 import SearchableProductSelect from '../components/common/SearchableProductSelect';
-import PackagingExpenseForm from '../components/packaging/PackagingExpenseForm';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -63,7 +62,43 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     minimum_stock: 10
   });
 
+  // Packaging/Bundling elements
+  const [packagingItems, setPackagingItems] = useState(order?.packaging_items || []);
+  const [newPackaging, setNewPackaging] = useState({ name: '', quantity: 1, unit_cost: 0, unit: 'pc' });
+
+  const packagingOptions = [
+    { name: 'Sticker', icon: '🏷️', units: ['pc', 'sheet', 'roll'] },
+    { name: 'Packaging Box', icon: '📦', units: ['pc', 'bundle'] },
+    { name: 'Jar/Container', icon: '🫙', units: ['pc', 'litre', 'ml'] },
+    { name: 'Plastic Wrap', icon: '🎁', units: ['kg', 'roll', 'meter'] },
+    { name: 'Bubble Wrap', icon: '🔵', units: ['kg', 'roll', 'meter'] },
+    { name: 'Label', icon: '🪧', units: ['pc', 'sheet', 'roll'] },
+    { name: 'Tape', icon: '📎', units: ['pc', 'roll'] },
+    { name: 'Bag', icon: '👜', units: ['pc', 'kg', 'bundle'] },
+    { name: 'Other', icon: '📋', units: ['pc', 'kg', 'litre', 'meter'] }
+  ];
+
   const unitOptions = ['pc', 'kg', 'gm', 'litre', 'ml', 'roll', 'sheet', 'bundle', 'meter', 'jar', 'box'];
+
+  const addPackagingItem = () => {
+    if (!newPackaging.name) {
+      toast.error('Please select a packaging item');
+      return;
+    }
+    setPackagingItems([...packagingItems, { ...newPackaging, id: Date.now() }]);
+    setNewPackaging({ name: '', quantity: 1, unit_cost: 0, unit: 'pc' });
+  };
+
+  const getPackagingUnits = (name) => {
+    const opt = packagingOptions.find(o => o.name === name);
+    return opt?.units || ['pc', 'kg', 'litre'];
+  };
+
+  const removePackagingItem = (id) => {
+    setPackagingItems(packagingItems.filter(item => item.id !== id));
+  };
+
+  const packagingTotal = packagingItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
 
   // Handle invoice image upload
   const handleInvoiceUpload = async (e) => {
@@ -239,6 +274,8 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       created_by_id: currentUser?.id,
       created_by_name: currentUser?.full_name,
       amount_due: formData.total_amount - (formData.amount_paid || 0),
+      packaging_items: packagingItems,
+      packaging_cost: packagingTotal,
       order_status: order ? formData.order_status : 'pending_approval',
       approval_status: order ? formData.approval_status : 'pending'
     };
@@ -622,6 +659,116 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
         </CardContent>
       </Card>
 
+      {/* Packaging & Bundling Elements */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Box className="w-5 h-5 text-amber-600" />
+            Packaging & Bundling Elements
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Record packaging materials like stickers, boxes, jars, labels etc. associated with this order.
+          </p>
+          
+          {/* Add Packaging Item */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <div>
+              <Label>Packaging Item</Label>
+              <Select
+                value={newPackaging.name}
+                onValueChange={(value) => setNewPackaging({...newPackaging, name: value, unit: packagingOptions.find(o => o.name === value)?.units[0] || 'pc'})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select item..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {packagingOptions.map(opt => (
+                    <SelectItem key={opt.name} value={opt.name}>
+                      {opt.icon} {opt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={newPackaging.quantity}
+                onChange={(e) => setNewPackaging({...newPackaging, quantity: parseFloat(e.target.value) || 1})}
+              />
+            </div>
+            <div>
+              <Label>Unit</Label>
+              <Select
+                value={newPackaging.unit}
+                onValueChange={(value) => setNewPackaging({...newPackaging, unit: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getPackagingUnits(newPackaging.name).map(u => (
+                    <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Unit Cost (BDT)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newPackaging.unit_cost}
+                onChange={(e) => setNewPackaging({...newPackaging, unit_cost: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="button" onClick={addPackagingItem} variant="outline" className="w-full border-amber-400 text-amber-700 hover:bg-amber-100">
+                <Plus className="w-4 h-4 mr-1" /> Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Packaging Items List */}
+          {packagingItems.length > 0 && (
+            <div className="space-y-2">
+              {packagingItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {packagingOptions.find(o => o.name === item.name)?.icon || '📦'}
+                    </span>
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.quantity} {(item.unit || 'pc').toUpperCase()} × ৳{item.unit_cost} = ৳{(item.quantity * item.unit_cost).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removePackagingItem(item.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+              <div className="p-3 bg-amber-100 rounded-lg text-right">
+                <span className="font-semibold">Packaging Total: ৳{packagingTotal.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Notes */}
       <Card>
         <CardHeader>
@@ -742,10 +889,6 @@ function PurchaseOrdersPage() {
   const [viewOrderDialog, setViewOrderDialog] = useState(null);
   const [approvalDialog, setApprovalDialog] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isPackagingFormOpen, setIsPackagingFormOpen] = useState(false);
-  const [editingPackagingExpense, setEditingPackagingExpense] = useState(null);
-  const [packagingApprovalDialog, setPackagingApprovalDialog] = useState(null);
-  const [packagingRejectionReason, setPackagingRejectionReason] = useState('');
 
   // Permission-based access control
   const { hasPermission: canCreate } = usePermission('purchase_orders', 'can_create');
@@ -774,11 +917,6 @@ function PurchaseOrdersPage() {
     queryKey: ['inventory-purchase'],
     queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 1000),
     staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: packagingExpenses = [] } = useQuery({
-    queryKey: ['packagingExpenses'],
-    queryFn: () => base44.entities.PackagingExpense.list('-created_date', 500),
   });
 
   // Create purchase order mutation
@@ -964,126 +1102,6 @@ function PurchaseOrdersPage() {
     },
   });
 
-  // Create packaging expense mutation
-  const createPackagingExpenseMutation = useMutation({
-    mutationFn: async (expenseData) => {
-      const expense = await base44.entities.PackagingExpense.create(expenseData);
-      
-      // Create notification for admin
-      await base44.entities.Notification.create({
-        user_id: 'admin',
-        title: '📦 New Packaging Expense Pending Approval',
-        message: `Packaging expense ${expenseData.expense_number} worth ৳${expenseData.total_amount?.toLocaleString()} submitted by ${expenseData.created_by_name}`,
-        category: 'inventory',
-        priority: 'high',
-        is_actionable: true,
-        action_text: 'Review Expense',
-        action_url: `/PurchaseOrders?tab=packaging`
-      });
-
-      return expense;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['packagingExpenses']);
-      toast.success('Packaging expense submitted for approval!');
-      setIsPackagingFormOpen(false);
-      setEditingPackagingExpense(null);
-    },
-    onError: (error) => {
-      toast.error('Failed to create expense: ' + error.message);
-    },
-  });
-
-  // Update packaging expense mutation
-  const updatePackagingExpenseMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      return await base44.entities.PackagingExpense.update(id, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['packagingExpenses']);
-      toast.success('Packaging expense updated!');
-      setIsPackagingFormOpen(false);
-      setEditingPackagingExpense(null);
-    },
-    onError: (error) => {
-      toast.error('Failed to update expense: ' + error.message);
-    },
-  });
-
-  // Approve packaging expense mutation
-  const approvePackagingExpenseMutation = useMutation({
-    mutationFn: async (expense) => {
-      await base44.entities.PackagingExpense.update(expense.id, {
-        approval_status: 'approved',
-        approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.full_name,
-        approval_date: new Date().toISOString()
-      });
-
-      if (expense.created_by_id) {
-        await base44.entities.Notification.create({
-          user_id: expense.created_by_id,
-          title: '✅ Packaging Expense Approved',
-          message: `Your packaging expense ${expense.expense_number} has been approved by ${currentUser?.full_name}`,
-          category: 'inventory',
-          priority: 'medium'
-        });
-      }
-
-      return expense;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['packagingExpenses']);
-      toast.success('Packaging expense approved!');
-      setPackagingApprovalDialog(null);
-    },
-    onError: (error) => {
-      toast.error('Failed to approve: ' + error.message);
-    },
-  });
-
-  // Reject packaging expense mutation
-  const rejectPackagingExpenseMutation = useMutation({
-    mutationFn: async ({ expense, reason }) => {
-      await base44.entities.PackagingExpense.update(expense.id, {
-        approval_status: 'rejected',
-        rejection_reason: reason,
-        approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.full_name,
-        approval_date: new Date().toISOString()
-      });
-
-      if (expense.created_by_id) {
-        await base44.entities.Notification.create({
-          user_id: expense.created_by_id,
-          title: '❌ Packaging Expense Rejected',
-          message: `Your packaging expense ${expense.expense_number} was rejected. Reason: ${reason}`,
-          category: 'inventory',
-          priority: 'high'
-        });
-      }
-
-      return expense;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['packagingExpenses']);
-      toast.success('Packaging expense rejected');
-      setPackagingApprovalDialog(null);
-      setPackagingRejectionReason('');
-    },
-    onError: (error) => {
-      toast.error('Failed to reject: ' + error.message);
-    },
-  });
-
-  const handlePackagingExpenseSubmit = (expenseData) => {
-    if (editingPackagingExpense) {
-      updatePackagingExpenseMutation.mutate({ id: editingPackagingExpense.id, data: expenseData });
-    } else {
-      createPackagingExpenseMutation.mutate(expenseData);
-    }
-  };
-
   const handleOrderSubmit = (orderData) => {
     if (editingOrder) {
       updateOrderMutation.mutate({ id: editingOrder.id, data: orderData });
@@ -1152,12 +1170,9 @@ function PurchaseOrdersPage() {
       totalOrders: filteredOrders.length,
       totalValue: filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
       pendingApproval: purchaseOrders.filter(o => o.approval_status === 'pending' || o.order_status === 'pending_approval').length,
-      receivedOrders: filteredOrders.filter(o => o.order_status === 'received').length,
-      packagingExpensesCount: packagingExpenses.length,
-      packagingTotal: packagingExpenses.reduce((sum, e) => sum + (e.total_amount || 0), 0),
-      packagingPending: packagingExpenses.filter(e => e.approval_status === 'pending').length
+      receivedOrders: filteredOrders.filter(o => o.order_status === 'received').length
     };
-  }, [filteredOrders, purchaseOrders, packagingExpenses]);
+  }, [filteredOrders, purchaseOrders]);
 
   const getStatusBadge = (order) => {
     if (order.approval_status === 'rejected' || order.order_status === 'rejected') {
@@ -1227,7 +1242,7 @@ function PurchaseOrdersPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-white border-0 shadow-sm rounded-xl">
             <CardContent className="p-5">
               <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center mb-3">
@@ -1254,7 +1269,7 @@ function PurchaseOrdersPage() {
                 <Clock className="w-5 h-5 text-amber-600" />
               </div>
               <p className="text-3xl font-bold text-amber-600">{stats.pendingApproval}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase">PO Pending</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase">Pending Approval</p>
             </CardContent>
           </Card>
 
@@ -1267,82 +1282,54 @@ function PurchaseOrdersPage() {
               <p className="text-xs font-medium text-[#6B7280] uppercase">Received</p>
             </CardContent>
           </Card>
-
-          <Card className="bg-white border-0 shadow-sm rounded-xl border-l-4 border-l-orange-500">
-            <CardContent className="p-5">
-              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center mb-3">
-                <Box className="w-5 h-5 text-orange-600" />
-              </div>
-              <p className="text-3xl font-bold text-orange-600">৳{stats.packagingTotal.toLocaleString()}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase">Packaging ({stats.packagingPending} pending)</p>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Tabs for Purchase Orders and Packaging Expenses */}
-        <Tabs defaultValue="purchase-orders" className="space-y-4">
-          <TabsList className="bg-white border shadow-sm p-1 rounded-lg">
-            <TabsTrigger value="purchase-orders" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
-              <ShoppingCart className="w-4 h-4" />
-              Purchase Orders
-            </TabsTrigger>
-            <TabsTrigger value="packaging" className="gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700">
-              <Box className="w-4 h-4" />
-              Packaging Expenses
-              {stats.packagingPending > 0 && (
-                <Badge className="bg-orange-500 text-white ml-1">{stats.packagingPending}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Purchase Orders Tab */}
-          <TabsContent value="purchase-orders" className="space-y-4">
-            {/* Filters */}
-            <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <div className="md:col-span-2">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                      <Input
-                        placeholder="Search PO, supplier, or creator..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
+        {/* Filters */}
+        <Card className="bg-white border border-slate-200 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full"
+                    placeholder="Search PO, supplier, or creator..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
                   />
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full"
-                  />
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending_approval">⏳ Pending Approval</SelectItem>
-                      <SelectItem value="approved">✅ Approved</SelectItem>
-                      <SelectItem value="received">📦 Received</SelectItem>
-                      <SelectItem value="in_production">🏭 In Production</SelectItem>
-                      <SelectItem value="completed">✔️ Completed</SelectItem>
-                      <SelectItem value="rejected">❌ Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full"
+              />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full"
+              />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending_approval">⏳ Pending Approval</SelectItem>
+                  <SelectItem value="approved">✅ Approved</SelectItem>
+                  <SelectItem value="received">📦 Received</SelectItem>
+                  <SelectItem value="in_production">🏭 In Production</SelectItem>
+                  <SelectItem value="completed">✔️ Completed</SelectItem>
+                  <SelectItem value="rejected">❌ Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Orders Table */}
+        {/* Orders Table */}
         <Card className="bg-white border border-slate-200 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/50">
             <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
@@ -1460,151 +1447,6 @@ function PurchaseOrdersPage() {
             </div>
           </CardContent>
         </Card>
-          </TabsContent>
-
-          {/* Packaging Expenses Tab */}
-          <TabsContent value="packaging" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">Packaging Expenses</h2>
-                <p className="text-sm text-slate-500">Record and track packaging material costs separately</p>
-              </div>
-              {canCreate && (
-                <Button
-                  onClick={() => {
-                    setEditingPackagingExpense(null);
-                    setIsPackagingFormOpen(true);
-                  }}
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Packaging Expense
-                </Button>
-              )}
-            </div>
-
-            <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Expense #</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Products</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead>Created By</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-center">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {packagingExpenses.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            <Box className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                            <p>No packaging expenses recorded yet</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        packagingExpenses.map((expense) => (
-                          <TableRow key={expense.id} className="hover:bg-gray-50">
-                            <TableCell className="font-mono font-semibold text-orange-600">
-                              {expense.expense_number}
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(expense.expense_date), 'dd MMM yyyy')}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                {expense.products?.slice(0, 2).map((p, idx) => (
-                                  <Badge key={idx} variant="outline" className="text-xs">
-                                    {p.item_name?.substring(0, 20)}...
-                                  </Badge>
-                                ))}
-                                {expense.products?.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{expense.products.length - 2} more
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {expense.packaging_items?.map((item, idx) => (
-                                  <Badge key={idx} className="bg-amber-100 text-amber-800 text-xs">
-                                    {item.name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-slate-400" />
-                                <span className="text-sm">{expense.created_by_name || 'N/A'}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-bold text-orange-700">
-                              ৳{expense.total_amount?.toLocaleString()}
-                            </TableCell>
-                            <TableCell>
-                              {expense.approval_status === 'pending' && (
-                                <Badge className="bg-amber-100 text-amber-800">Pending</Badge>
-                              )}
-                              {expense.approval_status === 'approved' && (
-                                <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                              )}
-                              {expense.approval_status === 'rejected' && (
-                                <Badge className="bg-red-100 text-red-800">Rejected</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <DropdownMenu modal={false}>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => {
-                                    setEditingPackagingExpense(expense);
-                                    setIsPackagingFormOpen(true);
-                                  }}>
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    View / Edit
-                                  </DropdownMenuItem>
-                                  {isAdmin && expense.approval_status === 'pending' && (
-                                    <>
-                                      <DropdownMenuItem 
-                                        onClick={() => setPackagingApprovalDialog({ expense, action: 'approve' })} 
-                                        className="text-green-600"
-                                      >
-                                        <ShieldCheck className="w-4 h-4 mr-2" />
-                                        Approve
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem 
-                                        onClick={() => setPackagingApprovalDialog({ expense, action: 'reject' })} 
-                                        className="text-red-600"
-                                      >
-                                        <ShieldX className="w-4 h-4 mr-2" />
-                                        Reject
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
 
         {/* Purchase Order Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
