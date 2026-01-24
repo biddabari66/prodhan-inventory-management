@@ -1356,40 +1356,32 @@ function SalesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="w-full px-6 py-6 space-y-6">
-      
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <span>Dashboard</span>
-        <span>/</span>
-        <span className="text-slate-900 font-medium">Sales Management</span>
-      </div>
+    <div className="min-h-screen bg-[#FAFBFC]">
+      <div className="w-full px-4 lg:px-6 py-4 lg:py-6 space-y-4">
 
-      {/* Premium Header with Glassmorphism Search */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      {/* Clean Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sales Management</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track and manage all your sales orders</p>
+          <h1 className="text-xl lg:text-2xl font-semibold text-slate-800">Orders</h1>
         </div>
-        <div className="flex items-center gap-3 w-full lg:w-auto">
-          {/* Glassmorphism Search Bar */}
-          <div className="relative flex-1 lg:w-96">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          {/* Clean Search Bar */}
+          <div className="relative flex-1 lg:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
-              placeholder="Search orders... ⌘K"
+              placeholder="Search orders..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="pl-9 h-9 bg-white border-slate-200 rounded-lg text-sm"
             />
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50">
-                <Filter className="w-4 h-4 text-slate-600" />
-                <span className="hidden sm:inline text-slate-700">Filters</span>
+              <Button variant="outline" className="gap-2 h-9 px-3 bg-white border-slate-200 rounded-lg hover:bg-slate-50 text-sm">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline text-slate-600">Filters</span>
                 {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
-                  <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-600 text-white text-xs">
+                  <Badge className="ml-1 h-4 w-4 rounded-full p-0 flex items-center justify-center bg-blue-600 text-white text-[10px]">
                     {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
                   </Badge>
                 )}
@@ -1530,10 +1522,10 @@ function SalesPage() {
             <Button
               variant="outline"
               onClick={() => setIsExportDialogOpen(true)}
-              className="h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50"
+              className="h-9 px-3 bg-white border-slate-200 rounded-lg hover:bg-slate-50 text-sm"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 mr-1.5" />
+              <span className="hidden sm:inline">Download</span>
             </Button>
           )}
           {canCreate && (
@@ -1542,330 +1534,172 @@ function SalesPage() {
                 setEditingOrder(null);
                 setIsOrderFormOpen(true);
               }}
-              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm font-medium rounded-lg"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               Create Sale
             </Button>
           )}
         </div>
       </div>
 
-      {/* Premium Minimalist Stats Cards */}
-      {stats.isFiltered && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
-          <Filter className="w-4 h-4 text-blue-600" />
-          <span className="text-sm text-blue-700 font-medium">
-            Showing stats for filtered date range: {dateRange.from} {dateRange.to && dateRange.to !== dateRange.from ? `to ${dateRange.to}` : ''}
-          </span>
+      {/* Compact Stats Row - WooCommerce Style */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-slate-200">
+          {/* Orders */}
+          <div className="p-4 border-l-4 border-l-blue-500">
+            <p className="text-xs text-slate-500 mb-1">Orders</p>
+            <p className="text-2xl font-semibold text-slate-900">{stats.totalOrders.toLocaleString()}</p>
+            {!stats.isFiltered && <p className="text-[11px] text-slate-400 mt-0.5">Today: {stats.todayOrders}</p>}
+          </div>
+          {/* Products Sold */}
+          <div className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Items sold</p>
+            <p className="text-2xl font-semibold text-slate-900">{stats.totalProductQuantity.toLocaleString()}</p>
+            {!stats.isFiltered && <p className="text-[11px] text-slate-400 mt-0.5">Today: {stats.todayProductQty}</p>}
+          </div>
+          {/* Returns */}
+          <div className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Returns</p>
+            <p className="text-2xl font-semibold text-slate-900">{stats.totalReturns}</p>
+            {!stats.isFiltered && <p className="text-[11px] text-slate-400 mt-0.5">Today: {stats.todayReturns}</p>}
+          </div>
+          {/* Pending */}
+          <div className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Pending</p>
+            <p className="text-2xl font-semibold text-amber-600">{stats.pendingOrders}</p>
+            {!stats.isFiltered && <p className="text-[11px] text-slate-400 mt-0.5">Today: {stats.todayPending}</p>}
+          </div>
+          {/* Confirmed */}
+          <div className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Confirmed</p>
+            <p className="text-2xl font-semibold text-emerald-600">{stats.confirmedOrders}</p>
+            {!stats.isFiltered && <p className="text-[11px] text-slate-400 mt-0.5">Today: {stats.todayConfirmed}</p>}
+          </div>
+          {/* Shipped */}
+          <div className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Shipped</p>
+            <p className="text-2xl font-semibold text-blue-600">{stats.shippedOrders}</p>
+            {!stats.isFiltered && <p className="text-[11px] text-slate-400 mt-0.5">Today: {stats.todayShipped}</p>}
+          </div>
         </div>
-      )}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {/* Total Orders */}
-        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
-              </div>
-              {!stats.isFiltered && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalOrders}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">{stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}</p>
-          </CardContent>
-        </Card>
-
-        {/* Total Product Qty */}
-        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                <Package className="w-5 h-5 text-[#D32F2F]" />
-              </div>
-              {!stats.isFiltered && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalProductQuantity}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Products Sold</p>
-          </CardContent>
-        </Card>
-
-        {/* Total Returns */}
-        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                <RefreshCw className="w-5 h-5 text-[#D32F2F]" />
-              </div>
-              {!stats.isFiltered && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalReturns}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Returns</p>
-          </CardContent>
-        </Card>
-
-        {/* Pending Orders */}
-        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-600" />
-              </div>
-              {!stats.isFiltered && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pendingOrders}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Pending</p>
-          </CardContent>
-        </Card>
-
-        {/* Confirmed Orders */}
-        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-              </div>
-              {!stats.isFiltered && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.confirmedOrders}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Confirmed</p>
-          </CardContent>
-        </Card>
-
-        {/* Shipped Orders */}
-        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                <Truck className="w-5 h-5 text-blue-600" />
-              </div>
-              {!stats.isFiltered && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.shippedOrders}</p>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Shipped</p>
-          </CardContent>
-        </Card>
+        {stats.isFiltered && (
+          <div className="bg-blue-50 px-4 py-2 border-t border-slate-200">
+            <span className="text-xs text-blue-700">
+              Filtered: {dateRange.from} {dateRange.to && dateRange.to !== dateRange.from ? `to ${dateRange.to}` : ''}
+            </span>
+          </div>
+        )}
       </div>
 
 
 
-      {/* Premium Bulk Actions Bar */}
+      {/* Bulk Actions Bar */}
       {selectedOrderIds.length > 0 && (
-        <Card className="bg-white border-0 shadow-lg rounded-2xl">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className="bg-[#D32F2F] text-white rounded-full px-4 py-1">
-                  {selectedOrderIds.length} selected
-                </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setSelectedOrderIds([])}
-                  className="text-slate-600 hover:text-slate-900 rounded-lg"
-                >
-                  Clear
-                </Button>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {/* Bulk Print Invoices */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const selectedOrders = orders.filter(o => selectedOrderIds.includes(o.id));
-                    if (selectedOrders.length === 0) {
-                      toast.error('No orders selected');
-                      return;
-                    }
-                    
-                    // Open new window for bulk printing
-                    const printWindow = window.open('', '_blank', 'width=800,height=600');
-                    if (!printWindow) {
-                      toast.error('Please allow popups for bulk printing');
-                      return;
-                    }
-
-                    const invoicesHTML = selectedOrders.map((order, idx) => `
-                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; padding: 20px; font-family: Arial, sans-serif;">
-                        <div style="text-align: center; margin-bottom: 15px;">
-                          <h2 style="margin: 0; color: #D32F2F;">Prodhan.com</h2>
-                          <p style="margin: 5px 0; font-size: 12px;">প্রোধান.কম - অনলাইন শপিং</p>
-                        </div>
-                        <hr/>
-                        <p><strong>Order:</strong> ${order.order_number || 'N/A'}</p>
-                        <p><strong>Date:</strong> ${order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A'}</p>
-                        <p><strong>Customer:</strong> ${order.customer_name || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${order.customer_phone || 'N/A'}</p>
-                        <p><strong>Address:</strong> ${order.shipping_address?.address_line || ''}, ${order.shipping_address?.city || ''}</p>
-                        <hr/>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                          <tr style="background: #f0f0f0;">
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: left;">Item</th>
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: center;">Qty</th>
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: right;">Price</th>
-                          </tr>
-                          ${(order.order_items || []).map(item => `
-                            <tr>
-                              <td style="border: 1px solid #ddd; padding: 5px;">${item.item_name || 'Product'}</td>
-                              <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantity || 1}</td>
-                              <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">৳${(item.subtotal || 0).toLocaleString()}</td>
-                            </tr>
-                          `).join('')}
-                        </table>
-                        <hr/>
-                        <div style="text-align: right;">
-                          <p><strong>Subtotal:</strong> ৳${(order.subtotal || 0).toLocaleString()}</p>
-                          ${(order.discount_amount || 0) + (order.coupon_discount || 0) > 0 ? `<p><strong>Discount:</strong> -৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</p>` : ''}
-                          <p><strong>Shipping:</strong> ৳${(order.shipping_cost || 0).toLocaleString()}</p>
-                          <p style="font-size: 16px;"><strong>Total: ৳${(order.total_amount || 0).toLocaleString()}</strong></p>
-                        </div>
-                        <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #666;">
-                          <p>Thank you for shopping with Prodhan.com!</p>
-                        </div>
-                      </div>
-                    `).join('');
-
-                    printWindow.document.write(`
-                      <html>
-                        <head>
-                          <title>Bulk Invoices - ${selectedOrders.length} Orders</title>
-                          <style>
-                            @media print {
-                              body { margin: 0; }
-                            }
-                          </style>
-                        </head>
-                        <body>${invoicesHTML}</body>
-                      </html>
-                    `);
-                    printWindow.document.close();
-                    setTimeout(() => {
-                      printWindow.print();
-                    }, 500);
-                    toast.success(`Printing ${selectedOrders.length} invoices...`);
-                  }}
-                  className="text-orange-600 hover:bg-orange-50"
-                >
-                  <Printer className="w-4 h-4 mr-1" />
-                  Print All Invoices
-                </Button>
-                {canApprove && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBulkAction('confirmed')}
-                      className="text-blue-600 hover:bg-blue-50"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Confirm All
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBulkAction('shipped')}
-                      className="text-cyan-600 hover:bg-cyan-50"
-                    >
-                      <Truck className="w-4 h-4 mr-1" />
-                      Ship All
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBulkAction('delivered')}
-                      className="text-green-600 hover:bg-green-50"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Mark Delivered
-                    </Button>
-                  </>
-                )}
-                {canDelete && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleBulkAction('delete')}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </Button>
-                )}
-              </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-blue-800">
+                {selectedOrderIds.length} selected
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setSelectedOrderIds([])}
+                className="text-blue-600 hover:text-blue-800 h-7 text-xs"
+              >
+                Clear
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex gap-1.5 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const selectedOrders = orders.filter(o => selectedOrderIds.includes(o.id));
+                  if (selectedOrders.length === 0) return;
+                  const printWindow = window.open('', '_blank', 'width=800,height=600');
+                  if (!printWindow) { toast.error('Please allow popups'); return; }
+                  const invoicesHTML = selectedOrders.map((order, idx) => `
+                    <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; padding: 20px; font-family: Arial, sans-serif;">
+                      <div style="text-align: center; margin-bottom: 15px;"><h2 style="margin: 0; color: #D32F2F;">Prodhan.com</h2></div>
+                      <hr/><p><strong>Order:</strong> ${order.order_number || 'N/A'}</p>
+                      <p><strong>Customer:</strong> ${order.customer_name || 'N/A'} - ${order.customer_phone || ''}</p>
+                      <p><strong>Address:</strong> ${order.shipping_address?.address_line || ''}, ${order.shipping_address?.city || ''}</p>
+                      <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;">
+                        <tr style="background: #f0f0f0;"><th style="border: 1px solid #ddd; padding: 5px;">Item</th><th style="border: 1px solid #ddd; padding: 5px;">Qty</th><th style="border: 1px solid #ddd; padding: 5px; text-align: right;">Price</th></tr>
+                        ${(order.order_items || []).map(item => `<tr><td style="border: 1px solid #ddd; padding: 5px;">${item.item_name || 'Product'}</td><td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantity || 1}</td><td style="border: 1px solid #ddd; padding: 5px; text-align: right;">৳${(item.subtotal || 0).toLocaleString()}</td></tr>`).join('')}
+                      </table>
+                      <div style="text-align: right; margin-top: 10px;"><p style="font-size: 14px;"><strong>Total: ৳${(order.total_amount || 0).toLocaleString()}</strong></p></div>
+                    </div>
+                  `).join('');
+                  printWindow.document.write(`<html><head><title>Invoices</title></head><body>${invoicesHTML}</body></html>`);
+                  printWindow.document.close();
+                  setTimeout(() => printWindow.print(), 500);
+                }}
+                className="h-7 text-xs"
+              >
+                <Printer className="w-3 h-3 mr-1" />Print
+              </Button>
+              {canApprove && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('confirmed')} className="h-7 text-xs">Confirm</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('shipped')} className="h-7 text-xs">Ship</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('delivered')} className="h-7 text-xs text-green-600">Delivered</Button>
+                </>
+              )}
+              {canDelete && (
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction('delete')} className="h-7 text-xs text-red-600">Delete</Button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Premium Orders Table */}
-      <Card className="bg-white border-0 shadow-sm rounded-2xl overflow-hidden">
-        <CardHeader className="border-b border-slate-100 bg-white px-6 py-4">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-slate-900">Sales Orders</span>
-              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
-                {filteredOrders.length}
-              </Badge>
-              {displayedOrders.length < filteredOrders.length && (
-                <span className="text-sm text-slate-400">showing {displayedOrders.length}</span>
-              )}
-              {!allOrdersLoaded && recentOrders.length > 0 && (
-                <Badge className="bg-blue-100 text-blue-700 font-medium rounded-full px-3 animate-pulse">
-                  <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />
-                  Loading all...
-                </Badge>
-              )}
-              {allOrdersLoaded && (
-                <Badge className="bg-green-100 text-green-700 font-medium rounded-full px-3">
-                  ✓ All {orders.length} loaded
-                </Badge>
-              )}
-            </div>
+      {/* Orders Table */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-700">Orders</span>
+            <span className="text-xs text-slate-500 bg-white border border-slate-200 rounded px-1.5 py-0.5">{filteredOrders.length}</span>
+            {displayedOrders.length < filteredOrders.length && (
+              <span className="text-xs text-slate-400">showing {displayedOrders.length}</span>
+            )}
+            {!allOrdersLoaded && recentOrders.length > 0 && (
+              <span className="text-xs text-blue-600 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />Loading...
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             {filteredOrders.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSelectAll}
-                className="text-[#D32F2F] hover:text-[#B71C1C] hover:bg-red-50 rounded-lg"
-              >
-                {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+              <Button variant="ghost" size="sm" onClick={toggleSelectAll} className="h-7 text-xs text-slate-600 hover:text-slate-900">
+                {selectedOrderIds.length === filteredOrders.length ? 'Deselect' : 'Select All'}
               </Button>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+          </div>
+        </div>
+        <div className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/50 border-b border-slate-100">
-                  <TableHead className="w-12 pl-6">
+                <TableRow className="bg-slate-50 border-b border-slate-200">
+                  <TableHead className="w-10 pl-4">
                     <Checkbox
                       checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
                       onCheckedChange={toggleSelectAll}
                       className="border-slate-300"
                     />
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Order #</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Items</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-center">Qty</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">Amount</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider pr-6">Actions</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase">Date</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase">Order #</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase">Status</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase">Customer</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase">Product(s)</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase text-center">Items</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase text-right">Net sales</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase">Payment</TableHead>
+                  <TableHead className="text-[11px] font-medium text-slate-500 uppercase pr-4"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1878,354 +1712,164 @@ function SalesPage() {
                   </TableRow>
                 ) : (
                   displayedOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-slate-50/50 border-b border-slate-100 transition-colors h-16">
-                      <TableCell className="pl-6">
+                    <TableRow key={order.id} className="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                      <TableCell className="pl-4 py-3">
                         <Checkbox
                           checked={selectedOrderIds.includes(order.id)}
                           onCheckedChange={() => toggleOrderSelection(order.id)}
                           className="border-slate-300"
                         />
                       </TableCell>
-                      <TableCell>
-                       <div className="flex flex-col gap-1">
-                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{order.order_number?.startsWith('PD') ? order.order_number : `PD${order.order_number?.replace(/\D/g, '').slice(-6) || order.id?.slice(-6) || '000000'}`}</span>
-                         <div className="flex flex-wrap gap-1">
-                           {order.adprofit_synced && (
-                             <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
-                               <CheckCircle className="w-3 h-3 mr-1" />
-                               Adprofit Synced
-                             </Badge>
-                           )}
-                           {(order.order_source === 'website' || order.order_source === 'landing_page' || order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-') || tag?.includes('landing'))) && (
-                               <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
-                                 🌐 Landing Page
-                               </Badge>
-                             )}
-                         </div>
-                       </div>
+                      <TableCell className="py-3">
+                        <span className="text-sm text-slate-600">{format(new Date(order.order_date), 'MMM d, yyyy')}</span>
                       </TableCell>
-                      <TableCell>
-                        {format(new Date(order.order_date), 'dd MMM yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-red-100 text-red-700 text-xs">
-                              {order.customer_name?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{order.customer_name}</p>
-                            <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
-                          </div>
+                      <TableCell className="py-3">
+                        <a href="#" className="text-sm text-blue-600 hover:underline font-medium">
+                          {order.order_number?.startsWith('PD') ? order.order_number : `#${order.order_number?.replace(/\D/g, '').slice(-6) || order.id?.slice(-6) || '000000'}`}
+                        </a>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {order.adprofit_synced && <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0">Synced</Badge>}
+                          {(order.order_source === 'website' || order.order_source === 'landing_page' || order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-') || tag?.includes('landing'))) && (
+                            <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0">🌐 LP</Badge>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="max-w-[300px]">
+                      <TableCell className="py-3">{getStatusBadge(order.order_status)}</TableCell>
+                      <TableCell className="py-3">
+                        <div>
+                          <p className="text-sm font-medium text-slate-800">{order.customer_name}</p>
+                          <p className="text-xs text-slate-500">{order.customer_phone}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <div className="max-w-[250px]">
                           {order.order_items && order.order_items.length > 0 ? (
-                            <div className="text-sm space-y-1.5">
-                              {order.order_items.map((item, idx) => {
-                                const inventoryItem = inventoryMap.get(item.inventory_id);
-                                const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
-
-                                return (
-                                  <div key={idx} className="border-l-2 border-slate-200 pl-2">
-                                    <p className="font-medium text-slate-800" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
-                                      {item.item_name}
-                                    </p>
-                                    <div className="flex flex-wrap gap-1 mt-0.5">
-                                      <span className="text-xs text-slate-500">×{item.quantity}</span>
-                                      <span className="text-xs text-slate-500">@৳{item.unit_price?.toLocaleString()}</span>
-                                      {item.discount > 0 && (
-                                        <span className="text-xs text-red-500">-৳{item.discount}</span>
-                                      )}
-                                      <span className="text-xs font-medium text-emerald-600">= ৳{item.subtotal?.toLocaleString()}</span>
-                                    </div>
-                                    {isCombo && (
-                                      <p className="text-xs text-blue-600 mt-0.5">
-                                        🎁 Combo: {inventoryItem.bundle_items.map(bi => {
-                                          const comp = inventoryMap.get(bi.inventory_id);
-                                          return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
-                                        }).join(' + ')}
-                                      </p>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                            <div className="space-y-0.5">
+                              {order.order_items.slice(0, 2).map((item, idx) => (
+                                <p key={idx} className="text-sm text-blue-600 hover:underline cursor-pointer truncate">{item.item_name}</p>
+                              ))}
+                              {order.order_items.length > 2 && (
+                                <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">+{order.order_items.length - 2} more</span>
+                              )}
                             </div>
                           ) : (
-                            <span className="text-slate-500 text-sm">No items</span>
+                            <span className="text-slate-400 text-sm">-</span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center py-3">
                         {order.order_items && order.order_items.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {order.order_items.map((item, idx) => {
+                          <span className="text-sm font-medium text-slate-700">
+                            {order.order_items.reduce((sum, item) => {
                               const inventoryItem = inventoryMap.get(item.inventory_id);
-                              const bundleCount = getComboCount(inventoryItem, item);
-                              const isCombo = bundleCount > 1;
-                              const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
-
-                              return (
-                                <div key={idx} className="inline-flex items-center gap-1.5">
-                                  <span className="font-bold text-red-600 text-base">×{actualQty}</span>
-                                  {isCombo && (
-                                    <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
-                                      {bundleCount}×{item.quantity}
-                                    </Badge>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+                              return sum + getActualQuantity(item.quantity || 0, inventoryItem, item);
+                            }, 0)}
+                          </span>
                         ) : (
-                          <span className="text-slate-500">-</span>
+                          <span className="text-slate-400">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
+                      <TableCell className="text-right py-3">
+                        <span className="text-sm font-medium text-slate-900">৳{order.total_amount?.toLocaleString()}</span>
                       </TableCell>
-                      <TableCell>
-                       <DropdownMenu modal={false}>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="outline" size="sm" className="h-8 gap-1">
-                             {getPaymentBadge(order.payment_status)}
-                             <ChevronDown className="w-3 h-3" />
-                           </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent align="center" sideOffset={4}>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
-                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
-                              Mark as Pending
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
-                              <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
-                              Mark as Partial
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                              Mark as Paid
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell className="py-3">
+                        {getPaymentBadge(order.payment_status)}
                       </TableCell>
-                      <TableCell>
-                       <DropdownMenu modal={false}>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="outline" size="sm" className="h-8 gap-1">
-                             {getStatusBadge(order.order_status)}
-                             <ChevronDown className="w-3 h-3" />
-                           </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent align="center" sideOffset={4}>
-                            {order.order_status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                Confirm Order
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                Mark as Processing
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                <Truck className="w-4 h-4 mr-2 text-purple-600" />
-                                Mark as Shipped
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Mark as Delivered
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
-                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                                Cancel Order
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewInvoice(order)}
-                            className="h-9 w-9 p-0 hover:bg-blue-50"
-                            title="Full Invoice"
-                          >
-                            <FileText className="w-4 h-4 text-blue-600" />
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 w-9 p-0 hover:bg-orange-50"
-                                title="Print Small Receipt"
-                              >
-                                <Receipt className="w-4 h-4 text-orange-600" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle className="text-center">Small Receipt</DialogTitle>
-                              </DialogHeader>
-                              <ThermalReceipt order={order} />
-                            </DialogContent>
-                          </Dialog>
-                          {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditOrder(order)}
-                              className="h-9 w-9 p-0 hover:bg-purple-50"
-                              title="Edit Order"
-                            >
-                              <Edit className="w-4 h-4 text-purple-600" />
+                      <TableCell className="py-3 pr-4">
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreVertical className="w-4 h-4 text-slate-400" />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleViewInvoice(order)}>
+                              <FileText className="w-4 h-4 mr-2" />View Invoice
+                            </DropdownMenuItem>
+                            {canEdit && (
+                              <DropdownMenuItem onClick={() => handleEditOrder(order)}>
+                                <Edit className="w-4 h-4 mr-2" />Edit Order
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => {
                               const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
                               const url = window.URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
-                              a.download = `invoice-${order.order_number}.pdf`;
+                              a.download = `invoice-${order.order_number}.json`;
                               a.click();
                               window.URL.revokeObjectURL(url);
-                              toast.success('Invoice downloaded!');
-                            }}
-                            className="h-9 w-9 p-0 hover:bg-green-50"
-                            title="Download Invoice"
-                          >
-                            <Download className="w-4 h-4 text-green-600" />
-                          </Button>
-                          {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Silent background sync - no loading toast
-                                base44.functions.invoke('syncToAdprofit', { order_id: order.id })
-                                  .then(async (response) => {
-                                    if (response.data?.success) {
-                                      queryClient.invalidateQueries(['orders']);
-                                    }
-                                  })
-                                  .catch((error) => {
-                                    console.error('Adprofit sync error:', error);
-                                  });
-                                toast.success('Sync started in background');
-                              }}
-                              className="h-9 w-9 p-0 hover:bg-indigo-50"
-                              title="Sync to Adprofit"
-                            >
-                              <Send className="w-4 h-4 text-indigo-600" />
-                            </Button>
-                          )}
-                          {/* Send to Courier Button */}
-                          {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                const loadingToast = toast.loading('🚚 Sending to Courier...');
+                            }}>
+                              <Download className="w-4 h-4 mr-2" />Download
+                            </DropdownMenuItem>
+                            {order.order_status === 'pending' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />Confirm
+                              </DropdownMenuItem>
+                            )}
+                            {['confirmed', 'processing'].includes(order.order_status) && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                <Truck className="w-4 h-4 mr-2 text-purple-600" />Ship
+                              </DropdownMenuItem>
+                            )}
+                            {['shipped', 'out_for_delivery'].includes(order.order_status) && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />Delivered
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
+                              <DollarSign className="w-4 h-4 mr-2 text-green-600" />Mark Paid
+                            </DropdownMenuItem>
+                            {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                              <DropdownMenuItem onClick={async () => {
+                                const loadingToast = toast.loading('Sending to Courier...');
                                 try {
-                                  // Build item description
-                                  const itemDescription = order.order_items?.map(item => 
-                                    `${item.item_name} (×${item.quantity})`
-                                  ).join(', ') || 'Products';
-                                  
-                                  // Build full address
                                   const address = order.shipping_address || {};
-                                  const fullAddress = [
-                                    address.address_line,
-                                    address.city,
-                                    address.district,
-                                    address.postal_code
-                                  ].filter(Boolean).join(', ');
-                                  
-                                  // Calculate total items
-                                  const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
-                                  
-                                  // Prepare payload as per Steadfast documentation
+                                  const fullAddress = [address.address_line, address.city, address.district].filter(Boolean).join(', ');
                                   const courierPayload = {
                                     invoice: order.order_number,
                                     recipient_name: order.customer_name,
                                     recipient_phone: order.customer_phone,
-                                    recipient_address: fullAddress || 'Address not provided',
+                                    recipient_address: fullAddress || 'N/A',
                                     cod_amount: order.payment_status === 'paid' ? 0 : (order.total_amount || 0),
                                     note: order.customer_notes || '',
-                                    item_description: itemDescription,
-                                    total_lot: totalLot,
-                                    delivery_type: 0 // 0 = home delivery
+                                    item_description: order.order_items?.map(item => `${item.item_name} (×${item.quantity})`).join(', ') || 'Products',
+                                    total_lot: order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
+                                    delivery_type: 0
                                   };
-                                  
-                                  // Send to webhook
-                                  const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
-                                    method: 'POST',
-                                    headers: {
-                                      'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify(courierPayload)
-                                  });
-                                  
+                                  const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(courierPayload) });
                                   toast.dismiss(loadingToast);
-                                  
                                   if (response.ok) {
                                     const result = await response.json();
-                                    
-                                    // Handle response - can be array or object
                                     const consignmentData = Array.isArray(result) ? result[0] : result;
                                     const consignment = consignmentData?.consignment || consignmentData;
-                                    
-                                    // Check if successful (status 200 or consignment exists)
-                                    if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
-                                      // Update order with courier info
-                                      await Order.update(order.id, {
-                                        courier_placed: true,
-                                        courier_placed_date: new Date().toISOString(),
-                                        courier_tracking_code: consignment?.tracking_code || null,
-                                        courier_consignment_id: String(consignment?.consignment_id || '')
-                                      });
-                                      
+                                    if (consignmentData?.status === 200 || consignment?.consignment_id) {
+                                      await Order.update(order.id, { courier_placed: true, courier_placed_date: new Date().toISOString(), courier_tracking_code: consignment?.tracking_code || null, courier_consignment_id: String(consignment?.consignment_id || '') });
                                       queryClient.invalidateQueries(['orders']);
-                                      toast.success('✅ Order sent to courier successfully!');
-                                    } else {
-                                      toast.error('Courier response invalid: ' + JSON.stringify(result));
-                                    }
-                                  } else {
-                                    const errorText = await response.text();
-                                    toast.error('Courier request failed: ' + (errorText || response.statusText));
-                                  }
-                                } catch (error) {
-                                  toast.dismiss(loadingToast);
-                                  toast.error('Failed to send to courier: ' + error.message);
-                                }
-                              }}
-                              className="h-9 w-9 p-0 hover:bg-orange-50"
-                              title="Send to Courier"
-                            >
-                              <Truck className="w-4 h-4 text-orange-600" />
-                            </Button>
-                          )}
-                          {order.courier_placed && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
-                              <PackageCheck className="w-3 h-3 mr-1" />
-                              Courier
-                            </Badge>
-                          )}
-                        </div>
+                                      toast.success('Sent to courier!');
+                                    } else { toast.error('Invalid response'); }
+                                  } else { toast.error('Failed'); }
+                                } catch (error) { toast.dismiss(loadingToast); toast.error(error.message); }
+                              }}>
+                                <Truck className="w-4 h-4 mr-2 text-orange-600" />Send to Courier
+                              </DropdownMenuItem>
+                            )}
+                            {!order.adprofit_synced && ['confirmed', 'processing', 'shipped', 'delivered'].includes(order.order_status) && (
+                              <DropdownMenuItem onClick={() => {
+                                base44.functions.invoke('syncToAdprofit', { order_id: order.id }).then(r => { if (r.data?.success) queryClient.invalidateQueries(['orders']); });
+                                toast.success('Syncing...');
+                              }}>
+                                <Send className="w-4 h-4 mr-2 text-indigo-600" />Sync Adprofit
+                              </DropdownMenuItem>
+                            )}
+                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')} className="text-red-600">
+                                <XCircle className="w-4 h-4 mr-2" />Cancel
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        {order.courier_placed && <Badge className="bg-orange-100 text-orange-700 text-[10px] ml-1">📦</Badge>}
                       </TableCell>
                     </TableRow>
                   ))
@@ -2233,14 +1877,9 @@ function SalesPage() {
                 {/* Load More Row */}
                 {displayedOrders.length < filteredOrders.length && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-4">
-                      <Button 
-                        variant="outline" 
-                        onClick={loadMoreOrders}
-                        className="gap-2"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Load More ({filteredOrders.length - displayedOrders.length} remaining)
+                    <TableCell colSpan={10} className="text-center py-3 bg-slate-50">
+                      <Button variant="ghost" size="sm" onClick={loadMoreOrders} className="text-blue-600 text-xs">
+                        Load more ({filteredOrders.length - displayedOrders.length} remaining)
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -2248,8 +1887,8 @@ function SalesPage() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Order Form Dialog */}
       <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
