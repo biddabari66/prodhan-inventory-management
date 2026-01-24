@@ -9,8 +9,8 @@ import { toast } from 'sonner';
  * High contrast fonts + QR code to prodhan.com
  */
 
-// Prodhan logo URL (cart icon style)
-const PRODHAN_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
+// Prodhan logo URL (প্রধান cart-style logo - red)
+const PRODHAN_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/56809d469_LOGO_PRODHAN-removebg-preview1.png";
 
 export default function ThermalReceipt({ order, onPrint }) {
   const receiptRef = useRef(null);
@@ -74,20 +74,11 @@ export default function ThermalReceipt({ order, onPrint }) {
           }
           .header {
             text-align: center;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            margin-bottom: 6px;
           }
           .logo {
-            width: 28px;
-            height: 28px;
-          }
-          .brand {
-            font-size: 24px;
-            font-weight: 900;
-            color: #000;
+            height: 36px;
+            width: auto;
           }
           .title {
             font-size: 12px;
@@ -182,8 +173,7 @@ export default function ThermalReceipt({ order, onPrint }) {
       </head>
       <body>
         <div class="header">
-          <img src="${PRODHAN_LOGO}" alt="Logo" class="logo" />
-          <div class="brand">প্রধান</div>
+          <img src="${PRODHAN_LOGO}" alt="প্রধান" class="logo" />
         </div>
         <div class="title">INVOICE</div>
 
@@ -253,59 +243,58 @@ export default function ThermalReceipt({ order, onPrint }) {
 
   return (
     <div className="space-y-3">
-      {/* Preview - 4x3 inch scaled for dialog */}
+      {/* Preview - 4x3 inch scaled for dialog (auto height to fit all content) */}
       <div 
         ref={receiptRef}
         className="bg-white border-2 border-slate-200 rounded-lg mx-auto overflow-hidden shadow-sm"
         style={{ 
           width: '384px',
-          height: '288px',
-          padding: '8px 12px',
+          minHeight: '288px',
+          padding: '12px 16px',
           fontFamily: "Arial, Helvetica, sans-serif",
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: 600,
           color: '#000'
         }}
       >
-        {/* Header with Logo */}
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <img src={PRODHAN_LOGO} alt="Logo" className="w-7 h-7" />
-          <div className="text-2xl font-black text-black leading-tight">প্রধান</div>
+        {/* Header with Prodhan Logo */}
+        <div className="text-center mb-2">
+          <img src={PRODHAN_LOGO} alt="প্রধান" className="h-12 mx-auto" />
         </div>
-        <div className="text-center text-xs font-extrabold tracking-widest mb-1">INVOICE</div>
+        <div className="text-center text-sm font-extrabold tracking-widest mb-2 border-b border-dashed border-black pb-1">INVOICE</div>
 
         {/* Customer Info */}
-        <div className="space-y-0.5 text-[8px] font-semibold">
+        <div className="space-y-1 text-[10px] font-semibold mb-2">
           <div><span className="font-bold">Customer:</span> {order.customer_name || 'N/A'}</div>
           <div><span className="font-bold">Mobile:</span> {order.customer_phone || 'N/A'}</div>
           <div><span className="font-bold">Date:</span> {format(new Date(order.order_date || order.created_date), 'dd-MM-yyyy')}</div>
         </div>
 
         {/* Order Details */}
-        <div className="mt-1.5">
-          <div className="font-extrabold border-b border-dashed border-black pb-0.5 mb-0.5 text-[9px]">
+        <div className="mb-2">
+          <div className="font-extrabold border-b border-dashed border-black pb-1 mb-1 text-[11px]">
             Order Details
           </div>
           
           {/* Header Row */}
-          <div className="flex justify-between font-extrabold text-[8px] border-b border-black pb-0.5 mb-0.5">
+          <div className="flex justify-between font-extrabold text-[10px] border-b border-black pb-1 mb-1">
             <span className="flex-1">Product</span>
-            <span className="w-7 text-center">Qty</span>
-            <span className="w-12 text-right">Price</span>
+            <span className="w-10 text-center">Qty</span>
+            <span className="w-16 text-right">Price</span>
           </div>
 
-          {/* Items */}
-          {order.order_items?.slice(0, 4).map((item, idx) => (
-            <div key={idx} className="flex justify-between text-[8px] py-0.5 font-semibold">
-              <span className="flex-1 truncate pr-1">{item.item_name || 'Product'}</span>
-              <span className="w-7 text-center font-bold">{item.quantity || 1}</span>
-              <span className="w-12 text-right font-bold">৳{(item.subtotal || 0).toLocaleString()}</span>
+          {/* All Items */}
+          {order.order_items?.map((item, idx) => (
+            <div key={idx} className="flex justify-between text-[10px] py-0.5 font-semibold">
+              <span className="flex-1 pr-2">{item.item_name || 'Product'}</span>
+              <span className="w-10 text-center font-bold">{item.quantity || 1}</span>
+              <span className="w-16 text-right font-bold">৳{(item.subtotal || 0).toLocaleString()}</span>
             </div>
           ))}
         </div>
 
         {/* Totals */}
-        <div className="mt-1 pt-1 border-t border-dashed border-black space-y-0.5 text-[8px]">
+        <div className="pt-2 border-t border-dashed border-black space-y-1 text-[10px]">
           <div className="flex justify-between font-semibold">
             <span>Sub Total</span>
             <span className="font-bold">৳{subtotal.toLocaleString()}</span>
@@ -314,25 +303,25 @@ export default function ThermalReceipt({ order, onPrint }) {
             <span>Delivery:</span>
             <span className="font-bold">৳{deliveryCharge.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between font-black text-[11px] pt-1 border-t border-black">
+          <div className="flex justify-between font-black text-sm pt-2 border-t border-black">
             <span>Grand Total:</span>
             <span>৳{grandTotal.toLocaleString()}</span>
           </div>
         </div>
 
-        {/* QR Code */}
-        <div className="mt-1.5 text-center border-t border-dashed border-black pt-1">
+        {/* QR Code & Invoice */}
+        <div className="mt-3 text-center border-t border-dashed border-black pt-2">
           <img 
             src={qrCodeUrl} 
             alt="Scan for prodhan.com" 
-            className="w-11 h-11 mx-auto"
+            className="w-14 h-14 mx-auto"
           />
-          <div className="text-[9px] font-extrabold mt-0.5">Invoice No: {shortInvoiceNo}</div>
+          <div className="text-[11px] font-extrabold mt-1">Invoice No: {shortInvoiceNo}</div>
         </div>
 
         {/* Footer */}
-        <div className="mt-1 text-center text-[7px]">
-          <div className="font-extrabold text-[8px]">Thanks for shopping with Prodhan</div>
+        <div className="mt-2 text-center text-[9px]">
+          <div className="font-extrabold text-[10px]">Thanks for shopping with Prodhan</div>
           <div className="font-semibold">+8809643330000 | www.prodhan.com</div>
         </div>
       </div>
