@@ -742,6 +742,12 @@ function PurchaseOrdersPage() {
   const [viewOrderDialog, setViewOrderDialog] = useState(null);
   const [approvalDialog, setApprovalDialog] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  
+  // Packaging Expense Form state
+  const [isPackagingFormOpen, setIsPackagingFormOpen] = useState(false);
+  const [editingPackagingExpense, setEditingPackagingExpense] = useState(null);
+  const [packagingApprovalDialog, setPackagingApprovalDialog] = useState(null);
+  const [packagingRejectionReason, setPackagingRejectionReason] = useState('');
 
   // Permission-based access control
   const { hasPermission: canCreate } = usePermission('purchase_orders', 'can_create');
