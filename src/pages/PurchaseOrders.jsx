@@ -43,7 +43,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     payment_method: 'bank_transfer',
     payment_status: 'pending',
     order_status: 'draft',
-    invoice_image_url: '',
+    invoice_images: [],
     invoice_number: '',
     notes: ''
   });
@@ -65,21 +65,40 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
 
   const unitOptions = ['pc', 'kg', 'gm', 'litre', 'ml', 'roll', 'sheet', 'bundle', 'meter', 'jar', 'box'];
 
-  // Handle invoice image upload
+  // Handle multiple invoice image uploads
   const handleInvoiceUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setIsUploadingInvoice(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setFormData(prev => ({ ...prev, invoice_image_url: file_url }));
-      toast.success('Invoice image uploaded successfully!');
+      const uploadPromises = files.map(file => base44.integrations.Core.UploadFile({ file }));
+      const results = await Promise.all(uploadPromises);
+      const newUrls = results.map(r => r.file_url);
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        invoice_images: [...(prev.invoice_images || []), ...newUrls],
+        invoice_image_url: prev.invoice_image_url || newUrls[0] // Keep backward compatibility
+      }));
+      toast.success(`${files.length} invoice image(s) uploaded successfully!`);
     } catch (error) {
       toast.error('Failed to upload invoice: ' + error.message);
     } finally {
       setIsUploadingInvoice(false);
     }
+  };
+
+  const handleRemoveInvoiceImage = (index) => {
+    setFormData(prev => {
+      const newImages = [...(prev.invoice_images || [])];
+      newImages.splice(index, 1);
+      return { 
+        ...prev, 
+        invoice_images: newImages,
+        invoice_image_url: newImages[0] || '' 
+      };
+    });
   };
 
   // Filter inventory for prodhan_com_e_commerce department
@@ -267,11 +286,12 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
               />
             </div>
             <div>
-              <Label>Invoice Image *</Label>
+              <Label>Invoice Images (Multiple) *</Label>
               <div className="flex items-center gap-3">
                 <Input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleInvoiceUpload}
                   disabled={isUploadingInvoice}
                   className="flex-1"
@@ -280,19 +300,36 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
                   <span className="text-sm text-muted-foreground animate-pulse">Uploading...</span>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">You can select multiple images at once</p>
             </div>
           </div>
-          {formData.invoice_image_url && (
+          {(formData.invoice_images?.length > 0 || formData.invoice_image_url) && (
             <div className="mt-3 p-3 bg-white rounded-lg border">
               <p className="text-xs text-green-600 mb-2 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> Invoice uploaded successfully
+                <CheckCircle className="w-3 h-3" /> {formData.invoice_images?.length || 1} invoice image(s) uploaded
               </p>
-              <img 
-                src={formData.invoice_image_url} 
-                alt="Invoice" 
-                className="max-h-48 rounded border cursor-pointer hover:opacity-90"
-                onClick={() => window.open(formData.invoice_image_url, '_blank')}
-              />
+              <div className="flex flex-wrap gap-3">
+                {(formData.invoice_images?.length > 0 ? formData.invoice_images : [formData.invoice_image_url]).map((url, idx) => (
+                  <div key={idx} className="relative group">
+                    <img 
+                      src={url} 
+                      alt={`Invoice ${idx + 1}`} 
+                      className="h-32 w-auto rounded border cursor-pointer hover:opacity-90 object-cover"
+                      onClick={() => window.open(url, '_blank')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveInvoiceImage(idx)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                    <Badge className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px]">
+                      #{idx + 1}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -1430,16 +1467,18 @@ function PurchaseOrdersPage() {
                           ৳{order.total_amount?.toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          {order.invoice_image_url ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(order.invoice_image_url, '_blank')}
-                              className="text-blue-600"
-                            >
-                              <Image className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
+                          {(order.invoice_images?.length > 0 || order.invoice_image_url) ? (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(order.invoice_images?.[0] || order.invoice_image_url, '_blank')}
+                                className="text-blue-600"
+                              >
+                                <Image className="w-4 h-4 mr-1" />
+                                {order.invoice_images?.length > 1 ? `${order.invoice_images.length} imgs` : 'View'}
+                              </Button>
+                            </div>
                           ) : (
                             <span className="text-xs text-slate-400">No invoice</span>
                           )}
@@ -1665,19 +1704,28 @@ function PurchaseOrdersPage() {
                   )}
                 </div>
 
-                {/* Invoice Image */}
-                {viewOrderDialog.invoice_image_url && (
+                {/* Invoice Images */}
+                {(viewOrderDialog.invoice_images?.length > 0 || viewOrderDialog.invoice_image_url) && (
                   <div className="p-4 border rounded-lg">
                     <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-                      <Image className="w-4 h-4" /> Invoice Image
+                      <Image className="w-4 h-4" /> Invoice Images ({viewOrderDialog.invoice_images?.length || 1})
                       {viewOrderDialog.invoice_number && <span className="text-slate-500">#{viewOrderDialog.invoice_number}</span>}
                     </p>
-                    <img 
-                      src={viewOrderDialog.invoice_image_url} 
-                      alt="Invoice" 
-                      className="max-h-64 rounded border cursor-pointer hover:opacity-90"
-                      onClick={() => window.open(viewOrderDialog.invoice_image_url, '_blank')}
-                    />
+                    <div className="flex flex-wrap gap-3">
+                      {(viewOrderDialog.invoice_images?.length > 0 ? viewOrderDialog.invoice_images : [viewOrderDialog.invoice_image_url]).map((url, idx) => (
+                        <div key={idx} className="relative">
+                          <img 
+                            src={url} 
+                            alt={`Invoice ${idx + 1}`} 
+                            className="h-48 w-auto rounded border cursor-pointer hover:opacity-90 object-contain"
+                            onClick={() => window.open(url, '_blank')}
+                          />
+                          <Badge className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px]">
+                            #{idx + 1}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

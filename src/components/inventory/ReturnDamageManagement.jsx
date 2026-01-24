@@ -48,10 +48,36 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
 
-  const { data: movements = [] } = useQuery({
-    queryKey: ['movements-returns'],
-    queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 200),
-    staleTime: 1 * 60 * 1000, // 1 minute cache
+  // Load ALL returns/damages for complete history with pagination
+  const { data: movements = [], isLoading: movementsLoading } = useQuery({
+    queryKey: ['movements-returns-all'],
+    queryFn: async () => {
+      // Load all return/damage movements in batches
+      const batchSize = 500;
+      let allMovements = [];
+      let offset = 0;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const batch = await base44.entities.InventoryMovement.list('-movement_date', batchSize, offset);
+        // Filter only returns and damages
+        const relevantBatch = batch.filter(m => 
+          m.reference_type === 'return' || 
+          m.reference_type === 'damage' || 
+          m.reference_type === 'expired'
+        );
+        allMovements = [...allMovements, ...relevantBatch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+        
+        // Limit total to prevent memory issues (max 5000 records)
+        if (allMovements.length >= 5000) break;
+      }
+      
+      return allMovements;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: currentUser } = useQuery({
@@ -427,8 +453,18 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     const returnValue = Math.abs(returnsData.reduce((sum, m) => sum + (m.total_value || 0), 0));
     const damageValue = Math.abs(damagesData.reduce((sum, m) => sum + (m.total_value || 0), 0));
     const totalLoss = returnValue + damageValue;
+    
+    // Calculate total loss quantity (write-offs only)
+    const lossQuantity = [...returnsData, ...damagesData].reduce((sum, m) => {
+      const metadata = m.metadata || {};
+      // Count write-offs as losses
+      if (metadata.action === 'write_off' || metadata.condition === 'damaged') {
+        return sum + (metadata.damaged_qty || metadata.original_quantity || Math.abs(m.quantity) || 0);
+      }
+      return sum;
+    }, 0);
 
-    return { returnCount, damageCount, returnValue, damageValue, totalLoss };
+    return { returnCount, damageCount, returnValue, damageValue, totalLoss, lossQuantity };
   }, [returnsData, damagesData]);
 
   const getItemName = (itemId) => {
@@ -453,8 +489,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
             Transaction Records
+            {movementsLoading && <span className="text-sm font-normal text-slate-400 ml-2">(Loading all data...)</span>}
           </h2>
-          <p className="text-sm text-slate-500">Detailed tracking and management</p>
+          <p className="text-sm text-slate-500">
+            Detailed tracking and management • Showing all {returnsData.length + damagesData.length} records
+          </p>
         </div>
         <div className="flex gap-3">
           <Button 
@@ -526,6 +565,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             </div>
             <p className="text-xs text-orange-700 uppercase tracking-wide font-semibold">Total Loss</p>
             <p className="text-2xl font-bold text-orange-600 mt-1">৳{stats.totalLoss.toLocaleString()}</p>
+            <p className="text-xs text-orange-600 mt-1">{stats.lossQuantity} units written off</p>
           </CardContent>
         </Card>
       </div>

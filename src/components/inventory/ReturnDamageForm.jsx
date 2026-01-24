@@ -344,13 +344,13 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
             </div>
 
             <div>
-              <Label>Customer Phone *</Label>
+              <Label>Customer Phone (Optional)</Label>
               <Input
                 value={formData.customer_phone}
                 onChange={(e) => setFormData({...formData, customer_phone: e.target.value})}
-                placeholder="01XXXXXXXXX"
-                required
+                placeholder="01XXXXXXXXX (not required)"
               />
+              <p className="text-xs text-muted-foreground mt-1">Phone number is optional - returns can be recorded without it</p>
             </div>
           </>
         )}
