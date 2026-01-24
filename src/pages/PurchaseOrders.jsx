@@ -1374,8 +1374,8 @@ function PurchaseOrdersPage() {
           </TabsList>
 
           <TabsContent value="purchase_orders">
-        {/* Orders Table */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
+            {/* Orders Table */}
+            <Card className="bg-white border border-slate-200 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/50">
             <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
           </CardHeader>
@@ -1490,8 +1490,8 @@ function PurchaseOrdersPage() {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Packaging Expenses Tab */}
