@@ -1739,6 +1739,17 @@ function SalesPage() {
               {displayedOrders.length < filteredOrders.length && (
                 <span className="text-sm text-slate-400">showing {displayedOrders.length}</span>
               )}
+              {!allOrdersLoaded && recentOrders.length > 0 && (
+                <Badge className="bg-blue-100 text-blue-700 font-medium rounded-full px-3 animate-pulse">
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />
+                  Loading all...
+                </Badge>
+              )}
+              {allOrdersLoaded && (
+                <Badge className="bg-green-100 text-green-700 font-medium rounded-full px-3">
+                  ✓ All {orders.length} loaded
+                </Badge>
+              )}
             </div>
             {filteredOrders.length > 0 && (
               <Button
