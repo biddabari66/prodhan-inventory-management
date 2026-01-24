@@ -1279,52 +1279,70 @@ function PurchaseOrdersPage() {
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="md:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Search PO, supplier, or creator..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full"
-              />
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full"
-              />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending_approval">⏳ Pending Approval</SelectItem>
-                  <SelectItem value="approved">✅ Approved</SelectItem>
-                  <SelectItem value="received">📦 Received</SelectItem>
-                  <SelectItem value="in_production">🏭 In Production</SelectItem>
-                  <SelectItem value="completed">✔️ Completed</SelectItem>
-                  <SelectItem value="rejected">❌ Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tabs for Purchase Orders and Packaging Expenses */}
+        <Tabs defaultValue="purchase-orders" className="space-y-4">
+          <TabsList className="bg-white border shadow-sm p-1 rounded-lg">
+            <TabsTrigger value="purchase-orders" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
+              <ShoppingCart className="w-4 h-4" />
+              Purchase Orders
+            </TabsTrigger>
+            <TabsTrigger value="packaging" className="gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700">
+              <Box className="w-4 h-4" />
+              Packaging Expenses
+              {stats.packagingPending > 0 && (
+                <Badge className="bg-orange-500 text-white ml-1">{stats.packagingPending}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Orders Table */}
+          {/* Purchase Orders Tab */}
+          <TabsContent value="purchase-orders" className="space-y-4">
+            {/* Filters */}
+            <Card className="bg-white border border-slate-200 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="md:col-span-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        placeholder="Search PO, supplier, or creator..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full"
+                  />
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full"
+                  />
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending_approval">⏳ Pending Approval</SelectItem>
+                      <SelectItem value="approved">✅ Approved</SelectItem>
+                      <SelectItem value="received">📦 Received</SelectItem>
+                      <SelectItem value="in_production">🏭 In Production</SelectItem>
+                      <SelectItem value="completed">✔️ Completed</SelectItem>
+                      <SelectItem value="rejected">❌ Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Orders Table */}
         <Card className="bg-white border border-slate-200 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/50">
             <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
