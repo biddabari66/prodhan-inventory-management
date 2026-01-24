@@ -238,8 +238,6 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       created_by_id: currentUser?.id,
       created_by_name: currentUser?.full_name,
       amount_due: formData.total_amount - (formData.amount_paid || 0),
-      packaging_items: packagingItems,
-      packaging_cost: packagingTotal,
       order_status: order ? formData.order_status : 'pending_approval',
       approval_status: order ? formData.approval_status : 'pending'
     };
