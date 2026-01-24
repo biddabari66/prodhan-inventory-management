@@ -1992,7 +1992,7 @@ function SalesPage() {
                                 <Receipt className="w-4 h-4 text-orange-600" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-sm">
+                            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle className="text-center">Small Receipt</DialogTitle>
                               </DialogHeader>
