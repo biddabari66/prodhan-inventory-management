@@ -1460,6 +1460,151 @@ function PurchaseOrdersPage() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          {/* Packaging Expenses Tab */}
+          <TabsContent value="packaging" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Packaging Expenses</h2>
+                <p className="text-sm text-slate-500">Record and track packaging material costs separately</p>
+              </div>
+              {canCreate && (
+                <Button
+                  onClick={() => {
+                    setEditingPackagingExpense(null);
+                    setIsPackagingFormOpen(true);
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Packaging Expense
+                </Button>
+              )}
+            </div>
+
+            <Card className="bg-white border border-slate-200 shadow-sm">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Expense #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Products</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {packagingExpenses.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            <Box className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>No packaging expenses recorded yet</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        packagingExpenses.map((expense) => (
+                          <TableRow key={expense.id} className="hover:bg-gray-50">
+                            <TableCell className="font-mono font-semibold text-orange-600">
+                              {expense.expense_number}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(expense.expense_date), 'dd MMM yyyy')}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {expense.products?.slice(0, 2).map((p, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    {p.item_name?.substring(0, 20)}...
+                                  </Badge>
+                                ))}
+                                {expense.products?.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{expense.products.length - 2} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {expense.packaging_items?.map((item, idx) => (
+                                  <Badge key={idx} className="bg-amber-100 text-amber-800 text-xs">
+                                    {item.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm">{expense.created_by_name || 'N/A'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-orange-700">
+                              ৳{expense.total_amount?.toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {expense.approval_status === 'pending' && (
+                                <Badge className="bg-amber-100 text-amber-800">Pending</Badge>
+                              )}
+                              {expense.approval_status === 'approved' && (
+                                <Badge className="bg-green-100 text-green-800">Approved</Badge>
+                              )}
+                              {expense.approval_status === 'rejected' && (
+                                <Badge className="bg-red-100 text-red-800">Rejected</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    setEditingPackagingExpense(expense);
+                                    setIsPackagingFormOpen(true);
+                                  }}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View / Edit
+                                  </DropdownMenuItem>
+                                  {isAdmin && expense.approval_status === 'pending' && (
+                                    <>
+                                      <DropdownMenuItem 
+                                        onClick={() => setPackagingApprovalDialog({ expense, action: 'approve' })} 
+                                        className="text-green-600"
+                                      >
+                                        <ShieldCheck className="w-4 h-4 mr-2" />
+                                        Approve
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        onClick={() => setPackagingApprovalDialog({ expense, action: 'reject' })} 
+                                        className="text-red-600"
+                                      >
+                                        <ShieldX className="w-4 h-4 mr-2" />
+                                        Reject
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Purchase Order Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
