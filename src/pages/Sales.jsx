@@ -28,7 +28,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader';
 import OrderInvoice from '../components/invoices/OrderInvoice';
+import ThermalReceipt from '../components/invoices/ThermalReceipt';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Receipt } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import SearchableProductSelect from '../components/common/SearchableProductSelect';
 import { ChevronDown } from 'lucide-react';
@@ -203,9 +205,16 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
       return;
     }
 
+    // Generate short order number: PD + 6 digits (e.g., PD020483)
+    const generateShortOrderNumber = () => {
+      const timestamp = Date.now().toString().slice(-5);
+      const random = Math.floor(Math.random() * 10);
+      return `PD0${timestamp}${random}`;
+    };
+
     const orderData = {
       ...formData,
-      order_number: order?.order_number || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+      order_number: order?.order_number || generateShortOrderNumber(),
       order_date: order?.order_date || new Date().toISOString(),
       subtotal: calculations.subtotal,
       total_amount: calculations.total,
