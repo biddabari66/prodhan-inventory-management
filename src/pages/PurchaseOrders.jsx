@@ -19,6 +19,7 @@ import {
   Upload, Image, ShieldCheck, ShieldX, User
 } from 'lucide-react';
 import SearchableProductSelect from '../components/common/SearchableProductSelect';
+import PackagingExpenseForm from '../components/procurement/PackagingExpenseForm';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
