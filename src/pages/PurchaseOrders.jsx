@@ -1780,6 +1780,82 @@ function PurchaseOrdersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Packaging Expense Form Dialog */}
+        <Dialog open={isPackagingFormOpen} onOpenChange={setIsPackagingFormOpen}>
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0">
+            <DialogHeader className="px-6 pt-6">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <Box className="w-6 h-6 text-amber-600" />
+                {editingPackagingExpense ? 'Edit Packaging Expense' : 'Create Packaging Expense'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6">
+              <PackagingExpenseForm
+                expense={editingPackagingExpense}
+                inventory={inventory}
+                currentUser={currentUser}
+                onSubmit={handlePackagingExpenseSubmit}
+                onCancel={() => {
+                  setIsPackagingFormOpen(false);
+                  setEditingPackagingExpense(null);
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Packaging Approval Dialog */}
+        <AlertDialog open={!!packagingApprovalDialog} onOpenChange={() => setPackagingApprovalDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {packagingApprovalDialog?.action === 'approve' ? '✅ Approve Packaging Expense' : '❌ Reject Packaging Expense'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {packagingApprovalDialog?.action === 'approve' ? (
+                  <>
+                    Are you sure you want to approve <strong>{packagingApprovalDialog?.expense?.expense_number}</strong> worth ৳{packagingApprovalDialog?.expense?.total_amount?.toLocaleString()}?
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <p>Please provide a reason for rejecting <strong>{packagingApprovalDialog?.expense?.expense_number}</strong>:</p>
+                    <Textarea
+                      value={packagingRejectionReason}
+                      onChange={(e) => setPackagingRejectionReason(e.target.value)}
+                      placeholder="Enter rejection reason..."
+                      rows={3}
+                    />
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPackagingRejectionReason('')}>Cancel</AlertDialogCancel>
+              {packagingApprovalDialog?.action === 'approve' ? (
+                <AlertDialogAction 
+                  onClick={() => approvePackagingExpenseMutation.mutate(packagingApprovalDialog.expense)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Approve
+                </AlertDialogAction>
+              ) : (
+                <AlertDialogAction 
+                  onClick={() => {
+                    if (!packagingRejectionReason.trim()) {
+                      toast.error('Please provide a rejection reason');
+                      return;
+                    }
+                    rejectPackagingExpenseMutation.mutate({ expense: packagingApprovalDialog.expense, reason: packagingRejectionReason });
+                  }}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Reject
+                </AlertDialogAction>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
