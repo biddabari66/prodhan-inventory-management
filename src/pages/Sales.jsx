@@ -1896,11 +1896,11 @@ function SalesPage() {
                                Adprofit Synced
                              </Badge>
                            )}
-                           {order.order_source === 'website' && order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-')) && (
-                             <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
-                               🌐 Landing Page
-                             </Badge>
-                           )}
+                           {(order.order_source === 'website' || order.order_source === 'landing_page' || order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-') || tag?.includes('landing'))) && (
+                               <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
+                                 🌐 Landing Page
+                               </Badge>
+                             )}
                          </div>
                        </div>
                       </TableCell>

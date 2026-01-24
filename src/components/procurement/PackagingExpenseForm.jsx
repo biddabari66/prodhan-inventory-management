@@ -22,7 +22,29 @@ const packagingTypes = [
   { name: 'Bag', icon: '👜' },
   { name: 'Carton', icon: '📤' },
   { name: 'Foam', icon: '🧽' },
+  { name: 'Pouch', icon: '🛍️' },
+  { name: 'Shrink Wrap', icon: '🔄' },
+  { name: 'Sealing Material', icon: '🔒' },
+  { name: 'Packing Paper', icon: '📄' },
+  { name: 'String/Rope', icon: '🧵' },
+  { name: 'Rubber Band', icon: '⭕' },
+  { name: 'Courier Bag', icon: '📬' },
+  { name: 'Air Pillow', icon: '💨' },
+  { name: 'Custom Printing', icon: '🖨️' },
   { name: 'Other', icon: '📋' }
+];
+
+// Expense types for non-product expenses
+const expenseTypes = [
+  { name: 'Shipping/Freight', icon: '🚚' },
+  { name: 'Labor/Handling', icon: '👷' },
+  { name: 'Equipment Rental', icon: '🔧' },
+  { name: 'Storage', icon: '🏭' },
+  { name: 'Utilities', icon: '💡' },
+  { name: 'Transportation', icon: '🚗' },
+  { name: 'Customs/Duties', icon: '🏛️' },
+  { name: 'Insurance', icon: '🛡️' },
+  { name: 'Miscellaneous', icon: '📝' }
 ];
 
 const unitOptions = ['pc', 'kg', 'gm', 'litre', 'ml', 'roll', 'sheet', 'bundle', 'meter', 'box'];
@@ -42,6 +64,11 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pc');
   const [amount, setAmount] = useState(0);
+  
+  // Other expense (non-product related)
+  const [isOtherExpense, setIsOtherExpense] = useState(false);
+  const [otherExpenseType, setOtherExpenseType] = useState('');
+  const [otherExpenseDescription, setOtherExpenseDescription] = useState('');
 
   // Filter inventory for department
   const departmentInventory = useMemo(() => {
@@ -50,6 +77,45 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
   }, [inventory]);
 
   const handleAddItem = () => {
+    if (isOtherExpense) {
+      // Handle non-product expense
+      if (!otherExpenseType) {
+        toast.error('Please select an expense type');
+        return;
+      }
+      if (amount <= 0) {
+        toast.error('Please enter a valid amount');
+        return;
+      }
+
+      const newItem = {
+        id: Date.now(),
+        inventory_id: null,
+        product_name: otherExpenseDescription || otherExpenseType,
+        packaging_type: otherExpenseType,
+        quantity: 1,
+        unit: 'service',
+        amount: amount,
+        is_other_expense: true
+      };
+
+      const newItems = [...formData.items, newItem];
+      const newTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+      setFormData(prev => ({
+        ...prev,
+        items: newItems,
+        total_amount: newTotal
+      }));
+
+      // Reset fields
+      setOtherExpenseType('');
+      setOtherExpenseDescription('');
+      setAmount(0);
+      return;
+    }
+
+    // Handle product packaging expense
     if (!selectedProduct) {
       toast.error('Please select a product');
       return;
@@ -76,7 +142,8 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
       packaging_type: packagingType,
       quantity: quantity,
       unit: unit,
-      amount: amount
+      amount: amount,
+      is_other_expense: false
     };
 
     const newItems = [...formData.items, newItem];
@@ -176,97 +243,181 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
             Select products and record their packaging expenses (stickers, boxes, jars, labels, etc.)
           </p>
 
-          {/* Add Item Form */}
-          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Select Product *</Label>
-                <SearchableProductSelect
-                  inventory={departmentInventory}
-                  value={selectedProduct}
-                  onValueChange={setSelectedProduct}
-                  placeholder="Search and select product..."
-                />
-              </div>
-              <div>
-                <Label>Packaging Type *</Label>
-                <Select value={packagingType} onValueChange={setPackagingType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select packaging type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packagingTypes.map(opt => (
-                      <SelectItem key={opt.name} value={opt.name}>
-                        {opt.icon} {opt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          {/* Toggle between Product Expense and Other Expense */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              type="button"
+              variant={!isOtherExpense ? "default" : "outline"}
+              onClick={() => setIsOtherExpense(false)}
+              className={!isOtherExpense ? "bg-amber-600 hover:bg-amber-700" : ""}
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Product Packaging
+            </Button>
+            <Button
+              type="button"
+              variant={isOtherExpense ? "default" : "outline"}
+              onClick={() => setIsOtherExpense(true)}
+              className={isOtherExpense ? "bg-blue-600 hover:bg-blue-700" : ""}
+            >
+              <Box className="w-4 h-4 mr-2" />
+              Other Expense
+            </Button>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
-                />
-              </div>
-              <div>
-                <Label>Unit</Label>
-                <Select value={unit} onValueChange={setUnit}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitOptions.map(u => (
-                      <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Amount (BDT) *</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="Enter total cost"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  type="button" 
-                  onClick={handleAddItem} 
-                  className="w-full bg-amber-600 hover:bg-amber-700"
-                >
-                  <Plus className="w-4 h-4 mr-1" /> Add
-                </Button>
-              </div>
-            </div>
+          {/* Add Item Form */}
+          <div className={`p-4 rounded-lg border space-y-4 ${isOtherExpense ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
+            {!isOtherExpense ? (
+              <>
+                {/* Product Packaging Form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Select Product *</Label>
+                    <SearchableProductSelect
+                      inventory={departmentInventory}
+                      value={selectedProduct}
+                      onValueChange={setSelectedProduct}
+                      placeholder="Search and select product..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Packaging Type *</Label>
+                    <Select value={packagingType} onValueChange={setPackagingType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select packaging type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {packagingTypes.map(opt => (
+                          <SelectItem key={opt.name} value={opt.name}>
+                            {opt.icon} {opt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Unit</Label>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unitOptions.map(u => (
+                          <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Amount (BDT) *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={amount}
+                      onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                      placeholder="Enter total cost"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button 
+                      type="button" 
+                      onClick={handleAddItem} 
+                      className="w-full bg-amber-600 hover:bg-amber-700"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Other Expense Form (No Product Required) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Expense Type *</Label>
+                    <Select value={otherExpenseType} onValueChange={setOtherExpenseType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select expense type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {expenseTypes.map(opt => (
+                          <SelectItem key={opt.name} value={opt.name}>
+                            {opt.icon} {opt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Description (Optional)</Label>
+                    <Input
+                      value={otherExpenseDescription}
+                      onChange={(e) => setOtherExpenseDescription(e.target.value)}
+                      placeholder="Brief description of expense..."
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Amount (BDT) *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={amount}
+                      onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                      placeholder="Enter expense amount"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button 
+                      type="button" 
+                      onClick={handleAddItem} 
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add Expense
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600">💡 Use this for expenses not tied to specific products (shipping, labor, etc.)</p>
+              </>
+            )}
           </div>
 
           {/* Items List */}
           {formData.items.length > 0 ? (
             <div className="space-y-2">
               {formData.items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-white rounded-lg border">
+                <div key={item.id} className={`flex items-center justify-between p-4 bg-white rounded-lg border ${item.is_other_expense ? 'border-blue-200' : ''}`}>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">
-                        {packagingTypes.find(t => t.name === item.packaging_type)?.icon || '📦'}
+                        {item.is_other_expense 
+                          ? expenseTypes.find(t => t.name === item.packaging_type)?.icon || '📝'
+                          : packagingTypes.find(t => t.name === item.packaging_type)?.icon || '📦'}
                       </span>
                       <span className="font-semibold">{item.product_name}</span>
-                      <Badge variant="outline" className="text-xs">{item.packaging_type}</Badge>
+                      <Badge variant="outline" className={`text-xs ${item.is_other_expense ? 'bg-blue-50 text-blue-700' : ''}`}>
+                        {item.is_other_expense ? 'Other Expense' : item.packaging_type}
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {item.quantity} {item.unit.toUpperCase()}
+                      {item.is_other_expense ? item.packaging_type : `${item.quantity} ${item.unit.toUpperCase()}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
