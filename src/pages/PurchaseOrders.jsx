@@ -1158,9 +1158,24 @@ function PurchaseOrdersPage() {
       totalOrders: filteredOrders.length,
       totalValue: filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
       pendingApproval: purchaseOrders.filter(o => o.approval_status === 'pending' || o.order_status === 'pending_approval').length,
-      receivedOrders: filteredOrders.filter(o => o.order_status === 'received').length
+      receivedOrders: filteredOrders.filter(o => o.order_status === 'received').length,
+      // Packaging stats
+      totalPackagingExpenses: packagingExpenses.length,
+      totalPackagingValue: packagingExpenses.reduce((sum, e) => sum + (e.total_amount || 0), 0),
+      pendingPackagingApproval: packagingExpenses.filter(e => e.status === 'pending_approval').length
     };
-  }, [filteredOrders, purchaseOrders]);
+  }, [filteredOrders, purchaseOrders, packagingExpenses]);
+
+  // Packaging expense status badge
+  const getPackagingStatusBadge = (status) => {
+    const config = {
+      pending_approval: { label: 'Pending Approval', class: 'bg-amber-100 text-amber-800' },
+      approved: { label: 'Approved', class: 'bg-green-100 text-green-800' },
+      rejected: { label: 'Rejected', class: 'bg-red-100 text-red-800' },
+    };
+    const { label, class: className } = config[status] || config.pending_approval;
+    return <Badge className={className}>{label}</Badge>;
+  };
 
   const getStatusBadge = (order) => {
     if (order.approval_status === 'rejected' || order.order_status === 'rejected') {
