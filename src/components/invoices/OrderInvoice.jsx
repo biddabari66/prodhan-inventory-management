@@ -103,9 +103,9 @@ export default function OrderInvoice({ order }) {
               Small Receipt
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-center">Thermal Receipt</DialogTitle>
+              <DialogTitle className="text-center">Small Receipt</DialogTitle>
             </DialogHeader>
             <ThermalReceipt order={order} />
           </DialogContent>
