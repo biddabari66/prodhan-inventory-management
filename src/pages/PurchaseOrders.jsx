@@ -1152,9 +1152,12 @@ function PurchaseOrdersPage() {
       totalOrders: filteredOrders.length,
       totalValue: filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
       pendingApproval: purchaseOrders.filter(o => o.approval_status === 'pending' || o.order_status === 'pending_approval').length,
-      receivedOrders: filteredOrders.filter(o => o.order_status === 'received').length
+      receivedOrders: filteredOrders.filter(o => o.order_status === 'received').length,
+      packagingExpensesCount: packagingExpenses.length,
+      packagingTotal: packagingExpenses.reduce((sum, e) => sum + (e.total_amount || 0), 0),
+      packagingPending: packagingExpenses.filter(e => e.approval_status === 'pending').length
     };
-  }, [filteredOrders, purchaseOrders]);
+  }, [filteredOrders, purchaseOrders, packagingExpenses]);
 
   const getStatusBadge = (order) => {
     if (order.approval_status === 'rejected' || order.order_status === 'rejected') {
