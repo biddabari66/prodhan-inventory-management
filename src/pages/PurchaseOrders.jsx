@@ -1227,7 +1227,7 @@ function PurchaseOrdersPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="bg-white border-0 shadow-sm rounded-xl">
             <CardContent className="p-5">
               <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center mb-3">
@@ -1254,7 +1254,7 @@ function PurchaseOrdersPage() {
                 <Clock className="w-5 h-5 text-amber-600" />
               </div>
               <p className="text-3xl font-bold text-amber-600">{stats.pendingApproval}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase">Pending Approval</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase">PO Pending</p>
             </CardContent>
           </Card>
 
@@ -1265,6 +1265,16 @@ function PurchaseOrdersPage() {
               </div>
               <p className="text-3xl font-bold text-green-600">{stats.receivedOrders}</p>
               <p className="text-xs font-medium text-[#6B7280] uppercase">Received</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-0 shadow-sm rounded-xl border-l-4 border-l-orange-500">
+            <CardContent className="p-5">
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center mb-3">
+                <Box className="w-5 h-5 text-orange-600" />
+              </div>
+              <p className="text-3xl font-bold text-orange-600">৳{stats.packagingTotal.toLocaleString()}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase">Packaging ({stats.packagingPending} pending)</p>
             </CardContent>
           </Card>
         </div>
