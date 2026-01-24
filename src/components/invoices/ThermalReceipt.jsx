@@ -5,9 +5,12 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 /**
- * THERMAL RECEIPT INVOICE - 4x3 inch size
- * High contrast fonts + Code128 barcode
+ * THERMAL RECEIPT INVOICE - 4x3 inch size  
+ * High contrast fonts + QR code to prodhan.com
  */
+
+// Prodhan logo URL (cart icon style)
+const PRODHAN_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
 export default function ThermalReceipt({ order, onPrint }) {
   const receiptRef = useRef(null);
@@ -25,8 +28,8 @@ export default function ThermalReceipt({ order, onPrint }) {
 
   const shortInvoiceNo = getShortInvoiceNo();
 
-  // Barcode URL - Code128 barcode for invoice number
-  const barcodeUrl = `https://barcodeapi.org/api/128/${encodeURIComponent(shortInvoiceNo)}`;
+  // QR Code URL - links to prodhan.com website
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://www.prodhan.com')}&format=png`;
 
   // Calculate totals
   const subtotal = order.order_items?.reduce((sum, item) => sum + (item.subtotal || 0), 0) || 0;
@@ -64,126 +67,136 @@ export default function ThermalReceipt({ order, onPrint }) {
             font-size: 11px;
             width: 4in;
             height: 3in;
-            padding: 8px 12px;
+            padding: 6px 10px;
             background: white;
             color: #000;
             font-weight: 600;
           }
           .header {
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          }
+          .logo {
+            width: 28px;
+            height: 28px;
           }
           .brand {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 900;
             color: #000;
           }
           .title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 800;
-            margin: 4px 0;
-            letter-spacing: 3px;
+            margin: 2px 0;
+            letter-spacing: 2px;
+            text-align: center;
           }
           .info-section {
-            margin: 6px 0;
+            margin: 4px 0;
           }
           .info-line {
-            margin: 2px 0;
+            margin: 1px 0;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 9px;
           }
           .section-title {
             font-weight: 800;
-            margin: 6px 0 4px 0;
+            margin: 4px 0 2px 0;
             border-bottom: 1px dashed #000;
             padding-bottom: 2px;
-            font-size: 11px;
+            font-size: 10px;
           }
           .item-row {
             display: flex;
             justify-content: space-between;
-            margin: 3px 0;
+            margin: 2px 0;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 9px;
           }
           .item-name {
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            padding-right: 8px;
+            padding-right: 6px;
           }
           .item-qty {
-            width: 30px;
+            width: 25px;
             text-align: center;
             font-weight: 700;
           }
           .item-price {
-            width: 55px;
+            width: 50px;
             text-align: right;
             font-weight: 700;
           }
           .total-section {
-            margin-top: 6px;
+            margin-top: 4px;
             border-top: 1px dashed #000;
-            padding-top: 4px;
+            padding-top: 3px;
           }
           .total-row {
             display: flex;
             justify-content: space-between;
-            margin: 2px 0;
+            margin: 1px 0;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 9px;
           }
           .grand-total {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 900;
-            margin-top: 4px;
-            padding-top: 4px;
+            margin-top: 3px;
+            padding-top: 3px;
             border-top: 1px solid #000;
           }
-          .barcode-section {
+          .qr-section {
             text-align: center;
-            margin: 8px 0 4px 0;
+            margin: 6px 0 3px 0;
             border-top: 1px dashed #000;
-            padding-top: 6px;
+            padding-top: 4px;
           }
-          .barcode-img {
-            height: 28px;
-            max-width: 140px;
+          .qr-img {
+            width: 50px;
+            height: 50px;
           }
           .invoice-no {
             font-weight: 900;
-            font-size: 11px;
+            font-size: 10px;
             margin-top: 2px;
           }
           .footer {
             text-align: center;
-            margin-top: 4px;
-            font-size: 9px;
+            margin-top: 3px;
+            font-size: 8px;
           }
           .footer-brand {
             font-weight: 800;
-            font-size: 10px;
+            font-size: 9px;
           }
         </style>
       </head>
       <body>
         <div class="header">
+          <img src="${PRODHAN_LOGO}" alt="Logo" class="logo" />
           <div class="brand">প্রধান</div>
-          <div class="title">INVOICE</div>
         </div>
+        <div class="title">INVOICE</div>
 
         <div class="info-section">
-          <div class="info-line"><strong>Customer Name:</strong> ${order.customer_name || 'N/A'}</div>
+          <div class="info-line"><strong>Customer:</strong> ${order.customer_name || 'N/A'}</div>
           <div class="info-line"><strong>Mobile:</strong> ${order.customer_phone || 'N/A'}</div>
           <div class="info-line"><strong>Date:</strong> ${format(new Date(order.order_date || order.created_date), 'dd-MM-yyyy')}</div>
         </div>
 
         <div class="section-title">Order Details</div>
         
-        <div class="item-row" style="font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 2px;">
-          <span class="item-name">Products Name:</span>
+        <div class="item-row" style="font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 1px;">
+          <span class="item-name">Product</span>
           <span class="item-qty">Qty</span>
           <span class="item-price">Price</span>
         </div>
@@ -202,7 +215,7 @@ export default function ThermalReceipt({ order, onPrint }) {
             <span>৳${subtotal.toLocaleString()}</span>
           </div>
           <div class="total-row">
-            <span>Delivery Charge:</span>
+            <span>Delivery:</span>
             <span>৳${deliveryCharge.toLocaleString()}</span>
           </div>
           <div class="total-row grand-total">
@@ -211,8 +224,8 @@ export default function ThermalReceipt({ order, onPrint }) {
           </div>
         </div>
 
-        <div class="barcode-section">
-          <img src="${barcodeUrl}" alt="Barcode" class="barcode-img" />
+        <div class="qr-section">
+          <img src="${qrCodeUrl}" alt="QR Code" class="qr-img" />
           <div class="invoice-no">Invoice No: ${shortInvoiceNo}</div>
         </div>
 
@@ -240,85 +253,86 @@ export default function ThermalReceipt({ order, onPrint }) {
 
   return (
     <div className="space-y-3">
-      {/* Preview - 4x3 inch = 384x288 px at 96dpi (scaled for preview) */}
+      {/* Preview - 4x3 inch scaled for dialog */}
       <div 
         ref={receiptRef}
-        className="bg-white border-2 border-dashed border-slate-300 rounded-lg mx-auto overflow-hidden"
+        className="bg-white border-2 border-slate-200 rounded-lg mx-auto overflow-hidden shadow-sm"
         style={{ 
-          width: '320px',
-          height: '240px',
-          padding: '10px 14px',
+          width: '384px',
+          height: '288px',
+          padding: '8px 12px',
           fontFamily: "Arial, Helvetica, sans-serif",
-          fontSize: '10px',
+          fontSize: '9px',
           fontWeight: 600,
           color: '#000'
         }}
       >
-        {/* Header */}
-        <div className="text-center mb-1">
+        {/* Header with Logo */}
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <img src={PRODHAN_LOGO} alt="Logo" className="w-7 h-7" />
           <div className="text-2xl font-black text-black leading-tight">প্রধান</div>
-          <div className="text-sm font-extrabold tracking-widest">INVOICE</div>
         </div>
+        <div className="text-center text-xs font-extrabold tracking-widest mb-1">INVOICE</div>
 
         {/* Customer Info */}
-        <div className="space-y-0.5 text-[9px] font-semibold">
-          <div><span className="font-bold">Customer Name:</span> {order.customer_name || 'N/A'}</div>
+        <div className="space-y-0.5 text-[8px] font-semibold">
+          <div><span className="font-bold">Customer:</span> {order.customer_name || 'N/A'}</div>
           <div><span className="font-bold">Mobile:</span> {order.customer_phone || 'N/A'}</div>
           <div><span className="font-bold">Date:</span> {format(new Date(order.order_date || order.created_date), 'dd-MM-yyyy')}</div>
         </div>
 
         {/* Order Details */}
-        <div className="mt-2">
-          <div className="font-extrabold border-b border-dashed border-black pb-0.5 mb-1 text-[10px]">
+        <div className="mt-1.5">
+          <div className="font-extrabold border-b border-dashed border-black pb-0.5 mb-0.5 text-[9px]">
             Order Details
           </div>
           
           {/* Header Row */}
-          <div className="flex justify-between font-extrabold text-[9px] border-b border-black pb-0.5 mb-0.5">
-            <span className="flex-1">Products Name:</span>
-            <span className="w-8 text-center">Qty</span>
-            <span className="w-14 text-right">Price</span>
+          <div className="flex justify-between font-extrabold text-[8px] border-b border-black pb-0.5 mb-0.5">
+            <span className="flex-1">Product</span>
+            <span className="w-7 text-center">Qty</span>
+            <span className="w-12 text-right">Price</span>
           </div>
 
-          {/* Items - limit to 3 for preview */}
-          {order.order_items?.slice(0, 3).map((item, idx) => (
-            <div key={idx} className="flex justify-between text-[9px] py-0.5 font-semibold">
+          {/* Items */}
+          {order.order_items?.slice(0, 4).map((item, idx) => (
+            <div key={idx} className="flex justify-between text-[8px] py-0.5 font-semibold">
               <span className="flex-1 truncate pr-1">{item.item_name || 'Product'}</span>
-              <span className="w-8 text-center font-bold">{item.quantity || 1}</span>
-              <span className="w-14 text-right font-bold">৳{(item.subtotal || 0).toLocaleString()}</span>
+              <span className="w-7 text-center font-bold">{item.quantity || 1}</span>
+              <span className="w-12 text-right font-bold">৳{(item.subtotal || 0).toLocaleString()}</span>
             </div>
           ))}
         </div>
 
         {/* Totals */}
-        <div className="mt-1 pt-1 border-t border-dashed border-black space-y-0.5 text-[9px]">
+        <div className="mt-1 pt-1 border-t border-dashed border-black space-y-0.5 text-[8px]">
           <div className="flex justify-between font-semibold">
             <span>Sub Total</span>
             <span className="font-bold">৳{subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between font-semibold">
-            <span>Delivery Charge:</span>
+            <span>Delivery:</span>
             <span className="font-bold">৳{deliveryCharge.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between font-black text-xs pt-1 border-t border-black">
+          <div className="flex justify-between font-black text-[11px] pt-1 border-t border-black">
             <span>Grand Total:</span>
             <span>৳{grandTotal.toLocaleString()}</span>
           </div>
         </div>
 
-        {/* Barcode */}
-        <div className="mt-2 text-center border-t border-dashed border-black pt-1">
+        {/* QR Code */}
+        <div className="mt-1.5 text-center border-t border-dashed border-black pt-1">
           <img 
-            src={barcodeUrl} 
-            alt="Barcode" 
-            className="h-6 mx-auto"
+            src={qrCodeUrl} 
+            alt="Scan for prodhan.com" 
+            className="w-11 h-11 mx-auto"
           />
-          <div className="text-[10px] font-extrabold">Invoice No: {shortInvoiceNo}</div>
+          <div className="text-[9px] font-extrabold mt-0.5">Invoice No: {shortInvoiceNo}</div>
         </div>
 
         {/* Footer */}
-        <div className="mt-1 text-center text-[8px]">
-          <div className="font-extrabold text-[9px]">Thanks for shopping with Prodhan</div>
+        <div className="mt-1 text-center text-[7px]">
+          <div className="font-extrabold text-[8px]">Thanks for shopping with Prodhan</div>
           <div className="font-semibold">+8809643330000 | www.prodhan.com</div>
         </div>
       </div>
@@ -330,7 +344,7 @@ export default function ThermalReceipt({ order, onPrint }) {
         size="sm"
       >
         <Printer className="w-4 h-4" />
-        Print Small Receipt (4"x3")
+        Print Small Receipt (4"×3")
       </Button>
     </div>
   );
