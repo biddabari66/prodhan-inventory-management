@@ -1,13 +1,14 @@
-
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Download, Printer, Phone, Mail, MapPin } from 'lucide-react';
+import { Download, Printer, Phone, Mail, MapPin, Receipt } from 'lucide-react';
 import { format } from 'date-fns';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
+import ThermalReceipt from './ThermalReceipt';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 /**
  * DEPARTMENT-BRANDED ORDER INVOICE
@@ -94,10 +95,24 @@ export default function OrderInvoice({ order }) {
   return (
     <div className="space-y-4">
       {/* Action Buttons */}
-      <div className="flex gap-3 justify-end no-print">
+      <div className="flex gap-3 justify-end no-print flex-wrap">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50">
+              <Receipt className="w-4 h-4" />
+              Small Receipt
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-center">Thermal Receipt</DialogTitle>
+            </DialogHeader>
+            <ThermalReceipt order={order} />
+          </DialogContent>
+        </Dialog>
         <Button onClick={printInvoice} variant="outline" className="gap-2">
           <Printer className="w-4 h-4" />
-          Print
+          Print Full
         </Button>
         <Button onClick={downloadPDF} className="gap-2" style={{ backgroundColor: branding.primaryColor }}>
           <Download className="w-4 h-4" />
