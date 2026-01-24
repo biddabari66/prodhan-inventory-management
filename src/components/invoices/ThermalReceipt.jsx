@@ -55,7 +55,7 @@ export default function ThermalReceipt({ order, onPrint }) {
         <style>
           @page {
             margin: 0;
-            size: 4in 3in;
+            size: 3in 4in portrait;
           }
           * {
             margin: 0;
@@ -65,8 +65,8 @@ export default function ThermalReceipt({ order, onPrint }) {
           body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 11px;
-            width: 4in;
-            height: 3in;
+            width: 3in;
+            min-height: 4in;
             padding: 6px 10px;
             background: white;
             color: #000;
