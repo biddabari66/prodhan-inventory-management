@@ -1762,7 +1762,7 @@ function SalesPage() {
                       </TableCell>
                       <TableCell>
                        <div className="flex flex-col gap-1">
-                         <span className="font-mono font-semibold text-[#111827] text-sm">{order.order_number}</span>
+                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{order.order_number?.startsWith('PD') ? order.order_number : `PD${order.order_number?.replace(/\D/g, '').slice(-6) || order.id?.slice(-6) || '000000'}`}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
                              <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
