@@ -1357,6 +1357,23 @@ function PurchaseOrdersPage() {
           </CardContent>
         </Card>
 
+        {/* Tabs for PO and Packaging */}
+        <Tabs defaultValue="purchase_orders" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="purchase_orders" className="gap-2">
+              <ShoppingCart className="w-4 h-4" />
+              Purchase Orders ({filteredOrders.length})
+            </TabsTrigger>
+            <TabsTrigger value="packaging" className="gap-2">
+              <Box className="w-4 h-4" />
+              Packaging Expenses ({packagingExpenses.length})
+              {stats.pendingPackagingApproval > 0 && (
+                <Badge className="ml-1 bg-amber-500 text-white text-xs">{stats.pendingPackagingApproval}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="purchase_orders">
         {/* Orders Table */}
         <Card className="bg-white border border-slate-200 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/50">
