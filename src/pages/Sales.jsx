@@ -617,17 +617,50 @@ function SalesPage() {
     gcTime: 30 * 60 * 1000,
   });
 
-  // 🚀 LIGHTNING FAST: Orders with aggressive caching + background refresh
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
-    queryKey: ['orders-sales'],
-    queryFn: () => Order.list('-order_date', 2000),
-    staleTime: 60 * 1000, // 1 min stale - show cached instantly
-    gcTime: 60 * 60 * 1000, // 1 hour gc
-    refetchOnWindowFocus: false, // Don't refetch on focus - too slow
-    refetchOnMount: 'always', // Always refetch in background on mount
-    refetchInterval: 60 * 1000, // Auto-refresh every 60s in background
-    placeholderData: (prev) => prev, // Keep showing old data while fetching
+  // 🚀 LIGHTNING FAST: Orders with pagination for ALL orders + fast initial load
+  const [allOrdersLoaded, setAllOrdersLoaded] = useState(false);
+  
+  // First load: Get recent 500 orders fast
+  const { data: recentOrders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders-sales-recent'],
+    queryFn: () => Order.list('-order_date', 500),
+    staleTime: 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchInterval: 60 * 1000,
+    placeholderData: (prev) => prev,
   });
+
+  // Background load: Get ALL orders (runs after initial render)
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['orders-sales-all'],
+    queryFn: async () => {
+      // Load in batches for smoother UI
+      const batchSize = 1000;
+      let allData = [];
+      let offset = 0;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const batch = await Order.list('-order_date', batchSize, offset);
+        allData = [...allData, ...batch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+      }
+      
+      setAllOrdersLoaded(true);
+      return allData;
+    },
+    staleTime: 5 * 60 * 1000, // 5 min cache for full data
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    enabled: recentOrders.length > 0, // Only run after initial load
+  });
+
+  // Use all orders if loaded, otherwise use recent
+  const orders = allOrdersLoaded && allOrders.length > 0 ? allOrders : recentOrders;
 
   // 🚀 LIGHTNING FAST: Real-time subscription with debounce
   useEffect(() => {
