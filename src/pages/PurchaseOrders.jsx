@@ -1300,6 +1300,16 @@ function PurchaseOrdersPage() {
               <p className="text-xs font-medium text-[#6B7280] uppercase">Received</p>
             </CardContent>
           </Card>
+
+          <Card className="bg-white border-0 shadow-sm rounded-xl border-l-4 border-l-amber-500">
+            <CardContent className="p-5">
+              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
+                <Box className="w-5 h-5 text-amber-600" />
+              </div>
+              <p className="text-3xl font-bold text-amber-600">৳{stats.totalPackagingValue.toLocaleString()}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase">Packaging ({stats.pendingPackagingApproval} pending)</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filters */}
