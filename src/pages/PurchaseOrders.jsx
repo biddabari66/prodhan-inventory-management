@@ -62,43 +62,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     minimum_stock: 10
   });
 
-  // Packaging/Bundling elements
-  const [packagingItems, setPackagingItems] = useState(order?.packaging_items || []);
-  const [newPackaging, setNewPackaging] = useState({ name: '', quantity: 1, unit_cost: 0, unit: 'pc' });
-
-  const packagingOptions = [
-    { name: 'Sticker', icon: '🏷️', units: ['pc', 'sheet', 'roll'] },
-    { name: 'Packaging Box', icon: '📦', units: ['pc', 'bundle'] },
-    { name: 'Jar/Container', icon: '🫙', units: ['pc', 'litre', 'ml'] },
-    { name: 'Plastic Wrap', icon: '🎁', units: ['kg', 'roll', 'meter'] },
-    { name: 'Bubble Wrap', icon: '🔵', units: ['kg', 'roll', 'meter'] },
-    { name: 'Label', icon: '🪧', units: ['pc', 'sheet', 'roll'] },
-    { name: 'Tape', icon: '📎', units: ['pc', 'roll'] },
-    { name: 'Bag', icon: '👜', units: ['pc', 'kg', 'bundle'] },
-    { name: 'Other', icon: '📋', units: ['pc', 'kg', 'litre', 'meter'] }
-  ];
-
   const unitOptions = ['pc', 'kg', 'gm', 'litre', 'ml', 'roll', 'sheet', 'bundle', 'meter', 'jar', 'box'];
-
-  const addPackagingItem = () => {
-    if (!newPackaging.name) {
-      toast.error('Please select a packaging item');
-      return;
-    }
-    setPackagingItems([...packagingItems, { ...newPackaging, id: Date.now() }]);
-    setNewPackaging({ name: '', quantity: 1, unit_cost: 0, unit: 'pc' });
-  };
-
-  const getPackagingUnits = (name) => {
-    const opt = packagingOptions.find(o => o.name === name);
-    return opt?.units || ['pc', 'kg', 'litre'];
-  };
-
-  const removePackagingItem = (id) => {
-    setPackagingItems(packagingItems.filter(item => item.id !== id));
-  };
-
-  const packagingTotal = packagingItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
 
   // Handle invoice image upload
   const handleInvoiceUpload = async (e) => {
