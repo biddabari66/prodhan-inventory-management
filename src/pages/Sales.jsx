@@ -1933,10 +1933,28 @@ function SalesPage() {
                             size="sm"
                             onClick={() => handleViewInvoice(order)}
                             className="h-9 w-9 p-0 hover:bg-blue-50"
-                            title="View Invoice"
+                            title="Full Invoice"
                           >
                             <FileText className="w-4 h-4 text-blue-600" />
                           </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 hover:bg-orange-50"
+                                title="Print Small Receipt"
+                              >
+                                <Receipt className="w-4 h-4 text-orange-600" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-sm">
+                              <DialogHeader>
+                                <DialogTitle className="text-center">Small Receipt</DialogTitle>
+                              </DialogHeader>
+                              <ThermalReceipt order={order} />
+                            </DialogContent>
+                          </Dialog>
                           {canEdit && (
                             <Button
                               variant="ghost"
