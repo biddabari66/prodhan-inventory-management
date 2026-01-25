@@ -65,7 +65,7 @@ export default function WelcomeCallList() {
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.WelcomeCall.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['welcomeCalls']);
+      queryClient.invalidateQueries({ queryKey: ['welcomeCalls'] });
       toast.success('Welcome call entry added');
       closeForm();
     }
@@ -74,7 +74,7 @@ export default function WelcomeCallList() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.WelcomeCall.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['welcomeCalls']);
+      queryClient.invalidateQueries({ queryKey: ['welcomeCalls'] });
       toast.success('Entry updated');
       closeForm();
     }
@@ -83,7 +83,7 @@ export default function WelcomeCallList() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.WelcomeCall.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['welcomeCalls']);
+      queryClient.invalidateQueries({ queryKey: ['welcomeCalls'] });
       toast.success('Entry deleted');
     }
   });
@@ -95,7 +95,7 @@ export default function WelcomeCallList() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['welcomeCalls']);
+      queryClient.invalidateQueries({ queryKey: ['welcomeCalls'] });
       toast.success(`${selectedIds.length} entries deleted`);
       setSelectedIds([]);
     }
@@ -167,31 +167,52 @@ export default function WelcomeCallList() {
       called_by: currentUser?.full_name || 'Unknown'
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['welcomeCalls']);
+      queryClient.invalidateQueries({ queryKey: ['welcomeCalls'] });
       toast.success('Status updated');
     }
   });
 
-  const filteredCalls = welcomeCalls.filter(call => {
-    const matchesSearch = !searchTerm || 
-      call.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      call.customer_phone?.includes(searchTerm) ||
-      call.product?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || call.call_status === statusFilter;
+  // 🚀 Optimized filtering with useMemo for fast re-renders
+  const filteredCalls = useMemo(() => {
+    if (!welcomeCalls || welcomeCalls.length === 0) return [];
     
-    const callDate = call.created_date ? new Date(call.created_date) : null;
-    const matchesDateFrom = !dateFrom || (callDate && callDate >= new Date(dateFrom));
-    const matchesDateTo = !dateTo || (callDate && callDate <= new Date(dateTo + 'T23:59:59'));
+    const searchLower = searchTerm?.toLowerCase() || '';
     
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
-  });
+    return welcomeCalls.filter(call => {
+      // Status filter first (most selective, O(1))
+      if (statusFilter !== 'all' && call.call_status !== statusFilter) return false;
+      
+      // Date filter using string comparison (fast)
+      if (dateFrom || dateTo) {
+        const callDateStr = call.created_date ? call.created_date.slice(0, 10) : '';
+        if (dateFrom && callDateStr < dateFrom) return false;
+        if (dateTo && callDateStr > dateTo) return false;
+      }
+      
+      // Search filter last (most expensive)
+      if (searchLower) {
+        const matchesSearch = 
+          call.customer_name?.toLowerCase().includes(searchLower) ||
+          call.customer_phone?.includes(searchTerm) ||
+          call.product?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
+      
+      return true;
+    });
+  }, [welcomeCalls, searchTerm, statusFilter, dateFrom, dateTo]);
 
-  const stats = {
-    total: welcomeCalls.length,
-    pending: welcomeCalls.filter(c => c.call_status === 'pending').length,
-    done: welcomeCalls.filter(c => c.call_status === 'done').length,
-    notReceived: welcomeCalls.filter(c => c.call_status === 'not_received').length
-  };
+  // 🚀 Optimized stats calculation - single pass
+  const stats = useMemo(() => {
+    const result = { total: 0, pending: 0, done: 0, notReceived: 0 };
+    for (const c of welcomeCalls) {
+      result.total++;
+      if (c.call_status === 'pending') result.pending++;
+      else if (c.call_status === 'done') result.done++;
+      else if (c.call_status === 'not_received') result.notReceived++;
+    }
+    return result;
+  }, [welcomeCalls]);
 
   const handleExport = () => {
     const headers = ['Customer Name', 'Phone', 'Product', 'Order #', 'Status', 'Call Date', 'Notes'];
