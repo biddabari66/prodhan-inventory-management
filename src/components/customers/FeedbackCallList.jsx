@@ -66,7 +66,7 @@ export default function FeedbackCallList() {
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.FeedbackCall.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['feedbackCalls']);
+      queryClient.invalidateQueries({ queryKey: ['feedbackCalls'] });
       toast.success('Feedback call entry added');
       closeForm();
     }
@@ -75,7 +75,7 @@ export default function FeedbackCallList() {
   const updateEntryMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.FeedbackCall.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['feedbackCalls']);
+      queryClient.invalidateQueries({ queryKey: ['feedbackCalls'] });
       toast.success('Entry updated');
       closeForm();
     }
@@ -84,7 +84,7 @@ export default function FeedbackCallList() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.FeedbackCall.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['feedbackCalls']);
+      queryClient.invalidateQueries({ queryKey: ['feedbackCalls'] });
       toast.success('Entry deleted');
     }
   });
@@ -96,7 +96,7 @@ export default function FeedbackCallList() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['feedbackCalls']);
+      queryClient.invalidateQueries({ queryKey: ['feedbackCalls'] });
       toast.success(`${selectedIds.length} entries deleted`);
       setSelectedIds([]);
     }
@@ -161,41 +161,65 @@ export default function FeedbackCallList() {
   };
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status, notes }) => base44.entities.FeedbackCall.update(id, { 
-      feedback_status: status,
-      feedback_notes: notes || '',
-      call_date: new Date().toISOString(),
-      called_by: currentUser?.full_name || 'Unknown'
-    }),
+    mutationFn: async ({ id, status, notes }) => {
+      const updateData = { 
+        feedback_status: status,
+        feedback_notes: notes || '',
+        call_date: new Date().toISOString(),
+        called_by: currentUser?.full_name || 'Unknown'
+      };
+      return base44.entities.FeedbackCall.update(id, updateData);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['feedbackCalls']);
+      queryClient.invalidateQueries({ queryKey: ['feedbackCalls'] });
       toast.success('Feedback recorded');
       setSelectedCall(null);
       setFeedbackNotes('');
     }
   });
 
-  const filteredCalls = feedbackCalls.filter(call => {
-    const matchesSearch = !searchTerm || 
-      call.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      call.customer_phone?.includes(searchTerm) ||
-      call.product?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || call.feedback_status === statusFilter;
+  // 🚀 Optimized filtering with useMemo for fast re-renders
+  const filteredCalls = useMemo(() => {
+    if (!feedbackCalls || feedbackCalls.length === 0) return [];
     
-    const callDate = call.created_date ? new Date(call.created_date) : null;
-    const matchesDateFrom = !dateFrom || (callDate && callDate >= new Date(dateFrom));
-    const matchesDateTo = !dateTo || (callDate && callDate <= new Date(dateTo + 'T23:59:59'));
+    const searchLower = searchTerm?.toLowerCase() || '';
     
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
-  });
+    return feedbackCalls.filter(call => {
+      // Status filter first (most selective, O(1))
+      if (statusFilter !== 'all' && call.feedback_status !== statusFilter) return false;
+      
+      // Date filter using string comparison (fast)
+      if (dateFrom || dateTo) {
+        const callDateStr = call.created_date ? call.created_date.slice(0, 10) : '';
+        if (dateFrom && callDateStr < dateFrom) return false;
+        if (dateTo && callDateStr > dateTo) return false;
+      }
+      
+      // Search filter last (most expensive)
+      if (searchLower) {
+        const matchesSearch = 
+          call.customer_name?.toLowerCase().includes(searchLower) ||
+          call.customer_phone?.includes(searchTerm) ||
+          call.product?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
+      
+      return true;
+    });
+  }, [feedbackCalls, searchTerm, statusFilter, dateFrom, dateTo]);
 
-  const stats = {
-    total: feedbackCalls.length,
-    pending: feedbackCalls.filter(c => c.feedback_status === 'pending').length,
-    happy: feedbackCalls.filter(c => c.feedback_status === 'happy').length,
-    unhappy: feedbackCalls.filter(c => c.feedback_status === 'unhappy').length,
-    others: feedbackCalls.filter(c => c.feedback_status === 'others').length
-  };
+  // 🚀 Optimized stats calculation - single pass
+  const stats = useMemo(() => {
+    const result = { total: 0, pending: 0, happy: 0, unhappy: 0, others: 0 };
+    for (const c of feedbackCalls) {
+      result.total++;
+      if (c.feedback_status === 'pending') result.pending++;
+      else if (c.feedback_status === 'happy') result.happy++;
+      else if (c.feedback_status === 'unhappy') result.unhappy++;
+      else if (c.feedback_status === 'others') result.others++;
+    }
+    return result;
+  }, [feedbackCalls]);
 
   const handleExport = () => {
     const headers = ['Customer Name', 'Phone', 'Product', 'Order #', 'Status', 'Call Date', 'Feedback Notes'];
