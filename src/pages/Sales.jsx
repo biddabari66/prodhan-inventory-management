@@ -1063,13 +1063,19 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
   const [displayLimit, setDisplayLimit] = useState(50); // Start with less for instant render
   
-  // Pre-compute BDT date formatter once
-  const bdtFormatter = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }), []);
+  // 🚀 Pre-compute date strings for ALL orders ONCE (expensive operation done only when orders change)
+  const ordersWithDateStr = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+    return orders.map(o => ({
+      ...o,
+      _dateStr: new Date(o.order_date || o.created_date).toISOString().slice(0, 10) // YYYY-MM-DD format, much faster
+    }));
+  }, [orders]);
   
   const filteredOrders = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
+    if (!ordersWithDateStr || ordersWithDateStr.length === 0) return [];
     
-    let filtered = orders;
+    let filtered = ordersWithDateStr;
     
     // 🚀 Fast path: Department filter first (most selective)
     if (!canViewAllDepartments) {
@@ -1078,14 +1084,11 @@ function SalesPage() {
       filtered = filtered.filter(o => o.department === departmentFilter);
     }
 
-    // 🚀 Date filter - optimized with pre-computed formatter
+    // 🚀 Date filter - now uses pre-computed _dateStr (O(1) per item)
     if (dateRange.from) {
       const fromDateStr = dateRange.from;
       const toDateStr = dateRange.to || dateRange.from;
-      filtered = filtered.filter(o => {
-        const orderDateBDT = bdtFormatter.format(new Date(o.order_date || o.created_date));
-        return orderDateBDT >= fromDateStr && orderDateBDT <= toDateStr;
-      });
+      filtered = filtered.filter(o => o._dateStr >= fromDateStr && o._dateStr <= toDateStr);
     }
 
     // Status filter
@@ -1116,7 +1119,7 @@ function SalesPage() {
     }
 
     return filtered;
-  }, [orders, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter, bdtFormatter]);
+  }, [ordersWithDateStr, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
   // 🚀 Display only limited rows for smooth scrolling
   const displayedOrders = useMemo(() => {
@@ -1267,8 +1270,8 @@ function SalesPage() {
 
   // 🚀 LIGHTNING FAST: Stats with optimized calculations
   const stats = useMemo(() => {
-    const todayBDT = bdtFormatter.format(new Date());
-    const statsOrders = hasDateFilter ? filteredOrders : orders;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
     
     // Single pass for main stats
     let pendingOrders = 0, confirmedOrders = 0, shippedOrders = 0, totalReturns = 0, totalProductQuantity = 0;
@@ -1289,9 +1292,8 @@ function SalesPage() {
     // Today's stats - single pass
     let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
     
-    for (const o of orders) {
-      const orderDateBDT = bdtFormatter.format(new Date(o.order_date || o.created_date));
-      if (orderDateBDT !== todayBDT) continue;
+    for (const o of ordersWithDateStr) {
+      if (o._dateStr !== todayStr) continue;
       
       todayOrdersCount++;
       if (o.order_status === 'pending') todayPending++;
@@ -1311,7 +1313,7 @@ function SalesPage() {
       todayOrders: todayOrdersCount, todayPending, todayConfirmed, todayShipped, todayReturns, todayProductQty,
       isFiltered: hasDateFilter
     };
-  }, [orders, filteredOrders, hasDateFilter, inventoryMap, bdtFormatter]);
+  }, [ordersWithDateStr, filteredOrders, hasDateFilter, inventoryMap]);
 
   // Premium Pill Badges
   const getStatusBadge = (status) => {
