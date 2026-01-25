@@ -399,14 +399,15 @@ export default function FeedbackCallList() {
                     onCheckedChange={() => toggleSelection(call.id)}
                     className="mt-1"
                   />
-                  <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />{call.customer_phone}
-                  </p>
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
+                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <Phone className="w-3 h-3" />{call.customer_phone}
+                    </p>
                   </div>
-                  </div>
-                  {getStatusBadge(call.feedback_status)}
-                  </div>
+                </div>
+                {getStatusBadge(call.feedback_status)}
+              </div>
               
               {call.product && (
                 <p className="text-sm text-slate-600 mb-2">
