@@ -10,8 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Phone, Plus, Search, CheckCircle, XCircle, Clock, 
-  Download, Upload, Users, Pencil, Trash2, Calendar
+  Download, Upload, Users, Pencil, Trash2, Calendar, CheckSquare, Square
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import DynamicCSVImport from './DynamicCSVImport';
@@ -34,6 +35,7 @@ export default function WelcomeCallList() {
     order_number: '',
     notes: ''
   });
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const { data: welcomeCalls = [], isLoading } = useQuery({
     queryKey: ['welcomeCalls'],
@@ -85,6 +87,40 @@ export default function WelcomeCallList() {
       toast.success('Entry deleted');
     }
   });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      for (const id of ids) {
+        await base44.entities.WelcomeCall.delete(id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['welcomeCalls']);
+      toast.success(`${selectedIds.length} entries deleted`);
+      setSelectedIds([]);
+    }
+  });
+
+  const toggleSelection = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredCalls.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredCalls.map(c => c.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Delete ${selectedIds.length} selected entries? This cannot be undone.`)) {
+      bulkDeleteMutation.mutate(selectedIds);
+    }
+  };
 
   const closeForm = () => {
     setIsAddOpen(false);
@@ -270,7 +306,27 @@ export default function WelcomeCallList() {
               <option value="not_received">Not Received</option>
             </select>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {selectedIds.length > 0 && (
+              <>
+                <Badge className="bg-blue-100 text-blue-700 px-3 py-2 h-10 flex items-center">
+                  {selectedIds.length} selected
+                </Badge>
+                <Button variant="outline" onClick={() => setSelectedIds([])} className="text-slate-600">
+                  Clear
+                </Button>
+                <Button variant="destructive" onClick={handleBulkDelete}>
+                  <Trash2 className="w-4 h-4 mr-2" />Delete Selected
+                </Button>
+              </>
+            )}
+            <Button variant="outline" onClick={toggleSelectAll}>
+              {selectedIds.length === filteredCalls.length && filteredCalls.length > 0 ? (
+                <><CheckSquare className="w-4 h-4 mr-2" />Deselect All</>
+              ) : (
+                <><Square className="w-4 h-4 mr-2" />Select All</>
+              )}
+            </Button>
             <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />Export
             </Button>
@@ -314,14 +370,21 @@ export default function WelcomeCallList() {
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCalls.map(call => (
-          <Card key={call.id} className="hover:shadow-lg transition-shadow">
+          <Card key={call.id} className={`hover:shadow-lg transition-shadow ${selectedIds.includes(call.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}>
             <CardContent className="p-5">
               <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />{call.customer_phone}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedIds.includes(call.id)}
+                    onCheckedChange={() => toggleSelection(call.id)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
+                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <Phone className="w-3 h-3" />{call.customer_phone}
+                    </p>
+                  </div>
                 </div>
                 {getStatusBadge(call.call_status)}
               </div>
