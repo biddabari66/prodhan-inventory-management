@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Box, Plus, Trash2, CheckCircle, Package, Image, Upload } from 'lucide-react';
+import { Box, Plus, Trash2, CheckCircle, Package, Image, Upload, Truck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import { toast } from 'sonner';
@@ -56,6 +56,7 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
     department: 'prodhan_com_e_commerce',
     items: [],
     total_amount: 0,
+    courier_expense: 0,
     invoice_images: [],
     invoice_number: '',
     notes: ''
@@ -183,7 +184,8 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
     };
 
     const newItems = [...formData.items, newItem];
-    const newTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const itemsTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const newTotal = itemsTotal + (formData.courier_expense || 0);
 
     setFormData(prev => ({
       ...prev,
@@ -201,7 +203,8 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
 
   const handleRemoveItem = (itemId) => {
     const newItems = formData.items.filter(item => item.id !== itemId);
-    const newTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const itemsTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const newTotal = itemsTotal + (formData.courier_expense || 0);
 
     setFormData(prev => ({
       ...prev,
@@ -538,11 +541,49 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
                 </div>
               ))}
               
+              {/* Courier/Communication Expense */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <Label className="flex items-center gap-2 text-blue-700 mb-2">
+                  <Truck className="w-4 h-4" />
+                  Courier / Communication Expense (Optional)
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.courier_expense || 0}
+                  onChange={(e) => {
+                    const courierVal = parseFloat(e.target.value) || 0;
+                    const itemsTotal = formData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+                    setFormData(prev => ({
+                      ...prev,
+                      courier_expense: courierVal,
+                      total_amount: itemsTotal + courierVal
+                    }));
+                  }}
+                  placeholder="Enter courier/communication cost"
+                  className="max-w-xs"
+                />
+                <p className="text-xs text-blue-600 mt-1">Add any courier charges, phone charges, or communication costs</p>
+              </div>
+
               {/* Total */}
               <div className="p-4 bg-gradient-to-r from-amber-100 to-orange-100 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-lg">Total Packaging Expense:</span>
-                  <span className="font-bold text-2xl text-amber-700">৳{formData.total_amount.toLocaleString()}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Items Total:</span>
+                    <span>৳{formData.items.reduce((sum, item) => sum + (item.amount || 0), 0).toLocaleString()}</span>
+                  </div>
+                  {(formData.courier_expense || 0) > 0 && (
+                    <div className="flex justify-between text-sm text-blue-700">
+                      <span>Courier/Comm:</span>
+                      <span>৳{(formData.courier_expense || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-lg">Total Expense:</span>
+                    <span className="font-bold text-2xl text-amber-700">৳{formData.total_amount.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             </div>

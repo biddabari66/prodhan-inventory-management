@@ -1578,6 +1578,7 @@ function PurchaseOrdersPage() {
                         <TableHead>Products</TableHead>
                         <TableHead>Created By</TableHead>
                         <TableHead className="text-right">Total Amount</TableHead>
+                        <TableHead>Invoice</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
@@ -1585,7 +1586,7 @@ function PurchaseOrdersPage() {
                     <TableBody>
                       {packagingExpenses.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                             <Box className="w-12 h-12 mx-auto mb-2 opacity-50" />
                             <p>No packaging expenses found</p>
                           </TableCell>
@@ -1619,6 +1620,21 @@ function PurchaseOrdersPage() {
                             </TableCell>
                             <TableCell className="text-right font-semibold">
                               ৳{expense.total_amount?.toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {expense.invoice_images?.length > 0 ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(expense.invoice_images[0], '_blank')}
+                                  className="text-blue-600"
+                                >
+                                  <Image className="w-4 h-4 mr-1" />
+                                  {expense.invoice_images.length > 1 ? `${expense.invoice_images.length} imgs` : 'View'}
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-slate-400">No invoice</span>
+                              )}
                             </TableCell>
                             <TableCell>{getPackagingStatusBadge(expense.status)}</TableCell>
                             <TableCell className="text-center">

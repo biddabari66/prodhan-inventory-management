@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   FileText, TrendingDown, RotateCcw, RefreshCw, Download,
   ShoppingBag, PackageX, BarChart3, Truck, Building2, 
-  Calendar, Filter, Image, FileDown, Loader2, Check
+  Calendar, Filter, Image, FileDown, Loader2, Check, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
@@ -78,6 +78,7 @@ function InventoryReportsPage() {
   const reportTypes = [
     { id: 'sales', label: 'Sales Report', icon: ShoppingBag, color: 'text-green-600', bgColor: 'bg-green-50' },
     { id: 'purchase', label: 'Purchase Report', icon: Truck, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+    { id: 'packaging', label: 'Packaging Expenses', icon: Package, color: 'text-amber-600', bgColor: 'bg-amber-50' },
     { id: 'waste', label: 'Waste/Damage Report', icon: PackageX, color: 'text-red-600', bgColor: 'bg-red-50' },
     { id: 'returns', label: 'Returns Report', icon: RotateCcw, color: 'text-orange-600', bgColor: 'bg-orange-50' },
     { id: 'supplier', label: 'Supplier Report', icon: Building2, color: 'text-purple-600', bgColor: 'bg-purple-50' },
@@ -108,6 +109,11 @@ function InventoryReportsPage() {
       { id: 'product', label: 'By Product' },
       { id: 'supplier', label: 'By Supplier' },
       { id: 'category', label: 'By Category' },
+      { id: 'date', label: 'By Date' }
+    ],
+    packaging: [
+      { id: 'product', label: 'By Product' },
+      { id: 'type', label: 'By Packaging Type' },
       { id: 'date', label: 'By Date' }
     ],
     waste: [
@@ -170,11 +176,12 @@ function InventoryReportsPage() {
     try {
       toast.info('Generating report...');
       
-      const [orders, inventory, movements, purchaseOrders] = await Promise.all([
+      const [orders, inventory, movements, purchaseOrders, packagingExpenses] = await Promise.all([
         base44.entities.Order.list('-order_date'),
         base44.entities.Inventory.list(),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.list('-order_date')
+        base44.entities.PurchaseOrder.list('-order_date'),
+        base44.entities.PackagingExpense.list('-expense_date', 1000)
       ]);
 
       const response = await base44.functions.invoke('generateInventorySalesReport', { 
@@ -188,7 +195,8 @@ function InventoryReportsPage() {
         orders,
         inventory,
         movements,
-        purchaseOrders
+        purchaseOrders,
+        packagingExpenses
       });
 
       if (response.data?.pdfBase64) {
@@ -226,11 +234,12 @@ function InventoryReportsPage() {
       
       const dateRange = getDateRange(customReport.dateRange);
       
-      const [orders, inventory, movements, purchaseOrders] = await Promise.all([
+      const [orders, inventory, movements, purchaseOrders, packagingExpenses] = await Promise.all([
         base44.entities.Order.list('-order_date'),
         base44.entities.Inventory.list(),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.list('-order_date')
+        base44.entities.PurchaseOrder.list('-order_date'),
+        base44.entities.PackagingExpense.list('-expense_date', 1000)
       ]);
 
       const response = await base44.functions.invoke('generateInventorySalesReport', { 
