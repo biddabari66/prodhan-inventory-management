@@ -39,6 +39,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     tax_amount: 0,
     shipping_cost: 0,
     discount_amount: 0,
+    courier_expense: 0,
     total_amount: 0,
     payment_method: 'bank_transfer',
     payment_status: 'pending',
@@ -157,7 +158,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       ...prev,
       order_items: newItems,
       subtotal: newSubtotal,
-      total_amount: newSubtotal + (prev.tax_amount || 0) + (prev.shipping_cost || 0) - (prev.discount_amount || 0)
+      total_amount: newSubtotal + (prev.tax_amount || 0) + (prev.shipping_cost || 0) + (prev.courier_expense || 0) - (prev.discount_amount || 0)
     }));
 
     setSelectedItem('');
@@ -198,7 +199,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
         ...prev,
         order_items: newItems,
         subtotal: newSubtotal,
-        total_amount: newSubtotal + (prev.tax_amount || 0) + (prev.shipping_cost || 0) - (prev.discount_amount || 0)
+        total_amount: newSubtotal + (prev.tax_amount || 0) + (prev.shipping_cost || 0) + (prev.courier_expense || 0) - (prev.discount_amount || 0)
       }));
 
       setShowNewProductForm(false);
@@ -226,7 +227,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       ...prev,
       order_items: newItems,
       subtotal: newSubtotal,
-      total_amount: newSubtotal + (prev.tax_amount || 0) + (prev.shipping_cost || 0) - (prev.discount_amount || 0)
+      total_amount: newSubtotal + (prev.tax_amount || 0) + (prev.shipping_cost || 0) + (prev.courier_expense || 0) - (prev.discount_amount || 0)
     }));
   };
 
@@ -234,7 +235,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
     const numValue = parseFloat(value) || 0;
     setFormData(prev => {
       const updated = { ...prev, [field]: numValue };
-      updated.total_amount = updated.subtotal + updated.tax_amount + updated.shipping_cost - updated.discount_amount;
+      updated.total_amount = updated.subtotal + updated.tax_amount + updated.shipping_cost + (updated.courier_expense || 0) - updated.discount_amount;
       return updated;
     });
   };
@@ -256,7 +257,7 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
       ...formData,
       po_number: order?.po_number || `PO-${Date.now()}`,
       created_by_id: currentUser?.id,
-      created_by_name: currentUser?.full_name,
+      created_by_name: currentUser?.display_name || currentUser?.full_name,
       amount_due: formData.total_amount - (formData.amount_paid || 0),
       order_status: order ? formData.order_status : 'pending_approval',
       approval_status: order ? formData.approval_status : 'pending'
@@ -605,6 +606,25 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
             </div>
           </div>
 
+          {/* Courier / Communication Expense */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <Label className="flex items-center gap-2 text-amber-700">
+                <Truck className="w-4 h-4" />
+                Courier / Communication Expense (Optional)
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                value={formData.courier_expense || 0}
+                onChange={(e) => updateTotals('courier_expense', e.target.value)}
+                placeholder="Enter courier/communication cost"
+                className="mt-2"
+              />
+              <p className="text-xs text-amber-600 mt-1">Add any courier charges, phone charges, or communication costs</p>
+            </div>
+          </div>
+
           <div className="bg-gradient-to-br from-violet-50 to-pink-50 p-6 rounded-xl">
             <div className="flex justify-between text-sm mb-2">
               <span>Subtotal:</span>
@@ -618,6 +638,12 @@ const PurchaseOrderForm = ({ order, suppliers, inventory, currentUser, onSubmit,
               <span>Shipping:</span>
               <span>BDT {(formData.shipping_cost || 0).toLocaleString()}</span>
             </div>
+            {(formData.courier_expense || 0) > 0 && (
+              <div className="flex justify-between text-sm mb-2">
+                <span>Courier/Comm:</span>
+                <span className="text-amber-600">BDT {(formData.courier_expense || 0).toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm mb-2">
               <span>Discount:</span>
               <span className="text-red-600">-BDT {(formData.discount_amount || 0).toLocaleString()}</span>
@@ -875,7 +901,7 @@ function PurchaseOrdersPage() {
         order_status: 'approved',
         approval_status: 'approved',
         approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.full_name,
+        approved_by_name: currentUser?.display_name || currentUser?.full_name,
         approval_date: new Date().toISOString()
       });
 
@@ -925,7 +951,7 @@ function PurchaseOrdersPage() {
         approval_status: 'rejected',
         rejection_reason: reason,
         approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.full_name,
+        approved_by_name: currentUser?.display_name || currentUser?.full_name,
         approval_date: new Date().toISOString()
       });
 
@@ -976,7 +1002,7 @@ function PurchaseOrdersPage() {
         order_status: 'received',
         actual_delivery_date: new Date().toISOString().split('T')[0],
         received_by_id: currentUser?.id,
-        received_by_name: currentUser?.full_name,
+        received_by_name: currentUser?.display_name || currentUser?.full_name,
         received_date: new Date().toISOString()
       });
 
@@ -1057,7 +1083,7 @@ function PurchaseOrdersPage() {
       await base44.entities.PackagingExpense.update(expense.id, {
         status: 'approved',
         approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.full_name,
+        approved_by_name: currentUser?.display_name || currentUser?.full_name,
         approval_date: new Date().toISOString()
       });
 
@@ -1091,7 +1117,7 @@ function PurchaseOrdersPage() {
         status: 'rejected',
         rejection_reason: reason,
         approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.full_name,
+        approved_by_name: currentUser?.display_name || currentUser?.full_name,
         approval_date: new Date().toISOString()
       });
 
