@@ -137,7 +137,8 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
       };
 
       const newItems = [...formData.items, newItem];
-      const newTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const itemsTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const newTotal = itemsTotal + (formData.courier_expense || 0);
 
       setFormData(prev => ({
         ...prev,
