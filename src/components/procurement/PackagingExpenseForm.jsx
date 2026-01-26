@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Box, Plus, Trash2, CheckCircle, Package } from 'lucide-react';
+import { Box, Plus, Trash2, CheckCircle, Package, Image, Upload } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import { toast } from 'sonner';
 
@@ -55,8 +56,12 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
     department: 'prodhan_com_e_commerce',
     items: [],
     total_amount: 0,
+    invoice_images: [],
+    invoice_number: '',
     notes: ''
   });
+
+  const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
 
   // Item being added
   const [selectedProduct, setSelectedProduct] = useState('');
@@ -69,6 +74,37 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
   const [isOtherExpense, setIsOtherExpense] = useState(false);
   const [otherExpenseType, setOtherExpenseType] = useState('');
   const [otherExpenseDescription, setOtherExpenseDescription] = useState('');
+
+  // Handle multiple invoice image uploads
+  const handleInvoiceUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setIsUploadingInvoice(true);
+    try {
+      const uploadPromises = files.map(file => base44.integrations.Core.UploadFile({ file }));
+      const results = await Promise.all(uploadPromises);
+      const newUrls = results.map(r => r.file_url);
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        invoice_images: [...(prev.invoice_images || []), ...newUrls]
+      }));
+      toast.success(`${files.length} invoice image(s) uploaded successfully!`);
+    } catch (error) {
+      toast.error('Failed to upload invoice: ' + error.message);
+    } finally {
+      setIsUploadingInvoice(false);
+    }
+  };
+
+  const handleRemoveInvoiceImage = (index) => {
+    setFormData(prev => {
+      const newImages = [...(prev.invoice_images || [])];
+      newImages.splice(index, 1);
+      return { ...prev, invoice_images: newImages };
+    });
+  };
 
   // Filter inventory for department
   const departmentInventory = useMemo(() => {
@@ -186,7 +222,7 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
       ...formData,
       expense_number: expense?.expense_number || `PKG-${Date.now()}`,
       created_by_id: currentUser?.id,
-      created_by_name: currentUser?.full_name,
+      created_by_name: currentUser?.display_name || currentUser?.full_name,
       status: expense ? formData.status : 'pending_approval'
     };
 
@@ -195,6 +231,74 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-2">
+      {/* Invoice Upload Section */}
+      <Card className="border-2 border-dashed border-blue-300 bg-blue-50/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2 text-blue-700">
+            <Image className="w-5 h-5" />
+            Invoice Image Upload (Optional)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Invoice Number</Label>
+              <Input
+                value={formData.invoice_number || ''}
+                onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
+                placeholder="Enter supplier invoice number"
+              />
+            </div>
+            <div>
+              <Label>Invoice Images (Multiple)</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleInvoiceUpload}
+                  disabled={isUploadingInvoice}
+                  className="flex-1"
+                />
+                {isUploadingInvoice && (
+                  <span className="text-sm text-muted-foreground animate-pulse">Uploading...</span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">You can select multiple images at once</p>
+            </div>
+          </div>
+          {formData.invoice_images?.length > 0 && (
+            <div className="mt-3 p-3 bg-white rounded-lg border">
+              <p className="text-xs text-green-600 mb-2 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" /> {formData.invoice_images.length} invoice image(s) uploaded
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {formData.invoice_images.map((url, idx) => (
+                  <div key={idx} className="relative group">
+                    <img 
+                      src={url} 
+                      alt={`Invoice ${idx + 1}`} 
+                      className="h-32 w-auto rounded border cursor-pointer hover:opacity-90 object-cover"
+                      onClick={() => window.open(url, '_blank')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveInvoiceImage(idx)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                    <Badge className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px]">
+                      #{idx + 1}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Header Info */}
       <Card>
         <CardHeader>
