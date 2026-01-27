@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Target, UserCheck, Users, Warehouse, Package, BookOpen, BarChart3,
   Phone, MessageSquare, TrendingUp, TrendingDown, Award, Calculator, Clock, Briefcase, FileSignature,
   Calendar, UserIcon, FileText, Plus, Shield, Link2, Bell, Mail, ShoppingCart, RotateCcw, PackageX,
-  Building2, Sparkles, Layers
+  Building2, Sparkles, Layers, DollarSign
 } from 'lucide-react';
 
 const MODULES = [
@@ -14,17 +14,20 @@ const MODULES = [
   { id: 'sales', name: 'Sales Orders', icon: ShoppingCart, category: 'Inventory' },
   { id: 'customer_management', name: 'Customer Management', icon: Users, category: 'Inventory' },
   { id: 'purchase_orders', name: 'Purchase Orders', icon: Package, category: 'Inventory' },
+  { id: 'production_house', name: 'Production House', icon: Briefcase, category: 'Inventory' },
   { id: 'inventory_movements', name: 'Stock Movements', icon: RotateCcw, category: 'Inventory' },
   { id: 'inventory_returns', name: 'Returns & Damages', icon: PackageX, category: 'Inventory' },
   { id: 'inventory_reconciliation', name: 'Reconciliation', icon: Shield, category: 'Inventory' },
   { id: 'inventory_suppliers', name: 'Suppliers', icon: Building2, category: 'Inventory' },
   { id: 'inventory_categories', name: 'Categories', icon: Layers, category: 'Inventory' },
-  { id: 'product_analytics', name: 'Product Analytics', icon: BarChart3, category: 'Inventory' },
-  { id: 'inventory_reports', name: 'Inventory Reports', icon: FileText, category: 'Inventory' },
-  { id: 'inventory_ai_insights', name: 'AI Insights', icon: Sparkles, category: 'Inventory' },
+  { id: 'product_analytics', name: 'Product Analytics', icon: BarChart3, category: 'Analytics' },
+  { id: 'inventory_reports', name: 'Inventory Reports', icon: FileText, category: 'Analytics' },
+  { id: 'inventory_ai_insights', name: 'AI Insights', icon: Sparkles, category: 'Analytics' },
+  { id: 'finance', name: 'Finance Management', icon: Calculator, category: 'Finance' },
+  { id: 'finance_dashboard', name: 'Finance Dashboard', icon: TrendingUp, category: 'Finance' },
   { id: 'financial_analytics', name: 'Financial Reports', icon: TrendingUp, category: 'Finance' },
   { id: 'attendance', name: 'Employee Attendance', icon: Clock, category: 'HR' },
-  { id: 'finance', name: 'Finance Management', icon: Calculator, category: 'Finance' },
+  { id: 'auto_reports', name: 'Auto Report Settings', icon: Bell, category: 'System' },
   { id: 'user_access_manager', name: 'User Access Manager', icon: Shield, category: 'System' },
   { id: 'integrations', name: 'Integrations', icon: Link2, category: 'System' },
   { id: 'system_alerts', name: 'System Alerts', icon: Bell, category: 'System' },
