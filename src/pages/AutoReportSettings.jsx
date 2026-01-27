@@ -621,4 +621,4 @@ function AutoReportSettingsPage() {
   );
 }
 
-export default withPermission(AutoReportSettingsPage, 'settings', 'can_view');
+export default withPermission(AutoReportSettingsPage, 'auto_reports', 'can_view');
