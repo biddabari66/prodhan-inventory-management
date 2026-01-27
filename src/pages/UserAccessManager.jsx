@@ -19,7 +19,7 @@ import PermissionMatrix from '../components/access/PermissionMatrix';
 import DepartmentSelect from '../components/common/DepartmentSelect';
 import { withPermission } from '../components/common/PermissionGuard';
 
-// INVENTORY-FOCUSED PERMISSIONS SYSTEM
+// INVENTORY-FOCUSED PERMISSIONS SYSTEM FOR PRODHAN.COM E-COMMERCE
 // Source of truth for default permissions per role
 const ROLE_PERMISSIONS = {
   super_admin: {
@@ -27,6 +27,7 @@ const ROLE_PERMISSIONS = {
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    production_house: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
@@ -35,9 +36,11 @@ const ROLE_PERMISSIONS = {
     product_analytics: { can_view: true, can_export: true },
     inventory_reports: { can_view: true, can_export: true },
     inventory_ai_insights: { can_view: true, can_export: true },
+    finance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    finance_dashboard: { can_view: true, can_create: true, can_edit: true, can_export: true, can_view_sensitive_finance: true },
     financial_analytics: { can_view: true, can_export: true, can_view_sensitive_finance: true },
     attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    finance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
+    auto_reports: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     user_access_manager: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     integrations: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     system_alerts: { can_view: true, can_create: true, can_edit: true, can_delete: true },
@@ -48,6 +51,7 @@ const ROLE_PERMISSIONS = {
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    production_house: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
@@ -56,9 +60,11 @@ const ROLE_PERMISSIONS = {
     product_analytics: { can_view: true, can_export: true },
     inventory_reports: { can_view: true, can_export: true },
     inventory_ai_insights: { can_view: true, can_export: true },
+    finance: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    finance_dashboard: { can_view: true, can_create: true, can_edit: true, can_export: true },
     financial_analytics: { can_view: true, can_export: true },
     attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
-    finance: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    auto_reports: { can_view: true, can_create: true, can_edit: true },
     user_access_manager: { can_view: true, can_create: true, can_edit: true },
     integrations: { can_view: true, can_create: true, can_edit: true },
     system_alerts: { can_view: true, can_create: true, can_edit: true },
@@ -69,6 +75,7 @@ const ROLE_PERMISSIONS = {
     sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     purchase_orders: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    production_house: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
     inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
@@ -77,6 +84,7 @@ const ROLE_PERMISSIONS = {
     product_analytics: { can_view: true, can_export: true },
     inventory_reports: { can_view: true, can_export: true },
     inventory_ai_insights: { can_view: true, can_export: true },
+    finance_dashboard: { can_view: true, can_export: true },
     financial_analytics: { can_view: true, can_export: true }
   },
   procurement_officer: {
@@ -84,6 +92,7 @@ const ROLE_PERMISSIONS = {
     sales: { can_view: true, can_export: true },
     customer_management: { can_view: true, can_export: true },
     purchase_orders: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    production_house: { can_view: true, can_create: true, can_edit: true, can_export: true },
     inventory_movements: { can_view: true, can_create: true, can_edit: true, can_export: true },
     inventory_returns: { can_view: true, can_create: true, can_edit: true, can_export: true },
     inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_export: true },
