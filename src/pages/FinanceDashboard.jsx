@@ -401,4 +401,4 @@ function FinanceDashboardPage() {
   );
 }
 
-export default withPermission(FinanceDashboardPage, 'financial_analytics', 'can_view');
+export default withPermission(FinanceDashboardPage, 'finance_dashboard', 'can_view');
