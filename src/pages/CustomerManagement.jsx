@@ -68,30 +68,30 @@ function CustomerManagementPage() {
     // Search filter
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.customer_name?.toLowerCase().includes(query) ||
-        c.customer_phone?.includes(query) ||
-        c.customer_email?.toLowerCase().includes(query)
+      filtered = filtered.filter((c) =>
+      c.customer_name?.toLowerCase().includes(query) ||
+      c.customer_phone?.includes(query) ||
+      c.customer_email?.toLowerCase().includes(query)
       );
     }
 
     // Segmentation filter
     if (segmentFilter !== 'all') {
       if (segmentFilter === 'vip') {
-        filtered = filtered.filter(c => c.total_spent >= 50000);
+        filtered = filtered.filter((c) => c.total_spent >= 50000);
       } else if (segmentFilter === 'regular') {
-        filtered = filtered.filter(c => c.total_spent >= 10000 && c.total_spent < 50000);
+        filtered = filtered.filter((c) => c.total_spent >= 10000 && c.total_spent < 50000);
       } else if (segmentFilter === 'new') {
-        filtered = filtered.filter(c => c.total_orders <= 2);
+        filtered = filtered.filter((c) => c.total_orders <= 2);
       } else if (segmentFilter === 'frequent') {
-        filtered = filtered.filter(c => c.total_orders >= 10);
+        filtered = filtered.filter((c) => c.total_orders >= 10);
       }
     }
 
     // Date filter
     if (customerDateFrom || customerDateTo) {
-      filtered = filtered.filter(c => {
-        const customerDate = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
+      filtered = filtered.filter((c) => {
+        const customerDate = c.customer_since ? new Date(c.customer_since) : c.created_date ? new Date(c.created_date) : null;
         if (!customerDate) return true;
         const matchesFrom = !customerDateFrom || customerDate >= new Date(customerDateFrom);
         const matchesTo = !customerDateTo || customerDate <= new Date(customerDateTo + 'T23:59:59');
@@ -135,18 +135,18 @@ function CustomerManagementPage() {
 
   const stats = {
     total: customers.length,
-    vip: customers.filter(c => c.total_spent >= 50000).length,
-    regular: customers.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
+    vip: customers.filter((c) => c.total_spent >= 50000).length,
+    regular: customers.filter((c) => c.total_spent >= 10000 && c.total_spent < 50000).length,
     totalRevenue: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
   };
 
   const handleExportCustomers = () => {
     const headers = ['Customer Name', 'Phone', 'Email', 'Type', 'Total Orders', 'Total Spent', 'Customer Since', 'Notes'];
-    const rows = filteredCustomers.map(c => [
-      c.customer_name, c.customer_phone, c.customer_email || '', c.customer_type || '',
-      c.total_orders || 0, c.total_spent || 0, c.customer_since || '', c.notes || ''
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const rows = filteredCustomers.map((c) => [
+    c.customer_name, c.customer_phone, c.customer_email || '', c.customer_type || '',
+    c.total_orders || 0, c.total_spent || 0, c.customer_since || '', c.notes || '']
+    );
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -188,15 +188,15 @@ function CustomerManagementPage() {
             <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)} className="h-10 bg-white border-slate-200 rounded-lg">
               <Upload className="w-4 h-4 mr-2" />Import
             </Button>
-            {canCreate && (
-              <Button 
-                onClick={() => setIsAddCustomerOpen(true)}
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 h-10 rounded-xl"
-              >
+            {canCreate &&
+            <Button
+              onClick={() => setIsAddCustomerOpen(true)}
+              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 h-10 rounded-xl">
+
                 <Plus className="w-5 h-5 mr-2" />
                 Add Customer
               </Button>
-            )}
+            }
           </div>
         </div>
 
@@ -207,7 +207,7 @@ function CustomerManagementPage() {
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Customers</span>
             </TabsTrigger>
-            <TabsTrigger value="welcome" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+            <TabsTrigger value="welcome" className="bg-rose-700 px-3 py-1 text-sm font-medium rounded-lg inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground gap-2 h-12 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               <PhoneCall className="w-4 h-4" />
               <span className="hidden sm:inline">Welcome Calls</span>
             </TabsTrigger>
@@ -286,11 +286,11 @@ function CustomerManagementPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
-                  placeholder="Search by name, phone, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+                      placeholder="Search by name, phone, or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10" />
+
               </div>
               <Select value={segmentFilter} onValueChange={setSegmentFilter}>
                 <SelectTrigger className="w-full md:w-[200px]">
@@ -311,26 +311,26 @@ function CustomerManagementPage() {
                 <Calendar className="w-4 h-4 text-slate-400" />
                 <span className="text-sm text-slate-600">From:</span>
                 <Input
-                  type="date"
-                  value={customerDateFrom}
-                  onChange={(e) => setCustomerDateFrom(e.target.value)}
-                  className="w-40"
-                />
+                      type="date"
+                      value={customerDateFrom}
+                      onChange={(e) => setCustomerDateFrom(e.target.value)}
+                      className="w-40" />
+
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-600">To:</span>
                 <Input
-                  type="date"
-                  value={customerDateTo}
-                  onChange={(e) => setCustomerDateTo(e.target.value)}
-                  className="w-40"
-                />
+                      type="date"
+                      value={customerDateTo}
+                      onChange={(e) => setCustomerDateTo(e.target.value)}
+                      className="w-40" />
+
               </div>
-              {(customerDateFrom || customerDateTo) && (
-                <Button variant="ghost" size="sm" onClick={() => { setCustomerDateFrom(''); setCustomerDateTo(''); }}>
+              {(customerDateFrom || customerDateTo) &&
+                  <Button variant="ghost" size="sm" onClick={() => {setCustomerDateFrom('');setCustomerDateTo('');}}>
                   Clear Dates
                 </Button>
-              )}
+                  }
             </div>
           </CardContent>
         </Card>
@@ -360,22 +360,22 @@ function CustomerManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers.length === 0 ? (
-                    <TableRow>
+                  {filteredCustomers.length === 0 ?
+                      <TableRow>
                       <TableCell colSpan={7} className="text-center py-16">
                         <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No customers found</p>
                         <p className="text-slate-400 text-sm mt-1">Add customers or adjust your filters</p>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredCustomers.map((customer) => {
-                      const segment = customer.total_spent >= 50000 ? 'VIP' : 
-                                     customer.total_spent >= 10000 ? 'Regular' : 
-                                     customer.total_orders <= 2 ? 'New' : 'Standard';
-                      
-                      return (
-                        <TableRow key={customer.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 h-16">
+                    </TableRow> :
+
+                      filteredCustomers.map((customer) => {
+                        const segment = customer.total_spent >= 50000 ? 'VIP' :
+                        customer.total_spent >= 10000 ? 'Regular' :
+                        customer.total_orders <= 2 ? 'New' : 'Standard';
+
+                        return (
+                          <TableRow key={customer.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 h-16">
                           <TableCell className="pl-6">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
@@ -383,13 +383,13 @@ function CustomerManagementPage() {
                               </div>
                               <div>
                                 <p className="font-semibold text-slate-900">{customer.customer_name}</p>
-                                {customer.tags?.length > 0 && (
+                                {customer.tags?.length > 0 &&
                                   <div className="flex gap-1 mt-0.5">
-                                    {customer.tags.slice(0, 2).map((tag, idx) => (
-                                      <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
-                                    ))}
+                                    {customer.tags.slice(0, 2).map((tag, idx) =>
+                                    <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
+                                    )}
                                   </div>
-                                )}
+                                  }
                               </div>
                             </div>
                           </TableCell>
@@ -399,12 +399,12 @@ function CustomerManagementPage() {
                                 <Phone className="w-3 h-3" />
                                 {customer.customer_phone}
                               </div>
-                              {customer.customer_email && (
+                              {customer.customer_email &&
                                 <div className="flex items-center gap-2 text-sm text-slate-600">
                                   <Mail className="w-3 h-3" />
                                   {customer.customer_email}
                                 </div>
-                              )}
+                                }
                             </div>
                           </TableCell>
                           <TableCell>
@@ -419,32 +419,32 @@ function CustomerManagementPage() {
                             ৳{(customer.total_spent || 0).toLocaleString()}
                           </TableCell>
                           <TableCell>
-                            <Badge 
-                              className={
+                            <Badge
+                                className={
                                 segment === 'VIP' ? 'bg-amber-100 text-amber-800' :
                                 segment === 'Regular' ? 'bg-blue-100 text-blue-800' :
                                 segment === 'New' ? 'bg-green-100 text-green-800' :
                                 'bg-slate-100 text-slate-800'
-                              }
-                            >
+                                }>
+
                               {segment}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDetails(customer)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetails(customer)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+
                               <Eye className="w-4 h-4 mr-1" />
                               View
                             </Button>
                           </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
+                        </TableRow>);
+
+                      })
+                      }
                 </TableBody>
               </Table>
             </div>
@@ -463,12 +463,12 @@ function CustomerManagementPage() {
           <DynamicCSVImport
             requiredFields={['customer_name', 'customer_phone']}
             fieldOptions={[
-              { key: 'customer_name', label: 'Customer Name', required: true },
-              { key: 'customer_phone', label: 'Phone Number', required: true },
-              { key: 'customer_email', label: 'Email', required: false },
-              { key: 'customer_type', label: 'Customer Type', required: false },
-              { key: 'notes', label: 'Notes', required: false }
-            ]}
+            { key: 'customer_name', label: 'Customer Name', required: true },
+            { key: 'customer_phone', label: 'Phone Number', required: true },
+            { key: 'customer_email', label: 'Email', required: false },
+            { key: 'customer_type', label: 'Customer Type', required: false },
+            { key: 'notes', label: 'Notes', required: false }]
+            }
             onImport={async (data) => {
               // FAST BULK IMPORT - using bulkCreate for speed
               const batchSize = 50;
@@ -476,10 +476,10 @@ function CustomerManagementPage() {
               for (let i = 0; i < data.length; i += batchSize) {
                 batches.push(data.slice(i, i + batchSize));
               }
-              
+
               let totalImported = 0;
               for (const batch of batches) {
-                const preparedData = batch.map(entry => ({
+                const preparedData = batch.map((entry) => ({
                   ...entry,
                   customer_type: entry.customer_type || 'retail',
                   total_orders: 0,
@@ -504,8 +504,8 @@ function CustomerManagementPage() {
               await loadCustomers();
               toast.success(`Imported ${totalImported} customers`);
             }}
-            onClose={() => setIsImportCustomersOpen(false)}
-          />
+            onClose={() => setIsImportCustomersOpen(false)} />
+
         </DialogContent>
       </Dialog>
 
@@ -522,9 +522,9 @@ function CustomerManagementPage() {
                 <Input
                   required
                   value={newCustomer.customer_name}
-                  onChange={(e) => setNewCustomer({...newCustomer, customer_name: e.target.value})}
-                  placeholder="Enter full name"
-                />
+                  onChange={(e) => setNewCustomer({ ...newCustomer, customer_name: e.target.value })}
+                  placeholder="Enter full name" />
+
               </div>
               <div>
                 <Label>Phone Number *</Label>
@@ -532,22 +532,22 @@ function CustomerManagementPage() {
                   required
                   type="tel"
                   value={newCustomer.customer_phone}
-                  onChange={(e) => setNewCustomer({...newCustomer, customer_phone: e.target.value})}
-                  placeholder="01XXXXXXXXX"
-                />
+                  onChange={(e) => setNewCustomer({ ...newCustomer, customer_phone: e.target.value })}
+                  placeholder="01XXXXXXXXX" />
+
               </div>
               <div>
                 <Label>Email</Label>
                 <Input
                   type="email"
                   value={newCustomer.customer_email}
-                  onChange={(e) => setNewCustomer({...newCustomer, customer_email: e.target.value})}
-                  placeholder="customer@example.com"
-                />
+                  onChange={(e) => setNewCustomer({ ...newCustomer, customer_email: e.target.value })}
+                  placeholder="customer@example.com" />
+
               </div>
               <div>
                 <Label>Customer Type</Label>
-                <Select value={newCustomer.customer_type} onValueChange={(val) => setNewCustomer({...newCustomer, customer_type: val})}>
+                <Select value={newCustomer.customer_type} onValueChange={(val) => setNewCustomer({ ...newCustomer, customer_type: val })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -564,10 +564,10 @@ function CustomerManagementPage() {
               <Label>Notes</Label>
               <Textarea
                 value={newCustomer.notes}
-                onChange={(e) => setNewCustomer({...newCustomer, notes: e.target.value})}
+                onChange={(e) => setNewCustomer({ ...newCustomer, notes: e.target.value })}
                 placeholder="Add any additional notes about this customer"
-                rows={3}
-              />
+                rows={3} />
+
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
@@ -584,8 +584,8 @@ function CustomerManagementPage() {
       {/* View Customer Details Dialog */}
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedCustomer && (
-            <>
+          {selectedCustomer &&
+          <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg">
@@ -596,11 +596,11 @@ function CustomerManagementPage() {
               </DialogHeader>
               <CustomerDetails customer={selectedCustomer} />
             </>
-          )}
+          }
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 }
 
 function CustomerDetails({ customer }) {
@@ -616,7 +616,7 @@ function CustomerDetails({ customer }) {
     queryKey: ['customer-returns', customer.customer_phone],
     queryFn: async () => {
       const movements = await base44.entities.InventoryMovement.filter({ reference_type: 'return' }, '-movement_date', 100);
-      return movements.filter(m => m.metadata?.customer_phone === customer.customer_phone);
+      return movements.filter((m) => m.metadata?.customer_phone === customer.customer_phone);
     },
     staleTime: 30000
   });
@@ -624,8 +624,8 @@ function CustomerDetails({ customer }) {
   const isLoading = ordersLoading || returnsLoading;
 
   // Calculate stats
-  const shippedOrders = orders.filter(o => ['shipped', 'out_for_delivery'].includes(o.order_status));
-  const deliveredOrders = orders.filter(o => o.order_status === 'delivered');
+  const shippedOrders = orders.filter((o) => ['shipped', 'out_for_delivery'].includes(o.order_status));
+  const deliveredOrders = orders.filter((o) => o.order_status === 'delivered');
   const totalReturns = returns.length;
   const returnValue = returns.reduce((sum, r) => sum + Math.abs(r.total_value || 0), 0);
 
@@ -649,12 +649,12 @@ function CustomerDetails({ customer }) {
                 <Phone className="w-4 h-4 text-slate-500" />
                 <span className="text-sm">{customer.customer_phone}</span>
               </div>
-              {customer.customer_email && (
-                <div className="flex items-center gap-2">
+              {customer.customer_email &&
+              <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-slate-500" />
                   <span className="text-sm">{customer.customer_email}</span>
                 </div>
-              )}
+              }
             </CardContent>
           </Card>
 
@@ -679,8 +679,8 @@ function CustomerDetails({ customer }) {
           </Card>
         </div>
 
-        {customer.notes && (
-          <Card>
+        {customer.notes &&
+        <Card>
             <CardHeader>
               <CardTitle className="text-sm">Notes</CardTitle>
             </CardHeader>
@@ -688,23 +688,23 @@ function CustomerDetails({ customer }) {
               <p className="text-sm text-slate-600">{customer.notes}</p>
             </CardContent>
           </Card>
-        )}
+        }
       </TabsContent>
 
       <TabsContent value="orders" className="mt-4">
-        {isLoading ? (
-          <div className="text-center py-12">
+        {isLoading ?
+        <div className="text-center py-12">
             <p className="text-slate-500">Loading orders...</p>
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="text-center py-12">
+          </div> :
+        orders.length === 0 ?
+        <div className="text-center py-12">
             <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500">No orders found</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {orders.map(order => (
-              <Card key={order.id} className="hover:shadow-md transition-shadow">
+          </div> :
+
+        <div className="space-y-3">
+            {orders.map((order) =>
+          <Card key={order.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
@@ -726,25 +726,25 @@ function CustomerDetails({ customer }) {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+          )}
           </div>
-        )}
+        }
       </TabsContent>
 
       <TabsContent value="shipped" className="mt-4">
-        {isLoading ? (
-          <div className="text-center py-12">
+        {isLoading ?
+        <div className="text-center py-12">
             <p className="text-slate-500">Loading...</p>
-          </div>
-        ) : shippedOrders.length === 0 ? (
-          <div className="text-center py-12">
+          </div> :
+        shippedOrders.length === 0 ?
+        <div className="text-center py-12">
             <Truck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500">No shipped orders</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {shippedOrders.map(order => (
-              <Card key={order.id} className="hover:shadow-md transition-shadow border-l-4 border-l-cyan-500">
+          </div> :
+
+        <div className="space-y-3">
+            {shippedOrders.map((order) =>
+          <Card key={order.id} className="hover:shadow-md transition-shadow border-l-4 border-l-cyan-500">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
@@ -755,18 +755,18 @@ function CustomerDetails({ customer }) {
                         <Badge className="bg-orange-100 text-orange-800">
                           {order.order_status === 'out_for_delivery' ? 'Out for Delivery' : 'Shipped'}
                         </Badge>
-                        {order.courier_tracking_code && (
-                          <Badge variant="outline" className="text-xs">
+                        {order.courier_tracking_code &&
+                    <Badge variant="outline" className="text-xs">
                             Tracking: {order.courier_tracking_code}
                           </Badge>
-                        )}
+                    }
                       </div>
                       <div className="text-sm text-slate-600">
-                        {(order.order_items || []).map((item, idx) => (
-                          <span key={idx}>
+                        {(order.order_items || []).map((item, idx) =>
+                    <span key={idx}>
                             {item.item_name} (×{item.quantity}){idx < order.order_items.length - 1 ? ', ' : ''}
                           </span>
-                        ))}
+                    )}
                       </div>
                       <p className="text-sm font-semibold text-slate-800">
                         ৳{order.total_amount?.toLocaleString()}
@@ -779,23 +779,23 @@ function CustomerDetails({ customer }) {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+          )}
           </div>
-        )}
+        }
       </TabsContent>
 
       <TabsContent value="returns" className="mt-4">
-        {isLoading ? (
-          <div className="text-center py-12">
+        {isLoading ?
+        <div className="text-center py-12">
             <p className="text-slate-500">Loading...</p>
-          </div>
-        ) : returns.length === 0 ? (
-          <div className="text-center py-12">
+          </div> :
+        returns.length === 0 ?
+        <div className="text-center py-12">
             <RotateCcw className="w-12 h-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500">No returns recorded</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
+          </div> :
+
+        <div className="space-y-3">
             <Card className="bg-red-50 border-red-200">
               <CardContent className="p-4">
                 <div className="flex justify-between items-center">
@@ -811,10 +811,10 @@ function CustomerDetails({ customer }) {
               </CardContent>
             </Card>
             
-            {returns.map(ret => {
-              const metadata = ret.metadata || {};
-              return (
-                <Card key={ret.id} className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
+            {returns.map((ret) => {
+            const metadata = ret.metadata || {};
+            return (
+              <Card key={ret.id} className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
@@ -836,14 +836,14 @@ function CustomerDetails({ customer }) {
                       </p>
                     </div>
                   </CardContent>
-                </Card>
-              );
-            })}
+                </Card>);
+
+          })}
           </div>
-        )}
+        }
       </TabsContent>
-    </Tabs>
-  );
+    </Tabs>);
+
 }
 
 export default withPermission(CustomerManagementPage, 'customer_management', 'can_view');
