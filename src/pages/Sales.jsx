@@ -1268,9 +1268,10 @@ function SalesPage() {
     return map;
   }, [inventory]);
 
-  // 🚀 LIGHTNING FAST: Stats with optimized calculations
+  // 🚀 LIGHTNING FAST: Stats with optimized calculations using BDT timezone
   const stats = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // Get today's date in Bangladesh timezone (Asia/Dhaka) - YYYY-MM-DD format
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
     
     // Single pass for main stats
@@ -1289,11 +1290,16 @@ function SalesPage() {
       }
     }
 
-    // Today's stats - single pass
+    // Today's stats - single pass using BDT date comparison
     let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
     
     for (const o of ordersWithDateStr) {
-      if (o._dateStr !== todayStr) continue;
+      // Convert order date to BDT timezone for accurate comparison
+      const orderDate = o.order_date || o.created_date;
+      if (!orderDate) continue;
+      
+      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(orderDate));
+      if (orderDateBDT !== todayStr) continue;
       
       todayOrdersCount++;
       if (o.order_status === 'pending') todayPending++;

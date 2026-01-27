@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Phone, Plus, Search, Smile, Frown, HelpCircle, Clock,
-  Download, Upload, Users, Star, Pencil, Trash2, Calendar, CheckSquare, Square
+  Download, Upload, Users, Pencil, Trash2, Calendar, CheckSquare, Square,
+  MapPin, Package, ShoppingBag
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -54,6 +55,28 @@ export default function FeedbackCallList() {
     queryFn: () => base44.entities.Customer.list('-created_date', 500),
     staleTime: 60000
   });
+
+  // Fetch orders for customer details
+  const { data: orders = [] } = useQuery({
+    queryKey: ['orders-feedback'],
+    queryFn: () => base44.entities.Order.list('-order_date', 1000),
+    staleTime: 60000
+  });
+
+  // Create order lookup map for O(1) access
+  const orderMap = useMemo(() => {
+    const map = new Map();
+    orders.forEach(o => {
+      if (o.order_number) map.set(o.order_number, o);
+      if (o.customer_phone) {
+        if (!map.has(`phone_${o.customer_phone}`)) {
+          map.set(`phone_${o.customer_phone}`, []);
+        }
+        map.get(`phone_${o.customer_phone}`).push(o);
+      }
+    });
+    return map;
+  }, [orders]);
 
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return [];
@@ -411,100 +434,137 @@ export default function FeedbackCallList() {
         </div>
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredCalls.map(call => (
-          <Card key={call.id} className={`hover:shadow-lg transition-shadow ${selectedIds.includes(call.id) ? 'ring-2 ring-purple-500 bg-purple-50' : ''}`}>
-            <CardContent className="p-5">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={selectedIds.includes(call.id)}
-                    onCheckedChange={() => toggleSelection(call.id)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{call.customer_name}</h3>
-                    <p className="text-sm text-slate-500 flex items-center gap-1">
-                      <Phone className="w-3 h-3" />{call.customer_phone}
-                    </p>
+      {/* Cards Grid - Professional Clean UI */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filteredCalls.map(call => {
+          // Get order details from map
+          const order = call.order_number ? orderMap.get(call.order_number) : null;
+          const customerOrders = call.customer_phone ? orderMap.get(`phone_${call.customer_phone}`) || [] : [];
+          const latestOrder = order || customerOrders[0];
+          
+          return (
+            <Card key={call.id} className={`group hover:shadow-lg transition-all border-0 shadow-sm rounded-2xl overflow-hidden ${selectedIds.includes(call.id) ? 'ring-2 ring-purple-500 bg-purple-50/50' : 'bg-white'}`}>
+              <CardContent className="p-0">
+                {/* Header with Customer Info */}
+                <div className="p-4 border-b border-slate-100">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedIds.includes(call.id)}
+                        onCheckedChange={() => toggleSelection(call.id)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-base">{call.customer_name}</h3>
+                        <a href={`tel:${call.customer_phone}`} className="text-sm text-purple-600 font-medium flex items-center gap-1 hover:underline">
+                          <Phone className="w-3.5 h-3.5" />{call.customer_phone}
+                        </a>
+                      </div>
+                    </div>
+                    {getStatusBadge(call.feedback_status)}
                   </div>
                 </div>
-                {getStatusBadge(call.feedback_status)}
-              </div>
-              
-              {call.product && (
-                <p className="text-sm text-slate-600 mb-2">
-                  <span className="font-medium">Product:</span> {call.product}
-                </p>
-              )}
-              {call.order_number && (
-                <p className="text-xs text-slate-500 mb-3">Order: {call.order_number}</p>
-              )}
-              
-              {call.feedback_notes && call.feedback_status !== 'pending' && (
-                <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded mb-3">
-                  {call.feedback_notes}
-                </p>
-              )}
 
-              {call.feedback_status === 'pending' && (
-                <div className="flex gap-2 mt-4 pt-3 border-t">
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => handleStatusUpdate(call, 'happy')}
-                  >
-                    <Smile className="w-4 h-4 mr-1" />Happy
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={() => handleStatusUpdate(call, 'unhappy')}
-                  >
-                    <Frown className="w-4 h-4 mr-1" />Unhappy
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 border-purple-300 text-purple-600 hover:bg-purple-50"
-                    onClick={() => handleStatusUpdate(call, 'others')}
-                  >
-                    <HelpCircle className="w-4 h-4 mr-1" />Others
-                  </Button>
+                {/* Order & Product Details - Key Info for Agents */}
+                <div className="p-4 space-y-3 bg-slate-50/50">
+                  {/* Products */}
+                  {(call.product || latestOrder?.order_items?.length > 0) && (
+                    <div className="flex items-start gap-2">
+                      <Package className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-500 uppercase">Products</p>
+                        <p className="text-sm text-slate-800 font-medium truncate">
+                          {call.product || latestOrder?.order_items?.map(i => i.item_name).join(', ') || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Order Number & Amount */}
+                  {(call.order_number || latestOrder) && (
+                    <div className="flex items-start gap-2">
+                      <ShoppingBag className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-500 uppercase">Order</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-mono text-purple-700">{call.order_number || latestOrder?.order_number}</span>
+                          {latestOrder?.total_amount && (
+                            <Badge className="bg-emerald-100 text-emerald-700 text-xs">৳{latestOrder.total_amount?.toLocaleString()}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Address - Short version */}
+                  {latestOrder?.shipping_address && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-500 uppercase">Address</p>
+                        <p className="text-sm text-slate-700 line-clamp-2">
+                          {[latestOrder.shipping_address.address_line, latestOrder.shipping_address.city, latestOrder.shipping_address.district].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order Status if available */}
+                  {latestOrder?.order_status && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-slate-500">Status:</span>
+                      <Badge variant="outline" className="text-xs capitalize">{latestOrder.order_status.replace(/_/g, ' ')}</Badge>
+                      {latestOrder?.payment_status && (
+                        <Badge variant="outline" className={`text-xs ${latestOrder.payment_status === 'paid' ? 'text-green-600 border-green-300' : 'text-amber-600 border-amber-300'}`}>
+                          {latestOrder.payment_status}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              {/* Edit/Delete Actions */}
-              <div className="flex gap-2 mt-3 pt-3 border-t">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1 text-blue-600 hover:bg-blue-50"
-                  onClick={() => openEditForm(call)}
-                >
-                  <Pencil className="w-4 h-4 mr-1" />Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1 text-red-600 hover:bg-red-50"
-                  onClick={() => {
-                    if (confirm('Delete this entry?')) deleteMutation.mutate(call.id);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                
+                {/* Feedback Notes */}
+                {call.feedback_notes && call.feedback_status !== 'pending' && (
+                  <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
+                    <p className="text-xs text-amber-800"><span className="font-medium">Notes:</span> {call.feedback_notes}</p>
+                  </div>
+                )}
 
-        {filteredCalls.length === 0 && (
-          <div className="col-span-full text-center py-12">
-            <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500">No feedback calls found</p>
+                {/* Action Buttons */}
+                <div className="p-3 border-t border-slate-100 bg-white">
+                  {call.feedback_status === 'pending' ? (
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 h-9" onClick={() => handleStatusUpdate(call, 'happy')}>
+                        <Smile className="w-4 h-4 mr-1" />Happy
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 border-red-300 text-red-600 hover:bg-red-50 h-9" onClick={() => handleStatusUpdate(call, 'unhappy')}>
+                        <Frown className="w-4 h-4 mr-1" />Unhappy
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 border-purple-300 text-purple-600 hover:bg-purple-50 h-9" onClick={() => handleStatusUpdate(call, 'others')}>
+                        <HelpCircle className="w-4 h-4 mr-1" />Others
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" className="flex-1 text-blue-600 hover:bg-blue-50 h-8" onClick={() => openEditForm(call)}>
+                        <Pencil className="w-3.5 h-3.5 mr-1" />Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" className="flex-1 text-red-600 hover:bg-red-50 h-8" onClick={() => { if (confirm('Delete this entry?')) deleteMutation.mutate(call.id); }}>
+                        <Trash2 className="w-3.5 h-3.5 mr-1" />Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {filteredCalls.length === 0 && !isLoading && (
+          <div className="col-span-full text-center py-16 bg-white rounded-2xl shadow-sm">
+            <Users className="w-16 h-16 mx-auto text-slate-200 mb-4" />
+            <p className="text-slate-500 text-lg">No feedback calls found</p>
+            <p className="text-slate-400 text-sm mt-1">Try adjusting your filters</p>
           </div>
         )}
       </div>
