@@ -104,21 +104,22 @@ const ROLE_PERMISSIONS = {
     inventory_overview: { can_view: true },
     sales: { can_view: true, can_create: true, can_edit: true, can_export: true },
     customer_management: { can_view: true, can_create: true, can_edit: true, can_export: true },
-    inventory_reports: { can_view: true, can_export: true }
+    inventory_reports: { can_view: true, can_export: true },
+    product_analytics: { can_view: true }
   },
   warehouse_staff: {
     inventory_overview: { can_view: true },
     inventory_movements: { can_view: true, can_create: true, can_export: true },
     inventory_returns: { can_view: true, can_create: true, can_export: true },
     inventory_reconciliation: { can_view: true, can_create: true, can_export: true },
-    purchase_orders: { can_view: true, can_export: true }
+    purchase_orders: { can_view: true, can_export: true },
+    production_house: { can_view: true, can_create: true, can_edit: true }
   },
   viewer: {
     inventory_overview: { can_view: true },
     sales: { can_view: true },
     customer_management: { can_view: true },
-    inventory_reports: { can_view: true, can_export: true },
-    attendance: { can_view: true }
+    inventory_reports: { can_view: true, can_export: true }
   }
 };
 
