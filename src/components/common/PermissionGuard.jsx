@@ -65,21 +65,27 @@ export const withPermission = (WrappedComponent, module, permission = 'can_view'
           return;
         }
 
-        // Admin role gets most permissions by default
-        if (user.job_role === 'admin' && !requireFinancialAccess) {
-          setHasPermission(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // Check specific user permissions
+        // Check specific user permissions first
         const permissions = await UserPermission.filter({ user_id: user.id });
         const modulePermission = permissions.find(p => p.module === module);
 
-        if (modulePermission && modulePermission[permission] === true) {
-          setHasPermission(true);
+        // CRITICAL: Admin has access ONLY if they have explicit permission OR it's a non-sensitive module
+        if (user.job_role === 'admin') {
+          if (modulePermission && modulePermission[permission] === true) {
+            setHasPermission(true);
+          } else if (!requireFinancialAccess && permission === 'can_view') {
+            // Admins get view access to non-financial modules by default
+            setHasPermission(true);
+          } else {
+            setHasPermission(false);
+          }
         } else {
-          setHasPermission(false);
+          // For non-admin users, strict permission check
+          if (modulePermission && modulePermission[permission] === true) {
+            setHasPermission(true);
+          } else {
+            setHasPermission(false);
+          }
         }
 
         setIsLoading(false);
