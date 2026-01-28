@@ -42,7 +42,6 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [editingMovement, setEditingMovement] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' });
   const [reasonFilter, setReasonFilter] = useState('all');
 
