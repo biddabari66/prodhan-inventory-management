@@ -13,8 +13,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   PackageX, AlertOctagon, RotateCcw,
-  AlertTriangle, DollarSign, TrendingDown, Building2, Pencil, Trash2
+  AlertTriangle, DollarSign, TrendingDown, Building2, Pencil, Trash2,
+  Search, Filter, Download, X
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import ReturnDamageForm from './ReturnDamageForm';
@@ -40,6 +42,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [editingMovement, setEditingMovement] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState({ from: '', to: '' });
+  const [reasonFilter, setReasonFilter] = useState('all');
 
   // Fetch data with optimized queries
   const { data: inventory = [] } = useQuery({
@@ -103,20 +108,142 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   }, [inventory, departmentFilter]);
 
   const returnsData = useMemo(() => {
-    return movements.filter(m =>
+    let filtered = movements.filter(m =>
       m.reference_type === 'return' &&
       (departmentFilter === 'all' ||
        inventory.find(i => i.id === m.inventory_item_id)?.department === departmentFilter)
     );
-  }, [movements, inventory, departmentFilter]);
+    
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => {
+        const itemName = getItemName(m.inventory_item_id).toLowerCase();
+        const metadata = m.metadata || {};
+        return itemName.includes(query) ||
+          (m.reference_number || '').toLowerCase().includes(query) ||
+          (metadata.customer_name || '').toLowerCase().includes(query) ||
+          (metadata.customer_phone || '').includes(query) ||
+          (metadata.reason || '').toLowerCase().includes(query);
+      });
+    }
+    
+    // Apply date filter
+    if (dateFilter.from) {
+      filtered = filtered.filter(m => m.movement_date >= dateFilter.from);
+    }
+    if (dateFilter.to) {
+      filtered = filtered.filter(m => m.movement_date <= dateFilter.to);
+    }
+    
+    // Apply reason filter
+    if (reasonFilter !== 'all') {
+      filtered = filtered.filter(m => (m.metadata?.reason || '').toLowerCase().includes(reasonFilter.toLowerCase()));
+    }
+    
+    return filtered;
+  }, [movements, inventory, departmentFilter, searchQuery, dateFilter, reasonFilter]);
 
   const damagesData = useMemo(() => {
-    return movements.filter(m =>
+    let filtered = movements.filter(m =>
       (m.reference_type === 'damage' || m.reference_type === 'expired') &&
       (departmentFilter === 'all' ||
        inventory.find(i => i.id === m.inventory_item_id)?.department === departmentFilter)
     );
-  }, [movements, inventory, departmentFilter]);
+    
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => {
+        const itemName = getItemName(m.inventory_item_id).toLowerCase();
+        const metadata = m.metadata || {};
+        return itemName.includes(query) ||
+          (metadata.reason || '').toLowerCase().includes(query);
+      });
+    }
+    
+    // Apply date filter
+    if (dateFilter.from) {
+      filtered = filtered.filter(m => m.movement_date >= dateFilter.from);
+    }
+    if (dateFilter.to) {
+      filtered = filtered.filter(m => m.movement_date <= dateFilter.to);
+    }
+    
+    return filtered;
+  }, [movements, inventory, departmentFilter, searchQuery, dateFilter]);
+  
+  // Export to Excel function
+  const handleExportExcel = (dataType) => {
+    const dataToExport = dataType === 'returns' ? returnsData : damagesData;
+    
+    if (dataToExport.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+    
+    const headers = dataType === 'returns' 
+      ? ['Date', 'Product', 'Type', 'Quantity', 'Order #', 'Customer/Supplier', 'Phone', 'Reason', 'Action', 'Impact']
+      : ['Date', 'Product', 'Quantity', 'Reason', 'Condition', 'Action', 'Reported By', 'Loss Value'];
+    
+    const rows = dataToExport.map(m => {
+      const metadata = m.metadata || {};
+      const itemName = getItemName(m.inventory_item_id);
+      
+      if (dataType === 'returns') {
+        return [
+          format(new Date(m.movement_date), 'yyyy-MM-dd'),
+          itemName,
+          metadata.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return',
+          metadata.is_partial ? `${(metadata.good_qty || 0) + (metadata.damaged_qty || 0)} (Good: ${metadata.good_qty || 0}, Damaged: ${metadata.damaged_qty || 0})` : (metadata.original_quantity || Math.abs(m.quantity) || 1),
+          m.reference_number || '-',
+          metadata.return_type === 'purchase_return' ? (metadata.supplier_name || '-') : (metadata.customer_name || '-'),
+          metadata.customer_phone || '-',
+          metadata.reason || '-',
+          metadata.action || '-',
+          Math.abs(m.total_value || 0)
+        ];
+      } else {
+        return [
+          format(new Date(m.movement_date), 'yyyy-MM-dd'),
+          itemName,
+          metadata.original_quantity || Math.abs(m.quantity) || 1,
+          metadata.reason || m.reference_type,
+          metadata.condition || 'damaged',
+          metadata.action || 'write_off',
+          m.performed_by || '-',
+          Math.abs(m.total_value || 0)
+        ];
+      }
+    });
+    
+    const escapeCSV = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+    
+    const csvContent = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+    
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dataType}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Exported ${dataToExport.length} ${dataType} records`);
+  };
 
   // Record return/damage mutation
   const recordIncidentMutation = useMutation({
@@ -569,6 +696,89 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           </CardContent>
         </Card>
       </div>
+
+      {/* Search and Filter Bar */}
+      <Card className="border border-slate-200 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Input
+                placeholder="Search by product, order #, customer, reason..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Date Filters */}
+            <div className="flex gap-2 items-center">
+              <Input
+                type="date"
+                value={dateFilter.from}
+                onChange={(e) => setDateFilter({...dateFilter, from: e.target.value})}
+                className="h-10 w-36"
+                placeholder="From"
+              />
+              <span className="text-slate-400">to</span>
+              <Input
+                type="date"
+                value={dateFilter.to}
+                onChange={(e) => setDateFilter({...dateFilter, to: e.target.value})}
+                className="h-10 w-36"
+                placeholder="To"
+              />
+            </div>
+            
+            {/* Clear Filters */}
+            {(searchQuery || dateFilter.from || dateFilter.to) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery('');
+                  setDateFilter({ from: '', to: '' });
+                  setReasonFilter('all');
+                }}
+                className="h-10"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            )}
+            
+            {/* Export Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleExportExcel(activeTab)}
+                className="h-10 bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export Excel
+              </Button>
+            </div>
+          </div>
+          
+          {/* Active Filters Summary */}
+          {(searchQuery || dateFilter.from || dateFilter.to) && (
+            <div className="mt-3 pt-3 border-t flex items-center gap-2 text-sm text-slate-600">
+              <Filter className="w-4 h-4" />
+              <span>Showing {activeTab === 'returns' ? returnsData.length : damagesData.length} filtered results</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Professional Tabs for Returns vs Damages */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
