@@ -2153,7 +2153,7 @@ function SalesPage() {
                                   const itemDescription = order.order_items?.map(item => 
                                     `${item.item_name} (×${item.quantity})`
                                   ).join(', ') || 'Products';
-                                  
+
                                   // Build full address
                                   const address = order.shipping_address || {};
                                   const fullAddress = [
@@ -2162,13 +2162,16 @@ function SalesPage() {
                                     address.district,
                                     address.postal_code
                                   ].filter(Boolean).join(', ');
-                                  
+
                                   // Calculate total items
                                   const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
-                                  
+
+                                  // Use the actual order_number (e.g., PD020483) as invoice
+                                  const invoiceNumber = order.order_number || `PD${Date.now().toString().slice(-6)}`;
+
                                   // Prepare payload as per Steadfast documentation
                                   const courierPayload = {
-                                    invoice: order.order_number,
+                                    invoice: invoiceNumber,
                                     recipient_name: order.customer_name,
                                     recipient_phone: order.customer_phone,
                                     recipient_address: fullAddress || 'Address not provided',
@@ -2178,7 +2181,7 @@ function SalesPage() {
                                     total_lot: totalLot,
                                     delivery_type: 0 // 0 = home delivery
                                   };
-                                  
+
                                   // Send to webhook
                                   const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
                                     method: 'POST',
@@ -2187,16 +2190,16 @@ function SalesPage() {
                                     },
                                     body: JSON.stringify(courierPayload)
                                   });
-                                  
+
                                   toast.dismiss(loadingToast);
-                                  
+
                                   if (response.ok) {
                                     const result = await response.json();
-                                    
+
                                     // Handle response - can be array or object
                                     const consignmentData = Array.isArray(result) ? result[0] : result;
                                     const consignment = consignmentData?.consignment || consignmentData;
-                                    
+
                                     // Check if successful (status 200 or consignment exists)
                                     if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
                                       // Update order with courier info
@@ -2206,7 +2209,7 @@ function SalesPage() {
                                         courier_tracking_code: consignment?.tracking_code || null,
                                         courier_consignment_id: String(consignment?.consignment_id || '')
                                       });
-                                      
+
                                       queryClient.invalidateQueries(['orders']);
                                       toast.success('✅ Order sent to courier successfully!');
                                     } else {
