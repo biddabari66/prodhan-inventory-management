@@ -27,7 +27,6 @@ import FeludaAnalytics from './pages/FeludaAnalytics';
 import FinanceDashboard from './pages/FinanceDashboard';
 import FinanceManagement from './pages/FinanceManagement';
 import FinanceReports from './pages/FinanceReports';
-import FinancialReports from './pages/FinancialReports';
 import FollowUp from './pages/FollowUp';
 import Home from './pages/Home';
 import IncentiveManagement from './pages/IncentiveManagement';
@@ -110,7 +109,6 @@ export const PAGES = {
     "FinanceDashboard": FinanceDashboard,
     "FinanceManagement": FinanceManagement,
     "FinanceReports": FinanceReports,
-    "FinancialReports": FinancialReports,
     "FollowUp": FollowUp,
     "Home": Home,
     "IncentiveManagement": IncentiveManagement,
