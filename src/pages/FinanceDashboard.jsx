@@ -545,22 +545,7 @@ function FinanceDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Orders */}
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl bg-blue-500 flex items-center justify-center">
-                  <ShoppingCart className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xs text-blue-700 font-medium">Avg: ৳{financials.avgOrderValue.toFixed(0)}</span>
-              </div>
-              <p className="text-2xl lg:text-3xl font-bold text-slate-900">{financials.totalOrders}</p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">Total Orders</p>
-              <div className="mt-2 text-xs text-blue-700">
-                Delivered: {financials.deliveredOrders} | Pending: {financials.pendingOrders}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
 
         {/* Secondary Stats */}

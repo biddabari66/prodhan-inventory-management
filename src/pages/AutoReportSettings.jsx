@@ -126,15 +126,16 @@ function AutoReportSettingsPage() {
     }
 
     const config = reportTypeConfig[reportType];
+    const [hours, minutes] = scheduleTime.split(':');
     const repeatConfig = frequency === 'daily' 
-      ? { repeat_interval: 1, repeat_unit: 'days' }
+      ? { schedule_type: 'simple', schedule_mode: 'recurring', repeat_interval: 1, repeat_unit: 'days', start_time: `${hours}:${minutes}` }
       : frequency === 'weekly'
-      ? { repeat_interval: 1, repeat_unit: 'weeks', repeat_on_days: [1] }
-      : { repeat_interval: 1, repeat_unit: 'months', repeat_on_day_of_month: 1 };
+      ? { schedule_type: 'simple', schedule_mode: 'recurring', repeat_interval: 1, repeat_unit: 'weeks', repeat_on_days: [1], start_time: `${hours}:${minutes}` }
+      : { schedule_type: 'simple', schedule_mode: 'recurring', repeat_interval: 1, repeat_unit: 'months', repeat_on_day_of_month: 1, start_time: `${hours}:${minutes}` };
 
     setIsCreating(true);
     try {
-      await base44.functions.invoke('manageScheduledReports', {
+      const response = await base44.functions.invoke('manageScheduledReports', {
         action: 'create',
         task_data: {
           name: `${config.name} - ${frequency}`,
@@ -142,14 +143,18 @@ function AutoReportSettingsPage() {
           description: `${config.description} | Sent to ${recipients.length} recipient(s)`,
           function_args: { recipient_emails: recipients },
           ...repeatConfig,
-          start_time: scheduleTime,
-          is_active: true
+          is_active: true,
+          ends_type: 'never'
         }
       });
 
-      toast.success(`✅ ${config.name} scheduled!`);
-      setRecipients([]);
-      loadScheduledTasks();
+      if (response?.data?.success) {
+        toast.success(`✅ ${config.name} scheduled successfully!`);
+        setRecipients([]);
+        await loadScheduledTasks();
+      } else {
+        throw new Error(response?.data?.error || 'Schedule creation failed');
+      }
     } catch (error) {
       console.error('Error creating schedule:', error);
       toast.error('Failed to create schedule: ' + error.message);
