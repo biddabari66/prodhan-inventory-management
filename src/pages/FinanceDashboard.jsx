@@ -769,6 +769,84 @@ function FinanceDashboardPage() {
             </CardContent>
           </Card>
         </div>
+        
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Sales Trend Chart */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-red-600" />
+                Sales Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                {dailySalesTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailySalesTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+                      <YAxis tickFormatter={(v) => `৳${(v/1000).toFixed(0)}K`} tick={{ fontSize: 10 }} />
+                      <Tooltip 
+                        formatter={(value, name) => [
+                          name === 'revenue' ? `৳${value.toLocaleString()}` : value,
+                          name === 'revenue' ? 'Revenue' : 'Orders'
+                        ]}
+                        labelFormatter={(label) => `Date: ${label}`}
+                      />
+                      <Line type="monotone" dataKey="revenue" stroke="#DC2626" strokeWidth={2} dot={{ fill: '#DC2626' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400">
+                    No data for selected period
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Expense Breakdown Chart */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-red-600" />
+                Expense Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                {expenseBreakdown.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie>
+                      <Pie
+                        data={expenseBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ৳${(value/1000).toFixed(0)}K`}
+                        labelLine={false}
+                      >
+                        {expenseBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => `৳${value.toLocaleString()}`} />
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400">
+                    No expenses for selected period
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
