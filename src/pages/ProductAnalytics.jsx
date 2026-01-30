@@ -15,12 +15,15 @@ import {
 import {
   Package, DollarSign, ShoppingCart, BarChart3, Download,
   Search, Activity, PackageX, RotateCcw, ShoppingBag,
-  Loader2, ChevronDown, ChevronUp
+  Loader2, ChevronDown, ChevronUp, Target
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
 import { withPermission } from '../components/common/PermissionGuard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AdSpendTracker from '../components/analytics/AdSpendTracker';
+import ROIGenerator from '../components/analytics/ROIGenerator';
 
 const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#06B6D4', '#A855F7'];
 
@@ -139,6 +142,25 @@ function ProductAnalyticsDashboard() {
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
       <div className="w-full p-6 space-y-6">
+        
+        {/* Tabs for different sections */}
+        <Tabs defaultValue="analytics" className="w-full space-y-6">
+          <TabsList className="bg-white p-1 rounded-xl border shadow-sm">
+            <TabsTrigger value="analytics" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4" />
+              Product Analytics
+            </TabsTrigger>
+            <TabsTrigger value="adspend" className="gap-2 rounded-lg data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+              <Target className="w-4 h-4" />
+              Ad Spend
+            </TabsTrigger>
+            <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white">
+              <DollarSign className="w-4 h-4" />
+              ROI Generator
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="analytics" className="space-y-6">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -433,6 +455,16 @@ function ProductAnalyticsDashboard() {
             )}
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="adspend">
+            <AdSpendTracker />
+          </TabsContent>
+
+          <TabsContent value="roi">
+            <ROIGenerator />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
