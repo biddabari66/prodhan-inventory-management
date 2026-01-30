@@ -2231,10 +2231,49 @@ function SalesPage() {
                             </Button>
                           )}
                           {order.courier_placed && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
-                              <PackageCheck className="w-3 h-3 mr-1" />
-                              Courier
-                            </Badge>
+                            <>
+                              <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
+                                <PackageCheck className="w-3 h-3 mr-1" />
+                                Courier
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  const loadingToast = toast.loading('🔄 Updating status...');
+                                  try {
+                                    // Send POST to webhook
+                                    const response = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ 
+                                        order_id: order.order_number,
+                                        action: 'get_status'
+                                      })
+                                    });
+                                    
+                                    toast.dismiss(loadingToast);
+                                    
+                                    if (response.ok) {
+                                      const result = await response.json();
+                                      
+                                      // The webhook will update the order status automatically
+                                      queryClient.invalidateQueries(['orders']);
+                                      toast.success('✅ Status updated from courier!');
+                                    } else {
+                                      toast.error('Failed to fetch status from courier');
+                                    }
+                                  } catch (error) {
+                                    toast.dismiss(loadingToast);
+                                    toast.error('Error: ' + error.message);
+                                  }
+                                }}
+                                className="h-9 w-9 p-0 hover:bg-blue-50"
+                                title="Update Status from Courier"
+                              >
+                                <RefreshCw className="w-4 h-4 text-blue-600" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>

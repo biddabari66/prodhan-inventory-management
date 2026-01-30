@@ -132,6 +132,19 @@ function FinanceDashboardPage() {
   });
 
   // Calculate comprehensive financials
+  // Fetch ad spends for ROI
+  const { data: adSpends = [] } = useQuery({
+    queryKey: ['finance-adspends', dateRange.start, dateRange.end],
+    queryFn: async () => {
+      const allSpends = await base44.entities.AdSpend.list('-spend_date', 1000);
+      return allSpends.filter(s => {
+        const spendDate = s.spend_date?.split('T')[0];
+        return spendDate >= dateRange.start && spendDate <= dateRange.end;
+      });
+    },
+    staleTime: 2 * 60 * 1000
+  });
+
   const financials = useMemo(() => {
     // Revenue - ALL orders (total potential revenue)
     const totalRevenue = orders
@@ -184,6 +197,13 @@ function FinanceDashboardPage() {
     // Discount given
     const totalDiscount = orders.reduce((sum, o) => sum + (o.discount_amount || 0) + (o.coupon_discount || 0), 0);
 
+    // Ad Spend
+    const totalAdSpend = adSpends.reduce((sum, s) => sum + (s.total_spend_bdt || 0), 0);
+
+    // ROI Calculation
+    const totalCostsWithAds = totalExpenses + totalAdSpend;
+    const roi = totalCostsWithAds > 0 ? ((grossProfit - totalAdSpend) / totalCostsWithAds * 100) : 0;
+
     return {
       totalRevenue,
       collectedRevenue,
@@ -202,9 +222,11 @@ function FinanceDashboardPage() {
       avgOrderValue,
       shippingRevenue,
       totalDiscount,
-      purchaseCount: purchaseOrders.length
+      purchaseCount: purchaseOrders.length,
+      totalAdSpend,
+      roi
     };
-  }, [orders, purchaseOrders, packagingExpenses, returns]);
+  }, [orders, purchaseOrders, packagingExpenses, returns, adSpends]);
 
   // Chart data - Expense breakdown
   const expenseBreakdown = [
@@ -413,8 +435,62 @@ function FinanceDashboardPage() {
           )}
         </div>
 
-        {/* Key Metrics - 4 main cards */}
+        {/* Key Metrics - 7 main cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Orders */}
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-xl bg-blue-500 flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs text-blue-700 font-medium">Avg: ৳{financials.avgOrderValue.toFixed(0)}</span>
+              </div>
+              <p className="text-2xl lg:text-3xl font-bold text-slate-900">{financials.totalOrders}</p>
+              <p className="text-xs text-slate-600 mt-1 font-medium">Total Orders</p>
+              <div className="mt-2 text-xs text-blue-700">
+                Delivered: {financials.deliveredOrders} | Pending: {financials.pendingOrders}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Ad Spend */}
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-orange-50">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-500 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <p className="text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalAdSpend.toLocaleString()}</p>
+              <p className="text-xs text-slate-600 mt-1 font-medium">Ad Spend</p>
+              <div className="mt-2 text-xs text-amber-700">
+                Marketing Investment
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ROI */}
+          <Card className={`border-2 shadow-sm ${financials.roi >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${financials.roi >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <Badge className={financials.roi >= 0 ? 'bg-green-600' : 'bg-red-600'}>
+                  {financials.roi.toFixed(1)}%
+                </Badge>
+              </div>
+              <p className={`text-2xl lg:text-3xl font-bold ${financials.roi >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                ROI
+              </p>
+              <p className="text-xs text-slate-600 mt-1 font-medium">
+                {financials.roi >= 20 ? 'Excellent' : financials.roi >= 10 ? 'Good' : financials.roi >= 0 ? 'Low' : 'Negative'}
+              </p>
+            </CardContent>
+          </Card>
+        
+          <div className="lg:col-start-1 lg:col-span-4 grid grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Total Revenue */}
           <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
             <CardContent className="p-5">
