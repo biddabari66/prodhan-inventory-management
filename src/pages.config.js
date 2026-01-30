@@ -74,7 +74,6 @@ import ExportCenter from './pages/ExportCenter';
 import FacebookLeadsWebhook from './pages/FacebookLeadsWebhook';
 import FeludaAnalytics from './pages/FeludaAnalytics';
 import FinanceDashboard from './pages/FinanceDashboard';
-import FinanceManagement from './pages/FinanceManagement';
 import FinanceReports from './pages/FinanceReports';
 import FollowUp from './pages/FollowUp';
 import Home from './pages/Home';
@@ -157,7 +156,6 @@ export const PAGES = {
     "FacebookLeadsWebhook": FacebookLeadsWebhook,
     "FeludaAnalytics": FeludaAnalytics,
     "FinanceDashboard": FinanceDashboard,
-    "FinanceManagement": FinanceManagement,
     "FinanceReports": FinanceReports,
     "FollowUp": FollowUp,
     "Home": Home,
