@@ -11,7 +11,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Package, Truck, Target,
   AlertTriangle, Download, Calendar, BarChart3, PieChart, FileSpreadsheet,
   ShoppingCart, CreditCard, Wallet, ArrowUpRight, ArrowDownRight, RefreshCw,
-  Filter, ChevronDown
+  Filter, ChevronDown, Megaphone
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -200,9 +200,10 @@ function FinanceDashboardPage() {
     // Ad Spend
     const totalAdSpend = adSpends.reduce((sum, s) => sum + (s.total_spend_bdt || 0), 0);
 
-    // ROI Calculation
+    // ROI Calculation (profit after all costs including ads)
+    const netProfit = grossProfit - totalAdSpend;
     const totalCostsWithAds = totalExpenses + totalAdSpend;
-    const roi = totalCostsWithAds > 0 ? ((grossProfit - totalAdSpend) / totalCostsWithAds * 100) : 0;
+    const roi = totalCostsWithAds > 0 ? (netProfit / totalCostsWithAds * 100) : 0;
 
     return {
       totalRevenue,
