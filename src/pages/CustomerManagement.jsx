@@ -53,9 +53,33 @@ function CustomerManagementPage() {
 
   const loadCustomers = async () => {
     try {
-      // Limit to 500 for faster load, sorted by most valuable
-      const customerData = await base44.entities.Customer.list('-total_spent', 500);
-      setCustomers(customerData);
+      // 🚀 FAST LOADING: Load ALL customers in batches for complete history
+      const batchSize = 1000;
+      let allCustomers = [];
+      let offset = 0;
+      let hasMore = true;
+      
+      // First batch loads immediately for fast UI render
+      const firstBatch = await base44.entities.Customer.list('-total_spent', batchSize);
+      setCustomers(firstBatch);
+      allCustomers = firstBatch;
+      
+      // Continue loading remaining batches in background
+      if (firstBatch.length === batchSize) {
+        offset = batchSize;
+        while (hasMore) {
+          const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
+          allCustomers = [...allCustomers, ...batch];
+          setCustomers([...allCustomers]); // Progressive update
+          offset += batchSize;
+          hasMore = batch.length === batchSize;
+          
+          // Safety limit
+          if (allCustomers.length >= 10000) break;
+        }
+      }
+      
+      setCustomers(allCustomers);
     } catch (error) {
       console.error('Error loading customers:', error);
       toast.error('Failed to load customers');

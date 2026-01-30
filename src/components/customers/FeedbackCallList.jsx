@@ -697,10 +697,32 @@ export default function FeedbackCallList() {
               { key: 'order_number', label: 'Order Number', required: false }
             ]}
             onImport={async (data) => {
+              // DUPLICATE CHECKING: Check for existing entries by phone, product, and order date
+              const existingCalls = await base44.entities.FeedbackCall.list('-created_date', 2000);
+              
+              const duplicateMap = new Map();
+              existingCalls.forEach(call => {
+                const key = `${call.customer_phone}_${call.product}_${call.order_number}`;
+                duplicateMap.set(key, true);
+              });
+              
+              let importedCount = 0;
+              let skippedDuplicates = 0;
+              
               for (const entry of data) {
+                const key = `${entry.customer_phone}_${entry.product}_${entry.order_number}`;
+                
+                if (duplicateMap.has(key)) {
+                  skippedDuplicates++;
+                  continue;
+                }
+                
                 await base44.entities.FeedbackCall.create({ ...entry, feedback_status: 'pending' });
+                importedCount++;
               }
+              
               queryClient.invalidateQueries(['feedbackCalls']);
+              toast.success(`Imported ${importedCount} entries${skippedDuplicates > 0 ? `, skipped ${skippedDuplicates} duplicates` : ''}`);
             }}
             onClose={() => setIsImportOpen(false)}
           />

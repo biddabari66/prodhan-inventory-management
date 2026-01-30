@@ -640,10 +640,32 @@ export default function WelcomeCallList() {
               { key: 'notes', label: 'Notes', required: false }
             ]}
             onImport={async (data) => {
+              // DUPLICATE CHECKING: Check for existing entries by phone, product, and order date
+              const existingCalls = await base44.entities.WelcomeCall.list('-created_date', 2000);
+              
+              const duplicateMap = new Map();
+              existingCalls.forEach(call => {
+                const key = `${call.customer_phone}_${call.product}_${call.order_number}`;
+                duplicateMap.set(key, true);
+              });
+              
+              let importedCount = 0;
+              let skippedDuplicates = 0;
+              
               for (const entry of data) {
+                const key = `${entry.customer_phone}_${entry.product}_${entry.order_number}`;
+                
+                if (duplicateMap.has(key)) {
+                  skippedDuplicates++;
+                  continue;
+                }
+                
                 await base44.entities.WelcomeCall.create({ ...entry, call_status: 'pending' });
+                importedCount++;
               }
+              
               queryClient.invalidateQueries(['welcomeCalls']);
+              toast.success(`Imported ${importedCount} entries${skippedDuplicates > 0 ? `, skipped ${skippedDuplicates} duplicates` : ''}`);
             }}
             onClose={() => setIsImportOpen(false)}
           />
