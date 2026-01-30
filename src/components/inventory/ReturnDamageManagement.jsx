@@ -879,7 +879,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           <TableCell className="text-sm text-muted-foreground">
                             {metadata.customer_phone || '-'}
                           </TableCell>
-                          <TableCell className="text-sm">{metadata.reason || '-'}</TableCell>
+                          <TableCell className="text-sm">
+                            <div className="flex flex-col gap-1">
+                              <span>{metadata.reason || '-'}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
                           <TableCell className="text-right text-red-600 font-medium">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
