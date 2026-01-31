@@ -879,9 +879,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           <TableCell className="text-sm text-muted-foreground">
                             {metadata.customer_phone || '-'}
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-sm max-w-[200px]">
                             <div className="flex flex-col gap-1">
-                              <span>{metadata.reason || '-'}</span>
+                              <span className="font-medium text-slate-700">
+                                {metadata.reason || movement.notes?.split('Reason:')[1]?.split('.')[0]?.trim() || 'Not specified'}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
