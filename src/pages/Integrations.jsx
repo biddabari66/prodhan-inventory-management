@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Zap, Settings, CheckCircle, AlertTriangle, MessageSquare, Facebook, 
   Truck, Mail, MessageSquareText, Loader2, Info, PlusCircle, Wrench,
-  Users, Send, Clock, XCircle, ExternalLink, Shield, Bot, Sparkles, MessagesSquare
+  Users, Send, Clock, XCircle, ExternalLink, Shield, Bot, Sparkles, MessagesSquare, Webhook
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
@@ -27,70 +27,24 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const INTEGRATION_META = {
-  whatsapp: { 
-    icon: MessageSquare, 
-    title: 'WhatsApp Business', 
-    description: 'Send templated notifications and manage conversations for HR and CRM.',
-    color: 'text-green-500',
-    bgColor: 'bg-green-50',
-    hasConfig: true,
-    docs: 'https://developers.facebook.com/docs/whatsapp'
-  },
-  whatsapp_employee: {
-    icon: MessagesSquare,
-    title: 'Employee WhatsApp Chat',
-    description: 'All employees can connect their WhatsApp number for inventory chat & notifications.',
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    hasConfig: true,
-    docs: null,
-    isEmployeeChat: true
-  },
   whatsapp_agent: {
     icon: Bot,
     title: 'WhatsApp AI Agent',
-    description: 'Intelligent WhatsApp bot for automated employee communication and support.',
+    description: 'Build intelligent WhatsApp bots with Base44 AI agents - automated support & communication.',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     hasConfig: true,
     docs: null,
     isAgent: true
   },
-  facebook_ads: { 
-    icon: Facebook, 
-    title: 'Facebook Ads', 
-    description: 'Sync leads directly from your Facebook Lead Ads into the CRM module.',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    hasConfig: true,
-    docs: 'https://developers.facebook.com/docs/marketing-api'
-  },
   steadfast_courier: { 
     icon: Truck, 
     title: 'Steadfast Courier', 
-    description: 'Create and track courier orders for inventory and procurement.',
+    description: 'Automated courier integration - create shipments and track delivery status in real-time.',
     color: 'text-orange-500',
     bgColor: 'bg-orange-50',
     hasConfig: false,
     docs: 'https://steadfast.com.bd/documentation'
-  },
-  email_notifications: { 
-    icon: Mail, 
-    title: 'Email Notifications', 
-    description: 'Send system-wide email alerts for approvals, tasks, and reports.',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-50',
-    hasConfig: false,
-    docs: null
-  },
-  sms_gateway: { 
-    icon: MessageSquareText, 
-    title: 'SMS Gateway', 
-    description: 'Send transactional SMS for critical alerts and notifications (coming soon).',
-    color: 'text-cyan-500',
-    bgColor: 'bg-cyan-50',
-    hasConfig: false,
-    docs: null
   }
 };
 
@@ -654,40 +608,32 @@ export default function Integrations() {
   const [isWhatsAppPanelOpen, setIsWhatsAppPanelOpen] = useState(false);
   const [isManualMessageOpen, setIsManualMessageOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('system');
   const navigate = useNavigate();
 
   const loadIntegrations = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [me, response] = await Promise.all([
-        User.me(),
-        manageIntegrationStatus({ action: 'get_all_statuses' })
-      ]);
-      
+      const me = await User.me();
       setCurrentUser(me);
       
-      if (response.data) {
-        // Add WhatsApp Agent and Employee Chat to integrations list
-        const integrationsWithExtras = [
-          ...response.data,
-          {
-            name: 'whatsapp_employee',
-            status: 'active',
-            is_configured_on_backend: true,
-            last_updated: new Date().toISOString()
-          },
-          {
-            name: 'whatsapp_agent',
-            status: 'active',
-            is_configured_on_backend: true,
-            last_updated: new Date().toISOString()
-          }
-        ];
-        setIntegrations(integrationsWithExtras);
-        console.log('✅ Loaded integrations:', integrationsWithExtras);
-      } else {
-        throw new Error('Failed to load integration statuses');
-      }
+      // Only load system integrations (simplified)
+      const systemIntegrations = [
+        {
+          name: 'whatsapp_agent',
+          status: 'active',
+          is_configured_on_backend: true,
+          last_updated: new Date().toISOString()
+        },
+        {
+          name: 'steadfast_courier',
+          status: 'active',
+          is_configured_on_backend: true,
+          last_updated: new Date().toISOString()
+        }
+      ];
+      
+      setIntegrations(systemIntegrations);
     } catch (error) {
       console.error("❌ Error loading integrations:", error);
       toast.error(error.message || "Could not fetch integration statuses");
@@ -763,101 +709,84 @@ export default function Integrations() {
             System Integrations
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-2">
-            Connect and manage third-party services to enhance ERP functionality.
+            Connect external services and build powerful automations
           </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {!isAdmin && (
-            <Badge variant="outline" className="border-yellow-300 bg-yellow-50 text-yellow-700">
-              <Shield className="w-4 h-4 mr-1" />
-              View Only
-            </Badge>
-          )}
-          {isAdmin && (
-            <Button onClick={() => setIsManualMessageOpen(true)} className="bg-green-600 hover:bg-green-700">
-              <Send className="w-4 h-4 mr-2" />
-              Send WhatsApp
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => setIsRequestDialogOpen(true)}>
-            <PlusCircle className="w-4 h-4 mr-2" />
-            Request Integration
-          </Button>
         </div>
       </div>
 
-      {/* FIXED: Only show limited access warning if user is NOT admin */}
-      {!isAdmin && (
-        <Alert className="border-yellow-300 bg-yellow-50">
-          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          <AlertTitle className="text-yellow-800">Limited Access</AlertTitle>
-          <AlertDescription className="text-yellow-700">
-            You have read-only access to integrations. Contact an administrator to enable or configure integrations.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-white p-1 rounded-xl border shadow-sm">
+          <TabsTrigger value="system" className="gap-2 rounded-lg data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+            <Zap className="w-4 h-4" />
+            System Integrations
+          </TabsTrigger>
+          <TabsTrigger value="webhooks" className="gap-2 rounded-lg data-[state=active]:bg-violet-600 data-[state=active]:text-white">
+            <Webhook className="w-4 h-4" />
+            Webhook Automations
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2 rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <Bot className="w-4 h-4" />
+            AI Agents
+          </TabsTrigger>
+        </TabsList>
 
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertTitle>Configuration Notice</AlertTitle>
-        <AlertDescription>
-          Integrations marked with "Setup Required" need to be configured on the server-side by an administrator. 
-          Contact support to enable them.
-        </AlertDescription>
-      </Alert>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading integrations...</p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {integrations.map(integration => (
-            <IntegrationCard 
-              key={integration.name}
-              integration={integration}
-              onToggle={handleToggle}
-              onTest={handleTest}
-              onConfigure={handleConfigure}
-              currentUser={currentUser}
-              navigate={navigate}
-            />
-          ))}
-          
-          <Card className="premium-card border-dashed flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
-              <Wrench className="w-8 h-8 text-gray-400" />
+        <TabsContent value="system" className="space-y-6">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-violet-600 mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading integrations...</p>
+              </div>
             </div>
-            <CardTitle className="text-lg mb-2">More Integrations Coming Soon</CardTitle>
-            <p className="text-sm text-muted-foreground mb-4">
-              We are constantly working to connect Bee ERP with more services.
-            </p>
-            <Button variant="outline" onClick={() => setIsRequestDialogOpen(true)}>
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Suggest Integration
-            </Button>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {integrations.map(integration => (
+                <IntegrationCard 
+                  key={integration.name}
+                  integration={integration}
+                  onToggle={handleToggle}
+                  onTest={handleTest}
+                  onConfigure={handleConfigure}
+                  currentUser={currentUser}
+                  navigate={navigate}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="webhooks">
+          <WebhookAutomationBuilder />
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">WhatsApp AI Agent Builder</h3>
+                  <p className="text-sm text-slate-600 font-normal">Create intelligent conversational agents for WhatsApp</p>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-700">
+                Build powerful AI agents that can interact with your inventory, answer questions, and automate workflows via WhatsApp.
+              </p>
+              <Button 
+                onClick={() => window.open('https://app.base44.com/686aeb57b62314958e21fd12/agents', '_blank')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Open Agent Builder
+              </Button>
+            </CardContent>
           </Card>
-        </div>
-      )}
-      
-      <RequestIntegrationDialog 
-        isOpen={isRequestDialogOpen} 
-        onClose={() => setIsRequestDialogOpen(false)} 
-      />
-
-      <WhatsAppAdminPanel
-        isOpen={isWhatsAppPanelOpen}
-        onClose={() => setIsWhatsAppPanelOpen(false)}
-        onRefresh={loadIntegrations}
-      />
-
-      <WhatsAppManualMessageDialog
-        isOpen={isManualMessageOpen}
-        onClose={() => setIsManualMessageOpen(false)}
-      />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
