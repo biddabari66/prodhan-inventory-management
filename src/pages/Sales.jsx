@@ -2064,39 +2064,83 @@ function SalesPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                         {order.courier_placed && (
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={async () => {
-                               const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
-                               try {
-                                 const response = await base44.functions.invoke('steadfastStatusWebhook', {
-                                   order_id: order.order_number,
-                                   action: 'get_status'
-                                 });
+                           {order.courier_placed && (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={async () => {
+      const loadingToast = toast.loading('🔄 Updating courier status...');
+      try {
+        // Send POST request to the webhook
+        const response = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            order_number: order.order_number,
+            tracking_code: order.courier_tracking_code,
+            consignment_id: order.courier_consignment_id
+          })
+        });
 
-                                 toast.dismiss(loadingToast);
+        toast.dismiss(loadingToast);
 
-                                 if (response.data?.success) {
-                                   queryClient.invalidateQueries(['orders-sales-recent']);
-                                   queryClient.invalidateQueries(['orders-sales-all']);
-                                   toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
-                                 } else {
-                                   toast.error(response.data?.error || 'Failed to fetch status');
-                                 }
-                               } catch (error) {
-                                 toast.dismiss(loadingToast);
-                                 toast.error('Error: ' + error.message);
-                               }
-                             }}
-                             className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
-                             title="Update Status from Steadfast"
-                           >
-                             <RefreshCw className="w-3 h-3 mr-1" />
-                             Update
-                           </Button>
-                         )}
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Map Steadfast delivery status to our order status
+          const steadfastStatus = data.delivery_status || data.status;
+          let newOrderStatus = order.order_status;
+          
+          // Mapping based on Steadfast delivery statuses
+          const statusMapping = {
+            'pending': 'processing',
+            'delivered_approval_pending': 'out_for_delivery',
+            'partial_delivered_approval_pending': 'out_for_delivery',
+            'cancelled_approval_pending': 'processing',
+            'unknown_approval_pending': 'processing',
+            'delivered': 'delivered',
+            'partial_delivered': 'delivered',
+            'cancelled': 'cancelled',
+            'hold': 'processing',
+            'in_review': 'processing',
+            'unknown': 'processing'
+          };
+          
+          if (steadfastStatus && statusMapping[steadfastStatus]) {
+            newOrderStatus = statusMapping[steadfastStatus];
+            
+            // Update order status in database
+            await Order.update(order.id, {
+              order_status: newOrderStatus,
+              courier_status: steadfastStatus
+            });
+            
+            // Refresh orders list
+            queryClient.invalidateQueries(['orders-sales-recent']);
+            queryClient.invalidateQueries(['orders-sales-all']);
+            
+            toast.success(`✅ Status updated: ${steadfastStatus} → ${newOrderStatus}`);
+          } else {
+            toast.info(`ℹ️ Courier status: ${steadfastStatus || 'Unknown'}`);
+          }
+        } else {
+          const errorText = await response.text();
+          toast.error('Failed to fetch status: ' + (errorText || response.statusText));
+        }
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        toast.error('Error updating status: ' + error.message);
+      }
+    }}
+    className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
+    title="Update Status from Steadfast Courier"
+  >
+    <RefreshCw className="w-3 h-3 mr-1" />
+    Update
+  </Button>
+                      )}
                        </div>
                       </TableCell>
                       <TableCell>
