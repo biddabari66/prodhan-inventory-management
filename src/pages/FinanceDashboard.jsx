@@ -546,23 +546,26 @@ function FinanceDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Net Profit/Loss */}
-          <Card className={`border-2 shadow-sm ${financials.grossProfit >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
+          {/* Net Profit/Loss (after salaries) */}
+          <Card className={`border-2 shadow-sm ${financials.netProfit >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${financials.grossProfit >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${financials.netProfit >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <Badge className={financials.grossProfit >= 0 ? 'bg-green-600' : 'bg-red-600'}>
+                <Badge className={financials.netProfit >= 0 ? 'bg-green-600' : 'bg-red-600'}>
                   {financials.profitMargin.toFixed(1)}%
                 </Badge>
               </div>
-              <p className={`text-2xl lg:text-3xl font-bold ${financials.grossProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                ৳{Math.abs(financials.grossProfit).toLocaleString()}
+              <p className={`text-2xl lg:text-3xl font-bold ${financials.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                ৳{Math.abs(financials.netProfit).toLocaleString()}
               </p>
               <p className="text-xs text-slate-600 mt-1 font-medium">
-                {financials.grossProfit >= 0 ? 'Net Profit' : 'Net Loss'}
+                {financials.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
               </p>
+              {financials.totalSalaries > 0 && (
+                <p className="text-xs text-slate-500 mt-1">After ৳{financials.totalSalaries.toLocaleString()} salaries</p>
+              )}
             </CardContent>
           </Card>
 
