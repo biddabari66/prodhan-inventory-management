@@ -2022,46 +2022,81 @@ function SalesPage() {
                         </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                       <DropdownMenu modal={false}>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="outline" size="sm" className="h-8 gap-1">
-                             {getStatusBadge(order.order_status)}
-                             <ChevronDown className="w-3 h-3" />
+                       <div className="flex flex-col gap-1.5">
+                         <DropdownMenu modal={false}>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="outline" size="sm" className="h-8 gap-1 w-full">
+                               {getStatusBadge(order.order_status)}
+                               <ChevronDown className="w-3 h-3" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="center" sideOffset={4}>
+                              {order.order_status === 'pending' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
+                                  Confirm Order
+                                </DropdownMenuItem>
+                              )}
+                              {order.order_status === 'confirmed' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
+                                  <Package className="w-4 h-4 mr-2 text-indigo-600" />
+                                  Mark as Processing
+                                </DropdownMenuItem>
+                              )}
+                              {(order.order_status === 'processing' || order.order_status === 'packed') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                  <Truck className="w-4 h-4 mr-2 text-purple-600" />
+                                  Mark as Shipped
+                                </DropdownMenuItem>
+                              )}
+                              {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                  Mark as Delivered
+                                </DropdownMenuItem>
+                              )}
+                              {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
+                                  <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                                  Cancel Order
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                         {order.courier_placed && (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={async () => {
+                               const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
+                               try {
+                                 const response = await base44.functions.invoke('steadfastStatusWebhook', {
+                                   order_id: order.order_number,
+                                   action: 'get_status'
+                                 });
+
+                                 toast.dismiss(loadingToast);
+
+                                 if (response.data?.success) {
+                                   queryClient.invalidateQueries(['orders-sales-recent']);
+                                   queryClient.invalidateQueries(['orders-sales-all']);
+                                   toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
+                                 } else {
+                                   toast.error(response.data?.error || 'Failed to fetch status');
+                                 }
+                               } catch (error) {
+                                 toast.dismiss(loadingToast);
+                                 toast.error('Error: ' + error.message);
+                               }
+                             }}
+                             className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
+                             title="Update Status from Steadfast"
+                           >
+                             <RefreshCw className="w-3 h-3 mr-1" />
+                             Update
                            </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent align="center" sideOffset={4}>
-                            {order.order_status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                Confirm Order
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                Mark as Processing
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                <Truck className="w-4 h-4 mr-2 text-purple-600" />
-                                Mark as Shipped
-                              </DropdownMenuItem>
-                            )}
-                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Mark as Delivered
-                              </DropdownMenuItem>
-                            )}
-                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
-                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                                Cancel Order
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                         )}
+                       </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -2234,44 +2269,10 @@ function SalesPage() {
                             </Button>
                           )}
                           {order.courier_placed && (
-                            <>
-                              <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
-                                <PackageCheck className="w-3 h-3 mr-1" />
-                                {order.courier_status || 'Sent'}
-                              </Badge>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={async () => {
-                                  const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
-                                  try {
-                                    // Call our backend function which will call Steadfast API
-                                    const response = await base44.functions.invoke('steadfastStatusWebhook', {
-                                      order_id: order.order_number,
-                                      action: 'get_status'
-                                    });
-                                    
-                                    toast.dismiss(loadingToast);
-                                    
-                                    if (response.data?.success) {
-                                      queryClient.invalidateQueries(['orders-sales-recent']);
-                                      queryClient.invalidateQueries(['orders-sales-all']);
-                                      toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
-                                    } else {
-                                      toast.error(response.data?.error || 'Failed to fetch status');
-                                    }
-                                  } catch (error) {
-                                    toast.dismiss(loadingToast);
-                                    toast.error('Error: ' + error.message);
-                                  }
-                                }}
-                                className="h-8 px-3 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                                title="Update Status from Steadfast"
-                              >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                Update
-                              </Button>
-                            </>
+                            <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
+                              <PackageCheck className="w-3 h-3 mr-1" />
+                              {order.courier_status || 'Sent'}
+                            </Badge>
                           )}
                         </div>
                       </TableCell>

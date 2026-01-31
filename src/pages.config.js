@@ -94,6 +94,7 @@ import ManualReporting from './pages/ManualReporting';
 import MyAttendance from './pages/MyAttendance';
 import NotificationPreferences from './pages/NotificationPreferences';
 import NotificationSettings from './pages/NotificationSettings';
+import Payroll from './pages/Payroll';
 import PayrollReport from './pages/PayrollReport';
 import Performance from './pages/Performance';
 import PerformanceHub from './pages/PerformanceHub';
@@ -124,7 +125,6 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import Payroll from './pages/Payroll';
 import __Layout from './Layout.jsx';
 
 
@@ -176,6 +176,7 @@ export const PAGES = {
     "MyAttendance": MyAttendance,
     "NotificationPreferences": NotificationPreferences,
     "NotificationSettings": NotificationSettings,
+    "Payroll": Payroll,
     "PayrollReport": PayrollReport,
     "Performance": Performance,
     "PerformanceHub": PerformanceHub,
@@ -206,7 +207,6 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "Payroll": Payroll,
 }
 
 export const pagesConfig = {
