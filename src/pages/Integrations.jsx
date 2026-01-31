@@ -176,34 +176,11 @@ const WhatsAppManualMessageDialog = ({ isOpen, onClose }) => {
   );
 };
 
-const IntegrationCard = ({ integration, onToggle, onTest, onConfigure, currentUser, navigate }) => {
+const IntegrationCard = ({ integration, onConfigure, currentUser }) => {
   const meta = INTEGRATION_META[integration.name];
-  const [isLoading, setIsLoading] = useState(false);
 
-  if (!meta) return null; // Skip if no metadata
+  if (!meta) return null;
 
-  const handleToggle = async (checked) => {
-    setIsLoading(true);
-    await onToggle(integration.name, checked ? 'active' : 'inactive');
-    setIsLoading(false);
-  };
-  
-  const handleTest = async () => {
-    setIsLoading(true);
-    await onTest(integration.name);
-    setIsLoading(false);
-  };
-
-  const handleConfigure = () => {
-    if (integration.name === 'whatsapp_agent' && meta.isAgent) {
-      // Navigate to AI Agents dashboard
-      window.open('https://app.base44.com/686aeb57b62314958e21fd12/agents', '_blank');
-    } else {
-      onConfigure(integration.name);
-    }
-  };
-
-  // CRITICAL FIX: Update isAdmin to include super_admin
   const isAdmin = ['super_admin', 'admin', 'manager'].includes(currentUser?.job_role);
 
   return (
@@ -221,64 +198,20 @@ const IntegrationCard = ({ integration, onToggle, onTest, onConfigure, currentUs
             <CardDescription className="text-sm mt-1">{meta.description}</CardDescription>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          ) : meta.isAgent ? (
-            <Badge variant="default" className="bg-blue-700">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Configured
-            </Badge>
-          ) : (
-            <Switch
-              checked={integration.status === 'active'}
-              onCheckedChange={handleToggle}
-              disabled={!integration.is_configured_on_backend || !isAdmin}
-            />
-          )}
-        </div>
+        <Badge variant="default" className={meta.isAgent ? 'bg-blue-700' : 'bg-orange-600'}>
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Active
+        </Badge>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            {!meta.isAgent && (
-              <Badge variant={integration.status === 'active' ? 'default' : 'outline'} className="font-semibold">
-                {integration.status === 'active' ? (
-                  <>
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Active
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-3 h-3 mr-1" />
-                    Inactive
-                  </>
-                )}
-              </Badge>
-            )}
-            {!integration.is_configured_on_backend && !meta.isAgent && (
-              <Badge variant="outline" className="text-yellow-600 border-yellow-300 bg-yellow-50">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Setup Required
-              </Badge>
-            )}
-          </div>
+          <p className="text-sm text-slate-600">{meta.description}</p>
           <div className="flex gap-2 flex-wrap">
-            {(integration.is_configured_on_backend || meta.isAgent) && (
-              <>
-                {meta.hasConfig && isAdmin && (
-                  <Button variant="outline" size="sm" onClick={handleConfigure}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    {meta.isAgent ? 'Open Agent' : 'Configure'}
-                  </Button>
-                )}
-                {!meta.isAgent && (
-                  <Button variant="outline" size="sm" onClick={handleTest} disabled={isLoading}>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Test
-                  </Button>
-                )}
-              </>
+            {meta.hasConfig && isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => onConfigure(integration.name)}>
+                <Settings className="w-4 h-4 mr-2" />
+                {meta.isAgent ? 'Open Agent Builder' : 'Configure'}
+              </Button>
             )}
             {meta.docs && (
               <Button variant="ghost" size="sm" asChild>
@@ -290,15 +223,6 @@ const IntegrationCard = ({ integration, onToggle, onTest, onConfigure, currentUs
             )}
           </div>
         </div>
-        {!integration.is_configured_on_backend && !meta.isAgent && (
-          <Alert className="mt-4 border-yellow-300 bg-yellow-50">
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">Backend Configuration Required</AlertTitle>
-            <AlertDescription className="text-yellow-700 text-sm">
-              This integration requires environment variables to be set on the server. Please contact your system administrator.
-            </AlertDescription>
-          </Alert>
-        )}
       </CardContent>
     </Card>
   );
@@ -697,11 +621,8 @@ export default function Integrations() {
                 <IntegrationCard 
                   key={integration.name}
                   integration={integration}
-                  onToggle={handleToggle}
-                  onTest={handleTest}
                   onConfigure={handleConfigure}
                   currentUser={currentUser}
-                  navigate={navigate}
                 />
               ))}
             </div>
