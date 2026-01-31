@@ -37,6 +37,7 @@ import { ChevronDown } from 'lucide-react';
 import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
@@ -2099,92 +2100,124 @@ function SalesPage() {
                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewInvoice(order)}
-                            className="h-9 w-9 p-0 hover:bg-blue-50"
-                            title="Full Invoice"
-                          >
-                            <FileText className="w-4 h-4 text-blue-600" />
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 w-9 p-0 hover:bg-orange-50"
-                                title="Print Small Receipt"
-                              >
-                                <Receipt className="w-4 h-4 text-orange-600" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle className="text-center">Small Receipt</DialogTitle>
-                              </DialogHeader>
-                              <ThermalReceipt order={order} />
-                            </DialogContent>
-                          </Dialog>
-                          {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditOrder(order)}
-                              className="h-9 w-9 p-0 hover:bg-purple-50"
-                              title="Edit Order"
-                            >
-                              <Edit className="w-4 h-4 text-purple-600" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
-                              const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `invoice-${order.order_number}.pdf`;
-                              a.click();
-                              window.URL.revokeObjectURL(url);
-                              toast.success('Invoice downloaded!');
-                            }}
-                            className="h-9 w-9 p-0 hover:bg-green-50"
-                            title="Download Invoice"
-                          >
-                            <Download className="w-4 h-4 text-green-600" />
-                          </Button>
-                          {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Silent background sync - no loading toast
-                                base44.functions.invoke('syncToAdprofit', { order_id: order.id })
-                                  .then(async (response) => {
-                                    if (response.data?.success) {
-                                      queryClient.invalidateQueries(['orders']);
-                                    }
-                                  })
-                                  .catch((error) => {
-                                    console.error('Adprofit sync error:', error);
-                                  });
-                                toast.success('Sync started in background');
-                              }}
-                              className="h-9 w-9 p-0 hover:bg-indigo-50"
-                              title="Sync to Adprofit"
-                            >
-                              <Send className="w-4 h-4 text-indigo-600" />
-                            </Button>
-                          )}
-                          {/* Send to Courier Button */}
-                          {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
+                       <div className="flex items-center gap-1">
+                         <TooltipProvider delayDuration={300}>
+                           <Tooltip>
+                             <TooltipTrigger asChild>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => handleViewInvoice(order)}
+                                 className="h-9 w-9 p-0 hover:bg-blue-50"
+                               >
+                                 <FileText className="w-4 h-4 text-blue-600" />
+                               </Button>
+                             </TooltipTrigger>
+                             <TooltipContent side="bottom" className="text-xs">
+                               <p>View Invoice</p>
+                             </TooltipContent>
+                           </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-9 w-9 p-0 hover:bg-orange-50"
+                                    >
+                                      <Receipt className="w-4 h-4 text-orange-600" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-center">Small Receipt</DialogTitle>
+                                    </DialogHeader>
+                                    <ThermalReceipt order={order} />
+                                  </DialogContent>
+                                </Dialog>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Print Receipt</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            {canEdit && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditOrder(order)}
+                                    className="h-9 w-9 p-0 hover:bg-purple-50"
+                                  >
+                                    <Edit className="w-4 h-4 text-purple-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  <p>Edit Order</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `invoice-${order.order_number}.pdf`;
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    toast.success('Invoice downloaded!');
+                                  }}
+                                  className="h-9 w-9 p-0 hover:bg-green-50"
+                                >
+                                  <Download className="w-4 h-4 text-green-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Download JSON</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                        .then(async (response) => {
+                                          if (response.data?.success) {
+                                            queryClient.invalidateQueries(['orders']);
+                                          }
+                                        })
+                                        .catch((error) => {
+                                          console.error('Adprofit sync error:', error);
+                                        });
+                                      toast.success('Sync started in background');
+                                    }}
+                                    className="h-9 w-9 p-0 hover:bg-indigo-50"
+                                  >
+                                    <Send className="w-4 h-4 text-indigo-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  <p>Sync to Adprofit</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {/* Send to Courier Button */}
+                            {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async () => {
                                 const loadingToast = toast.loading('🚚 Sending to Courier...');
                                 try {
                                   // Build item description
@@ -2259,14 +2292,18 @@ function SalesPage() {
                                   }
                                 } catch (error) {
                                   toast.dismiss(loadingToast);
-                                  toast.error('Failed to send to courier: ' + error.message);
-                                }
-                              }}
-                              className="h-9 w-9 p-0 hover:bg-orange-50"
-                              title="Send to Courier"
-                            >
-                              <Truck className="w-4 h-4 text-orange-600" />
-                            </Button>
+                                      toast.error('Failed to send to courier: ' + error.message);
+                                    }
+                                  }}
+                                  className="h-9 w-9 p-0 hover:bg-orange-50"
+                                >
+                                  <Truck className="w-4 h-4 text-orange-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Send to Courier</p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {order.courier_placed && (
                             <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
@@ -2274,8 +2311,9 @@ function SalesPage() {
                               {order.courier_status || 'Sent'}
                             </Badge>
                           )}
-                        </div>
-                      </TableCell>
+                          </TooltipProvider>
+                          </div>
+                          </TableCell>
                     </TableRow>
                   ))
                 )}
