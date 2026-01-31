@@ -145,6 +145,19 @@ function FinanceDashboardPage() {
     staleTime: 2 * 60 * 1000
   });
 
+  // Fetch payroll for Prodhan.com employees (for profit/loss)
+  const { data: payrollRecords = [] } = useQuery({
+    queryKey: ['finance-payroll', dateRange.start, dateRange.end],
+    queryFn: async () => {
+      const allPayroll = await base44.entities.PayrollRecord.list('-created_date', 500);
+      // Filter by month range (YYYY-MM format)
+      const startMonth = dateRange.start.slice(0, 7);
+      const endMonth = dateRange.end.slice(0, 7);
+      return allPayroll.filter(p => p.month >= startMonth && p.month <= endMonth);
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
   const financials = useMemo(() => {
     // Revenue - ALL orders (total potential revenue)
     const totalRevenue = orders
@@ -200,9 +213,14 @@ function FinanceDashboardPage() {
     // Ad Spend
     const totalAdSpend = adSpends.reduce((sum, s) => sum + (s.total_spend_bdt || 0), 0);
 
-    // ROI Calculation (profit after all costs including ads)
-    const netProfit = grossProfit - totalAdSpend;
-    const totalCostsWithAds = totalExpenses + totalAdSpend;
+    // Employee Salaries (Prodhan.com E-commerce department only)
+    const totalSalaries = payrollRecords
+      .filter(p => p.payment_status === 'paid')
+      .reduce((sum, p) => sum + (p.net_salary || 0), 0);
+
+    // ROI Calculation (profit after all costs including ads and salaries)
+    const netProfit = grossProfit - totalAdSpend - totalSalaries;
+    const totalCostsWithAds = totalExpenses + totalAdSpend + totalSalaries;
     const roi = totalCostsWithAds > 0 ? (netProfit / totalCostsWithAds * 100) : 0;
 
     return {
@@ -225,9 +243,11 @@ function FinanceDashboardPage() {
       totalDiscount,
       purchaseCount: purchaseOrders.length,
       totalAdSpend,
+      totalSalaries,
+      netProfit,
       roi
     };
-  }, [orders, purchaseOrders, packagingExpenses, returns, adSpends]);
+  }, [orders, purchaseOrders, packagingExpenses, returns, adSpends, payrollRecords]);
 
   // Chart data - Expense breakdown
   const expenseBreakdown = [
