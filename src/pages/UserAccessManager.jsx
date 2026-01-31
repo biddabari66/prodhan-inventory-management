@@ -44,7 +44,8 @@ const ROLE_PERMISSIONS = {
     user_access_manager: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     integrations: { can_view: true, can_create: true, can_edit: true, can_delete: true },
     system_alerts: { can_view: true, can_create: true, can_edit: true, can_delete: true },
-    audit_trail: { can_view: true, can_export: true }
+    audit_trail: { can_view: true, can_export: true },
+    payroll: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true }
   },
   admin: {
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
@@ -68,7 +69,8 @@ const ROLE_PERMISSIONS = {
     user_access_manager: { can_view: true, can_create: true, can_edit: true },
     integrations: { can_view: true, can_create: true, can_edit: true },
     system_alerts: { can_view: true, can_create: true, can_edit: true },
-    audit_trail: { can_view: true, can_export: true }
+    audit_trail: { can_view: true, can_export: true },
+    payroll: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true }
   },
   inventory_manager: {
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
@@ -85,7 +87,8 @@ const ROLE_PERMISSIONS = {
     inventory_reports: { can_view: true, can_export: true },
     inventory_ai_insights: { can_view: true, can_export: true },
     finance_dashboard: { can_view: true, can_export: true },
-    financial_analytics: { can_view: true, can_export: true }
+    financial_analytics: { can_view: true, can_export: true },
+    payroll: { can_view: true, can_export: true }
   },
   procurement_officer: {
     inventory_overview: { can_view: true, can_create: true, can_edit: true, can_export: true },
