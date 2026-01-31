@@ -99,15 +99,28 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
             product_name: item.item_name,
             quantity: initialData.quantity,
             return_type: initialData.return_type,
-            condition_breakdown: initialData.condition_breakdown,
+            condition_breakdown: initialData.condition_breakdown || {
+              good: { quantity: initialData.quantity || 0, action: 'restock' },
+              fair: { quantity: 0, action: 'return_to_supplier' },
+              damaged: { quantity: 0, action: 'write_off' }
+            },
             financial_impact: initialData.financial_impact,
             restocking_fee: initialData.restocking_fee,
             unit_price: item.selling_price || 0
           }]);
         }
+        // Set form data properly for editing
+        setFormData({
+          ...initialData,
+          condition_breakdown: initialData.condition_breakdown || {
+            good: { quantity: initialData.quantity || 0, action: 'restock' },
+            fair: { quantity: 0, action: 'return_to_supplier' },
+            damaged: { quantity: 0, action: 'write_off' }
+          }
+        });
       }
     }
-  }, [initialData, inventory]);
+  }, [initialData?.id, inventory.length]);
 
   const handleProductChange = (value) => {
     const item = inventory.find(i => i.id === value);
