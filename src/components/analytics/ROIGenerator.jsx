@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,13 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calculator, Target, Package, TrendingUp, TrendingDown, AlertCircle, X } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Calculator, Target, Package, TrendingUp, TrendingDown, AlertCircle, X, Save, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 
 export default function ROIGenerator() {
+  const queryClient = useQueryClient();
   const [analysisType, setAnalysisType] = useState('single'); // 'single' or 'all'
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedProductForSingle, setSelectedProductForSingle] = useState('');
+  const [savedROIs, setSavedROIs] = useState([]);
   const [roiData, setRoiData] = useState({
     purchase_price: 0,
     selling_price: 0,
@@ -35,6 +40,25 @@ export default function ROIGenerator() {
     queryKey: ['adSpends'],
     queryFn: () => base44.entities.AdSpend.list('-spend_date', 500)
   });
+
+  // Load product data when single product selected
+  const handleProductSelect = (productId) => {
+    setSelectedProductForSingle(productId);
+    if (productId) {
+      const product = inventory.find(p => p.id === productId);
+      if (product) {
+        const productAdSpend = getProductAdSpend(productId);
+        setRoiData({
+          ...roiData,
+          purchase_price: product.purchase_price || 0,
+          selling_price: product.selling_price || 0,
+          quantity_sold: product.total_sold || 0,
+          ad_spend: productAdSpend,
+          packaging_per_unit: product.packaging_cost || 0
+        });
+      }
+    }
+  };
 
   // Get ad spend for selected product
   const getProductAdSpend = (productId) => {
@@ -106,6 +130,76 @@ export default function ROIGenerator() {
 
   const result = analysisType === 'single' ? calculateSingleROI() : calculateAllProductsROI;
 
+  // Save ROI to table
+  const handleSaveROI = () => {
+    if (!result || !result.totalRevenue) {
+      toast.error('Please calculate ROI first');
+      return;
+    }
+
+    const productName = analysisType === 'single' 
+      ? (selectedProductForSingle ? inventory.find(p => p.id === selectedProductForSingle)?.item_name : 'Manual Entry')
+      : `${selectedProducts.length} Products`;
+
+    const newROI = {
+      id: Date.now(),
+      date: format(new Date(), 'yyyy-MM-dd HH:mm'),
+      product_name: productName,
+      product_id: selectedProductForSingle || null,
+      revenue: result.totalRevenue,
+      costs: result.totalCosts,
+      profit: result.grossProfit,
+      roi: result.roi,
+      type: analysisType,
+      details: {
+        ad_spend: roiData.ad_spend,
+        packaging: result.totalPackaging || 0,
+        cogs: result.totalCOGS,
+        quantity: roiData.quantity_sold
+      }
+    };
+
+    setSavedROIs([newROI, ...savedROIs]);
+    toast.success('ROI saved to table!');
+  };
+
+  // Export saved ROIs to Excel
+  const handleExportROIs = () => {
+    if (savedROIs.length === 0) {
+      toast.error('No saved ROIs to export');
+      return;
+    }
+
+    const headers = ['Date', 'Product', 'Revenue', 'Total Costs', 'Profit', 'ROI %', 'Ad Spend', 'COGS', 'Quantity'];
+    const rows = savedROIs.map(r => [
+      r.date,
+      r.product_name,
+      r.revenue,
+      r.costs,
+      r.profit,
+      r.roi.toFixed(2),
+      r.details.ad_spend,
+      r.details.cogs,
+      r.details.quantity
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(row => row.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `roi_analysis_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${savedROIs.length} ROI records`);
+  };
+
+  // Delete saved ROI
+  const handleDeleteROI = (id) => {
+    setSavedROIs(savedROIs.filter(r => r.id !== id));
+    toast.success('ROI record deleted');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -138,6 +232,15 @@ export default function ROIGenerator() {
           <CardContent className="p-6 space-y-4">
             {analysisType === 'single' ? (
               <>
+                <div>
+                  <Label>Select Product (Optional - auto-fills data)</Label>
+                  <SearchableProductSelect
+                    inventory={inventory}
+                    value={selectedProductForSingle}
+                    onValueChange={handleProductSelect}
+                    placeholder="Search product to auto-fill..."
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Purchase Price (per unit)</Label>
@@ -362,11 +465,78 @@ export default function ROIGenerator() {
                     </div>
                   </div>
                 )}
+
+                {/* Save ROI Button */}
+                <Button 
+                  onClick={handleSaveROI} 
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save ROI to Table
+                </Button>
               </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Saved ROIs Table */}
+      {savedROIs.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="border-b bg-slate-50 flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Saved ROI Records ({savedROIs.length})</CardTitle>
+            <Button onClick={handleExportROIs} variant="outline" className="bg-green-50 border-green-200 text-green-700">
+              <Download className="w-4 h-4 mr-2" />
+              Export Excel
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>Date</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-right">Costs</TableHead>
+                    <TableHead className="text-right">Profit</TableHead>
+                    <TableHead className="text-right">ROI</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {savedROIs.map((roi) => (
+                    <TableRow key={roi.id}>
+                      <TableCell className="text-sm">{roi.date}</TableCell>
+                      <TableCell className="font-medium">{roi.product_name}</TableCell>
+                      <TableCell className="text-right text-green-600">৳{roi.revenue.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-red-600">৳{roi.costs.toLocaleString()}</TableCell>
+                      <TableCell className={`text-right font-semibold ${roi.profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                        ৳{roi.profit.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge className={roi.roi >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          {roi.roi.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteROI(roi.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
