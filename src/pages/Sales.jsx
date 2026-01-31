@@ -2234,44 +2234,39 @@ function SalesPage() {
                             <>
                               <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
                                 <PackageCheck className="w-3 h-3 mr-1" />
-                                Courier
+                                {order.courier_status || 'Sent'}
                               </Badge>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={async () => {
-                                  const loadingToast = toast.loading('🔄 Updating status...');
+                                  const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
                                   try {
-                                    // Send POST to webhook
-                                    const response = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ 
-                                        order_id: order.order_number,
-                                        action: 'get_status'
-                                      })
+                                    // Call our backend function which will call Steadfast API
+                                    const response = await base44.functions.invoke('steadfastStatusWebhook', {
+                                      order_id: order.order_number,
+                                      action: 'get_status'
                                     });
                                     
                                     toast.dismiss(loadingToast);
                                     
-                                    if (response.ok) {
-                                      const result = await response.json();
-                                      
-                                      // The webhook will update the order status automatically
-                                      queryClient.invalidateQueries(['orders']);
-                                      toast.success('✅ Status updated from courier!');
+                                    if (response.data?.success) {
+                                      queryClient.invalidateQueries(['orders-sales-recent']);
+                                      queryClient.invalidateQueries(['orders-sales-all']);
+                                      toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
                                     } else {
-                                      toast.error('Failed to fetch status from courier');
+                                      toast.error(response.data?.error || 'Failed to fetch status');
                                     }
                                   } catch (error) {
                                     toast.dismiss(loadingToast);
                                     toast.error('Error: ' + error.message);
                                   }
                                 }}
-                                className="h-9 w-9 p-0 hover:bg-blue-50"
-                                title="Update Status from Courier"
+                                className="h-8 px-3 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                title="Update Status from Steadfast"
                               >
-                                <RefreshCw className="w-4 h-4 text-blue-600" />
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Update
                               </Button>
                             </>
                           )}
