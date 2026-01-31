@@ -17,14 +17,11 @@ import {
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
-import { manageIntegrationStatus } from '@/functions/manageIntegrationStatus';
-import { whatsappAttendanceIntegration } from '@/functions/whatsappAttendanceIntegration';
-import { sendWhatsAppMessage } from '@/functions/sendWhatsAppMessage';
 import { User } from '@/entities/User';
-import { WhatsAppActivation } from '@/entities/WhatsAppActivation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import WebhookAutomationBuilder from '../components/integrations/WebhookAutomationBuilder';
 
 const INTEGRATION_META = {
   whatsapp_agent: {
@@ -617,7 +614,6 @@ export default function Integrations() {
       const me = await User.me();
       setCurrentUser(me);
       
-      // Only load system integrations (simplified)
       const systemIntegrations = [
         {
           name: 'whatsapp_agent',
@@ -635,8 +631,8 @@ export default function Integrations() {
       
       setIntegrations(systemIntegrations);
     } catch (error) {
-      console.error("❌ Error loading integrations:", error);
-      toast.error(error.message || "Could not fetch integration statuses");
+      console.error("Error loading user:", error);
+      toast.error("Could not load user data");
     } finally {
       setIsLoading(false);
     }
@@ -646,52 +642,9 @@ export default function Integrations() {
     loadIntegrations();
   }, [loadIntegrations]);
 
-  const handleToggle = async (name, newStatus) => {
-    const originalIntegrations = [...integrations];
-    
-    // Optimistic UI update
-    setIntegrations(prev => prev.map(i => i.name === name ? { ...i, status: newStatus } : i));
-
-    try {
-      const response = await manageIntegrationStatus({ 
-        action: 'toggle_status', 
-        integrationName: name,
-        newStatus: newStatus
-      });
-
-      if (response.data?.success) {
-        toast.success(response.data.message);
-        loadIntegrations();
-      } else {
-        throw new Error(response.data.error || `Failed to toggle ${name}`);
-      }
-    } catch (error) {
-      // Revert optimistic update on failure
-      setIntegrations(originalIntegrations);
-      toast.error(error.message);
-    }
-  };
-  
-  const handleTest = async (name) => {
-    const promise = async () => {
-        const response = await manageIntegrationStatus({ action: 'test_integration', integrationName: name });
-        if (response.data?.success) {
-            return response.data.message;
-        } else {
-            throw new Error(response.data.error || `Test failed for ${name}`);
-        }
-    };
-
-    toast.promise(promise(), {
-        loading: `Testing ${INTEGRATION_META[name]?.title || name}...`,
-        success: (message) => message,
-        error: (err) => err.message,
-    });
-  };
-
   const handleConfigure = (name) => {
-    if (name === 'whatsapp') {
-      setIsWhatsAppPanelOpen(true);
+    if (name === 'whatsapp_agent') {
+      window.open('https://app.base44.com/686aeb57b62314958e21fd12/agents', '_blank');
     }
   };
 
