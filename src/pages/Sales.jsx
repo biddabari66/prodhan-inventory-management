@@ -610,6 +610,153 @@ function SalesPage() {
     onlyFiltered: true
   });
 
+  // HELPER: Get Date String in BDT Timezone to fix "Today" filter bug
+  const getBDTDateString = useCallback((dateString) => {
+    if (!dateString) return '';
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(dateString));
+    } catch (e) {
+      console.error("Date parsing error:", e);
+      return '';
+    }
+  }, []);
+
+  // HELPER: Normalize Order ID to PD format
+  const getCorrectOrderId = (order) => {
+    if (!order) return 'N/A';
+    // If already PD, return it
+    if (order.order_number && order.order_number.startsWith('PD')) {
+      return order.order_number;
+    }
+    // If WC-, convert to PD
+    if (order.order_number && order.order_number.startsWith('WC-')) {
+      const digits = order.order_number.replace(/\D/g, '').slice(-6);
+      return `PD${digits.padStart(6, '0')}`;
+    }
+    // Fallback
+    const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
+    return `PD${fallbackDigits.padStart(6, '0')}`;
+  };
+
+  // HELPER: Generate High Fidelity Invoice HTML for Bulk Print
+  const generateBulkInvoiceHTML = useCallback((orders) => {
+    return orders.map((order, idx) => {
+      const displayId = getCorrectOrderId(order);
+      const orderDate = getBDTDateString(order.order_date);
+      const address = order.shipping_address || {};
+
+      return `
+      <div style="page-break-after: ${idx < orders.length - 1 ? 'always' : 'auto'}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 0; border: 1px solid #e0e0e0; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+        <div style="padding: 40px;">
+          <!-- HEADER SECTION (Red Design + LOGO) -->
+          <div style="text-align: center; margin-bottom: 40px; border-bottom: 4px solid #D32F2F; padding-bottom: 20px;">
+             <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 70px; margin-bottom: 15px; display: block;" />
+             <h1 style="margin: 0; font-size: 32px; font-weight: 900; color: #D32F2F; letter-spacing: -0.5px;">INVOICE</h1>
+             <p style="margin: 5px 0 0 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Official Receipt</p>
+          </div>
+
+          <!-- ORDER INFO & CUSTOMER INFO GRID -->
+          <div style="display: flex; justify-content: space-between; margin-bottom: 40px; gap: 30px;">
+            <!-- Bill To -->
+            <div style="flex: 1;">
+              <h3 style="margin: 0 0 15px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Bill To:</h3>
+              <p style="margin: 8px 0; font-size: 18px; font-weight: 700; color: #222; line-height: 1.4;">${order.customer_name || 'N/A'}</p>
+              <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
+              <p style="margin: 8px 0 0 0; font-size: 13px; color: #555; line-height: 1.5; white-space: pre-wrap;">
+                ${address.address_line || ''}, ${address.city || ''}, ${address.district || ''}
+              </p>
+            </div>
+            
+            <!-- Invoice Details -->
+            <div style="text-align: right; min-width: 220px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Invoice Details:</h2>
+              <div style="margin-bottom: 12px;">
+                <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Invoice #:</span>
+                <span style="font-size: 20px; font-weight: 800; color: #D32F2F; display: inline-block;">${displayId}</span>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Date:</span>
+                <span style="font-size: 15px; font-weight: 600; color: #333; display: inline-block;">${orderDate || 'N/A'}</span>
+              </div>
+               <div style="margin-bottom: 12px;">
+                <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Status:</span>
+                <span style="font-size: 14px; font-weight: 700; background: #e3f2fd; color: #1565c0; padding: 4px 10px; border-radius: 6px; display: inline-block;">
+                  ${(order.order_status || 'Pending').toUpperCase()}
+                </span>
+              </div>
+              <div>
+                 <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Payment:</span>
+                 <span style="font-size: 14px; font-weight: 600; color: #333; display: inline-block;">
+                   ${(order.payment_method || 'COD').toUpperCase()}
+                 </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ORDER DETAILS TABLE -->
+          <div style="margin-bottom: 30px;">
+            <h3 style="margin: 0 0 20px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Order Details</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 20px;">
+              <thead>
+                <tr style="background-color: #D32F2F; color: white;">
+                  <th style="padding: 14px 20px; text-align: left; font-weight: 600; border: 1px solid #b71c1c; width: 45%;">Item</th>
+                  <th style="padding: 14px 20px; text-align: center; width: 15%; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
+                  <th style="padding: 14px 20px; text-align: right; width: 20%; font-weight: 600; border: 1px solid #b71c1c;">Unit Price</th>
+                  <th style="padding: 14px 20px; text-align: right; width: 20%; font-weight: 600; border: 1px solid #b71c1c;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(order.order_items || []).map(item => `
+                  <tr style="border-bottom: 1px solid #eee; height: 50px;">
+                    <td style="padding: 14px 20px; color: #333; font-weight: 500; vertical-align: middle;">${item.item_name || 'Product'}</td>
+                    <td style="padding: 14px 20px; text-align: center; color: #555; vertical-align: middle;">${item.quantity || 1}</td>
+                    <td style="padding: 14px 20px; text-align: right; color: #555; vertical-align: middle;">৳${(item.unit_price || 0).toLocaleString()}</td>
+                    <td style="padding: 14px 20px; text-align: right; color: #333; font-weight: 700; vertical-align: middle;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- SUMMARY SECTION -->
+          <div style="display: flex; justify-content: flex-end;">
+            <div style="width: 300px; background: #f9f9f9; padding: 20px; border-radius: 8px;">
+               <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #555; font-size: 14px;">
+                  <span>Subtotal:</span>
+                  <span style="font-weight: 600;">৳${(order.subtotal || 0).toLocaleString()}</span>
+                </div>
+                ${((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 ? `
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #c62828; font-size: 14px;">
+                  <span>Discount:</span>
+                  <span style="font-weight: 600;">-৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</span>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #555; font-size: 14px;">
+                  <span>Shipping:</span>
+                  <span style="font-weight: 600;">৳${(order.shipping_cost || 0).toLocaleString()}</span>
+                </div>
+                <div style="border-top: 2px solid #ddd; margin: 10px 0;"></div>
+                <div style="display: flex; justify-content: space-between; padding: 15px 0; font-size: 22px; font-weight: 900; color: #D32F2F;">
+                  <span>Total:</span>
+                  <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+                </div>
+                 <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px; font-style: italic;">
+                  ${order.payment_status === 'paid' ? '✓ PAID' : 'PAYMENT PENDING (COD)'}
+                </div>
+            </div>
+          </div>
+
+          <!-- FOOTER -->
+          <div style="margin-top: 60px; padding-top: 30px; border-top: 1px dashed #ccc; text-align: center;">
+            <h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700; color: #D32F2F;">Thank you for shopping with Prodhan.com!</h2>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #777;">For queries, contact us: +880 1333 565401 | support@prodhan.com</p>
+          </div>
+        </div>
+      </div>
+      `;
+    }).join('');
+  }, []);
+
   // 🚀 LIGHTNING FAST: Cached current user
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -1069,19 +1216,19 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
   const [displayLimit, setDisplayLimit] = useState(50); // Start with less for instant render
   
-  // 🚀 Pre-compute date strings for ALL orders ONCE (expensive operation done only when orders change)
-  const ordersWithDateStr = useMemo(() => {
+  // 🚀 Pre-compute date strings for ALL orders ONCE (FIXED: using BDT timezone)
+  const ordersWithBDTDate = useMemo(() => {
     if (!orders || orders.length === 0) return [];
     return orders.map(o => ({
       ...o,
-      _dateStr: new Date(o.order_date || o.created_date).toISOString().slice(0, 10) // YYYY-MM-DD format, much faster
+      _bdtDateStr: getBDTDateString(o.order_date || o.created_date) // YYYY-MM-DD format in BDT
     }));
-  }, [orders]);
+  }, [orders, getBDTDateString]);
   
   const filteredOrders = useMemo(() => {
-    if (!ordersWithDateStr || ordersWithDateStr.length === 0) return [];
+    if (!ordersWithBDTDate || ordersWithBDTDate.length === 0) return [];
     
-    let filtered = ordersWithDateStr;
+    let filtered = ordersWithBDTDate;
     
     // 🚀 Fast path: Department filter first (most selective)
     if (!canViewAllDepartments) {
@@ -1090,11 +1237,12 @@ function SalesPage() {
       filtered = filtered.filter(o => o.department === departmentFilter);
     }
 
-    // 🚀 Date filter - now uses pre-computed _dateStr (O(1) per item)
+    // 🚀 FIXED: Date filter - now uses pre-computed _bdtDateStr (BD Timezone)
+    // Both the filter input AND the data are compared in BDT Time
     if (dateRange.from) {
       const fromDateStr = dateRange.from;
       const toDateStr = dateRange.to || dateRange.from;
-      filtered = filtered.filter(o => o._dateStr >= fromDateStr && o._dateStr <= toDateStr);
+      filtered = filtered.filter(o => o._bdtDateStr >= fromDateStr && o._bdtDateStr <= toDateStr);
     }
 
     // Status filter
@@ -1125,7 +1273,7 @@ function SalesPage() {
     }
 
     return filtered;
-  }, [ordersWithDateStr, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
+  }, [ordersWithBDTDate, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
   // 🚀 Display only limited rows for smooth scrolling
   const displayedOrders = useMemo(() => {
@@ -1278,7 +1426,7 @@ function SalesPage() {
   const stats = useMemo(() => {
     // Get today's date in Bangladesh timezone (Asia/Dhaka) - YYYY-MM-DD format
     const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
-    const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
+    const statsOrders = hasDateFilter ? filteredOrders : ordersWithBDTDate;
     
     // Single pass for main stats
     let pendingOrders = 0, confirmedOrders = 0, shippedOrders = 0, totalReturns = 0, totalProductQuantity = 0;
@@ -1299,12 +1447,9 @@ function SalesPage() {
     // Today's stats - single pass using BDT date comparison
     let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
     
-    for (const o of ordersWithDateStr) {
-      // Convert order date to BDT timezone for accurate comparison
-      const orderDate = o.order_date || o.created_date;
-      if (!orderDate) continue;
-      
-      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(orderDate));
+    for (const o of ordersWithBDTDate) {
+      // Use the pre-computed _bdtDateStr
+      const orderDateBDT = o._bdtDateStr;
       if (orderDateBDT !== todayStr) continue;
       
       todayOrdersCount++;
@@ -1325,7 +1470,7 @@ function SalesPage() {
       todayOrders: todayOrdersCount, todayPending, todayConfirmed, todayShipped, todayReturns, todayProductQty,
       isFiltered: hasDateFilter
     };
-  }, [ordersWithDateStr, filteredOrders, hasDateFilter, inventoryMap]);
+  }, [ordersWithBDTDate, filteredOrders, hasDateFilter, inventoryMap]);
 
   // Premium Pill Badges
   const getStatusBadge = (status) => {
@@ -1353,23 +1498,6 @@ function SalesPage() {
     };
     const { label, class: className } = config[status] || config.pending;
     return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
-  };
-
-  // HELPER: Normalize Order ID to PD format
-  const getCorrectOrderId = (order) => {
-    if (!order) return 'N/A';
-    // If already PD, return it
-    if (order.order_number && order.order_number.startsWith('PD')) {
-      return order.order_number;
-    }
-    // If WC-, convert to PD
-    if (order.order_number && order.order_number.startsWith('WC-')) {
-      const digits = order.order_number.replace(/\D/g, '').slice(-6);
-      return `PD${digits.padStart(6, '0')}`;
-    }
-    // Fallback
-    const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
-    return `PD${fallbackDigits.padStart(6, '0')}`;
   };
 
   // Logo URL constant
@@ -1716,7 +1844,7 @@ function SalesPage() {
                 </Button>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* Bulk Print Invoices - HIGH FIDELITY HTML WITH LOGO */}
+                {/* Bulk Print Invoices - BEAUTIFUL HIGH FIDELITY HTML */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -1727,127 +1855,13 @@ function SalesPage() {
                       return;
                     }
                     
-                    const printWindow = window.open('', '_blank', 'width=800,height=900');
+                    const printWindow = window.open('', '_blank', 'width=850,height=1000');
                     if (!printWindow) {
                       toast.error('Please allow popups for bulk printing');
                       return;
                     }
 
-                    // High-Fidelity Invoice Template with LOGO
-                    const invoicesHTML = selectedOrders.map((order, idx) => {
-                      const displayId = getCorrectOrderId(order);
-                      const orderDate = order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A';
-                      const address = order.shipping_address || {};
-
-                      return `
-                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 30px; border: 1px solid #e0e0e0; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                        
-                        <!-- HEADER SECTION (Red Design + LOGO) -->
-                        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #D32F2F; padding-bottom: 20px;">
-                          <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 60px; margin-bottom: 10px; object-fit: contain;" />
-                          <p style="margin: 8px 0 0 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Premium Online Shopping</p>
-                        </div>
-
-                        <!-- ORDER INFO & CUSTOMER INFO GRID -->
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; gap: 20px;">
-                          <!-- Bill To -->
-                          <div style="flex: 1;">
-                            <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Bill To:</h3>
-                            <p style="margin: 4px 0; font-size: 16px; font-weight: 600; color: #222;">${order.customer_name || 'N/A'}</p>
-                            <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
-                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #555; line-height: 1.4;">
-                              ${address.address_line || ''}, ${address.city || ''}, ${address.district || ''}
-                            </p>
-                          </div>
-                          
-                          <!-- Invoice Details -->
-                          <div style="text-align: right; min-width: 200px;">
-                            <h2 style="margin: 0 0 15px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Invoice Details:</h2>
-                            <div style="margin-bottom: 8px;">
-                              <span style="font-size: 13px; color: #666;">Invoice #:</span>
-                              <span style="font-size: 18px; font-weight: 700; color: #D32F2F; margin-left: 8px;">${displayId}</span>
-                            </div>
-                            <div style="margin-bottom: 8px;">
-                              <span style="font-size: 13px; color: #666;">Date:</span>
-                              <span style="font-size: 14px; font-weight: 600; color: #333; margin-left: 8px;">${orderDate}</span>
-                            </div>
-                            <div style="margin-bottom: 8px;">
-                              <span style="font-size: 13px; color: #666;">Status:</span>
-                              <span style="font-size: 13px; font-weight: 600; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 4px; margin-left: 8px;">
-                                ${(order.order_status || 'Pending').toUpperCase()}
-                              </span>
-                            </div>
-                            <div>
-                              <span style="font-size: 13px; color: #666;">Payment:</span>
-                              <span style="font-size: 13px; font-weight: 600; color: #333; margin-left: 8px;">
-                                ${(order.payment_method || 'COD').toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- ORDER DETAILS TABLE -->
-                        <div style="margin-bottom: 20px;">
-                          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Order Details</h3>
-                          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                            <thead>
-                              <tr style="background-color: #D32F2F; color: white;">
-                                <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #b71c1c;">Item</th>
-                                <th style="padding: 12px 15px; text-align: center; width: 80px; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
-                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Unit Price</th>
-                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              ${(order.order_items || []).map(item => `
-                                <tr style="border-bottom: 1px solid #eee;">
-                                  <td style="padding: 12px 15px; color: #333; font-weight: 500;">${item.item_name || 'Product'}</td>
-                                  <td style="padding: 12px 15px; text-align: center; color: #555;">${item.quantity || 1}</td>
-                                  <td style="padding: 12px 15px; text-align: right; color: #555;">৳${(item.unit_price || 0).toLocaleString()}</td>
-                                  <td style="padding: 12px 15px; text-align: right; color: #333; font-weight: 600;">৳${(item.subtotal || 0).toLocaleString()}</td>
-                                </tr>
-                              `).join('')}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <!-- SUMMARY SECTION -->
-                        <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
-                          <div style="width: 280px;">
-                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
-                              <span>Subtotal:</span>
-                              <span>৳${(order.subtotal || 0).toLocaleString()}</span>
-                            </div>
-                            ${((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 ? `
-                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #c62828; font-size: 14px;">
-                              <span>Discount:</span>
-                              <span>-৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</span>
-                            </div>
-                            ` : ''}
-                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
-                              <span>Shipping:</span>
-                              <span>৳${(order.shipping_cost || 0).toLocaleString()}</span>
-                            </div>
-                            <div style="border-top: 2px solid #ddd; margin: 10px 0;"></div>
-                            <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 18px; font-weight: 800; color: #D32F2F;">
-                              <span>Total:</span>
-                              <span>৳${(order.total_amount || 0).toLocaleString()}</span>
-                            </div>
-                            <div style="text-align: right; font-size: 12px; color: #888; margin-top: 4px;">
-                              ${order.payment_status === 'paid' ? '✓ PAID' : 'PAYMENT PENDING (COD)'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- FOOTER -->
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center;">
-                          <p style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Thank you for shopping with Prodhhan.com!</p>
-                          <p style="margin: 5px 0 0 0; font-size: 12px; color: #777;">For queries, contact us: +880 1333 565401 | support@prodhan.com</p>
-                        </div>
-                        
-                      </div>
-                    `;
-                    }).join('');
+                    const invoicesHTML = generateBulkInvoiceHTML(selectedOrders);
 
                     printWindow.document.write(`
                       <html>
@@ -2152,7 +2166,7 @@ function SalesPage() {
                                   Mark as Shipped
                                 </DropdownMenuItem>
                               )}
-                              {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                              {(order.order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
                                 <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
                                   <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
                                   Mark as Delivered
@@ -2173,7 +2187,7 @@ function SalesPage() {
     onClick={async () => {
       const loadingToast = toast.loading('🔄 Updating courier status...');
       try {
-        // Send POST request to the webhook
+        // Send POST request to webhook
         const response = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
           method: 'POST',
           headers: {
@@ -2312,91 +2326,104 @@ function SalesPage() {
                                   onClick={() => {
                                     // FIX: Generate proper printable invoice for PDF download
                                     const displayId = getCorrectOrderId(order);
-                                    const printWindow = window.open('', '_blank', 'width=800,height=900');
+                                    const printWindow = window.open('', '_blank', 'width=850,height=1000');
                                     if (!printWindow) return;
                                     
                                     const address = order.shipping_address || {};
+                                    const orderDate = getBDTDateString(order.order_date);
+
                                     const orderHTML = `
-                                      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 30px; border: 1px solid #e0e0e0;">
-                                        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #D32F2F; padding-bottom: 20px;">
-                                          <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 60px; margin-bottom: 10px; object-fit: contain;" />
-                                          <p style="margin: 8px 0 0 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Premium Online Shopping</p>
-                                        </div>
-                                        
-                                        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; gap: 20px;">
-                                          <div style="flex: 1;">
-                                            <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Bill To:</h3>
-                                            <p style="margin: 4px 0; font-size: 16px; font-weight: 600; color: #222;">${order.customer_name || 'N/A'}</p>
-                                            <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
-                                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #555; line-height: 1.4;">
-                                              ${address.address_line || ''}, ${address.city || ''}, ${address.district || ''}
-                                            </p>
+                                      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 0; border: 1px solid #e0e0e0; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+                                        <div style="padding: 40px;">
+                                          <div style="text-align: center; margin-bottom: 40px; border-bottom: 4px solid #D32F2F; padding-bottom: 20px;">
+                                             <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 70px; margin-bottom: 15px; display: block;" />
+                                             <h1 style="margin: 0; font-size: 32px; font-weight: 900; color: #D32F2F; letter-spacing: -0.5px;">INVOICE</h1>
+                                             <p style="margin: 5px 0 0 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Official Receipt</p>
                                           </div>
                                           
-                                          <div style="text-align: right; min-width: 200px;">
-                                            <h2 style="margin: 0 0 15px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Invoice Details:</h2>
-                                            <div style="margin-bottom: 8px;">
-                                              <span style="font-size: 13px; color: #666;">Invoice #:</span>
-                                              <span style="font-size: 18px; font-weight: 700; color: #D32F2F; margin-left: 8px;">${displayId}</span>
+                                          <div style="display: flex; justify-content: space-between; margin-bottom: 40px; gap: 30px;">
+                                            <div style="flex: 1;">
+                                              <h3 style="margin: 0 0 15px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Bill To:</h3>
+                                              <p style="margin: 8px 0; font-size: 18px; font-weight: 700; color: #222; line-height: 1.4;">${order.customer_name || 'N/A'}</p>
+                                              <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
+                                              <p style="margin: 8px 0 0 0; font-size: 13px; color: #555; line-height: 1.5; white-space: pre-wrap;">
+                                                ${address.address_line || ''}, ${address.city || ''}, ${address.district || ''}
+                                              </p>
                                             </div>
-                                            <div style="margin-bottom: 8px;">
-                                              <span style="font-size: 13px; color: #666;">Date:</span>
-                                              <span style="font-size: 14px; font-weight: 600; color: #333; margin-left: 8px;">${new Date(order.order_date).toLocaleDateString()}</span>
+                                            
+                                            <div style="text-align: right; min-width: 220px;">
+                                              <h2 style="margin: 0 0 15px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Invoice Details:</h2>
+                                              <div style="margin-bottom: 12px;">
+                                                <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Invoice #:</span>
+                                                <span style="font-size: 20px; font-weight: 800; color: #D32F2F; display: inline-block;">${displayId}</span>
+                                              </div>
+                                              <div style="margin-bottom: 12px;">
+                                                <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Date:</span>
+                                                <span style="font-size: 15px; font-weight: 600; color: #333; display: inline-block;">${orderDate || 'N/A'}</span>
+                                              </div>
+                                               <div style="margin-bottom: 12px;">
+                                                <span style="font-size: 13px; color: #666; display: inline-block; width: 80px;">Status:</span>
+                                                <span style="font-size: 14px; font-weight: 700; background: #e3f2fd; color: #1565c0; padding: 4px 10px; border-radius: 6px; display: inline-block;">
+                                                  ${(order.order_status || 'Pending').toUpperCase()}
+                                                </span>
+                                              </div>
                                             </div>
-                                          </div>
-                                        </div>
+                                           </div>
 
-                                        <div style="margin-bottom: 20px;">
-                                          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Order Details</h3>
-                                          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                                            <thead>
-                                              <tr style="background-color: #D32F2F; color: white;">
-                                                <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #b71c1c;">Item</th>
-                                                <th style="padding: 12px 15px; text-align: center; width: 80px; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
-                                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Price</th>
-                                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Total</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              ${(order.order_items || []).map(item => `
-                                                <tr style="border-bottom: 1px solid #eee;">
-                                                  <td style="padding: 12px 15px; color: #333; font-weight: 500;">${item.item_name || 'Product'}</td>
-                                                  <td style="padding: 12px 15px; text-align: center; color: #555;">${item.quantity || 1}</td>
-                                                  <td style="padding: 12px 15px; text-align: right; color: #555;">৳${(item.unit_price || 0).toLocaleString()}</td>
-                                                  <td style="padding: 12px 15px; text-align: right; color: #333; font-weight: 600;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                                          <div style="margin-bottom: 30px;">
+                                            <h3 style="margin: 0 0 20px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Order Details</h3>
+                                            <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 20px;">
+                                              <thead>
+                                                <tr style="background-color: #D32F2F; color: white;">
+                                                  <th style="padding: 14px 20px; text-align: left; font-weight: 600; border: 1px solid #b71c1c; width: 45%;">Item</th>
+                                                  <th style="padding: 14px 20px; text-align: center; width: 15%; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
+                                                  <th style="padding: 14px 20px; text-align: right; width: 20%; font-weight: 600; border: 1px solid #b71c1c;">Unit Price</th>
+                                                  <th style="padding: 14px 20px; text-align: right; width: 20%; font-weight: 600; border: 1px solid #b71c1c;">Total</th>
                                                 </tr>
-                                              `).join('')}
-                                            </tbody>
-                                          </table>
-                                        </div>
+                                              </thead>
+                                              <tbody>
+                                                ${(order.order_items || []).map(item => `
+                                                  <tr style="border-bottom: 1px solid #eee; height: 50px;">
+                                                    <td style="padding: 14px 20px; color: #333; font-weight: 500; vertical-align: middle;">${item.item_name || 'Product'}</td>
+                                                    <td style="padding: 14px 20px; text-align: center; color: #555; vertical-align: middle;">${item.quantity || 1}</td>
+                                                    <td style="padding: 14px 20px; text-align: right; color: #555; vertical-align: middle;">৳${(item.unit_price || 0).toLocaleString()}</td>
+                                                    <td style="padding: 14px 20px; text-align: right; color: #333; font-weight: 700; vertical-align: middle;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                                                  </tr>
+                                                `).join('')}
+                                              </tbody>
+                                            </table>
+                                          </div>
 
-                                        <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
-                                          <div style="width: 280px;">
-                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
-                                              <span>Subtotal:</span>
-                                              <span>৳${(order.subtotal || 0).toLocaleString()}</span>
-                                            </div>
-                                            ${((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 ? `
-                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #c62828; font-size: 14px;">
-                                              <span>Discount:</span>
-                                              <span>-৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</span>
-                                            </div>
-                                            ` : ''}
-                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
-                                              <span>Shipping:</span>
-                                              <span>৳${(order.shipping_cost || 0).toLocaleString()}</span>
-                                            </div>
-                                            <div style="border-top: 2px solid #ddd; margin: 10px 0;"></div>
-                                            <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 18px; font-weight: 800; color: #D32F2F;">
-                                              <span>Total:</span>
-                                              <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+                                          <div style="display: flex; justify-content: flex-end;">
+                                            <div style="width: 300px; background: #f9f9f9; padding: 20px; border-radius: 8px;">
+                                                 <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #555; font-size: 14px;">
+                                                  <span>Subtotal:</span>
+                                                  <span style="font-weight: 600;">৳${(order.subtotal || 0).toLocaleString()}</span>
+                                                </div>
+                                                ${((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 ? `
+                                                <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #c62828; font-size: 14px;">
+                                                  <span>Discount:</span>
+                                                  <span style="font-weight: 600;">-৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</span>
+                                                </div>
+                                                ` : ''}
+                                                <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #555; font-size: 14px;">
+                                                  <span>Shipping:</span>
+                                                  <span style="font-weight: 600;">৳${(order.shipping_cost || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div style="border-top: 2px solid #ddd; margin: 10px 0;"></div>
+                                                <div style="display: flex; justify-content: space-between; padding: 15px 0; font-size: 22px; font-weight: 900; color: #D32F2F;">
+                                                  <span>Total:</span>
+                                                  <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+                                                </div>
+                                                 <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px; font-style: italic;">
+                                                  ${order.payment_status === 'paid' ? '✓ PAID' : 'PAYMENT PENDING (COD)'}
+                                                </div>
                                             </div>
                                           </div>
-                                        </div>
-                                        
-                                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center;">
-                                          <p style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Thank you for shopping with Prodhhan.com!</p>
-                                        </div>
+                                          
+                                          <div style="margin-top: 60px; padding-top: 30px; border-top: 1px dashed #ccc; text-align: center;">
+                                            <h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700; color: #D32F2F;">Thank you for shopping with Prodhan.com!</h2>
+                                          </div>
                                       </div>
                                     `;
 
