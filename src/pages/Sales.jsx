@@ -192,7 +192,7 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
     e.preventDefault();
 
     if (formData.order_items.length === 0) {
-      toast.error('Please add at least one item to the order');
+      toast.error('Please add at least one item to order');
       return;
     }
 
@@ -955,6 +955,7 @@ function SalesPage() {
     updatePaymentStatusMutation.mutate({ orderId: order.id, newPaymentStatus });
   };
 
+  // FIXED: Enhanced Bulk Actions
   const handleBulkAction = async (action) => {
     if (selectedOrderIds.length === 0) {
       toast.error('Please select orders first');
@@ -968,19 +969,23 @@ function SalesPage() {
       
       try {
         await Promise.all(selectedOrderIds.map(id => Order.delete(id)));
-        queryClient.invalidateQueries(['orders']);
+        // Invalidate specific queries to ensure instant UI update
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-recent'] });
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-all'] });
         toast.success(`${selectedOrderIds.length} order(s) deleted successfully`);
         setSelectedOrderIds([]);
       } catch (error) {
         toast.error('Failed to delete orders: ' + error.message);
       }
     } else {
-      // Bulk status update
+      // Bulk status update (confirmed, shipped, delivered)
       try {
         await Promise.all(selectedOrderIds.map(id => 
           Order.update(id, { order_status: action })
         ));
-        queryClient.invalidateQueries(['orders']);
+        // Invalidate specific queries to ensure instant UI update
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-recent'] });
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-all'] });
         toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
         setSelectedOrderIds([]);
       } catch (error) {
@@ -1350,6 +1355,26 @@ function SalesPage() {
     return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
   };
 
+  // HELPER: Normalize Order ID to PD format
+  const getCorrectOrderId = (order) => {
+    if (!order) return 'N/A';
+    // If already PD, return it
+    if (order.order_number && order.order_number.startsWith('PD')) {
+      return order.order_number;
+    }
+    // If WC-, convert to PD
+    if (order.order_number && order.order_number.startsWith('WC-')) {
+      const digits = order.order_number.replace(/\D/g, '').slice(-6);
+      return `PD${digits.padStart(6, '0')}`;
+    }
+    // Fallback
+    const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
+    return `PD${fallbackDigits.padStart(6, '0')}`;
+  };
+
+  // Logo URL constant
+  const PRODHAN_LOGO = "https://z-cdn-media.chatglm.cn/files/ce97af84-8f81-419d-b062-e3bbb9bb0ff9.png?auth_key=1869978983-2c45fe054a014d9389481fe00700cc8c-0-8957bc7ab0a2e8e8d935b312e5b678f1";
+
   // 🚀 LIGHTNING FAST: Show skeleton only on first load, not on refetch
   if (ordersLoading && orders.length === 0) {
     return (
@@ -1691,7 +1716,7 @@ function SalesPage() {
                 </Button>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* Bulk Print Invoices */}
+                {/* Bulk Print Invoices - HIGH FIDELITY HTML WITH LOGO */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -1702,61 +1727,138 @@ function SalesPage() {
                       return;
                     }
                     
-                    // Open new window for bulk printing
-                    const printWindow = window.open('', '_blank', 'width=800,height=600');
+                    const printWindow = window.open('', '_blank', 'width=800,height=900');
                     if (!printWindow) {
                       toast.error('Please allow popups for bulk printing');
                       return;
                     }
 
-                    const invoicesHTML = selectedOrders.map((order, idx) => `
-                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; padding: 20px; font-family: Arial, sans-serif;">
-                        <div style="text-align: center; margin-bottom: 15px;">
-                          <h2 style="margin: 0; color: #D32F2F;">Prodhan.com</h2>
-                          <p style="margin: 5px 0; font-size: 12px;">প্রোধান.কম - অনলাইন শপিং</p>
+                    // High-Fidelity Invoice Template with LOGO
+                    const invoicesHTML = selectedOrders.map((order, idx) => {
+                      const displayId = getCorrectOrderId(order);
+                      const orderDate = order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A';
+                      const address = order.shipping_address || {};
+
+                      return `
+                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 30px; border: 1px solid #e0e0e0; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                        
+                        <!-- HEADER SECTION (Red Design + LOGO) -->
+                        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #D32F2F; padding-bottom: 20px;">
+                          <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 60px; margin-bottom: 10px; object-fit: contain;" />
+                          <p style="margin: 8px 0 0 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Premium Online Shopping</p>
                         </div>
-                        <hr/>
-                        <p><strong>Order:</strong> ${order.order_number || 'N/A'}</p>
-                        <p><strong>Date:</strong> ${order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A'}</p>
-                        <p><strong>Customer:</strong> ${order.customer_name || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${order.customer_phone || 'N/A'}</p>
-                        <p><strong>Address:</strong> ${order.shipping_address?.address_line || ''}, ${order.shipping_address?.city || ''}</p>
-                        <hr/>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                          <tr style="background: #f0f0f0;">
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: left;">Item</th>
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: center;">Qty</th>
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: right;">Price</th>
-                          </tr>
-                          ${(order.order_items || []).map(item => `
-                            <tr>
-                              <td style="border: 1px solid #ddd; padding: 5px;">${item.item_name || 'Product'}</td>
-                              <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantity || 1}</td>
-                              <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">৳${(item.subtotal || 0).toLocaleString()}</td>
-                            </tr>
-                          `).join('')}
-                        </table>
-                        <hr/>
-                        <div style="text-align: right;">
-                          <p><strong>Subtotal:</strong> ৳${(order.subtotal || 0).toLocaleString()}</p>
-                          ${(order.discount_amount || 0) + (order.coupon_discount || 0) > 0 ? `<p><strong>Discount:</strong> -৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</p>` : ''}
-                          <p><strong>Shipping:</strong> ৳${(order.shipping_cost || 0).toLocaleString()}</p>
-                          <p style="font-size: 16px;"><strong>Total: ৳${(order.total_amount || 0).toLocaleString()}</strong></p>
+
+                        <!-- ORDER INFO & CUSTOMER INFO GRID -->
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; gap: 20px;">
+                          <!-- Bill To -->
+                          <div style="flex: 1;">
+                            <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Bill To:</h3>
+                            <p style="margin: 4px 0; font-size: 16px; font-weight: 600; color: #222;">${order.customer_name || 'N/A'}</p>
+                            <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #555; line-height: 1.4;">
+                              ${address.address_line || ''}, ${address.city || ''}, ${address.district || ''}
+                            </p>
+                          </div>
+                          
+                          <!-- Invoice Details -->
+                          <div style="text-align: right; min-width: 200px;">
+                            <h2 style="margin: 0 0 15px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Invoice Details:</h2>
+                            <div style="margin-bottom: 8px;">
+                              <span style="font-size: 13px; color: #666;">Invoice #:</span>
+                              <span style="font-size: 18px; font-weight: 700; color: #D32F2F; margin-left: 8px;">${displayId}</span>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                              <span style="font-size: 13px; color: #666;">Date:</span>
+                              <span style="font-size: 14px; font-weight: 600; color: #333; margin-left: 8px;">${orderDate}</span>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                              <span style="font-size: 13px; color: #666;">Status:</span>
+                              <span style="font-size: 13px; font-weight: 600; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 4px; margin-left: 8px;">
+                                ${(order.order_status || 'Pending').toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <span style="font-size: 13px; color: #666;">Payment:</span>
+                              <span style="font-size: 13px; font-weight: 600; color: #333; margin-left: 8px;">
+                                ${(order.payment_method || 'COD').toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #666;">
-                          <p>Thank you for shopping with Prodhan.com!</p>
+
+                        <!-- ORDER DETAILS TABLE -->
+                        <div style="margin-bottom: 20px;">
+                          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Order Details</h3>
+                          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <thead>
+                              <tr style="background-color: #D32F2F; color: white;">
+                                <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #b71c1c;">Item</th>
+                                <th style="padding: 12px 15px; text-align: center; width: 80px; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
+                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Unit Price</th>
+                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${(order.order_items || []).map(item => `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                  <td style="padding: 12px 15px; color: #333; font-weight: 500;">${item.item_name || 'Product'}</td>
+                                  <td style="padding: 12px 15px; text-align: center; color: #555;">${item.quantity || 1}</td>
+                                  <td style="padding: 12px 15px; text-align: right; color: #555;">৳${(item.unit_price || 0).toLocaleString()}</td>
+                                  <td style="padding: 12px 15px; text-align: right; color: #333; font-weight: 600;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                                </tr>
+                              `).join('')}
+                            </tbody>
+                          </table>
                         </div>
+
+                        <!-- SUMMARY SECTION -->
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
+                          <div style="width: 280px;">
+                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
+                              <span>Subtotal:</span>
+                              <span>৳${(order.subtotal || 0).toLocaleString()}</span>
+                            </div>
+                            ${((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 ? `
+                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #c62828; font-size: 14px;">
+                              <span>Discount:</span>
+                              <span>-৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</span>
+                            </div>
+                            ` : ''}
+                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
+                              <span>Shipping:</span>
+                              <span>৳${(order.shipping_cost || 0).toLocaleString()}</span>
+                            </div>
+                            <div style="border-top: 2px solid #ddd; margin: 10px 0;"></div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 18px; font-weight: 800; color: #D32F2F;">
+                              <span>Total:</span>
+                              <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+                            </div>
+                            <div style="text-align: right; font-size: 12px; color: #888; margin-top: 4px;">
+                              ${order.payment_status === 'paid' ? '✓ PAID' : 'PAYMENT PENDING (COD)'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- FOOTER -->
+                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center;">
+                          <p style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Thank you for shopping with Prodhhan.com!</p>
+                          <p style="margin: 5px 0 0 0; font-size: 12px; color: #777;">For queries, contact us: +880 1333 565401 | support@prodhan.com</p>
+                        </div>
+                        
                       </div>
-                    `).join('');
+                    `;
+                    }).join('');
 
                     printWindow.document.write(`
                       <html>
                         <head>
-                          <title>Bulk Invoices - ${selectedOrders.length} Orders</title>
+                          <title>Print Invoices</title>
                           <style>
-                            @media print {
-                              body { margin: 0; }
+                            @media print { 
+                              body { margin: 0; -webkit-print-color-adjust: exact; } 
+                              @page { margin: 10mm; }
                             }
+                            @page { size: A4; margin: 0; }
                           </style>
                         </head>
                         <body>${invoicesHTML}</body>
@@ -1900,7 +2002,7 @@ function SalesPage() {
                       </TableCell>
                       <TableCell>
                        <div className="flex flex-col gap-1">
-                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{order.order_number?.startsWith('PD') ? order.order_number : `PD${order.order_number?.replace(/\D/g, '').slice(-6) || order.id?.slice(-6) || '000000'}`}</span>
+                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{getCorrectOrderId(order)}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
                              <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
@@ -2208,14 +2310,105 @@ function SalesPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `invoice-${order.order_number}.pdf`;
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    toast.success('Invoice downloaded!');
+                                    // FIX: Generate proper printable invoice for PDF download
+                                    const displayId = getCorrectOrderId(order);
+                                    const printWindow = window.open('', '_blank', 'width=800,height=900');
+                                    if (!printWindow) return;
+                                    
+                                    const address = order.shipping_address || {};
+                                    const orderHTML = `
+                                      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 30px; border: 1px solid #e0e0e0;">
+                                        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #D32F2F; padding-bottom: 20px;">
+                                          <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 60px; margin-bottom: 10px; object-fit: contain;" />
+                                          <p style="margin: 8px 0 0 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Premium Online Shopping</p>
+                                        </div>
+                                        
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; gap: 20px;">
+                                          <div style="flex: 1;">
+                                            <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Bill To:</h3>
+                                            <p style="margin: 4px 0; font-size: 16px; font-weight: 600; color: #222;">${order.customer_name || 'N/A'}</p>
+                                            <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
+                                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #555; line-height: 1.4;">
+                                              ${address.address_line || ''}, ${address.city || ''}, ${address.district || ''}
+                                            </p>
+                                          </div>
+                                          
+                                          <div style="text-align: right; min-width: 200px;">
+                                            <h2 style="margin: 0 0 15px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Invoice Details:</h2>
+                                            <div style="margin-bottom: 8px;">
+                                              <span style="font-size: 13px; color: #666;">Invoice #:</span>
+                                              <span style="font-size: 18px; font-weight: 700; color: #D32F2F; margin-left: 8px;">${displayId}</span>
+                                            </div>
+                                            <div style="margin-bottom: 8px;">
+                                              <span style="font-size: 13px; color: #666;">Date:</span>
+                                              <span style="font-size: 14px; font-weight: 600; color: #333; margin-left: 8px;">${new Date(order.order_date).toLocaleDateString()}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div style="margin-bottom: 20px;">
+                                          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Order Details</h3>
+                                          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                            <thead>
+                                              <tr style="background-color: #D32F2F; color: white;">
+                                                <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #b71c1c;">Item</th>
+                                                <th style="padding: 12px 15px; text-align: center; width: 80px; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
+                                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Price</th>
+                                                <th style="padding: 12px 15px; text-align: right; width: 120px; font-weight: 600; border: 1px solid #b71c1c;">Total</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              ${(order.order_items || []).map(item => `
+                                                <tr style="border-bottom: 1px solid #eee;">
+                                                  <td style="padding: 12px 15px; color: #333; font-weight: 500;">${item.item_name || 'Product'}</td>
+                                                  <td style="padding: 12px 15px; text-align: center; color: #555;">${item.quantity || 1}</td>
+                                                  <td style="padding: 12px 15px; text-align: right; color: #555;">৳${(item.unit_price || 0).toLocaleString()}</td>
+                                                  <td style="padding: 12px 15px; text-align: right; color: #333; font-weight: 600;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                                                </tr>
+                                              `).join('')}
+                                            </tbody>
+                                          </table>
+                                        </div>
+
+                                        <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
+                                          <div style="width: 280px;">
+                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
+                                              <span>Subtotal:</span>
+                                              <span>৳${(order.subtotal || 0).toLocaleString()}</span>
+                                            </div>
+                                            ${((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 ? `
+                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #c62828; font-size: 14px;">
+                                              <span>Discount:</span>
+                                              <span>-৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</span>
+                                            </div>
+                                            ` : ''}
+                                            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #555; font-size: 14px;">
+                                              <span>Shipping:</span>
+                                              <span>৳${(order.shipping_cost || 0).toLocaleString()}</span>
+                                            </div>
+                                            <div style="border-top: 2px solid #ddd; margin: 10px 0;"></div>
+                                            <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 18px; font-weight: 800; color: #D32F2F;">
+                                              <span>Total:</span>
+                                              <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center;">
+                                          <p style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Thank you for shopping with Prodhhan.com!</p>
+                                        </div>
+                                      </div>
+                                    `;
+
+                                    printWindow.document.write(`
+                                      <html>
+                                        <head><title>Invoice ${displayId}</title></head>
+                                        <body>${orderHTML}</body>
+                                      </html>
+                                    `);
+                                    printWindow.document.close();
+                                    setTimeout(() => printWindow.print(), 250);
+                                    toast.success('Opening print dialog. Choose "Save as PDF".');
                                   }}
                                   className="h-9 w-9 p-0 hover:bg-green-50"
                                 >
@@ -2223,7 +2416,7 @@ function SalesPage() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent side="bottom" className="text-xs">
-                                <p>Download JSON</p>
+                                <p>Download PDF</p>
                               </TooltipContent>
                             </Tooltip>
                             {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
@@ -2281,27 +2474,8 @@ function SalesPage() {
                                   // Calculate total items
                                   const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
 
-                                  // 🔧 FIX: Normalize order number to PD format
-                                  const normalizeOrderNumber = (order) => {
-                                  if (!order) return `PD${Date.now().toString().slice(-6)}`;
-  
-                                  // If already in PD format, return as is
-                                  if (order.order_number && order.order_number.startsWith('PD')) {
-                                  return order.order_number;
-                                  }
-  
-                                  // If WC- format (WooCommerce), convert to PD format
-                                  if (order.order_number && order.order_number.startsWith('WC-')) {
-                                  const digits = order.order_number.replace(/\D/g, '').slice(-6);
-                                  return `PD${digits.padStart(6, '0')}`;
-                                  }
-  
-                                  // Fallback: use last 6 digits of ID
-                                  const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
-                                  return `PD${fallbackDigits.padStart(6, '0')}`;
-                                  };
-
-                                  const invoiceNumber = normalizeOrderNumber(order);
+                                  // FIX: Use helper function to ensure PD ID is sent
+                                  const invoiceNumber = getCorrectOrderId(order);
 
                                   // Prepare payload as per Steadfast documentation
                                   const courierPayload = {
@@ -2344,7 +2518,8 @@ function SalesPage() {
                                         courier_consignment_id: String(consignment?.consignment_id || '')
                                       });
 
-                                      queryClient.invalidateQueries(['orders']);
+                                      queryClient.invalidateQueries(['orders-sales-recent']);
+                                      queryClient.invalidateQueries(['orders-sales-all']);
                                       toast.success('✅ Order sent to courier successfully!');
                                     } else {
                                       toast.error('Courier response invalid: ' + JSON.stringify(result));
