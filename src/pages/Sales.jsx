@@ -2281,8 +2281,27 @@ function SalesPage() {
                                   // Calculate total items
                                   const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
 
-                                  // Use the actual order_number (e.g., PD020483) as invoice
-                                  const invoiceNumber = order.order_number || `PD${Date.now().toString().slice(-6)}`;
+                                  // 🔧 FIX: Normalize order number to PD format
+                                  const normalizeOrderNumber = (order) => {
+                                  if (!order) return `PD${Date.now().toString().slice(-6)}`;
+  
+                                  // If already in PD format, return as is
+                                  if (order.order_number && order.order_number.startsWith('PD')) {
+                                  return order.order_number;
+                                  }
+  
+                                  // If WC- format (WooCommerce), convert to PD format
+                                  if (order.order_number && order.order_number.startsWith('WC-')) {
+                                  const digits = order.order_number.replace(/\D/g, '').slice(-6);
+                                  return `PD${digits.padStart(6, '0')}`;
+                                  }
+  
+                                  // Fallback: use last 6 digits of ID
+                                  const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
+                                  return `PD${fallbackDigits.padStart(6, '0')}`;
+                                  };
+
+                                  const invoiceNumber = normalizeOrderNumber(order);
 
                                   // Prepare payload as per Steadfast documentation
                                   const courierPayload = {
