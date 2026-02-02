@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,18 +11,36 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2, PhoneCall, MessageSquare, Download, Upload, Truck, RotateCcw } from 'lucide-react';
+import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2, PhoneCall, MessageSquare, Download, Upload, Truck, RotateCcw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
 import WelcomeCallList from '../components/customers/WelcomeCallList';
 import FeedbackCallList from '../components/customers/FeedbackCallList';
 import DynamicCSVImport from '../components/customers/DynamicCSVImport';
 
+// 🚀 HELPER: Normalize Order ID (WC-XXXX to PDXXXXXX)
+const getOrderDisplayId = (order) => {
+  if (!order) return 'N/A';
+  // If already PD, return it
+  if (order.order_number && order.order_number.startsWith('PD')) {
+    return order.order_number;
+  }
+  // If WC- (WooCommerce/Landing Page), convert to PD
+  if (order.order_number && order.order_number.startsWith('WC-')) {
+    const digits = order.order_number.replace(/\D/g, '').slice(-6);
+    return `PD${digits.padStart(6, '0')}`;
+  }
+  // Fallback to ID
+  const fallbackDigits = String(order.id || '000000').replace(/\D/g, '').slice(-6);
+  return `PD${fallbackDigits.padStart(6, '0')}`;
+};
+
 function CustomerManagementPage() {
   // CRITICAL: Permission-based access control
   const { hasPermission: canCreate } = usePermission('customer_management', 'can_create');
   const { hasPermission: canEdit } = usePermission('customer_management', 'can_edit');
   const { hasPermission: canDelete } = usePermission('customer_management', 'can_delete');
+  
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,50 +61,62 @@ function CustomerManagementPage() {
   const [customerDateFrom, setCustomerDateFrom] = useState('');
   const [customerDateTo, setCustomerDateTo] = useState('');
 
+  // 🚀 FAST LOADING: Load ALL customers in batches for complete history
   useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        const batchSize = 1000;
+        let allCustomers = [];
+        let offset = 0;
+        let hasMore = true;
+        
+        // First batch loads immediately for fast UI render
+        const firstBatch = await base44.entities.Customer.list('-total_spent', batchSize);
+        setCustomers(firstBatch);
+        allCustomers = firstBatch;
+        
+        // Continue loading remaining batches in background
+        if (firstBatch.length === batchSize) {
+          offset = batchSize;
+          while (hasMore) {
+            const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
+            allCustomers = [...allCustomers, ...batch];
+            // Yield to main thread slightly for UI responsiveness if list is massive
+            if (allCustomers.length % 2000 === 0) {
+               await new Promise(resolve => setTimeout(resolve, 0)); 
+            }
+            setCustomers([...allCustomers]); 
+            offset += batchSize;
+            hasMore = batch.length === batchSize;
+            
+            // Safety limit
+            if (allCustomers.length >= 10000) break;
+          }
+        }
+        
+        setCustomers(allCustomers);
+      } catch (error) {
+        console.error('Error loading customers:', error);
+        toast.error('Failed to load customers');
+      }
+    };
+
     loadCustomers();
   }, []);
 
-  useEffect(() => {
-    filterCustomers();
-  }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
-
-  const loadCustomers = async () => {
-    try {
-      // 🚀 FAST LOADING: Load ALL customers in batches for complete history
-      const batchSize = 1000;
-      let allCustomers = [];
-      let offset = 0;
-      let hasMore = true;
-      
-      // First batch loads immediately for fast UI render
-      const firstBatch = await base44.entities.Customer.list('-total_spent', batchSize);
-      setCustomers(firstBatch);
-      allCustomers = firstBatch;
-      
-      // Continue loading remaining batches in background
-      if (firstBatch.length === batchSize) {
-        offset = batchSize;
-        while (hasMore) {
-          const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
-          allCustomers = [...allCustomers, ...batch];
-          setCustomers([...allCustomers]); // Progressive update
-          offset += batchSize;
-          hasMore = batch.length === batchSize;
-          
-          // Safety limit
-          if (allCustomers.length >= 10000) break;
-        }
+  // 🚀 PERFORMANCE: Memoize duplicate detection
+  const duplicateMap = useMemo(() => {
+    const map = new Map();
+    customers.forEach(c => {
+      if (c.customer_phone) {
+        map.set(c.customer_phone, (map.get(c.customer_phone) || 0) + 1);
       }
-      
-      setCustomers(allCustomers);
-    } catch (error) {
-      console.error('Error loading customers:', error);
-      toast.error('Failed to load customers');
-    }
-  };
+    });
+    return map;
+  }, [customers]);
 
-  const filterCustomers = () => {
+  // 🚀 PERFORMANCE: Memoize filtering logic
+  const filteredCustomersData = useMemo(() => {
     let filtered = [...customers];
 
     // Search filter
@@ -123,12 +153,24 @@ function CustomerManagementPage() {
       });
     }
 
-    setFilteredCustomers(filtered);
-  };
+    return filtered;
+  }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
+
+  // Update state when memoized data changes
+  useEffect(() => {
+    setFilteredCustomers(filteredCustomersData);
+  }, [filteredCustomersData]);
 
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     try {
+      // Basic duplicate check for manual entry
+      const existing = customers.find(c => c.customer_phone === newCustomer.customer_phone);
+      if (existing) {
+        toast.error('A customer with this phone number already exists!');
+        return;
+      }
+
       await base44.entities.Customer.create({
         ...newCustomer,
         customer_since: new Date().toISOString().split('T')[0],
@@ -145,7 +187,10 @@ function CustomerManagementPage() {
         notes: '',
         tags: []
       });
-      await loadCustomers();
+      // Reload customers to get fresh data
+      // Note: In a real app, optimistic update is better, but full reload ensures consistency here
+      const all = await base44.entities.Customer.list('-total_spent', 10000);
+      setCustomers(all);
     } catch (error) {
       console.error('Error adding customer:', error);
       toast.error('Failed to add customer');
@@ -157,12 +202,13 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: customers.length,
     vip: customers.filter(c => c.total_spent >= 50000).length,
     regular: customers.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
-    totalRevenue: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
-  };
+    totalRevenue: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    duplicates: Array.from(duplicateMap.values()).filter(count => count > 1).length
+  }), [customers, duplicateMap]);
 
   const handleExportCustomers = () => {
     const headers = ['Customer Name', 'Phone', 'Email', 'Type', 'Total Orders', 'Total Spent', 'Customer Since', 'Notes'];
@@ -180,8 +226,6 @@ function CustomerManagementPage() {
     URL.revokeObjectURL(url);
     toast.success('Customers exported successfully');
   };
-
-  // Legacy import removed - using DynamicCSVImport component instead
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -231,9 +275,14 @@ function CustomerManagementPage() {
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Customers</span>
             </TabsTrigger>
-            <TabsTrigger value="welcome" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+            <TabsTrigger value="welcome" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium relative">
               <PhoneCall className="w-4 h-4" />
               <span className="hidden sm:inline">Welcome Calls</span>
+              {stats.duplicates > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] rounded-full">
+                  {stats.duplicates}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
               <MessageSquare className="w-4 h-4" />
@@ -242,16 +291,24 @@ function CustomerManagementPage() {
           </TabsList>
 
           <TabsContent value="welcome">
-            <WelcomeCallList />
+            {/* Pass duplicates map to enable duplicate detection in the list */}
+            <WelcomeCallList 
+              allCustomers={customers} 
+              duplicateMap={duplicateMap}
+            />
           </TabsContent>
 
           <TabsContent value="feedback">
-            <FeedbackCallList />
+            {/* Pass duplicates map to enable duplicate detection in the list */}
+            <FeedbackCallList 
+              allCustomers={customers}
+              duplicateMap={duplicateMap}
+            />
           </TabsContent>
 
           <TabsContent value="customers">
         {/* Stats Grid - Minimalist White */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="bg-white border-0 shadow-sm rounded-xl">
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-3">
@@ -299,6 +356,19 @@ function CustomerManagementPage() {
               </div>
               <p className="text-3xl font-bold text-[#111827]">৳{(stats.totalRevenue / 1000).toFixed(1)}K</p>
               <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Revenue</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-0 shadow-sm rounded-xl border border-orange-200">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-orange-600" />
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-[#111827]">{stats.duplicates}</p>
+              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Duplicate Phones</p>
+              <p className="text-xs text-slate-400 mt-0.5">Check Welcome/Feedback</p>
             </CardContent>
           </Card>
         </div>
@@ -398,12 +468,21 @@ function CustomerManagementPage() {
                                      customer.total_spent >= 10000 ? 'Regular' : 
                                      customer.total_orders <= 2 ? 'New' : 'Standard';
                       
+                      const isDuplicate = duplicateMap.get(customer.customer_phone) > 1;
+
                       return (
                         <TableRow key={customer.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 h-16">
                           <TableCell className="pl-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
-                                {customer.customer_name.charAt(0).toUpperCase()}
+                              <div className="relative">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                                  {customer.customer_name.charAt(0).toUpperCase()}
+                                </div>
+                                {isDuplicate && (
+                                  <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-white">
+                                    <AlertTriangle className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <p className="font-semibold text-slate-900">{customer.customer_name}</p>
@@ -494,11 +573,43 @@ function CustomerManagementPage() {
               { key: 'notes', label: 'Notes', required: false }
             ]}
             onImport={async (data) => {
-              // FAST BULK IMPORT - using bulkCreate for speed
+              // 🚀 FAST BULK IMPORT with Duplicate Detection
               const batchSize = 50;
               const batches = [];
-              for (let i = 0; i < data.length; i += batchSize) {
-                batches.push(data.slice(i, i + batchSize));
+              
+              // Detect duplicates in the CSV itself and against DB
+              const existingPhones = new Set(customers.map(c => c.customer_phone));
+              const seenInCSV = new Set();
+              const duplicatesInCSV = new Set();
+              const validData = [];
+
+              data.forEach(entry => {
+                if (seenInCSV.has(entry.customer_phone)) {
+                  duplicatesInCSV.add(entry.customer_phone);
+                } else {
+                  seenInCSV.add(entry.customer_phone);
+                  // Check against DB
+                  if (!existingPhones.has(entry.customer_phone)) {
+                    validData.push(entry);
+                  }
+                }
+              });
+
+              if (duplicatesInCSV.size > 0) {
+                toast.warning(`Found ${duplicatesInCSV.size} duplicate entries in CSV (removed).`);
+              }
+              const skippedCount = data.length - validData.length;
+              if (skippedCount > 0) {
+                toast.info(`Skipped ${skippedCount} existing customers.`);
+              }
+
+              if (validData.length === 0) {
+                toast.info('No new customers to import.');
+                return;
+              }
+
+              for (let i = 0; i < validData.length; i += batchSize) {
+                batches.push(validData.slice(i, i + batchSize));
               }
               
               let totalImported = 0;
@@ -525,8 +636,12 @@ function CustomerManagementPage() {
                   }
                 }
               }
-              await loadCustomers();
-              toast.success(`Imported ${totalImported} customers`);
+              
+              // Reload customers
+              const all = await base44.entities.Customer.list('-total_spent', 10000);
+              setCustomers(all);
+              
+              toast.success(`Successfully imported ${totalImported} customers`);
             }}
             onClose={() => setIsImportCustomersOpen(false)}
           />
@@ -733,8 +848,9 @@ function CustomerDetails({ customer }) {
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
+                        {/* FIXED: Use PD order number for Landing Page/WC orders */}
                         <Badge className="bg-violet-100 text-violet-800">
-                          {order.order_number}
+                          {getOrderDisplayId(order)}
                         </Badge>
                         <Badge variant={order.order_status === 'delivered' ? 'default' : 'secondary'}>
                           {order.order_status}
@@ -773,8 +889,9 @@ function CustomerDetails({ customer }) {
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
+                        {/* FIXED: Use PD order number for Landing Page/WC orders */}
                         <Badge className="bg-cyan-100 text-cyan-800">
-                          {order.order_number}
+                          {getOrderDisplayId(order)}
                         </Badge>
                         <Badge className="bg-orange-100 text-orange-800">
                           {order.order_status === 'out_for_delivery' ? 'Out for Delivery' : 'Shipped'}
