@@ -43,6 +43,12 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
+// Helper function to format date in BDT
+const formatDateBDT = (dateStr) => {
+  if (!dateStr) return '';
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(dateStr));
+};
+
 // Enhanced Order Form Component
 const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) => {
   const defaultDepartment = 'prodhan_com_e_commerce';
@@ -1069,12 +1075,12 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
   const [displayLimit, setDisplayLimit] = useState(50); // Start with less for instant render
   
-  // 🚀 Pre-compute date strings for ALL orders ONCE (expensive operation done only when orders change)
+  // 🚀 Pre-compute date strings for ALL orders ONCE using BDT Timezone
   const ordersWithDateStr = useMemo(() => {
     if (!orders || orders.length === 0) return [];
     return orders.map(o => ({
       ...o,
-      _dateStr: new Date(o.order_date || o.created_date).toISOString().slice(0, 10) // YYYY-MM-DD format, much faster
+      _dateStr: formatDateBDT(o.order_date || o.created_date) 
     }));
   }, [orders]);
   
@@ -1091,6 +1097,8 @@ function SalesPage() {
     }
 
     // 🚀 Date filter - now uses pre-computed _dateStr (O(1) per item)
+    // Note: Both _dateStr and dateRange inputs are 'YYYY-MM-DD' strings, 
+    // so string comparison works perfectly for calendar dates.
     if (dateRange.from) {
       const fromDateStr = dateRange.from;
       const toDateStr = dateRange.to || dateRange.from;
@@ -1176,7 +1184,7 @@ function SalesPage() {
         const rows = ordersToExport.map(order => {
           const row = [
             order.order_number || '',
-            order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
+            order.order_date ? formatDateBDT(order.order_date) : '',
             order.order_status || '',
             order.payment_status || ''
           ];
@@ -1223,7 +1231,7 @@ function SalesPage() {
           
           row.push(
             order.customer_notes || '',
-            order.created_date ? format(new Date(order.created_date), 'yyyy-MM-dd HH:mm') : ''
+            order.created_date ? formatDateBDT(order.created_date) : ''
           );
           
           return row;
@@ -1250,7 +1258,7 @@ function SalesPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `sales_orders_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`;
+        a.download = `sales_orders_${formatDateBDT(new Date())}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1277,7 +1285,7 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Stats with optimized calculations using BDT timezone
   const stats = useMemo(() => {
     // Get today's date in Bangladesh timezone (Asia/Dhaka) - YYYY-MM-DD format
-    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+    const todayStr = formatDateBDT(new Date());
     const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
     
     // Single pass for main stats
@@ -1300,12 +1308,9 @@ function SalesPage() {
     let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
     
     for (const o of ordersWithDateStr) {
-      // Convert order date to BDT timezone for accurate comparison
-      const orderDate = o.order_date || o.created_date;
-      if (!orderDate) continue;
-      
-      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(orderDate));
-      if (orderDateBDT !== todayStr) continue;
+      // Use pre-calculated BDT string for comparison
+      const orderDateBDT = o._dateStr;
+      if (!orderDateBDT || orderDateBDT !== todayStr) continue;
       
       todayOrdersCount++;
       if (o.order_status === 'pending') todayPending++;
@@ -1439,7 +1444,7 @@ function SalesPage() {
                       size="sm"
                       onClick={() => {
                         // Use Bangladesh timezone (Asia/Dhaka) for today
-                        const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+                        const todayBDT = formatDateBDT(new Date());
                         setDateRange({ from: todayBDT, to: todayBDT });
                       }}
                       className="text-sm"
@@ -1454,7 +1459,7 @@ function SalesPage() {
                         const now = new Date();
                         const bdtNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
                         bdtNow.setDate(bdtNow.getDate() - 1);
-                        const yesterdayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
+                        const yesterdayBDT = formatDateBDT(bdtNow);
                         setDateRange({ from: yesterdayBDT, to: yesterdayBDT });
                       }}
                       className="text-sm"
@@ -1736,7 +1741,7 @@ function SalesPage() {
                     // High-Fidelity Invoice Template with LOGO
                     const invoicesHTML = selectedOrders.map((order, idx) => {
                       const displayId = getCorrectOrderId(order);
-                      const orderDate = order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A';
+                      const orderDate = order.order_date ? formatDateBDT(new Date(order.order_date)) : 'N/A';
                       const address = order.shipping_address || {};
 
                       return `
@@ -2019,7 +2024,7 @@ function SalesPage() {
                        </div>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(order.order_date), 'dd MMM yyyy')}
+                        {formatDateBDT(order.order_date)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -2341,7 +2346,7 @@ function SalesPage() {
                                             </div>
                                             <div style="margin-bottom: 8px;">
                                               <span style="font-size: 13px; color: #666;">Date:</span>
-                                              <span style="font-size: 14px; font-weight: 600; color: #333; margin-left: 8px;">${new Date(order.order_date).toLocaleDateString()}</span>
+                                              <span style="font-size: 14px; font-weight: 600; color: #333; margin-left: 8px;">${formatDateBDT(new Date(order.order_date))}</span>
                                             </div>
                                           </div>
                                         </div>
