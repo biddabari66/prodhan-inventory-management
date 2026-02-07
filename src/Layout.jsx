@@ -1,1854 +1,2551 @@
-import React, { useState, useEffect, Suspense, lazy, useRef, useCallback } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { User } from "@/entities/User";
-import { Lead } from "@/entities/Lead";
-import { Admission } from "@/entities/Admission";
-import { Expense } from "@/entities/Expense";
-import { Income } from "@/entities/Income";
-import { Inventory } from "@/entities/Inventory";
-import { UserPermission } from "@/entities/UserPermission";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger } from
-"@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent } from
-"@/components/ui/dialog";
-import {
-  LayoutDashboard,
-  Users,
-  Clock,
-  DollarSign,
-  TrendingUp,
-  CreditCard,
-  Package,
-  Target,
-  FileText,
-  Settings,
-  Bell,
-  Search,
-  Menu,
-  X,
-  LogOut,
-  ChevronDown,
-  UserCheck,
-  Calculator,
-  Award,
-  BarChart3,
-  Zap,
-  Building2,
-  BookOpen,
-  Phone,
-  PieChart,
-  TrendingDown,
-  User as UserIcon,
-  Lock,
-  MessageSquare,
-  Warehouse,
-  Shield,
-  CheckSquare,
-  WifiOff,
-  RefreshCw,
-  Sun,
-  Moon,
-  Calendar,
-  Sparkles,
-  Layers,
-  Link2,
-  Briefcase,
-  Globe,
-  Plus,
-  FileSignature,
-  ChevronLeft,
-  MoreHorizontal,
-  Mail,
-  ChevronRight,
-  ShoppingCart,
-  RotateCcw,
-  PackageX } from
-"lucide-react";
-import { toast, Toaster } from "sonner";
-import { AuditLog } from "@/entities/AuditLog";
-import UserProfile from "../components/user/UserProfile";
-import NotificationCenter from "../components/notifications/NotificationCenter";
-import ErrorBoundary from "../components/common/ErrorBoundary";
-import Chatbot from "@/components/common/Chatbot";
-import SessionProvider from '../components/common/EnhancedSessionManager';
-import UniversalSearch from '../components/common/UniversalSearch';
+  Plus, Package, Users, TrendingUp, DollarSign, Truck, Search,
+  Filter, Download, Eye, Edit, Phone, Mail, MapPin, Calendar,
+  CreditCard, CheckCircle, Clock, AlertCircle, XCircle, MoreVertical,
+  ShoppingCart, RefreshCw, Send, Printer, FileText, ArrowUpDown, Upload, FileSpreadsheet, Loader2, Shield, Trash2, PackageCheck
+} from "lucide-react";
+import { toast } from "sonner";
+import { format } from 'date-fns';
 import { base44 } from '@/api/base44Client';
-import FastLoadingProvider from '../components/common/FastLoadingProvider';
-import { ShimmerStyles } from '../components/common/SkeletonLoaders';
-import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
-import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
-import SmartOnboarding from '../components/onboarding/SmartOnboarding';
-import SmartHelp from '../components/ai/SmartHelp';
-import MobileBottomNav from '../components/common/MobileBottomNav';
-import PWAInstaller from '../components/common/PWAInstaller';
+import { Order } from '@/entities/Order';
+import { Customer } from '@/entities/Customer';
+import { Inventory } from '@/entities/Inventory';
+import { User } from '@/entities/User';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader';
+import OrderInvoice from '../components/invoices/OrderInvoice';
+import ThermalReceipt from '../components/invoices/ThermalReceipt';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Receipt } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import SearchableProductSelect from '../components/common/SearchableProductSelect';
+import { ChevronDown } from 'lucide-react';
+import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
+import { withPermission } from '../components/common/PermissionGuard';
+import { useCachedQuery } from '../components/common/CachedQuery';
+import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
-// Enhanced translations with mobile-friendly labels
-const translations = {
-  en: {
-    Dashboard: 'Dashboard',
-    'CRM & Leads': 'CRM & Leads',
-    'Lead Management': 'Leads',
-    'Lead Database': 'Database',
-    'Follow Up': 'Follow Up',
-    WhatsApp: 'WhatsApp',
-    Admissions: 'Admissions',
-    Students: 'Students',
-    Finance: 'Finance',
-    Income: 'Income',
-    Expenses: 'Expenses',
-    Incentives: 'Incentives',
-    Budgeting: 'Budget',
-    'Payroll Report': 'Payroll',
-    'Finance Reports': 'Reports',
-    'Human Resources': 'HR',
-    Employees: 'Employees',
-    Attendance: 'Attendance',
-    'My Attendance': 'My Time',
-    'Performance Hub': 'Performance',
-    'Manual Reporting': 'Reports',
-    'All Submitted Reports': 'All Reports',
-    'Send Email': 'Email',
-    Inventory: 'Inventory',
-    Procurement: 'Purchase',
-    Courses: 'Courses',
-    'Analytics & Reports': 'Analytics',
-    'Report Builder': 'Builder',
-    'Scheduled Reports': 'Scheduled',
-    'Document Center': 'Documents',
-    'Analytics': 'Analytics',
-    'System Settings': 'Settings',
-    'User Access Manager': 'Access',
-    Integrations: 'Integrations',
-    'System Alerts': 'Alerts',
-    'Audit Trail': 'Audit'
-  },
-  bn: {
-    Dashboard: 'ড্যাশবোর্ড',
-    'CRM & Leads': 'সিআরএম ও লিডস',
-    'Lead Management': 'লিড',
-    'Lead Database': 'ডেটাবেস',
-    'Follow Up': 'ফলো আপ',
-    WhatsApp: 'হোয়াটসঅ্যাপ',
-    Admissions: 'ভর্তি',
-    Students: 'শিক্ষার্থী',
-    Finance: 'অর্থ',
-    Income: 'আয়',
-    Expenses: 'খরচ',
-    Incentives: 'প্রণোদনা',
-    Budgeting: 'বাজেট',
-    'Payroll Report': 'বেতন',
-    'Finance Reports': 'রিপোর্ট',
-    'Human Resources': 'এইচআর',
-    Employees: 'কর্মচারী',
-    Attendance: 'উপস্থিতি',
-    'My Attendance': 'আমার সময়',
-    'Performance Hub': 'পারফরম্যান্স',
-    'Manual Reporting': 'রিপোর্ট',
-    'All Submitted Reports': 'সব রিপোর্ট',
-    'Send Email': 'ইমেল',
-    Inventory: 'ইনভেন্টরি',
-    Procurement: 'ক্রয়',
-    Courses: 'কোর্স',
-    'Analytics & Reports': 'বিশ্লেষণ',
-    'Report Builder': 'বিল্ডার',
-    'Scheduled Reports': 'সিডিউল',
-    'Document Center': 'ডকুমেন্ট',
-    'Analytics': 'অ্যানালিটিক্স',
-    'System Settings': 'সেটিংস',
-    'User Access Manager': 'অ্যাক্সেস',
-    Integrations: 'ইন্টিগ্রেশন',
-    'System Alerts': 'অ্যালার্ট',
-    'Audit Trail': 'অডিট'
+// Helper function to format date in BDT
+const formatDateBDT = (dateStr) => {
+  if (!dateStr) return '';
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(dateStr));
+};
+
+// Helper for nice date display (e.g., 08 Feb 2026)
+const formatDisplayDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  try {
+    const date = new Date(dateStr);
+    return format(date, 'dd MMM yyyy, hh:mm a');
+  } catch (e) {
+    return dateStr;
   }
 };
 
-const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
-  const location = useLocation();
-  const [isExpanded, setIsExpanded] = useState(false);
+// Enhanced Order Form Component
+const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) => {
+  const defaultDepartment = 'prodhan_com_e_commerce';
 
-  const isActive = useCallback((url) => location.pathname === url, [location.pathname]);
+  const [formData, setFormData] = useState(order || {
+    customer_id: '',
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    order_items: [],
+    shipping_address: {
+      address_line: '',
+      city: '',
+      district: '',
+      postal_code: '',
+      phone: ''
+    },
+    payment_method: 'cod',
+    payment_status: 'pending',
+    department: defaultDepartment,
+    discount_amount: 0,
+    coupon_discount: 0,
+    discount_code: '',
+    shipping_cost: 60,
+    customer_notes: '',
+    tags: []
+  });
 
-  const isModuleActive = useCallback(() => {
-    if (module.url && isActive(module.url)) return true;
-    return module.subItems?.some((si) => isActive(si.url)) ?? false;
-  }, [module.url, module.subItems, isActive]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState('');
+  const [itemQuantity, setItemQuantity] = useState(1);
+  const [itemDiscount, setItemDiscount] = useState(0);
 
-  useEffect(() => {
-    if (isModuleActive()) {
-      setIsExpanded(true);
-    }
-  }, [location.pathname, isModuleActive]);
-
-  // Collapsed sidebar - icon only with tooltip
-  if (isCollapsed && !isMobile) {
-    if (!module.isExpandable) {
-      return (
-        <div className="relative group">
-          <Link
-            to={module.url}
-            className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
-            isActive(module.url) ?
-            'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
-            'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
-            }>
-
-            <module.icon className={`w-5 h-5 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          </Link>
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-[100] shadow-lg">
-            {module.label}
-            <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-slate-900 dark:border-r-slate-700"></div>
-          </div>
-        </div>);
-
-    }
-
-    return (
-      <div className="relative group">
-        <button
-          className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
-          isModuleActive() ?
-          'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
-          'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
-          }>
-
-          <module.icon className={`w-5 h-5 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-        </button>
-        <div className="absolute left-full ml-3 top-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
-          <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">{module.label}</span>
-          </div>
-          <div className="py-1">
-            {module.subItems?.map((subItem, index) =>
-            <Link
-              key={index}
-              to={subItem.url}
-              className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-              isActive(subItem.url) ?
-              'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' :
-              'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'}`
-              }>
-
-                <subItem.icon className={`w-4 h-4 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
-                <span>{subItem.label}</span>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>);
-
-  }
-
-  // Expanded sidebar - full view
-  if (!module.isExpandable) {
-    return (
-      <Link
-        to={module.url}
-        className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
-        isActive(module.url) ? 'active' : ''}`}>
-
-        <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-      </Link>);
-
-  }
-
-  return (
-    <div>
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
-        isModuleActive() ? 'active' : ''}`}>
-
-        <div className="flex items-center gap-3">
-          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-        </div>
-        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-      </button>
-
-      {isExpanded && module.subItems &&
-      <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
-          {module.subItems.map((subItem, index) =>
-        <Link
-          key={index}
-          to={subItem.url}
-          className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-          isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'} ${
-          isActive(subItem.url) ?
-          'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' :
-          'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'}`
-          }>
-
-              <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
-              <span>{subItem.label}</span>
-            </Link>
-        )}
-        </div>
-      }
-    </div>);
-
-};
-
-export default function Layout({ children, currentPageName }) {
-  const location = useLocation();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userPermissions, setUserPermissions] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile-first: closed by default
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [theme, setTheme] = useState('light');
-  const [currentLanguage, setCurrentLanguage] = useState('en');
-  const isAuthPage = location.pathname === '/';
-
-  const { prefetchForRoute } = usePrefetchOnHover();
-
-  // Set favicon dynamically
-  useEffect(() => {
-    let link = document.querySelector("link[rel~='icon']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.getElementsByTagName('head')[0].appendChild(link);
-    }
-    link.href = NEW_LOGO_URL;
-  }, []);
-
-  // ENHANCED: Register Service Worker with better error handling
-  useEffect(() => {
-    registerServiceWorker().then((registration) => {
-      if (registration) {
-        console.log('⚡ PWA enabled - Lightning-fast loading activated!');
-
-        // Update service worker when new version available
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              toast.info('🔄 New version available! Refresh for updates.', {
-                duration: 10000,
-                action: {
-                  label: 'Refresh',
-                  onClick: () => window.location.reload()
-                }
-              });
-            }
-          });
-        });
-      }
-    }).catch((error) => {
-      console.warn('Service Worker registration failed:', error);
-    });
-
-    // Preload critical fonts
-    const fontLinks = [
-    'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap'];
-
-    fontLinks.forEach((href) => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'style';
-      link.href = href;
-      document.head.appendChild(link);
-    });
-  }, []);
-
-  // Simple translation function
-  const t = (key) => {
-    return translations[currentLanguage]?.[key] || key;
-  };
-
-  const handleLogout = useCallback(async () => {
-    let logoutAttempted = false;
-
+  const departmentFilteredInventory = useMemo(() => {
     try {
-      toast.info("Signing you out...", { duration: 2000 });
-
-      localStorage.removeItem('user_preferences');
-      localStorage.removeItem('biddabari_theme');
-      localStorage.removeItem('biddabari_language');
-      localStorage.removeItem('cached_user_data');
-      localStorage.removeItem('cached_user_permissions');
-
-      if (currentUser) {
-        try {
-          await AuditLog.create({
-            user_id: currentUser.id,
-            user_name: currentUser.full_name,
-            action: 'logout',
-            entity_type: 'User',
-            module: 'Auth',
-            description: 'User logged out successfully.',
-            timestamp: new Date().toISOString()
-          });
-        } catch (auditError) {
-          console.warn("Could not create audit log for logout:", auditError);
-        }
-      }
-
-      logoutAttempted = true;
-      await User.logout();
-
-      toast.success("Successfully signed out!");
-
-    } catch (error) {
-      console.error("Logout process encountered an error:", error);
-
-      if (logoutAttempted) {
-        toast.warning("Logout completed with minor issues. Refreshing for security...");
-      } else {
-        toast.error("Logout failed. Forcing security refresh...");
-      }
-    } finally {
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('biddabari_theme') || 'light';
-    setTheme(savedTheme);
-  }, []);
-
-  useEffect(() => {
-    const savedLanguage = localStorage.getItem('biddabari_language') || 'en';
-    setCurrentLanguage(savedLanguage);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    localStorage.setItem('biddabari_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prevTheme) => prevTheme === 'light' ? 'dark' : 'light');
-  };
-
-  const changeLanguage = (lng) => {
-    setCurrentLanguage(lng);
-    localStorage.setItem('biddabari_language', lng);
-  };
-
-  // Permission loading is now integrated into loadCurrentUser for better caching
-
-  const loadCurrentUser = useCallback(async () => {
-    setError(null);
-
-    // OPTIMIZATION: Try to use cached user data first for instant display
-    const cachedUser = localStorage.getItem('cached_user_data');
-    const cachedPermissions = localStorage.getItem('cached_user_permissions');
-
-    if (cachedUser) {
-      try {
-        const parsedUser = JSON.parse(cachedUser);
-        const parsedPermissions = cachedPermissions ? JSON.parse(cachedPermissions) : {};
-
-        // Show cached data immediately (stale-while-revalidate pattern)
-        setCurrentUser(parsedUser);
-        setUserPermissions(parsedPermissions);
-        setIsLoading(false); // Stop loading immediately with cached data
-
-        console.log('⚡ Instant load from cache:', parsedUser?.full_name);
-      } catch (e) {
-        console.warn('Cache parse error, falling back to server');
-      }
-    }
-
-    // Still loading if no cache
-    if (!cachedUser) {
-      setIsLoading(true);
-    }
-
-    try {
-      console.log('🔄 Fetching fresh user data from server...');
-
-      let user = await User.me();
-
-      if (!user) {
-        console.warn("No user found. Redirecting to login page.");
-        localStorage.removeItem('cached_user_data');
-        localStorage.removeItem('cached_user_permissions');
-        window.location.href = '/';
-        return;
-      }
-
-      console.log('👤 User data loaded:', user?.full_name, user?.email);
-
-      if (user && !user.employee_id) {
-        try {
-          console.log("Employee ID missing, attempting to generate...");
-          const response = await base44.functions.invoke('generateEmployeeId', {});
-
-          if (response.data && response.data.employee_id) {
-            toast.success(`Employee ID generated: ${response.data.employee_id}`);
-            user = await User.me();
-          }
-        } catch (genError) {
-          console.error("Could not generate Employee ID:", genError);
-        }
-      }
-
-      // Update state with fresh data
-      setCurrentUser(user);
-
-      // Cache user data for next visit
-      localStorage.setItem('cached_user_data', JSON.stringify(user));
-
-      // Load permissions in background
-      const permissions = await UserPermission.filter({ user_id: user.id });
-      const permissionsMap = {};
-
-      permissions.forEach((p) => {
-        permissionsMap[p.module] = {
-          can_view: p.can_view,
-          can_create: p.can_edit,
-          can_edit: p.can_edit,
-          can_delete: p.can_delete,
-          can_approve: p.can_approve,
-          can_export: p.can_export
-        };
+      return inventory.filter(item => {
+        return item?.department === formData.department && (item?.current_stock || 0) > 0;
       });
-
-      if (permissions.length === 0 && user.job_role === 'admin') {
-        const adminPermissions = {
-          dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          admissions: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          students: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          hr: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          purchase: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          courses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          reports: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          settings: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          followup: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          whatsapp: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          income: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          expenses: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          incentives: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          budget: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          customer_management: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          purchase_orders: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          production_house: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_movements: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_returns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_reconciliation: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_suppliers: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          inventory_categories: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          finance_dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
-          product_analytics: { can_view: true, can_export: true },
-          inventory_reports: { can_view: true, can_export: true },
-          inventory_ai_insights: { can_view: true, can_export: true },
-          financial_analytics: { can_view: true, can_export: true },
-          auto_reports: { can_view: true, can_create: true, can_edit: true },
-          user_access_manager: { can_view: true, can_create: true, can_edit: true },
-          integrations: { can_view: true, can_create: true, can_edit: true },
-          system_alerts: { can_view: true, can_create: true, can_edit: true },
-          audit_trail: { can_view: true, can_export: true }
-        };
-        setUserPermissions(adminPermissions);
-        localStorage.setItem('cached_user_permissions', JSON.stringify(adminPermissions));
-      } else {
-        setUserPermissions(permissionsMap);
-        localStorage.setItem('cached_user_permissions', JSON.stringify(permissionsMap));
-      }
-
-    } catch (e) {
-      console.error("❌ Error loading user:", e);
-      if (e && (e.status === 401 || e.message && (e.message.includes('Unauthorized') || e.message.includes('JWT') || e.message.includes('access token')))) {
-        localStorage.removeItem('cached_user_data');
-        localStorage.removeItem('cached_user_permissions');
-        toast.error("Session expired. Please log in again.");
-        window.location.href = '/';
-      } else {
-        setError(e);
-      }
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Error filtering inventory:', error);
+      return [];
     }
-  }, [setCurrentUser, setIsLoading, setError, setUserPermissions]);
+  }, [inventory, formData.department]);
 
   useEffect(() => {
-    if (isAuthPage) {
-      const checkSessionAndRedirect = async () => {
-        setIsLoading(true);
-        try {
-          const user = await User.me();
-          if (user) {
-            setCurrentUser(user);
-            console.log("Logged in user found on auth page. Redirecting to Inventory Overview.");
-            window.location.href = createPageUrl('InventoryOverview');
-          } else {
-            console.log("No active session on auth page. Rendering login/auth content.");
-          }
-        } catch (e) {
-          console.log("Session check failed/no session on auth page:", e.message);
-        } finally {
-          setIsLoading(false);
+    try {
+      if (formData.customer_id && customers.length > 0) {
+        const customer = customers.find(c => c.id === formData.customer_id);
+        if (customer) {
+          setSelectedCustomer(customer);
+          setFormData(prev => ({
+            ...prev,
+            customer_name: customer.customer_name || prev.customer_name,
+            customer_phone: customer.customer_phone || prev.customer_phone,
+            customer_email: customer.customer_email || prev.customer_email || '',
+            shipping_address: customer.shipping_addresses?.[0] || prev.shipping_address
+          }));
         }
-      };
-      checkSessionAndRedirect();
-    } else {
-      loadCurrentUser();
-    }
-  }, [isAuthPage, loadCurrentUser, setIsLoading, setCurrentUser]);
-
-  // Mobile-first sidebar behavior
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsSidebarOpen(true);
-      } else {
-        setIsSidebarOpen(false);
       }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Close mobile sidebar when navigating
-  useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
+    } catch (error) {
+      console.error('Error loading customer:', error);
     }
-  }, [location.pathname]);
+  }, [formData.customer_id, customers]);
 
-  const refreshUserData = async () => {
-    console.log('🔄 Refreshing user data (called from child component)...');
-    await loadCurrentUser();
-  };
+  const calculations = useMemo(() => {
+    const subtotal = formData.order_items.reduce((sum, item) => sum + item.subtotal, 0);
+    const regularDiscount = formData.discount_amount || 0;
+    const couponDiscount = formData.coupon_discount || 0;
+    const totalDiscount = regularDiscount + couponDiscount;
+    const shippingCost = formData.shipping_cost || 0;
+    const total = subtotal - totalDiscount + shippingCost;
 
-  const isActiveRoute = (url) => location.pathname === url;
+    return { subtotal, regularDiscount, couponDiscount, totalDiscount, shippingCost, total };
+  }, [formData.order_items, formData.discount_amount, formData.coupon_discount, formData.shipping_cost]);
 
-  const hasPermission = (moduleKey) => {
-    if (!currentUser) return false;
-
-    if (currentUser.job_role === 'admin' || currentUser.role === 'admin') return true;
-
-    const modulePermissions = userPermissions[moduleKey];
-    return modulePermissions && modulePermissions.can_view === true;
-  };
-
-  const getPermissionKey = (pageName) => {
-    const mapping = {
-      'Dashboard': 'dashboard',
-      'CRM': 'crm',
-      'LeadDatabase': 'crm',
-      'FollowUp': 'followup',
-      'WhatsApp': 'whatsapp',
-      'Admissions': 'admissions',
-      'Students': 'students',
-      'Income': 'income',
-      'Expenses': 'expenses',
-      'Incentives': 'incentives',
-      'Budget': 'budget',
-      'BudgetReportGenerator': 'budget',
-      'Payroll': 'finance',
-      'PayrollReport': 'finance',
-      'FinanceReports': 'finance',
-      'Employees': 'employees',
-      'Attendance': 'attendance',
-      'AttendanceMy': 'attendance',
-      'PerformanceHub': 'performance',
-      'performance-hub': 'performance',
-      'ManualReporting': 'manual_reporting',
-      'SubmittedReports': 'manual_reporting',
-      'SendEmail': 'hr',
-      'Inventory': 'inventory',
-      'InventoryOverview': 'inventory_overview',
-      'InventoryAIInsights': 'inventory_ai_insights',
-      'InventoryMovements': 'inventory_movements',
-      'InventoryReconciliation': 'inventory_reconciliation',
-      'InventoryReturns': 'inventory_returns',
-      'InventorySuppliers': 'inventory_suppliers',
-      'InventoryReports': 'inventory_reports',
-      'Sales': 'sales',
-      'PurchaseOrders': 'purchase_orders',
-      'ProductionHouse': 'production_house',
-      'ProductAnalytics': 'product_analytics',
-      'FinanceDashboard': 'finance_dashboard',
-      'FinanceManagement': 'finance',
-      'FinancialReports': 'financial_analytics',
-      'AutoReportSettings': 'auto_reports',
-      'CategorySettings': 'inventory_categories',
-      'CustomerManagement': 'customer_management',
-      'EmployeeAttendance': 'attendance',
-      'Courses': 'courses',
-      'Reports': 'reports',
-      'CustomReports': 'reports',
-      'CustomDailyReports': 'reports',
-      'UserAccessManager': 'settings',
-      'Integrations': 'settings',
-      'AlertsConfiguration': 'settings',
-      'AuditTrailViewer': 'settings'
-    };
-    return mapping[pageName] || pageName.toLowerCase();
-  };
-
-  // PRODUCTION: Optimized navigation with memoization
-  const getNavigationModules = useCallback(() => {
-    if (!currentUser) return [];
-    const isMobile = window.innerWidth < 1024;
-
-    const baseModules = [
-    { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-red-600', permission: 'inventory_overview' },
-    { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
-    { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
-    { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-indigo-600', permission: 'purchase_orders' },
-    { label: t('Production House'), url: createPageUrl('ProductionHouse'), icon: Briefcase, colorClass: 'text-purple-600', permission: 'production_house' },
-    { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-red-500', permission: 'inventory_movements' },
-    { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-600', permission: 'inventory_returns' },
-    { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
-    { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-red-700', permission: 'inventory_suppliers' },
-    { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
-    { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
-    { label: t('Payroll'), url: createPageUrl('Payroll'), icon: Calculator, colorClass: 'text-green-600', permission: 'finance' },
-    { label: t('Finance Dashboard'), url: createPageUrl('FinanceDashboard'), icon: DollarSign, colorClass: 'text-emerald-600', permission: 'finance_dashboard' },
-    { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-red-500', permission: 'product_analytics' },
-    { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
-    { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-red-600', permission: 'inventory_ai_insights' },
-
-    { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'auto_reports' },
-    { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
-    { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
-    { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'system_alerts' },
-    { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-slate-600', permission: 'audit_trail' }];
-
-
-
-    return baseModules.filter((module) => {
-      const permissionKey = module.permission || getPermissionKey(module.url?.split('/').pop()?.split('?')[0] || module.label);
-      return hasPermission(permissionKey);
-    });
-  }, [currentUser, userPermissions, currentLanguage, t, createPageUrl, hasPermission, getPermissionKey]);
-
-  if (isAuthPage) {
-    if (isLoading) {
-      return (
-        <div className="w-screen h-screen flex items-center justify-center">
-          <p className="text-muted-foreground">Checking session...</p>
-        </div>);
-
+  const handleAddItem = () => {
+    if (!selectedInventoryItem || itemQuantity <= 0) {
+      toast.error('Please select an item and enter valid quantity');
+      return;
     }
-    return (
-      <SessionProvider>
-        {children}
-      </SessionProvider>);
 
-  }
+    const inventoryItem = departmentFilteredInventory.find(i => i.id === selectedInventoryItem);
+    if (!inventoryItem) {
+      toast.error('Selected item not available');
+      return;
+    }
 
-  // OPTIMIZED: Professional skeleton loading screen that mimics the actual layout
-  if (isLoading) {
-    return (
-      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-        {/* Skeleton Sidebar */}
-        <aside className="hidden lg:flex w-[280px] h-full flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3 h-16 px-4 border-b border-slate-200 dark:border-slate-800">
-            <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
-            <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-          </div>
-          <div className="flex-1 p-4 space-y-2">
-            {[...Array(8)].map((_, i) =>
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
-                <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
-                <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
-              </div>
-            )}
-          </div>
-        </aside>
-        
-        {/* Skeleton Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Skeleton Header */}
-          <header className="h-16 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
-              <div className="w-48 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
-              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
-            </div>
-          </header>
-          
-          {/* Skeleton Content Area */}
-          <main className="flex-1 p-6 lg:p-8 overflow-hidden">
-            <div className="max-w-7xl mx-auto space-y-6">
-              {/* Title skeleton */}
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
-                  <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                </div>
-              </div>
-              
-              {/* Stats cards skeleton */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) =>
-                <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-3" />
-                    <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                  </div>
-                )}
-              </div>
-              
-              {/* Table skeleton */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                  <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                </div>
-                <div className="p-4 space-y-3">
-                  {[...Array(5)].map((_, i) =>
-                  <div key={i} className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
-                      <div className="flex-1 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
-                      <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>);
+    if (inventoryItem.current_stock < itemQuantity) {
+      toast.error(`Only ${inventoryItem.current_stock} units available in stock`);
+      return;
+    }
 
-  }
+    const unitPrice = inventoryItem.selling_price;
+    const discount = itemDiscount || 0;
+    const subtotal = (unitPrice * itemQuantity) - discount;
 
-  if (error) {
-    return (
-      <div className="w-screen h-screen flex items-center justify-center bg-red-50 p-4">
-        <div className="text-center text-red-800">
-          <h1 className="text-xl sm:text-2xl font-bold mb-2">System Error</h1>
-          <p className="text-sm sm:text-base">Please refresh the page and try again.</p>
-        </div>
-      </div>);
+    const newItem = {
+      inventory_id: inventoryItem.id,
+      item_name: inventoryItem.item_name,
+      quantity: itemQuantity,
+      unit_price: unitPrice,
+      discount: discount,
+      subtotal: subtotal,
+      is_combo: inventoryItem.is_bundle || false
+    };
 
-  }
+    setFormData(prev => ({
+      ...prev,
+      order_items: [...prev.order_items, newItem]
+    }));
 
-  // Simple nav link component for flat menu
-  const SimpleNavLink = ({ module }) => {
-    const location = useLocation();
-    const isActive = location.pathname === module.url;
-    const hoverProps = module.url ? prefetchForRoute(module.url) : {};
+    setSelectedInventoryItem('');
+    setItemQuantity(1);
+    setItemDiscount(0);
+  };
 
-    return (
-      <div {...hoverProps}>
-        <Link
-          to={module.url}
-          className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isActive ? 'active bg-indigo-50 dark:bg-indigo-900/30' : ''}`
-          }>
+  const handleRemoveItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      order_items: prev.order_items.filter((_, i) => i !== index)
+    }));
+  };
 
-          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          <span className={`font-semibold text-[15px] ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
-        </Link>
-      </div>);
+  const handleSubmit = (e) => {
+    e.preventDefault();
 
+    if (formData.order_items.length === 0) {
+      toast.error('Please add at least one item to order');
+      return;
+    }
+
+    if (!formData.customer_name || !formData.customer_phone) {
+      toast.error('Please enter customer details');
+      return;
+    }
+
+    if (!formData.shipping_address.address_line || !formData.shipping_address.city) {
+      toast.error('Please enter complete shipping address');
+      return;
+    }
+
+    const generateShortOrderNumber = () => {
+      const timestamp = Date.now().toString().slice(-5);
+      const random = Math.floor(Math.random() * 10);
+      return `PD0${timestamp}${random}`;
+    };
+
+    const orderData = {
+      ...formData,
+      order_number: order?.order_number || generateShortOrderNumber(),
+      order_date: order?.order_date || new Date().toISOString(),
+      subtotal: calculations.subtotal,
+      total_amount: calculations.total,
+      order_status: order?.order_status || 'pending',
+      paid_amount: formData.payment_status === 'paid' ? calculations.total : 0
+    };
+
+    onSubmit(orderData);
   };
 
   return (
-    <FastLoadingProvider>
-      <SessionProvider>
-        <ShimmerStyles />
-        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans overflow-hidden">
-          <Toaster richColors position="top-center" toastOptions={{
-            className: 'sm:top-4 top-20',
-            duration: 3000
-          }} />
-          
-          <style>{`
-            /* PROFESSIONAL UI DESIGN SYSTEM - Expert Color Palette & Typography */
-            @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
-            :root {
-              /* Professional Color Palette - RED & WHITE Theme */
-                --primary-red: #DC2626;
-                --primary-red-dark: #B91C1C;
-                --primary-red-light: #EF4444;
-                --primary-violet: #DC2626;
-                --primary-indigo: #B91C1C;
-              --accent-emerald: #10B981;
-              --accent-cyan: #0891B2;
-              --accent-orange: #EA580C;
-              --accent-pink: #DB2777;
-              --accent-purple: #7C3AED;
-              --accent-amber: #D97706;
-              --accent-rose: #E11D48;
-              --accent-teal: #0D9488;
-              
-              --neutral-50: #F8FAFC;
-              --neutral-100: #F1F5F9;
-              --neutral-200: #E2E8F0;
-              --neutral-300: #CBD5E1;
-              --neutral-600: #475569;
-              --neutral-700: #334155;
-              --neutral-800: #1E293B;
-              --neutral-900: #0F172A;
-              
-              /* Light Mode */
-              --bg-primary: #FFFFFF;
-              --bg-secondary: #F8FAFC;
-              --bg-accent: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%);
-              --text-primary: #0F172A;
-              --text-secondary: #475569;
-              --card-bg: #FFFFFF;
-              --card-border: #E2E8F0;
-              --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-              --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
-              --shadow-lg: 0 12px 32px 0 rgba(0, 0, 0, 0.12);
-              
-              /* Dark Mode */
-              --text-dark-primary: #F8FAFC;
-              --text-dark-secondary: #CBD5E1;
-              --card-dark-bg: #1E293B;
-              --card-dark-border: #334155;
-            }
-
-            .light {
-              --current-bg-primary: var(--bg-primary);
-              --current-bg-secondary: var(--bg-secondary);
-              --current-text-primary: var(--text-primary);
-              --current-text-secondary: var(--text-secondary);
-              --current-card-bg: var(--card-bg);
-              --current-card-border: var(--card-border);
-            }
-
-            .dark {
-              --current-bg-primary: var(--neutral-900);
-              --current-bg-secondary: var(--neutral-800);
-              --current-text-primary: var(--text-dark-primary);
-              --current-text-secondary: var(--text-dark-secondary);
-              --current-card-bg: var(--card-dark-bg);
-              --current-card-border: var(--card-dark-border);
-            }
-
-            body {
-              color: var(--current-text-primary);
-              font-family: 'Anek Bangla', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              font-weight: 400;
-              -webkit-font-smoothing: antialiased;
-              -moz-osx-font-smoothing: grayscale;
-              -webkit-overflow-scrolling: touch;
-              overflow-x: hidden;
-              background: var(--current-bg-secondary);
-            }
-
-            /* Professional Typography */
-            h1, h2, h3, h4, h5, h6 {
-              font-family: 'Anek Bangla', 'Inter', sans-serif;
-              font-weight: 700;
-              letter-spacing: -0.02em;
-              color: var(--current-text-primary);
-            }
-
-            .font-display {
-              font-family: 'Anek Bangla', sans-serif;
-            }
-
-            /* Modern Text Gradient - RED Theme */
-            .text-gradient {
-              background: linear-gradient(135deg, #B91C1C 0%, #DC2626 50%, #EF4444 100%);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
-            }
-
-            /* Deep Navy Theme Variables */
-            :root {
-              --navy-900: #0F172A;
-              --navy-800: #1E293B;
-              --navy-700: #334155;
-              --navy-600: #475569;
-              --navy-500: #64748B;
-              --navy-400: #94A3B8;
-              --navy-300: #CBD5E1;
-              --navy-200: #E2E8F0;
-              --navy-100: #F1F5F9;
-              --navy-50: #F8FAFC;
-            }
-
-            /* MOBILE-FIRST TOUCH OPTIMIZATIONS */
-            * {
-              touch-action: manipulation;
-              -webkit-tap-highlight-color: rgba(124, 58, 237, 0.1);
-            }
-
-            /* Enhanced scrollbars - mobile optimized */
-            .sidebar,
-            main,
-            .overflow-y-auto,
-            .overflow-auto {
-              scrollbar-width: thin;
-              scrollbar-color: rgba(124, 58, 237, 0.3) transparent;
-            }
-
-            .sidebar::-webkit-scrollbar,
-            main::-webkit-scrollbar,
-            .overflow-y-auto::-webkit-scrollbar,
-            .overflow-auto::-webkit-scrollbar {
-              width: 6px;
-              height: 6px;
-            }
-
-            @media (min-width: 1024px) {
-              .sidebar::-webkit-scrollbar,
-              main::-webkit-scrollbar,
-              .overflow-y-auto::-webkit-scrollbar,
-              .overflow-auto::-webkit-scrollbar {
-                width: 8px;
-                height: 8px;
-              }
-            }
-
-            .sidebar::-webkit-scrollbar-track,
-            main::-webkit-scrollbar-track,
-            .overflow-y-auto::-webkit-scrollbar-track,
-            .overflow-auto::-webkit-scrollbar-track {
-              background: transparent;
-              border-radius: 3px;
-            }
-
-            .sidebar::-webkit-scrollbar-thumb,
-            main::-webkit-scrollbar-thumb,
-            .overflow-y-auto::-webkit-scrollbar-thumb,
-            .overflow-auto::-webkit-scrollbar-thumb {
-              background: rgba(124, 58, 237, 0.3);
-              border-radius: 3px;
-              transition: background 0.3s ease;
-            }
-
-            .sidebar::-webkit-scrollbar-thumb:hover,
-            main::-webkit-scrollbar-thumb:hover,
-            .overflow-y-auto::-webkit-scrollbar-thumb:hover,
-            .overflow-auto::-webkit-scrollbar-thumb:hover {
-              background: rgba(124, 58, 237, 0.5);
-            }
-
-            /* PROFESSIONAL FIXED SIDEBAR NAVIGATION - Clean & Enterprise */
-            .nav-item {
-              color: var(--neutral-600);
-              position: relative;
-              transition: all 0.15s ease-out;
-              background: transparent;
-              min-height: 44px;
-              display: flex;
-              align-items: center;
-              touch-action: manipulation;
-              font-weight: 500;
-              letter-spacing: -0.01em;
-              border-radius: 8px;
-              border: 1px solid transparent;
-              margin-bottom: 2px;
-            }
-
-            @media (max-width: 1024px) {
-              .nav-item {
-                min-height: 52px;
-                padding: 14px 16px;
-                font-size: 15px;
-                font-weight: 500;
-              }
-            }
-
-            .nav-item:hover {
-              background: rgba(99, 102, 241, 0.06);
-              border-color: rgba(99, 102, 241, 0.15);
-            }
-
-            .nav-item.active {
-              background: rgba(220, 38, 38, 0.1);
-              font-weight: 600;
-              border-color: rgba(220, 38, 38, 0.3);
-              box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
-            }
-
-            .dark .nav-item.active {
-              background: rgba(220, 38, 38, 0.2);
-              border-color: rgba(220, 38, 38, 0.4);
-            }
-
-            .nav-item.active::before {
-              content: '';
-              position: absolute;
-              left: 0;
-              top: 50%;
-              transform: translateY(-50%);
-              width: 3px;
-              height: 24px;
-              background: #DC2626;
-              border-radius: 0 4px 4px 0;
-            }
-
-            .dark .nav-item.active::before {
-              background: #EF4444;
-            }
-
-            /* Sub-navigation box styling */
-            .nav-sub-item {
-              border: 1px solid transparent;
-              margin-bottom: 1px;
-            }
-
-            .nav-sub-item:hover {
-              border-color: rgba(99, 102, 241, 0.15);
-            }
-
-            /* Sub-navigation items */
-            .nav-sub-item {
-              transition: all 0.15s ease-out;
-            }
-
-            /* Collapsed sidebar item styles */
-            .nav-item-collapsed {
-              transition: all 0.15s ease-out;
-            }
-
-            /* PROFESSIONAL HEADER - Clean & Minimal */
-            .header {
-              background: rgba(255, 255, 255, 0.95);
-              backdrop-filter: blur(12px);
-              -webkit-backdrop-filter: blur(12px);
-              border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-            }
-
-            .dark .header {
-              background: rgba(15, 23, 42, 0.95);
-              border-bottom: 1px solid rgba(51, 65, 85, 0.8);
-            }
-
-            @media (max-width: 768px) {
-              .header {
-                padding: 12px 16px;
-                min-height: 64px;
-              }
-            }
-
-            /* MODERN CARD DESIGN - Professional & Vibrant */
-            .premium-card {
-              background: var(--current-card-bg);
-              border: 1.5px solid var(--current-card-border);
-              border-radius: 20px;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 16px rgba(0, 0, 0, 0.06);
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              position: relative;
-              overflow: hidden;
-            }
-
-            .premium-card::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              height: 3px;
-              background: linear-gradient(90deg, var(--primary-indigo), var(--accent-purple), var(--accent-pink));
-              opacity: 0;
-              transition: opacity 0.3s ease;
-            }
-
-            .premium-card:hover::before {
-              opacity: 1;
-            }
-
-            @media (min-width: 768px) {
-              .premium-card {
-                border-radius: 24px;
-              }
-            }
-
-            .premium-card:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 8px 32px rgba(30, 64, 175, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
-              border-color: rgba(30, 64, 175, 0.25);
-            }
-
-            @media (min-width: 1024px) {
-              .premium-card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 16px 48px rgba(30, 64, 175, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
-              }
-            }
-
-            /* MOBILE TOUCH TARGETS */
-            @media (max-width: 1024px) {
-              button, .btn, a[role="button"], input[type="button"], 
-              [role="button"], [tabindex="0"] {
-                min-height: 48px;
-                min-width: 48px;
-                touch-action: manipulation;
-              }
-
-              input, select, textarea {
-                min-height: 48px;
-                font-size: 16px !important;
-                padding: 12px 16px;
-              }
-
-              .dropdown-trigger,
-              .select-trigger {
-                min-height: 52px;
-                font-size: 16px;
-              }
-            }
-
-            /* MOBILE SCROLLING & GESTURES */
-            .sidebar, .main-content, .overflow-y-auto {
-              -webkit-overflow-scrolling: touch;
-              overscroll-behavior: contain;
-            }
-
-            /* MOBILE DIALOG/MODAL OPTIMIZATIONS */
-            @media (max-width: 768px) {
-              .dialog-content {
-                width: 100vw !important;
-                height: 100vh !important;
-                max-width: 100vw !important;
-                max-height: 100vh !important;
-                margin: 0 !important;
-                border-radius: 0 !important;
-                transform: none !important;
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-              }
-
-              .user-profile-dialog {
-                width: 100vw !important;
-                height: 100vh !important;
-                max-width: 100vw !important;
-                max-height: 100vh !important;
-                margin: 0 !important;
-                border-radius: 0 !important;
-                transform: none !important;
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-              }
-            }
-
-            /* MOBILE-FIRST TYPOGRAPHY SCALE */
-            @media (max-width: 768px) {
-              h1 { font-size: 1.75rem; line-height: 1.2; }
-              h2 { font-size: 1.375rem; line-height: 1.3; }
-              h3 { font-size: 1.125rem; line-height: 1.4; }
-              
-              .text-4xl { font-size: 1.75rem; }
-              .text-3xl { font-size: 1.375rem; }
-              .text-2xl { font-size: 1.125rem; }
-              .text-xl { font-size: 1rem; }
-            }
-
-            /* MOBILE LAYOUT OPTIMIZATIONS */
-            @media (max-width: 768px) {
-              .grid { gap: 12px; }
-              .space-y-6 > * + * { margin-top: 16px; }
-              .space-y-4 > * + * { margin-top: 12px; }
-              .p-6 { padding: 16px; }
-              .p-8 { padding: 20px; }
-              
-              .container, .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl {
-                max-width: 100vw;
-                padding-left: 16px;
-                padding-right: 16px;
-              }
-            }
-
-            /* MOBILE TABLE OPTIMIZATIONS */
-            @media (max-width: 768px) {
-              .responsive-table {
-                margin: 0 -16px;
-                border-radius: 0;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-              }
-              
-              .responsive-table table {
-                width: 100%;
-                min-width: 600px;
-              }
-              
-              .responsive-table th,
-              .responsive-table td {
-                padding: 12px 8px;
-                font-size: 14px;
-                white-space: nowrap;
-              }
-            }
-
-            /* ACCESSIBILITY & FOCUS STATES */
-            @media (max-width: 1024px) {
-              *:focus-visible {
-                outline: 2px solid #7C3AED;
-                outline-offset: 2px;
-                border-radius: 4px;
-              }
-              
-              button:focus-visible,
-              a:focus-visible,
-              input:focus-visible,
-              select:focus-visible,
-              textarea:focus-visible {
-                outline: 3px solid #7C3AED;
-                outline-offset: 2px;
-              }
-            }
-
-            /* PREVENT HORIZONTAL OVERFLOW */
-            * {
-              max-width: 100%;
-              box-sizing: border-box;
-            }
-
-            html, body {
-              overflow-x: hidden;
-              width: 100vw;
-            }
-
-            /* MOBILE SAFE AREA SUPPORT */
-            @supports (padding: max(0px)) {
-              .mobile-safe-area {
-                padding-left: max(16px, env(safe-area-inset-left));
-                padding-right: max(16px, env(safe-area-inset-right));
-                padding-top: max(8px, env(safe-area-inset-top));
-                padding-bottom: max(8px, env(safe-area-inset-bottom));
-              }
-            }
-
-            /* Clean sidebar scrollbar */
-            .sidebar::-webkit-scrollbar {
-              width: 4px;
-            }
-            
-            .sidebar::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            
-            .sidebar::-webkit-scrollbar-thumb {
-              background: rgba(148, 163, 184, 0.3);
-              border-radius: 2px;
-            }
-            
-            .sidebar::-webkit-scrollbar-thumb:hover {
-              background: rgba(148, 163, 184, 0.5);
-            }
-            /* PERFORMANCE: Reduce paint complexity */
-            * {
-              will-change: auto;
-            }
-
-            .nav-item:hover,
-            .premium-card:hover {
-              will-change: transform, box-shadow;
-            }
-
-            /* PERFORMANCE: Hardware acceleration for animations */
-            .animated-logo,
-            .nav-item,
-            .premium-card {
-              transform: translateZ(0);
-              backface-visibility: hidden;
-            }
-
-            /* PERFORMANCE: Optimize scrolling */
-            .sidebar,
-            .main-content {
-              contain: layout style paint;
-            }
-
-            /* ULTRA-FAST PERFORMANCE: 3x faster interactions */
-            button, a, input, select, textarea {
-              transition: all 0.08s ease-out !important;
-            }
-
-            .premium-card, .nav-item, [class*="Card"] {
-              transition: transform 0.1s ease-out, box-shadow 0.1s ease-out !important;
-            }
-
-            /* Instant visual feedback */
-            button:active, a:active {
-              transform: scale(0.97) !important;
-              transition-duration: 0.03s !important;
-            }
-
-            /* Preload critical resources */
-            @media (prefers-reduced-motion: no-preference) {
-              * {
-                scroll-behavior: smooth;
-              }
-            }
-
-            /* GPU acceleration for smoother animations */
-            .sidebar, main, [class*="Dialog"], [class*="Sheet"] {
-              transform: translateZ(0);
-              will-change: transform;
-            }
-
-            /* Smooth Page Transitions */
-            @keyframes smoothFadeIn {
-              from { 
-                opacity: 0; 
-                transform: translateY(8px) scale(0.98);
-              }
-              to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1);
-              }
-            }
-
-            .fade-in {
-              animation: smoothFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            /* Professional Button Styles - RED Theme */
-            .btn-primary {
-              background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
-              color: white;
-              font-weight: 600;
-              box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-              transition: all 0.08s ease;
-            }
-
-            .btn-primary:hover {
-              box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-              transform: translateY(-1px);
-            }
-
-            /* Premium Card RED Border */
-            .premium-card {
-              border-left: 3px solid #DC2626;
-            }
-
-            .dark .premium-card {
-              border-left: 3px solid #EF4444;
-            }
-
-            /* Modern Badge Styles */
-            .badge-modern {
-              font-weight: 600;
-              font-size: 0.75rem;
-              padding: 0.375rem 0.75rem;
-              border-radius: 9999px;
-              letter-spacing: 0.025em;
-            }
-
-            /* Enhanced Focus States */
-            *:focus-visible {
-              outline: 2px solid var(--primary-indigo);
-              outline-offset: 3px;
-              border-radius: 8px;
-            }
-
-            /* Smooth Scrollbars - RED Theme */
-            ::-webkit-scrollbar {
-              width: 6px;
-              height: 6px;
-            }
-
-            ::-webkit-scrollbar-track {
-              background: #FEF2F2;
-              border-radius: 6px;
-            }
-
-            ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #B91C1C, #DC2626);
-              border-radius: 6px;
-              border: 1px solid #FEF2F2;
-            }
-
-            ::-webkit-scrollbar-thumb:hover {
-              background: linear-gradient(180deg, #991B1B, #B91C1C);
-            }
-
-            .dark ::-webkit-scrollbar-track {
-              background: #1F1F1F;
-            }
-
-            .dark ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #DC2626, #EF4444);
-              border: 1px solid #1F1F1F;
-            }
-
-            /* PERFORMANCE: 3X FASTER - Ultra-Fast Transitions for Production */
-            * {
-              transition-duration: 0.05s !important;
-            }
-
-            button, a, .nav-item, .premium-card, input, select {
-              transition: all 0.05s ease-out !important;
-            }
-
-            /* Instant feedback on click */
-            button:active, a:active, .nav-item:active {
-              transform: scale(0.97) !important;
-              transition: transform 0.02s !important;
-            }
-
-            /* Production-Ready: Optimize rendering for 3x speed */
-            .premium-card, [class*="Card"] {
-              contain: layout style paint;
-              will-change: auto;
-            }
-
-            /* GPU acceleration for instant rendering */
-            main, .sidebar, [class*="Dialog"], [class*="Content"] {
-              transform: translateZ(0);
-              backface-visibility: hidden;
-            }
-
-            /* Minimal icon animations - fast but visible */
-            svg {
-              transition: transform 0.05s ease-out !important;
-            }
-
-            .nav-item:hover svg, button:hover svg {
-              transform: scale(1.02);
-            }
-
-            /* Preload optimization */
-            @media (prefers-reduced-motion: no-preference) {
-              html { scroll-behavior: auto; }
-            }
-
-            /* Eliminate layout shifts */
-            img, video, canvas {
-              max-width: 100%;
-              height: auto;
-              content-visibility: auto;
-            }
-          `}</style>
-
-          {/* Mobile Overlay */}
-          {isSidebarOpen &&
-          <div
-            className="fixed inset-0 bg-black/60 z-40 lg:hidden animate-in fade-in duration-300"
-            onClick={() => setIsSidebarOpen(false)}
-            style={{ backdropFilter: 'blur(4px)' }} />
-
-          }
-
-          {/* Professional Fixed Sidebar - Clean Enterprise Design */}
-          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
-            ${isSidebarOpen ? 'w-[260px] translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[260px]'}`}>
-            
-            {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
-              <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                            <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
-                </div>
-                {isSidebarOpen &&
-                <div className="min-w-0">
-                    <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      PIM
-                    </span>
-                    <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Prodhan Inventory
-
-                  </span>
-                  </div>
-                }
-              </Link>
-              {isSidebarOpen &&
-              <Button
-                onClick={() => setIsSidebarOpen(false)}
-                variant="ghost"
-                size="sm"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-8 w-8 p-0 touch-manipulation rounded-lg">
-
-                  <X className="w-4 h-4" />
-                </Button>
-              }
-              {/* Desktop collapse toggle */}
-              <Button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                variant="ghost"
-                size="sm"
-                className="hidden lg:flex text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 h-7 w-7 p-0 touch-manipulation rounded-lg">
-
-                {isSidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+    <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-2">
+      {/* Customer Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Customer Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Select Existing Customer (Optional)</Label>
+            <SearchableCustomerSelect
+              customers={customers}
+              value={formData.customer_id}
+              onValueChange={(value) => setFormData({...formData, customer_id: value})}
+              placeholder="Search customers by name, phone, or email..."
+            />
+          </div>
+
+          <Separator />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Customer Name *</Label>
+              <Input
+                value={formData.customer_name}
+                onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
+                placeholder="Enter name"
+                required
+              />
+            </div>
+            <div>
+              <Label>Phone Number *</Label>
+              <Input
+                value={formData.customer_phone}
+                onChange={(e) => setFormData({...formData, customer_phone: e.target.value})}
+                placeholder="01XXXXXXXXX"
+                required
+              />
+            </div>
+            <div>
+              <Label>Email (Optional)</Label>
+              <Input
+                type="email"
+                value={formData.customer_email}
+                onChange={(e) => setFormData({...formData, customer_email: e.target.value})}
+                placeholder="customer@email.com"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Order Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5" />
+            Order Items
+            <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">
+              🛒 Prodhan.com Products
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 rounded-lg border-2 bg-purple-50 border-purple-300">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Products shown below are from <strong>Prodhan.com E-commerce</strong> only.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="md:col-span-2">
+              <Label className="font-semibold">
+                Select Product
+                <span className="text-muted-foreground font-normal ml-2">
+                  ({departmentFilteredInventory.length} available)
+                </span>
+              </Label>
+              <SearchableProductSelect
+                inventory={departmentFilteredInventory}
+                value={selectedInventoryItem}
+                onValueChange={setSelectedInventoryItem}
+                placeholder="Search by name, ISBN, barcode..."
+                disabled={departmentFilteredInventory.length === 0}
+              />
+            </div>
+            <div>
+              <Label>Quantity</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={itemQuantity}
+                onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+              />
+            </div>
+            <div>
+              <Label>Discount (BDT)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={itemDiscount}
+                onChange={(e) => setItemDiscount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="button" onClick={handleAddItem} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Add
               </Button>
             </div>
-
-            {/* Navigation Content */}
-            <div className="flex-1 overflow-y-auto py-4 px-3">
-              <nav className="space-y-1">
-                {getNavigationModules().map((mod) =>
-                <SimpleNavLink key={mod.url} module={mod} />
-                )}
-              </nav>
-            </div>
-
-            {/* User Footer */}
-            <div className={`border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
-              {isSidebarOpen ?
-              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                        {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                      </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                      {currentUser?.display_name || currentUser?.full_name}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                      {currentUser?.designation || currentUser?.email}
-                    </p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-xl">
-                      <DropdownMenuLabel className="text-slate-700 dark:text-slate-300">My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
-                      <DropdownMenuItem onSelect={() => setIsProfileOpen(true)} className="cursor-pointer">
-                        <UserIcon className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleLogout} className="cursor-pointer text-red-600 dark:text-red-400">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div> :
-
-              <div className="relative group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-red-300 transition-all">
-                    {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
-                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-                      <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{currentUser?.display_name || currentUser?.full_name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
-                    </div>
-                    <button
-                    onClick={() => setIsProfileOpen(true)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left">
-
-                      <UserIcon className="w-4 h-4" />
-                      <span>Profile</span>
-                    </button>
-                    <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left">
-
-                      <LogOut className="w-4 h-4" />
-                      <span>Log out</span>
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-          </aside>
-
-          {/* Main Content Area */}
-          <div className={`flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950
-            ${isSidebarOpen ? 'lg:ml-[260px] ml-0' : 'ml-0 lg:ml-[260px]'}
-          `}>
-            
-            {/* Professional Header */}
-            <header className="header h-16 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
-              <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
-                <Button
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
-
-                  {isSidebarOpen && window.innerWidth < 1024 ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </Button>
-                
-                {/* Compact search button */}
-                <div className="flex-1 max-w-xs lg:max-w-md">
-                  <UniversalSearch
-                    entities={{ User, Lead, Admission, Expense, Income, Inventory }}
-                    className="w-full"
-                    compact={true} />
-
-                </div>
-              </div>
-
-              {/* Header Actions */}
-              <div className="flex items-center gap-2 lg:gap-3">
-                <Button
-                  onClick={toggleTheme}
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors relative h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
-
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
-                      <Globe className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="premium-card z-50">
-                    <DropdownMenuItem
-                      onClick={() => changeLanguage('en')}
-                      className={`cursor-pointer min-h-[48px] lg:min-h-[40px] ${currentLanguage === 'en' ? 'font-bold text-primary' : ''}`}>
-
-                      English
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => changeLanguage('bn')}
-                      className={`cursor-pointer min-h-[48px] lg:min-h-[40px] ${currentLanguage === 'bn' ? 'font-bold text-primary' : ''}`}>
-
-                      বাংলা (Bengali)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <NotificationCenter currentUser={currentUser} />
-
-                {/* Mobile-Optimized User Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-12 w-12 lg:h-10 lg:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-red-500/30">
-                        <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm lg:text-xs">
-                          {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-64 mr-2 mt-2 premium-card z-50" align="end">
-                    <DropdownMenuLabel className="p-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
-                          <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                          <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm">
-                              {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
-                          <p className="text-xs text-red-600 font-medium mt-1 truncate">{currentUser?.designation}</p>
-                        </div>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem
-                      onClick={() => setIsProfileOpen(true)}
-                      className="text-muted-foreground hover:bg-red-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
-
-                      <UserIcon className="mr-3 h-4 w-4" />
-                      My Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to={createPageUrl("Settings")}
-                        className="flex items-center w-full text-muted-foreground hover:bg-red-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
-
-                        <Settings className="mr-3 h-4 w-4" />
-                        Settings
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem
-                      onClick={handleLogout}
-                      className="text-red-500 hover:bg-red-500/10 hover:text-red-600 m-2 rounded-lg cursor-pointer transition-colors duration-200 min-h-[52px] lg:min-h-[48px] touch-manipulation">
-
-                      <LogOut className="mr-3 h-4 w-4" />
-                      <span className="font-medium">Sign Out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </header>
-
-            {/* Main Content - OPTIMIZED padding */}
-            <main className="p-4 main-content flex-1 overflow-y-auto lg:p-6">
-              <ErrorBoundary>
-                <Suspense fallback={
-                <div className="text-center p-20 text-muted-foreground">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
-                    <p>Loading page...</p>
-                  </div>
-                }>
-                  <div className="fade-in">
-                    {children}
-                  </div>
-                </Suspense>
-              </ErrorBoundary>
-            </main>
           </div>
 
-          {/* Mobile Bottom Navigation */}
-          <MobileBottomNav />
+          {formData.order_items.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead className="text-right">Subtotal</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {formData.order_items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{item.item_name}</TableCell>
+                    <TableCell className="text-center">{item.quantity || 0}</TableCell>
+                    <TableCell className="text-right">BDT {(item.unit_price || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-red-600">-BDT {(item.discount || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-semibold">BDT {(item.subtotal || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        <XCircle className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No items added yet. Start adding products above.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-          {/* Mobile-Optimized Profile Dialog */}
-          <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-            <DialogContent className="w-full h-full max-w-none max-h-none p-0 m-0 border-0 rounded-none lg:w-[90vw] lg:h-[90vh] lg:max-w-4xl lg:max-h-[90vh] lg:rounded-2xl lg:border lg:m-auto lg:p-6 overflow-y-auto">
-              <UserProfile
-                user={currentUser}
-                onUpdate={refreshUserData}
-                onClose={() => setIsProfileOpen(false)} />
+      {/* Shipping Address */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MapPin className="w-5 h-5" />
+            Shipping Address
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label>Full Address *</Label>
+              <Textarea
+                value={formData.shipping_address.address_line}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  shipping_address: {...formData.shipping_address, address_line: e.target.value}
+                })}
+                placeholder="House/Flat no, Road, Area"
+                rows={2}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>City *</Label>
+                <Input
+                  value={formData.shipping_address.city}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    shipping_address: {...formData.shipping_address, city: e.target.value}
+                  })}
+                  placeholder="e.g. Dhaka"
+                  required
+                />
+              </div>
+              <div>
+                <Label>District *</Label>
+                <Input
+                  value={formData.shipping_address.district}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    shipping_address: {...formData.shipping_address, district: e.target.value}
+                  })}
+                  placeholder="e.g. Dhaka"
+                  required
+                />
+              </div>
+              <div>
+                <Label>Postal Code</Label>
+                <Input
+                  value={formData.shipping_address.postal_code}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    shipping_address: {...formData.shipping_address, postal_code: e.target.value}
+                  })}
+                  placeholder="e.g. 1205"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            </DialogContent>
-          </Dialog>
+      {/* Payment & Pricing */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Payment & Pricing
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Payment Method *</Label>
+              <Select
+                value={formData.payment_method}
+                onValueChange={(value) => setFormData({...formData, payment_method: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cod">Cash on Delivery (COD)</SelectItem>
+                  <SelectItem value="bkash">bKash</SelectItem>
+                  <SelectItem value="nagad">Nagad</SelectItem>
+                  <SelectItem value="rocket">Rocket</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="card">Card Payment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Payment Status</Label>
+              <Select
+                value={formData.payment_status}
+                onValueChange={(value) => setFormData({...formData, payment_status: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="font-semibold">Department</Label>
+              <div className="p-3 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-purple-600 text-white">🛒 Prodhan.com E-commerce</Badge>
+                  <span className="text-sm text-purple-700">All orders are for Prodhan.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* Smart Onboarding - Shows only once */}
-          {currentUser && !isAuthPage &&
-          <SmartOnboarding
-            user={currentUser}
-            onComplete={() => {
-              console.log('✅ Onboarding completed');
-              toast.success('🎉 Welcome! You\'re all set to explore the ERP!');
-            }} />
+          <Separator />
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Regular Discount (BDT)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={formData.discount_amount}
+                onChange={(e) => setFormData({...formData, discount_amount: parseFloat(e.target.value) || 0})}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label>Coupon Discount (BDT)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={formData.coupon_discount}
+                onChange={(e) => setFormData({...formData, coupon_discount: parseFloat(e.target.value) || 0})}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label>Shipping Cost (BDT)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={formData.shipping_cost}
+                onChange={(e) => setFormData({...formData, shipping_cost: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 rounded-xl space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Items Total:</span>
+              <span className="font-medium">BDT {(calculations.subtotal || 0).toLocaleString()}</span>
+            </div>
+            {calculations.totalDiscount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Discount:</span>
+                <span className="font-medium text-red-600">-BDT {(calculations.totalDiscount || 0).toLocaleString()}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Shipping:</span>
+              <span className="font-medium">BDT {(calculations.shippingCost || 0).toLocaleString()}</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between text-lg font-bold">
+              <span>Total Amount:</span>
+              <span className="text-red-600">BDT {(calculations.total || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div>
+            <Label>Customer Notes</Label>
+            <Textarea
+              value={formData.customer_notes}
+              onChange={(e) => setFormData({...formData, customer_notes: e.target.value})}
+              placeholder="Any special requests from customer..."
+              rows={2}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3 sticky bottom-0 bg-white p-4 border-t">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" className="bg-red-600 hover:bg-red-700">
+          <CheckCircle className="w-4 h-4 mr-2" />
+          {order ? 'Update Order' : 'Create Order'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+// Main Sales Page
+function SalesPage() {
+  const queryClient = useQueryClient();
+  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
+  const [productFilter, setProductFilter] = useState('all');
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    includeCustomerDetails: true,
+    includeProductDetails: true,
+    includeShippingAddress: true,
+    includePaymentInfo: true,
+    onlyFiltered: true
+  });
+
+  // 🚀 LIGHTNING FAST: Cached current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => User.me(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  // 🚀 LIGHTNING FAST: Orders with pagination for ALL orders + fast initial load
+  const [allOrdersLoaded, setAllOrdersLoaded] = useState(false);
+  
+  const { data: recentOrders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders-sales-recent'],
+    queryFn: () => Order.list('-order_date', 500),
+    staleTime: 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchInterval: 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
+
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['orders-sales-all'],
+    queryFn: async () => {
+      const batchSize = 1000;
+      let allData = [];
+      let offset = 0;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const batch = await Order.list('-order_date', batchSize, offset);
+        allData = [...allData, ...batch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+      }
+      
+      setAllOrdersLoaded(true);
+      return allData;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    enabled: recentOrders.length > 0,
+  });
+
+  const orders = allOrdersLoaded && allOrders.length > 0 ? allOrders : recentOrders;
+
+  useEffect(() => {
+    let timeoutId = null;
+    const unsubscribe = Order.subscribe(() => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['orders-sales'] });
+      }, 500);
+    });
+    return () => {
+      unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [queryClient]);
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers-sales'],
+    queryFn: () => Customer.list('-created_date', 500),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['inventory-sales'],
+    queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const canViewAllDepartments = useMemo(() => {
+    return ['super_admin', 'admin'].includes(currentUser?.job_role?.toLowerCase());
+  }, [currentUser]);
+
+  const userDepartment = useMemo(() => {
+    if (!currentUser) return 'all';
+    if (canViewAllDepartments) return 'all';
+    return currentUser?.department || 'all';
+  }, [currentUser, canViewAllDepartments]);
+
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+
+  useEffect(() => {
+    if (currentUser && !canViewAllDepartments && departmentFilter !== userDepartment) {
+      setDepartmentFilter(userDepartment);
+    }
+  }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
+
+  const { data: rawUserPermissions = [] } = useQuery({
+    queryKey: ['user-permissions', currentUser?.id],
+    queryFn: () => base44.entities.UserPermission.filter({ user_id: currentUser.id }),
+    enabled: !!currentUser?.id,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const userPermissions = useMemo(() => {
+    const permMap = {};
+    rawUserPermissions.forEach(p => {
+      permMap[p.module] = {
+        can_view: p.can_view || false,
+        can_create: p.can_create || false,
+        can_edit: p.can_edit || false,
+        can_delete: p.can_delete || false,
+        can_approve: p.can_approve || false,
+        can_export: p.can_export || false
+      };
+    });
+    return permMap;
+  }, [rawUserPermissions]);
+
+  const hasPermission = useCallback((module, action) => {
+    if (['admin', 'super_admin'].includes(currentUser?.job_role?.toLowerCase())) return true;
+    return userPermissions[module]?.[action] === true;
+  }, [currentUser?.job_role, userPermissions]);
+
+  const canEdit = hasPermission('sales', 'can_edit');
+  const canDelete = hasPermission('sales', 'can_delete');
+  const canCreate = hasPermission('sales', 'can_create');
+  const canApprove = hasPermission('sales', 'can_approve');
+  const canExport = hasPermission('sales', 'can_export');
+
+  const isAdmin = useMemo(() => {
+    return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
+  }, [currentUser]);
+
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderData) => {
+      let customerId = orderData.customer_id;
+
+      if (!customerId) {
+        const existingByPhone = customers.find(c => c.customer_phone === orderData.customer_phone);
+        const existingByEmail = orderData.customer_email 
+          ? customers.find(c => c.customer_email === orderData.customer_email)
+          : null;
+
+        const existingCustomer = existingByPhone || existingByEmail;
+
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+          await Customer.update(customerId, {
+            total_orders: (existingCustomer.total_orders || 0) + 1,
+            total_spent: (existingCustomer.total_spent || 0) + orderData.total_amount
+          });
+          toast.info(`Using existing customer: ${existingCustomer.customer_name}`);
+        } else {
+          const newCustomer = await Customer.create({
+            customer_name: orderData.customer_name,
+            customer_phone: orderData.customer_phone,
+            customer_email: orderData.customer_email,
+            customer_type: 'retail',
+            shipping_addresses: [orderData.shipping_address],
+            total_orders: 1,
+            total_spent: orderData.total_amount,
+            customer_since: new Date().toISOString()
+          });
+          customerId = newCustomer.id;
+        }
+      }
+
+      const order = await Order.create({
+        ...orderData,
+        customer_id: customerId
+      });
+
+      // Update inventory with combo and variant support
+      for (const item of orderData.order_items) {
+        const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+        if (!inventoryItem) continue;
+
+        // Check if this is a combo product
+        if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
+          // Deduct all component items
+          for (const bundleItem of inventoryItem.bundle_items) {
+            const componentItem = inventory.find(i => i.id === bundleItem.inventory_id);
+            if (componentItem) {
+              const deductQty = bundleItem.quantity * item.quantity;
+              const newComponentStock = componentItem.current_stock - deductQty;
+
+              await Inventory.update(bundleItem.inventory_id, {
+                current_stock: newComponentStock
+              });
+
+              await base44.entities.InventoryMovement.create({
+                inventory_item_id: bundleItem.inventory_id,
+                movement_type: 'out',
+                quantity: -deductQty,
+                reference_type: 'sale',
+                reference_id: order.id,
+                reference_number: order.order_number,
+                unit_cost: componentItem.selling_price,
+                total_value: -(deductQty * componentItem.selling_price),
+                performed_by: currentUser?.id || 'system',
+                notes: `Combo Sale: ${order.order_number} - Component of ${inventoryItem.item_name} (${item.quantity}×)`,
+                movement_date: new Date().toISOString().split('T')[0],
+                balance_after: newComponentStock
+              });
+            }
           }
 
-          {/* AI Smart Help - Contextual assistance */}
-          {currentUser && !isAuthPage && currentPageName &&
-          <SmartHelp
-            currentPage={`/${currentPageName}`}
-            currentLanguage={currentLanguage} />
+          // Record combo movement (informational)
+          await base44.entities.InventoryMovement.create({
+            inventory_item_id: item.inventory_id,
+            movement_type: 'out',
+            quantity: -item.quantity,
+            reference_type: 'sale',
+            reference_id: order.id,
+            reference_number: order.order_number,
+            unit_cost: item.unit_price,
+            total_value: -(item.quantity * item.unit_price),
+            performed_by: currentUser?.id || 'system',
+            notes: `Combo Sale: ${order.order_number} - ${inventoryItem.bundle_items.length} components auto-deducted`,
+            movement_date: new Date().toISOString().split('T')[0],
+            balance_after: inventoryItem.current_stock
+          });
+        } else {
+          // Regular product or variant tracking
+          const newStock = inventoryItem.current_stock - item.quantity;
 
+          // Handle color variant deduction if applicable
+          let updatedColorVariants = inventoryItem.color_variants;
+          if (item.selected_color && inventoryItem.color_variants?.length > 0) {
+            updatedColorVariants = inventoryItem.color_variants.map(variant => {
+              if (variant.color === item.selected_color) {
+                return { ...variant, quantity: variant.quantity - item.quantity };
+              }
+              return variant;
+            });
           }
 
-          {/* Chatbot - Enhanced positioning */}
-          <Chatbot
-            currentUser={currentUser}
-            currentPageName={currentPageName}
-            currentLanguage={currentLanguage} />
+          await Inventory.update(item.inventory_id, {
+            current_stock: newStock,
+            ...(updatedColorVariants && { color_variants: updatedColorVariants })
+          });
 
-          {/* PWA Installer */}
-          <PWAInstaller />
+          await base44.entities.InventoryMovement.create({
+            inventory_item_id: item.inventory_id,
+            movement_type: 'out',
+            quantity: -item.quantity,
+            reference_type: 'sale',
+            reference_id: order.id,
+            reference_number: order.order_number,
+            unit_cost: item.unit_price,
+            total_value: -(item.quantity * item.unit_price),
+            performed_by: currentUser?.id || 'system',
+            notes: `Sale: ${order.order_number} - Customer: ${order.customer_name}${item.selected_color ? ` - Color: ${item.selected_color}` : ''}`,
+            movement_date: new Date().toISOString().split('T')[0],
+            balance_after: newStock
+          });
+        }
+      }
+
+      return order;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['customers']);
+      queryClient.invalidateQueries(['inventory']);
+      toast.success('Sale order created successfully!');
+      setIsOrderFormOpen(false);
+      setEditingOrder(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to create order: ' + error.message);
+    },
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      const updatedOrder = await Order.update(id, data);
+      return updatedOrder;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      toast.success('Order updated successfully!');
+      setIsOrderFormOpen(false);
+      setEditingOrder(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to update order: ' + error.message);
+    },
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ orderId, newStatus }) => {
+      return await Order.update(orderId, { order_status: newStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      toast.success('Order status updated!');
+    },
+    onError: (error) => {
+      toast.error('Failed to update order status: ' + error.message);
+    },
+  });
+
+  const handleQuickStatusChange = (order, newStatus) => {
+    updateOrderStatusMutation.mutate({ orderId: order.id, newStatus });
+  };
+
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ orderId, newPaymentStatus }) => {
+      return await Order.update(orderId, { payment_status: newPaymentStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      toast.success('Payment status updated!');
+    },
+    onError: (error) => {
+      toast.error('Failed to update payment status: ' + error.message);
+    },
+  });
+
+  const handlePaymentStatusChange = (order, newPaymentStatus) => {
+    updatePaymentStatusMutation.mutate({ orderId: order.id, newPaymentStatus });
+  };
+
+  const handleBulkAction = async (action) => {
+    if (selectedOrderIds.length === 0) {
+      toast.error('Please select orders first');
+      return;
+    }
+
+    if (action === 'delete') {
+      if (!confirm(`Delete ${selectedOrderIds.length} order(s)? This cannot be undone.`)) {
+        return;
+      }
+      
+      try {
+        await Promise.all(selectedOrderIds.map(id => Order.delete(id)));
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-recent'] });
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-all'] });
+        toast.success(`${selectedOrderIds.length} order(s) deleted successfully`);
+        setSelectedOrderIds([]);
+      } catch (error) {
+        toast.error('Failed to delete orders: ' + error.message);
+      }
+    } else {
+      try {
+        await Promise.all(selectedOrderIds.map(id => 
+          Order.update(id, { order_status: action })
+        ));
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-recent'] });
+        queryClient.invalidateQueries({ queryKey: ['orders-sales-all'] });
+        toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
+        setSelectedOrderIds([]);
+      } catch (error) {
+        toast.error('Failed to update orders: ' + error.message);
+      }
+    }
+  };
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.length === filteredOrders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredOrders.map(o => o.id));
+    }
+  };
+
+  const handleOrderSubmit = (orderData) => {
+    if (editingOrder) {
+      updateOrderMutation.mutate({ id: editingOrder.id, data: orderData });
+    } else {
+      createOrderMutation.mutate(orderData);
+    }
+  };
+
+  const handleEditOrder = (order) => {
+    try {
+      if (!order || !order.id) {
+        toast.error('Invalid order data');
+        return;
+      }
+      
+      const validatedOrder = {
+        ...order,
+        order_items: Array.isArray(order.order_items) ? order.order_items : [],
+        shipping_address: order.shipping_address || {
+          address_line: '',
+          city: '',
+          district: '',
+          postal_code: '',
+          phone: ''
+        },
+        department: order.department || 'prodhan_com_e_commerce',
+        discount_amount: order.discount_amount || 0,
+        coupon_discount: order.coupon_discount || 0,
+        shipping_cost: order.shipping_cost || 60
+      };
+      
+      setEditingOrder(validatedOrder);
+      setIsOrderFormOpen(true);
+    } catch (error) {
+      console.error('Error opening order for edit:', error);
+      toast.error('Failed to load order for editing: ' + error.message);
+    }
+  };
+
+  const handleViewInvoice = (order) => {
+    setSelectedOrder(order);
+    setIsInvoiceOpen(true);
+  };
+
+  const handleDepartmentFilterChange = (value) => {
+    if (!canViewAllDepartments) {
+      if (value !== userDepartment) {
+        toast.error('You can only view orders from your assigned department.');
+        return;
+      }
+    }
+    setDepartmentFilter(value);
+  };
+
+  const [displayLimit, setDisplayLimit] = useState(50);
+  
+  const ordersWithDateStr = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+    return orders.map(o => ({
+      ...o,
+      _dateStr: formatDateBDT(o.order_date || o.created_date) 
+    }));
+  }, [orders]);
+  
+  const filteredOrders = useMemo(() => {
+    if (!ordersWithDateStr || ordersWithDateStr.length === 0) return [];
+    
+    let filtered = ordersWithDateStr;
+    
+    if (!canViewAllDepartments) {
+      filtered = filtered.filter(o => o.department === userDepartment);
+    } else if (departmentFilter !== 'all') {
+      filtered = filtered.filter(o => o.department === departmentFilter);
+    }
+
+    if (dateRange.from) {
+      const fromDateStr = dateRange.from;
+      const toDateStr = dateRange.to || dateRange.from;
+      filtered = filtered.filter(o => o._dateStr >= fromDateStr && o._dateStr <= toDateStr);
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(o => o.order_status === statusFilter);
+    }
+
+    if (paymentFilter !== 'all') {
+      filtered = filtered.filter(o => o.payment_status === paymentFilter);
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(o =>
+        o.order_number?.toLowerCase().includes(query) ||
+        o.customer_name?.toLowerCase().includes(query) ||
+        o.customer_phone?.includes(query)
+      );
+    }
+
+    if (productFilter !== 'all') {
+      filtered = filtered.filter(o => 
+        o.order_items?.some(item => item.inventory_id === productFilter)
+      );
+    }
+
+    return filtered;
+  }, [ordersWithDateStr, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
+
+  const displayedOrders = useMemo(() => {
+    return filteredOrders.slice(0, displayLimit);
+  }, [filteredOrders, displayLimit]);
+
+  const loadMoreOrders = useCallback(() => {
+    setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
+  }, [filteredOrders.length]);
+
+  const handleExportExcel = useCallback(() => {
+    const ordersToExport = exportOptions.onlyFiltered ? filteredOrders : orders;
+    
+    if (ordersToExport.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+    
+    toast.loading('Generating Excel...', { id: 'export' });
+    
+    setTimeout(() => {
+      try {
+        const headers = ['Order #', 'Date', 'Status', 'Payment Status'];
+        
+        if (exportOptions.includeCustomerDetails) {
+          headers.push('Customer Name', 'Customer Phone', 'Customer Email');
+        }
+        
+        if (exportOptions.includeShippingAddress) {
+          headers.push('Address', 'City', 'District', 'Postal Code');
+        }
+        
+        if (exportOptions.includeProductDetails) {
+          headers.push('Products', 'Total Items', 'Subtotal');
+        }
+        
+        if (exportOptions.includePaymentInfo) {
+          headers.push('Payment Method', 'Discount', 'Shipping', 'Total Amount', 'Paid Amount');
+        }
+        
+        headers.push('Notes', 'Created Date');
+        
+        const rows = ordersToExport.map(order => {
+          const row = [
+            order.order_number || '',
+            order.order_date ? formatDateBDT(order.order_date) : '',
+            order.order_status || '',
+            order.payment_status || ''
+          ];
+          
+          if (exportOptions.includeCustomerDetails) {
+            row.push(
+              order.customer_name || '',
+              order.customer_phone || '',
+              order.customer_email || ''
+            );
+          }
+          
+          if (exportOptions.includeShippingAddress) {
+            const addr = order.shipping_address || {};
+            row.push(
+              addr.address_line || '',
+              addr.city || '',
+              addr.district || '',
+              addr.postal_code || ''
+            );
+          }
+          
+          if (exportOptions.includeProductDetails) {
+            const products = (order.order_items || []).map(item => 
+              `${item.item_name} (×${item.quantity})`
+            ).join('; ');
+            const totalItems = (order.order_items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+            row.push(
+              products,
+              totalItems,
+              order.subtotal || 0
+            );
+          }
+          
+          if (exportOptions.includePaymentInfo) {
+            row.push(
+              order.payment_method || '',
+              (order.discount_amount || 0) + (order.coupon_discount || 0),
+              order.shipping_cost || 0,
+              order.total_amount || 0,
+              order.paid_amount || 0
+            );
+          }
+          
+          row.push(
+            order.customer_notes || '',
+            order.created_date ? formatDateBDT(order.created_date) : ''
+          );
+          
+          return row;
+        });
+        
+        const escapeCSV = (val) => {
+          if (val === null || val === undefined) return '';
+          const str = String(val);
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+        
+        const csvContent = [
+          headers.map(escapeCSV).join(','),
+          ...rows.map(row => row.map(escapeCSV).join(','))
+        ].join('\n');
+        
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sales_orders_${formatDateBDT(new Date())}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.success(`Exported ${ordersToExport.length} orders`, { id: 'export' });
+        setIsExportDialogOpen(false);
+      } catch (error) {
+        toast.error('Export failed: ' + error.message, { id: 'export' });
+      }
+    }, 100);
+  }, [filteredOrders, orders, exportOptions]);
+
+  const hasDateFilter = dateRange.from !== undefined;
+
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    inventory.forEach(i => map.set(i.id, i));
+    return map;
+  }, [inventory]);
+
+  const stats = useMemo(() => {
+    const todayStr = formatDateBDT(new Date());
+    const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
+    
+    let pendingOrders = 0, confirmedOrders = 0, shippedOrders = 0, totalReturns = 0, totalProductQuantity = 0;
+    
+    for (const o of statsOrders) {
+      if (o.order_status === 'pending') pendingOrders++;
+      else if (['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)) confirmedOrders++;
+      if (['shipped', 'out_for_delivery'].includes(o.order_status)) shippedOrders++;
+      if (o.order_status === 'returned') totalReturns++;
+      
+      for (const item of (o.order_items || [])) {
+        const invItem = inventoryMap.get(item.inventory_id);
+        totalProductQuantity += getActualQuantity(item.quantity || 0, invItem, item);
+      }
+    }
+
+    let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
+    
+    for (const o of ordersWithDateStr) {
+      const orderDateBDT = o._dateStr;
+      if (!orderDateBDT || orderDateBDT !== todayStr) continue;
+      
+      todayOrdersCount++;
+      if (o.order_status === 'pending') todayPending++;
+      else if (['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)) todayConfirmed++;
+      if (['shipped', 'out_for_delivery'].includes(o.order_status)) todayShipped++;
+      if (o.order_status === 'returned') todayReturns++;
+      
+      for (const item of (o.order_items || [])) {
+        const invItem = inventoryMap.get(item.inventory_id);
+        todayProductQty += getActualQuantity(item.quantity || 0, invItem, item);
+      }
+    }
+
+    return { 
+      totalOrders: statsOrders.length, 
+      pendingOrders, confirmedOrders, shippedOrders, totalProductQuantity, totalReturns,
+      todayOrders: todayOrdersCount, todayPending, todayConfirmed, todayShipped, todayReturns, todayProductQty,
+      isFiltered: hasDateFilter
+    };
+  }, [ordersWithDateStr, filteredOrders, hasDateFilter, inventoryMap]);
+
+  const getStatusBadge = (status) => {
+    const config = {
+      pending: { label: 'Pending', class: 'bg-slate-100 text-slate-700 border border-slate-200' },
+      confirmed: { label: 'Confirmed', class: 'bg-white text-[#D32F2F] border-2 border-[#D32F2F]' },
+      processing: { label: 'Processing', class: 'bg-blue-50 text-blue-700 border border-blue-200' },
+      packed: { label: 'Packed', class: 'bg-purple-50 text-purple-700 border border-purple-200' },
+      shipped: { label: 'Shipped', class: 'bg-cyan-50 text-cyan-700 border border-cyan-200' },
+      out_for_delivery: { label: 'Out for Delivery', class: 'bg-orange-50 text-orange-700 border border-orange-200' },
+      delivered: { label: 'Delivered', class: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+      cancelled: { label: 'Cancelled', class: 'bg-red-50 text-red-700 border border-red-200' },
+      returned: { label: 'Returned', class: 'bg-slate-100 text-slate-600 border border-slate-200' },
+    };
+    const { label, class: className } = config[status] || config.pending;
+    return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
+  };
+
+  const getPaymentBadge = (status) => {
+    const config = {
+      pending: { label: 'Pending', class: 'bg-slate-100 text-slate-600 border border-slate-200' },
+      partial: { label: 'Partial', class: 'bg-amber-50 text-amber-700 border border-amber-200' },
+      paid: { label: 'Paid', class: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+      refunded: { label: 'Refunded', class: 'bg-red-50 text-red-600 border border-red-200' },
+    };
+    const { label, class: className } = config[status] || config.pending;
+    return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
+  };
+
+  const getCorrectOrderId = (order) => {
+    if (!order) return 'N/A';
+    if (order.order_number && order.order_number.startsWith('PD')) {
+      return order.order_number;
+    }
+    if (order.order_number && order.order_number.startsWith('WC-')) {
+      const digits = order.order_number.replace(/\D/g, '').slice(-6);
+      return `PD${digits.padStart(6, '0')}`;
+    }
+    const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
+    return `PD${fallbackDigits.padStart(6, '0')}`;
+  };
+
+  const PRODHAN_LOGO = "https://z-cdn-media.chatglm.cn/files/ce97af84-8f81-419d-b062-e3bbb9bb0ff9.png?auth_key=1869978983-2c45fe054a014d9389481fe00700cc8c-0-8957bc7ab0a2e8e8d935b312e5b678f1";
+
+  // 🆕 MASTER INVOICE GENERATOR (Complete and Finalized)
+  const generateMasterInvoiceHTML = (order) => {
+    const displayId = getCorrectOrderId(order);
+    const address = order.shipping_address || {};
+    const orderDate = formatDisplayDate(order.order_date);
+
+    return `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd;">
+        
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #D32F2F; padding-bottom: 15px;">
+          <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 60px; margin-bottom: 10px;" />
+          <h2 style="margin: 0; font-size: 14px; color: #555; text-transform: uppercase; letter-spacing: 1px;">Prodhan.com</h2>
+          <h1 style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #222;">Your Trusted E-Commerce Partner</h1>
+          <div style="margin-top: 10px; display: inline-block; background: #D32F2F; color: white; padding: 5px 15px; border-radius: 4px; font-weight: bold;">
+            INVOICE
+          </div>
         </div>
-      </SessionProvider>
-    </FastLoadingProvider>);
 
+        <!-- Meta Info Grid -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 25px; gap: 20px;">
+          <!-- From -->
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 8px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700;">From:</h3>
+            <p style="margin: 2px 0; font-size: 14px; font-weight: 600; color: #222;">Prodhan.com</p>
+            <p style="margin: 2px 0; font-size: 13px; color: #444;">Head Office: 1st-4th-5th-6th Floor, Jashore Malik Shamiti</p>
+            <p style="margin: 2px 0; font-size: 13px; color: #444;">Vobon, Gausul Azam Super Market, Nilkhet, Katabon Rd</p>
+            <p style="margin: 2px 0; font-size: 13px; color: #444;">1205 Dhaka</p>
+            <p style="margin: 2px 0; font-size: 13px; color: #444;">+8809643330000</p>
+            <p style="margin: 2px 0; font-size: 13px; color: #444;">support@prodhan.com</p>
+          </div>
+
+          <!-- Bill To & Invoice Details -->
+          <div style="flex: 1.2;">
+            <div style="margin-bottom: 15px;">
+               <h3 style="margin: 0 0 8px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700;">Bill To:</h3>
+               <p style="margin: 4px 0; font-size: 16px; font-weight: 600; color: #222;">${order.customer_name || 'N/A'}</p>
+               <p style="margin: 4px 0; font-size: 14px; color: #444;">${address.address_line || ''}</p>
+               <p style="margin: 4px 0; font-size: 14px; color: #444;">${address.city || ''}, ${address.district || ''}</p>
+               <p style="margin: 4px 0; font-size: 14px; color: #444;">${address.postal_code || ''}</p>
+               <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
+            </div>
+            
+            <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid #D32F2F;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 12px; color: #666; font-weight: bold;">Invoice #:</span>
+                <span style="font-size: 14px; color: #D32F2F; font-weight: bold;">${displayId}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 12px; color: #666; font-weight: bold;">Date:</span>
+                <span style="font-size: 13px; color: #333;">${orderDate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Details Table -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Order Details</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #D32F2F; color: white;">
+                <th style="padding: 10px; text-align: left; font-weight: 600; border: 1px solid #b71c1c;">Item</th>
+                <th style="padding: 10px; text-align: center; width: 70px; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
+                <th style="padding: 10px; text-align: right; width: 100px; font-weight: 600; border: 1px solid #b71c1c;">Unit Price</th>
+                <th style="padding: 10px; text-align: right; width: 100px; font-weight: 600; border: 1px solid #b71c1c;">Item Discount</th>
+                <th style="padding: 10px; text-align: right; width: 100px; font-weight: 600; border: 1px solid #b71c1c;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(order.order_items || []).map(item => `
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 10px; color: #333; font-weight: 500;">${item.item_name || 'Product'}</td>
+                  <td style="padding: 10px; text-align: center; color: #555;">${item.quantity || 1}</td>
+                  <td style="padding: 10px; text-align: right; color: #555;">৳${(item.unit_price || 0).toLocaleString()}</td>
+                  <td style="padding: 10px; text-align: right; color: #c62828;">৳${(item.discount || 0).toLocaleString()}</td>
+                  <td style="padding: 10px; text-align: right; color: #333; font-weight: 600;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totals Section -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+          <div style="width: 250px;">
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #555; font-size: 13px;">
+              <span>Items Total:</span>
+              <span>৳${(order.subtotal || 0).toLocaleString()}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #555; font-size: 13px;">
+              <span>Shipping Cost:</span>
+              <span>৳${(order.shipping_cost || 0).toLocaleString()}</span>
+            </div>
+            <div style="border-top: 1px solid #ccc; margin: 5px 0;"></div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 16px; font-weight: bold; color: #D32F2F;">
+              <span>Total Amount:</span>
+              <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Details (Payment Status, Method, Special Instructions) -->
+        <div style="border-top: 1px dashed #ccc; padding-top: 15px; margin-top: 20px;">
+           <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+             <div style="flex: 1;">
+               <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Payment Status:</h3>
+               <p style="margin: 0; font-weight: 600; color: ${order.payment_status === 'paid' ? 'green' : 'red'};">${order.payment_status?.toUpperCase() || 'PENDING'}</p>
+             </div>
+             <div style="flex: 1;">
+               <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Payment Method:</h3>
+               <p style="margin: 0; font-weight: 600; color: #333;">${order.payment_method === 'cod' ? 'CASH_ON_DELIVERY' : (order.payment_method || 'COD').toUpperCase()}</p>
+             </div>
+             <div style="flex: 1;">
+               <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Due Amount:</h3>
+               <p style="margin: 0; font-weight: bold; color: #D32F2F;">৳${(order.total_amount - (order.paid_amount || 0)).toLocaleString()}</p>
+             </div>
+           </div>
+           <div>
+             <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Special Instructions:</h3>
+             <p style="margin: 0; font-size: 13px; color: #555; font-style: italic;">${order.customer_notes || 'None'}</p>
+           </div>
+        </div>
+
+      </div>
+    `;
+  };
+
+  // 🚀 LIGHTNING FAST: Show skeleton only on first load, not on refetch
+  if (ordersLoading && orders.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto animate-pulse">
+            <ShoppingCart className="w-6 h-6 text-red-600" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading sales data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="w-full px-6 py-6 space-y-6">
+      
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <span>Dashboard</span>
+        <span>/</span>
+        <span className="text-slate-900 font-medium">Sales Management</span>
+      </div>
+
+      {/* Premium Header with Glassmorphism Search */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sales Management</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Track and manage all your sales orders</p>
+        </div>
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-96">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Input
+              placeholder="Search orders... ⌘K"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-11 h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+            />
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2 h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50">
+                <Filter className="w-4 h-4 text-slate-600" />
+                <span className="hidden sm:inline text-slate-700">Filters</span>
+                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
+                  <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-600 text-white text-xs">
+                    {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" align="end">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Quick Date Filters</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const todayBDT = formatDateBDT(new Date());
+                        setDateRange({ from: todayBDT, to: todayBDT });
+                      }}
+                      className="text-sm"
+                    >
+                      Today
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const now = new Date();
+                        const bdtNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+                        bdtNow.setDate(bdtNow.getDate() - 1);
+                        const yesterdayBDT = formatDateBDT(bdtNow);
+                        setDateRange({ from: yesterdayBDT, to: yesterdayBDT });
+                      }}
+                      className="text-sm"
+                    >
+                      Yesterday
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Date Range</Label>
+                  <div className="space-y-2">
+                    <div>
+                      <Label className="text-xs text-slate-600">From</Label>
+                      <Input
+                        type="date"
+                        value={dateRange.from || ''}
+                        onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+                        className="h-9"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600">To</Label>
+                      <Input
+                        type="date"
+                        value={dateRange.to || ''}
+                        onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Order Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="packed">Packed</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                      <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="returned">Returned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Payment Status</Label>
+                  <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Payments</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="partial">Partial</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Product Filter</Label>
+                  <SearchableProductSelect
+                    inventory={inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all')}
+                    value={productFilter}
+                    onValueChange={setProductFilter}
+                    placeholder="Search products..."
+                    showStock={false}
+                    showPrice={false}
+                    allowClear={true}
+                    onClear={() => setProductFilter('all')}
+                  />
+                </div>
+
+                {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all') && (
+                  <>
+                    <Separator />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDateRange({ from: undefined, to: undefined });
+                        setStatusFilter('all');
+                        setPaymentFilter('all');
+                        setProductFilter('all');
+                      }}
+                      className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Clear All Filters
+                    </Button>
+                  </>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+          {canExport && (
+            <Button
+              variant="outline"
+              onClick={() => setIsExportDialogOpen(true)}
+              className="h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          )}
+          {canCreate && (
+            <Button
+              onClick={() => {
+                setEditingOrder(null);
+                setIsOrderFormOpen(true);
+              }}
+              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Sale
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      {stats.isFiltered && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
+          <Filter className="w-4 h-4 text-blue-600" />
+          <span className="text-sm text-blue-700 font-medium">
+            Showing stats for filtered date range: {dateRange.from} {dateRange.to && dateRange.to !== dateRange.from ? `to ${dateRange.to}` : ''}
+          </span>
+        </div>
+      )}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
+              </div>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">{stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <Package className="w-5 h-5 text-[#D32F2F]" />
+              </div>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalProductQuantity}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Products Sold</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-[#D32F2F]" />
+              </div>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalReturns}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Returns</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pendingOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Pending</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.confirmedOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Confirmed</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <Truck className="w-5 h-5 text-blue-600" />
+              </div>
+              {!stats.isFiltered && (
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.shippedOrders}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Shipped</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Premium Bulk Actions Bar */}
+      {selectedOrderIds.length > 0 && (
+        <Card className="bg-white border-0 shadow-lg rounded-2xl">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-[#D32F2F] text-white rounded-full px-4 py-1">
+                  {selectedOrderIds.length} selected
+                </Badge>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setSelectedOrderIds([])}
+                  className="text-slate-600 hover:text-slate-900 rounded-lg"
+                >
+                  Clear
+                </Button>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {/* 🚀 IMPROVED: Bulk Print Invoices - Uses Master Function */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const selectedOrders = orders.filter(o => selectedOrderIds.includes(o.id));
+                    if (selectedOrders.length === 0) {
+                      toast.error('No orders selected');
+                      return;
+                    }
+                    
+                    const printWindow = window.open('', '_blank', 'width=800,height=900');
+                    if (!printWindow) {
+                      toast.error('Please allow popups for bulk printing');
+                      return;
+                    }
+
+                    const invoicesHTML = selectedOrders.map((order, idx) => {
+                      return `
+                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; margin-bottom: 20px;">
+                        ${generateMasterInvoiceHTML(order)}
+                      </div>
+                      `;
+                    }).join('');
+
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Print Invoices</title>
+                          <style>
+                            @media print { 
+                              body { margin: 0; -webkit-print-color-adjust: exact; } 
+                              @page { margin: 10mm; }
+                            }
+                            @page { size: A4; margin: 0; }
+                          </style>
+                        </head>
+                        <body>${invoicesHTML}</body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                    setTimeout(() => {
+                      printWindow.print();
+                    }, 500);
+                    toast.success(`Printing ${selectedOrders.length} invoices...`);
+                  }}
+                  className="text-orange-600 hover:bg-orange-50"
+                >
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print All Invoices
+                </Button>
+                {canApprove && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('confirmed')}
+                      className="text-blue-600 hover:bg-blue-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Confirm All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('shipped')}
+                      className="text-cyan-600 hover:bg-cyan-50"
+                    >
+                      <Truck className="w-4 h-4 mr-1" />
+                      Ship All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('delivered')}
+                      className="text-green-600 hover:bg-green-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Mark Delivered
+                    </Button>
+                  </>
+                )}
+                {canDelete && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkAction('delete')}
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Premium Orders Table */}
+      <Card className="bg-white border-0 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="border-b border-slate-100 bg-white px-6 py-4">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-slate-900">Sales Orders</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
+                {filteredOrders.length}
+              </Badge>
+              {displayedOrders.length < filteredOrders.length && (
+                <span className="text-sm text-slate-400">showing {displayedOrders.length}</span>
+              )}
+              {!allOrdersLoaded && recentOrders.length > 0 && (
+                <Badge className="bg-blue-100 text-blue-700 font-medium rounded-full px-3 animate-pulse">
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />
+                  Loading all...
+                </Badge>
+              )}
+              {allOrdersLoaded && (
+                <Badge className="bg-green-100 text-green-700 font-medium rounded-full px-3">
+                  ✓ All {orders.length} loaded
+                </Badge>
+              )}
+            </div>
+            {filteredOrders.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSelectAll}
+                className="text-[#D32F2F] hover:text-[#B71C1C] hover:bg-red-50 rounded-lg"
+              >
+                {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50 border-b border-slate-100">
+                  <TableHead className="w-12 pl-6">
+                    <Checkbox
+                      checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      className="border-slate-300"
+                    />
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Order #</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Items</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-center">Qty</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">Amount</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {displayedOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No sales orders found</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayedOrders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-slate-50/50 border-b border-slate-100 transition-colors h-16">
+                      <TableCell className="pl-6">
+                        <Checkbox
+                          checked={selectedOrderIds.includes(order.id)}
+                          onCheckedChange={() => toggleOrderSelection(order.id)}
+                          className="border-slate-300"
+                        />
+                      </TableCell>
+                      <TableCell>
+                       <div className="flex flex-col gap-1">
+                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{getCorrectOrderId(order)}</span>
+                         <div className="flex flex-wrap gap-1">
+                           {order.adprofit_synced && (
+                             <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
+                               <CheckCircle className="w-3 h-3 mr-1" />
+                               Adprofit Synced
+                             </Badge>
+                           )}
+                           {(order.order_source === 'website' || order.order_source === 'landing_page' || order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-') || tag?.includes('landing'))) && (
+                               <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
+                                 🌐 Landing Page
+                               </Badge>
+                             )}
+                         </div>
+                       </div>
+                      </TableCell>
+                      <TableCell>
+                        {formatDateBDT(order.order_date)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-red-100 text-red-700 text-xs">
+                              {order.customer_name?.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{order.customer_name}</p>
+                            <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[300px]">
+                          {order.order_items && order.order_items.length > 0 ? (
+                            <div className="text-sm space-y-1.5">
+                              {order.order_items.map((item, idx) => {
+                                const inventoryItem = inventoryMap.get(item.inventory_id);
+                                const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+
+                                return (
+                                  <div key={idx} className="border-l-2 border-slate-200 pl-2">
+                                    <p className="font-medium text-slate-800" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
+                                      {item.item_name}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      <span className="text-xs text-slate-500">×{item.quantity}</span>
+                                      <span className="text-xs text-slate-500">@৳{item.unit_price?.toLocaleString()}</span>
+                                      {item.discount > 0 && (
+                                        <span className="text-xs text-red-500">-৳{item.discount}</span>
+                                      )}
+                                      <span className="text-xs font-medium text-emerald-600">= ৳{item.subtotal?.toLocaleString()}</span>
+                                    </div>
+                                    {isCombo && (
+                                      <p className="text-xs text-blue-600 mt-0.5">
+                                        🎁 Combo: {inventoryItem.bundle_items.map(bi => {
+                                          const comp = inventoryMap.get(bi.inventory_id);
+                                          return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
+                                        }).join(' + ')}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 text-sm">No items</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {order.order_items && order.order_items.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            {order.order_items.map((item, idx) => {
+                              const inventoryItem = inventoryMap.get(item.inventory_id);
+                              const bundleCount = getComboCount(inventoryItem, item);
+                              const isCombo = bundleCount > 1;
+                              const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
+
+                              return (
+                                <div key={idx} className="inline-flex items-center gap-1.5">
+                                  <span className="font-bold text-red-600 text-base">×{actualQty}</span>
+                                  {isCombo && (
+                                    <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
+                                      {bundleCount}×{item.quantity}
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
+                      </TableCell>
+                      <TableCell>
+                       <DropdownMenu modal={false}>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="outline" size="sm" className="h-8 gap-1">
+                             {getPaymentBadge(order.payment_status)}
+                             <ChevronDown className="w-3 h-3" />
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="center" sideOffset={4}>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
+                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                              Mark as Pending
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
+                              <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
+                              Mark as Partial
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                              Mark as Paid
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      <TableCell>
+                       <div className="flex flex-col gap-1.5">
+                         <DropdownMenu modal={false}>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="outline" size="sm" className="h-8 gap-1 w-full">
+                               {getStatusBadge(order.order_status)}
+                               <ChevronDown className="w-3 h-3" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="center" sideOffset={4}>
+                              {order.order_status === 'pending' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
+                                  Confirm Order
+                                </DropdownMenuItem>
+                              )}
+                              {order.order_status === 'confirmed' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
+                                  <Package className="w-4 h-4 mr-2 text-indigo-600" />
+                                  Mark as Processing
+                                </DropdownMenuItem>
+                              )}
+                              {(order.order_status === 'processing' || order.order_status === 'packed') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                  <Truck className="w-4 h-4 mr-2 text-purple-600" />
+                                  Mark as Shipped
+                                </DropdownMenuItem>
+                              )}
+                              {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                  Mark as Delivered
+                                </DropdownMenuItem>
+                              )}
+                              {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
+                                  <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                                  Cancel Order
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                           {order.courier_placed && (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={async () => {
+      const loadingToast = toast.loading('🔄 Updating courier status...');
+      try {
+        const response = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            order_number: order.order_number,
+            tracking_code: order.courier_tracking_code,
+            consignment_id: order.courier_consignment_id
+          })
+        });
+
+        toast.dismiss(loadingToast);
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          const steadfastStatus = data.delivery_status || data.status;
+          let newOrderStatus = order.order_status;
+          
+          const statusMapping = {
+            'pending': 'processing',
+            'delivered_approval_pending': 'out_for_delivery',
+            'partial_delivered_approval_pending': 'out_for_delivery',
+            'cancelled_approval_pending': 'processing',
+            'unknown_approval_pending': 'processing',
+            'delivered': 'delivered',
+            'partial_delivered': 'delivered',
+            'cancelled': 'cancelled',
+            'hold': 'processing',
+            'in_review': 'processing',
+            'unknown': 'processing'
+          };
+          
+          if (steadfastStatus && statusMapping[steadfastStatus]) {
+            newOrderStatus = statusMapping[steadfastStatus];
+            
+            await Order.update(order.id, {
+              order_status: newOrderStatus,
+              courier_status: steadfastStatus
+            });
+            
+            queryClient.invalidateQueries(['orders-sales-recent']);
+            queryClient.invalidateQueries(['orders-sales-all']);
+            
+            toast.success(`✅ Status updated: ${steadfastStatus} → ${newOrderStatus}`);
+          } else {
+            toast.info(`ℹ️ Courier status: ${steadfastStatus || 'Unknown'}`);
+          }
+        } else {
+          const errorText = await response.text();
+          toast.error('Failed to fetch status: ' + (errorText || response.statusText));
+        }
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        toast.error('Error updating status: ' + error.message);
+      }
+    }}
+    className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
+    title="Update Status from Steadfast Courier"
+  >
+    <RefreshCw className="w-3 h-3 mr-1" />
+    Update
+  </Button>
+                      )}
+                       </div>
+                      </TableCell>
+                      <TableCell>
+                       <div className="flex items-center gap-1">
+                         <TooltipProvider delayDuration={300}>
+                           <Tooltip>
+                             <TooltipTrigger asChild>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => handleViewInvoice(order)}
+                                 className="h-9 w-9 p-0 hover:bg-blue-50"
+                               >
+                                 <FileText className="w-4 h-4 text-blue-600" />
+                               </Button>
+                             </TooltipTrigger>
+                             <TooltipContent side="bottom" className="text-xs">
+                               <p>View Invoice</p>
+                             </TooltipContent>
+                           </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-9 w-9 p-0 hover:bg-orange-50"
+                                    >
+                                      <Receipt className="w-4 h-4 text-orange-600" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-center">Small Receipt</DialogTitle>
+                                    </DialogHeader>
+                                    <ThermalReceipt order={order} />
+                                  </DialogContent>
+                                </Dialog>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Print Receipt</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            {canEdit && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditOrder(order)}
+                                    className="h-9 w-9 p-0 hover:bg-purple-50"
+                                  >
+                                    <Edit className="w-4 h-4 text-purple-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  <p>Edit Order</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // 🚀 Uses Master Function for Single Download
+                                    const printWindow = window.open('', '_blank', 'width=800,height=900');
+                                    if (!printWindow) return;
+                                    
+                                    const orderHTML = generateMasterInvoiceHTML(order);
+
+                                    printWindow.document.write(`
+                                      <html>
+                                        <head><title>Invoice ${getCorrectOrderId(order)}</title></head>
+                                        <body>${orderHTML}</body>
+                                      </html>
+                                    `);
+                                    printWindow.document.close();
+                                    setTimeout(() => printWindow.print(), 250);
+                                    toast.success('Opening print dialog. Choose "Save as PDF".');
+                                  }}
+                                  className="h-9 w-9 p-0 hover:bg-green-50"
+                                >
+                                  <Download className="w-4 h-4 text-green-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Download PDF</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                        .then(async (response) => {
+                                          if (response.data?.success) {
+                                            queryClient.invalidateQueries(['orders']);
+                                          }
+                                        })
+                                        .catch((error) => {
+                                          console.error('Adprofit sync error:', error);
+                                        });
+                                      toast.success('Sync started in background');
+                                    }}
+                                    className="h-9 w-9 p-0 hover:bg-indigo-50"
+                                  >
+                                    <Send className="w-4 h-4 text-indigo-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  <p>Sync to Adprofit</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {/* Send to Courier Button */}
+                            {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async () => {
+                                const loadingToast = toast.loading('🚚 Sending to Courier...');
+                                try {
+                                  const itemDescription = order.order_items?.map(item => 
+                                    `${item.item_name} (×${item.quantity})`
+                                  ).join(', ') || 'Products';
+
+                                  const address = order.shipping_address || {};
+                                  const fullAddress = [
+                                    address.address_line,
+                                    address.city,
+                                    address.district,
+                                    address.postal_code
+                                  ].filter(Boolean).join(', ');
+
+                                  const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
+
+                                  const invoiceNumber = getCorrectOrderId(order);
+
+                                  const courierPayload = {
+                                    invoice: invoiceNumber,
+                                    recipient_name: order.customer_name,
+                                    recipient_phone: order.customer_phone,
+                                    recipient_address: fullAddress || 'Address not provided',
+                                    cod_amount: order.payment_status === 'paid' ? 0 : (order.total_amount || 0),
+                                    note: order.customer_notes || '',
+                                    item_description: itemDescription,
+                                    total_lot: totalLot,
+                                    delivery_type: 0
+                                  };
+
+                                  const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(courierPayload)
+                                  });
+
+                                  toast.dismiss(loadingToast);
+
+                                  if (response.ok) {
+                                    const result = await response.json();
+
+                                    const consignmentData = Array.isArray(result) ? result[0] : result;
+                                    const consignment = consignmentData?.consignment || consignmentData;
+
+                                    if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
+                                      await Order.update(order.id, {
+                                        courier_placed: true,
+                                        courier_placed_date: new Date().toISOString(),
+                                        courier_tracking_code: consignment?.tracking_code || null,
+                                        courier_consignment_id: String(consignment?.consignment_id || '')
+                                      });
+
+                                      queryClient.invalidateQueries(['orders-sales-recent']);
+                                      queryClient.invalidateQueries(['orders-sales-all']);
+                                      toast.success('✅ Order sent to courier successfully!');
+                                    } else {
+                                      toast.error('Courier response invalid: ' + JSON.stringify(result));
+                                    }
+                                  } else {
+                                    const errorText = await response.text();
+                                    toast.error('Courier request failed: ' + (errorText || response.statusText));
+                                  }
+                                } catch (error) {
+                                  toast.dismiss(loadingToast);
+                                      toast.error('Failed to send to courier: ' + error.message);
+                                    }
+                                  }}
+                                  className="h-9 w-9 p-0 hover:bg-orange-50"
+                                >
+                                  <Truck className="w-4 h-4 text-orange-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Send to Courier</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {order.courier_placed && (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
+                              <PackageCheck className="w-3 h-3 mr-1" />
+                              {order.courier_status || 'Sent'}
+                            </Badge>
+                          )}
+                          </TooltipProvider>
+                          </div>
+                          </TableCell>
+                    </TableRow>
+                  ))
+                )}
+                {displayedOrders.length < filteredOrders.length && (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={loadMoreOrders}
+                        className="gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Load More ({filteredOrders.length - displayedOrders.length} remaining)
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Order Form Dialog */}
+      <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <ShoppingCart className="w-6 h-6" />
+              {editingOrder ? 'Edit Sale Order' : 'Create New Sale Order'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            <OrderForm
+              order={editingOrder}
+              customers={customers}
+              inventory={inventory}
+              onSubmit={handleOrderSubmit}
+              onCancel={() => {
+                setIsOrderFormOpen(false);
+                setEditingOrder(null);
+              }}
+              currentUser={currentUser}
+              canViewAllDepartments={canViewAllDepartments}
+              userDepartment={userDepartment}
+              initialDepartment={departmentFilter}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <AlertDialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-green-600" />
+              Export Sales Orders
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose what data to include in your export.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <Label className="font-medium">Export filtered orders only</Label>
+              <Checkbox
+                checked={exportOptions.onlyFiltered}
+                onCheckedChange={(checked) => setExportOptions({...exportOptions, onlyFiltered: checked})}
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              {exportOptions.onlyFiltered 
+                ? `Will export ${filteredOrders.length} filtered orders`
+                : `Will export all ${orders.length} orders`}
+            </p>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Include in Export:</Label>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Customer Details (Name, Phone, Email)</Label>
+                <Checkbox
+                  checked={exportOptions.includeCustomerDetails}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeCustomerDetails: checked})}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Shipping Address</Label>
+                <Checkbox
+                  checked={exportOptions.includeShippingAddress}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeShippingAddress: checked})}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Product Details</Label>
+                <Checkbox
+                  checked={exportOptions.includeProductDetails}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeProductDetails: checked})}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Payment Info (Method, Amounts)</Label>
+                <Checkbox
+                  checked={exportOptions.includePaymentInfo}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includePaymentInfo: checked})}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleExportExcel}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Invoice Dialog */}
+      <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Order Invoice</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <OrderInvoice order={selectedOrder} />
+          )}
+        </DialogContent>
+      </Dialog>
+      </div>
+    </div>
+  );
 }
+
+export default withPermission(SalesPage, 'sales', 'can_view');
