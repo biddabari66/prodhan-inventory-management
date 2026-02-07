@@ -1441,7 +1441,8 @@ function SalesPage() {
       </div>
     `;
   };
-    // 🆕 SMALL RECEPT GENERATOR (4in x 3.3in)
+  
+  // 🆕 SMALL RECEPT GENERATOR (4in x 3.3in)
   const generateSmallReceiptHTML = (order) => {
     const displayId = getCorrectOrderId(order);
     const address = order.shipping_address || {};
@@ -2188,7 +2189,9 @@ function SalesPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                           {order.courier_placed && (
+                          
+                          {/* 🚀 IMPROVED COURIER UPDATE BUTTON: Only appears when status is 'shipped' or 'out_for_delivery' */}
+                          {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
   <Button
     variant="outline"
     size="sm"
@@ -2253,13 +2256,13 @@ function SalesPage() {
         toast.error('Error updating status: ' + error.message);
       }
     }}
-    className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
+    className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full mt-2"
     title="Update Status from Steadfast Courier"
   >
     <RefreshCw className="w-3 h-3 mr-1" />
     Update
   </Button>
-                      )}
+                          )}
                        </div>
                       </TableCell>
                       <TableCell>
@@ -2280,6 +2283,8 @@ function SalesPage() {
                                <p>View Invoice</p>
                              </TooltipContent>
                            </Tooltip>
+                            
+                            {/* 🆕 IMPROVED RECEIPT DIALOG (4x3.3in) */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Dialog>
@@ -2292,11 +2297,37 @@ function SalesPage() {
                                       <Receipt className="w-4 h-4 text-orange-600" />
                                     </Button>
                                   </DialogTrigger>
-                                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-center">Small Receipt</DialogTitle>
+                                  <DialogContent className="max-w-sm w-[380px] p-0 overflow-hidden">
+                                    <DialogHeader className="p-4 border-b bg-gray-50 flex flex-row items-center justify-between">
+                                      <DialogTitle className="text-sm font-medium">Thermal Receipt (4x3.3)</DialogTitle>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="h-8 px-3 text-xs"
+                                        onClick={() => {
+                                          const printContent = document.getElementById('thermal-receipt-content');
+                                          if(!printContent) return;
+                                          const printWindow = window.open('', '_blank', 'width=400,height=350');
+                                          printWindow.document.write(`
+                                            <html>
+                                              <head><title>Print Receipt</title></head>
+                                              <body>${printContent.innerHTML}</body>
+                                            </html>
+                                          `);
+                                          printWindow.document.close();
+                                          setTimeout(() => printWindow.print(), 250);
+                                        }}
+                                      >
+                                        <Printer className="w-3 h-3 mr-1" /> Print
+                                      </Button>
                                     </DialogHeader>
-                                    <ThermalReceipt order={order} />
+                                    <div className="bg-white p-2 flex justify-center overflow-y-auto max-h-[80vh]">
+                                      <div 
+                                        id="thermal-receipt-content"
+                                        dangerouslySetInnerHTML={{ __html: generateSmallReceiptHTML(order) }} 
+                                        style={{ width: '384px', height: '316.8px', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}
+                                      />
+                                    </div>
                                   </DialogContent>
                                 </Dialog>
                               </TooltipTrigger>
@@ -2304,6 +2335,7 @@ function SalesPage() {
                                 <p>Print Receipt</p>
                               </TooltipContent>
                             </Tooltip>
+                            
                             {canEdit && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -2327,7 +2359,6 @@ function SalesPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    // 🚀 Uses Master Function for Single Download
                                     const printWindow = window.open('', '_blank', 'width=800,height=900');
                                     if (!printWindow) return;
                                     
