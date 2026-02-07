@@ -1441,6 +1441,80 @@ function SalesPage() {
       </div>
     `;
   };
+    // 🆕 SMALL RECEPT GENERATOR (4in x 3.3in)
+  const generateSmallReceiptHTML = (order) => {
+    const displayId = getCorrectOrderId(order);
+    const address = order.shipping_address || {};
+    
+    return `
+      <style>
+        /* STRICT SIZE CONTROL: 4in width x 3.3in height */
+        @page {
+          size: 4in 3.3in;
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 8px;
+          font-family: 'Courier New', Courier, monospace;
+          font-size: 11px;
+          width: 4in;
+          height: 3.3in;
+          box-sizing: border-box;
+          overflow: hidden; /* Prevents spillover */
+          color: #000;
+          background: white;
+        }
+        .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+        .logo { height: 35px; object-fit: contain; }
+        .shop-name { font-weight: bold; font-size: 14px; margin: 2px 0; text-transform: uppercase; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .customer-row { margin-bottom: 4px; font-weight: bold; }
+        .items-container { margin: 5px 0; border-bottom: 1px dashed #000; padding-bottom: 5px; max-height: 1.8in; overflow-y: hidden; }
+        .item-row { display: flex; justify-content: space-between; margin-bottom: 2px; line-height: 1.2; }
+        .item-name { width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-qty { width: 15%; text-align: center; }
+        .item-price { width: 20%; text-align: right; }
+        .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 5px; border-top: 1px solid #000; padding-top: 2px; }
+        .footer { text-align: center; margin-top: auto; font-size: 10px; }
+      </style>
+
+      <div class="header">
+        <img src="${PRODHAN_LOGO}" class="logo" />
+        <div class="shop-name">Prodhan.com</div>
+        <div>+8809643330000</div>
+      </div>
+
+      <div class="info-row">
+        <span>INV: ${displayId}</span>
+        <span>${formatDateBDT(order.order_date)}</span>
+      </div>
+      <div class="customer-row">
+        ${order.customer_name.substring(0, 18)}<br/>
+        ${address.city || ''}, ${address.district || ''}
+      </div>
+
+      <div class="items-container">
+        ${(order.order_items || []).map(item => `
+          <div class="item-row">
+            <span class="item-name">${item.item_name}</span>
+            <span class="item-qty">x${item.quantity}</span>
+            <span class="item-price">${item.subtotal}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="total-row">
+        <span>TOTAL</span>
+        <span>৳${(order.total_amount || 0).toLocaleString()}</span>
+      </div>
+
+      <div class="footer">
+        Paid: ${order.payment_status?.toUpperCase() || 'COD'}<br/>
+        Thank You!
+      </div>
+    `;
+  };
 
   // 🚀 LIGHTNING FAST: Show skeleton only on first load, not on refetch
   if (ordersLoading && orders.length === 0) {
