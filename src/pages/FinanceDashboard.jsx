@@ -202,8 +202,11 @@ function FinanceDashboardPage() {
     // Returns/Damage loss
     const returnLoss = returns.reduce((sum, r) => sum + Math.abs(r.total_value || 0), 0);
 
+    // General expenses (from Expense entity - not purchase orders)
+    const otherExpenses = generalExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
     // Total expenses
-    const totalExpenses = costOfGoods + packagingCost + returnLoss;
+    const totalExpenses = costOfGoods + packagingCost + returnLoss + otherExpenses;
 
     // Profit calculations
     const grossProfit = collectedRevenue - totalExpenses;
