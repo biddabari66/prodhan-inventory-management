@@ -176,55 +176,315 @@ function InventoryReportsPage() {
     try {
       toast.info('Generating report...');
       
-      const [orders, inventory, movements, purchaseOrders, packagingExpenses] = await Promise.all([
-        base44.entities.Order.list('-order_date'),
-        base44.entities.Inventory.list(),
+      const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses] = await Promise.all([
+        base44.entities.Order.list('-order_date', 5000),
+        base44.entities.Inventory.list('-updated_date', 2000),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.list('-order_date'),
-        base44.entities.PackagingExpense.list('-expense_date', 1000)
+        base44.entities.PurchaseOrder.list('-order_date', 2000),
+        base44.entities.PackagingExpense.list('-expense_date', 1000),
+        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000)
       ]);
 
-      const response = await base44.functions.invoke('generateInventorySalesReport', { 
-        reportType,
-        department: 'prodhan_com_e_commerce',
-        dateFrom: startDate,
-        dateTo: endDate,
-        timeFrom: startTime,
-        timeTo: endTime,
-        category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        orders,
-        inventory,
-        movements,
-        purchaseOrders,
-        packagingExpenses
+      // Filter data by date range (BDT timezone)
+      const filteredOrders = orders.filter(o => {
+        const orderDate = o.order_date?.split('T')[0];
+        return orderDate >= startDate && orderDate <= endDate;
       });
 
-      if (response.data?.pdfBase64) {
-        const binaryString = atob(response.data.pdfBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${reportType}_report_${toBDTDate()}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        toast.success('✅ Report downloaded!');
-      } else {
-        throw new Error('No PDF data received');
+      const filteredMovements = movements.filter(m => {
+        const mDate = m.movement_date?.split('T')[0];
+        return mDate >= startDate && mDate <= endDate;
+      });
+
+      const filteredPurchaseOrders = purchaseOrders.filter(p => {
+        const pDate = p.order_date?.split('T')[0];
+        return pDate >= startDate && pDate <= endDate;
+      });
+
+      const filteredPackaging = packagingExpenses.filter(e => {
+        const eDate = e.expense_date?.split('T')[0];
+        return eDate >= startDate && eDate <= endDate;
+      });
+
+      const filteredExpenses = expenses.filter(e => {
+        const eDate = e.expense_date?.split('T')[0];
+        return eDate >= startDate && eDate <= endDate;
+      });
+
+      // Generate CSV report based on type
+      let csvContent = '';
+      let fileName = '';
+
+      switch (reportType) {
+        case 'sales':
+          csvContent = generateSalesReport(filteredOrders, inventory, startDate, endDate);
+          fileName = `sales_report_${startDate}_to_${endDate}.csv`;
+          break;
+        case 'purchase':
+          csvContent = generatePurchaseReport(filteredPurchaseOrders, inventory, startDate, endDate);
+          fileName = `purchase_report_${startDate}_to_${endDate}.csv`;
+          break;
+        case 'packaging':
+          csvContent = generatePackagingReport(filteredPackaging, startDate, endDate);
+          fileName = `packaging_report_${startDate}_to_${endDate}.csv`;
+          break;
+        case 'waste':
+          csvContent = generateWasteReport(filteredMovements.filter(m => m.reference_type === 'damage' || m.reference_type === 'expired'), inventory, startDate, endDate);
+          fileName = `waste_damage_report_${startDate}_to_${endDate}.csv`;
+          break;
+        case 'returns':
+          csvContent = generateReturnsReport(filteredMovements.filter(m => m.reference_type === 'return'), inventory, startDate, endDate);
+          fileName = `returns_report_${startDate}_to_${endDate}.csv`;
+          break;
+        case 'stock':
+          csvContent = generateStockValuationReport(inventory);
+          fileName = `stock_valuation_${toBDTDate()}.csv`;
+          break;
+        case 'low_stock':
+          csvContent = generateLowStockReport(inventory);
+          fileName = `low_stock_alert_${toBDTDate()}.csv`;
+          break;
+        case 'movement':
+          csvContent = generateMovementReport(filteredMovements, inventory, startDate, endDate);
+          fileName = `movement_summary_${startDate}_to_${endDate}.csv`;
+          break;
+        case 'supplier':
+          csvContent = generateSupplierReport(filteredPurchaseOrders, inventory);
+          fileName = `supplier_report_${startDate}_to_${endDate}.csv`;
+          break;
+        default:
+          throw new Error('Unknown report type');
       }
+
+      // Download CSV
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('✅ Report downloaded!');
     } catch (error) {
       console.error(`Error generating ${reportType} report:`, error);
       toast.error(`Error: ${error.message || 'Failed to generate report'}`);
     } finally {
       setReportGenerating(null);
     }
+  };
+
+  // Report generation functions
+  const generateSalesReport = (orders, inventory, startDate, endDate) => {
+    const inventoryMap = {};
+    inventory.forEach(i => { inventoryMap[i.id] = i; });
+
+    const productSales = {};
+    let totalRevenue = 0;
+    let totalOrders = orders.length;
+
+    orders.forEach(order => {
+      if (['cancelled', 'returned'].includes(order.order_status)) return;
+      totalRevenue += order.total_amount || 0;
+      
+      (order.order_items || []).forEach(item => {
+        if (!productSales[item.inventory_id]) {
+          const prod = inventoryMap[item.inventory_id] || {};
+          productSales[item.inventory_id] = {
+            name: item.product_name || prod.item_name || 'Unknown',
+            category: prod.category || 'N/A',
+            qty: 0,
+            revenue: 0,
+            cost: 0
+          };
+        }
+        productSales[item.inventory_id].qty += item.quantity || 0;
+        productSales[item.inventory_id].revenue += (item.quantity || 0) * (item.unit_price || 0);
+        productSales[item.inventory_id].cost += (item.quantity || 0) * (inventoryMap[item.inventory_id]?.purchase_price || 0);
+      });
+    });
+
+    const rows = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
+
+    let csv = `Sales Report: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Orders: ${totalOrders}\n`;
+    csv += `Total Revenue: ৳${totalRevenue.toLocaleString()}\n\n`;
+    csv += 'Product Name,Category,Quantity Sold,Revenue,Cost,Profit\n';
+    
+    rows.forEach(r => {
+      csv += `"${r.name}","${r.category}",${r.qty},${r.revenue},${r.cost},${r.revenue - r.cost}\n`;
+    });
+
+    return csv;
+  };
+
+  const generatePurchaseReport = (purchaseOrders, inventory, startDate, endDate) => {
+    let csv = `Purchase Report: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Purchase Orders: ${purchaseOrders.length}\n`;
+    csv += `Total Value: ৳${purchaseOrders.reduce((s, p) => s + (p.total_amount || 0), 0).toLocaleString()}\n\n`;
+    csv += 'PO Number,Date,Supplier,Status,Items Count,Total Amount\n';
+
+    purchaseOrders.forEach(po => {
+      csv += `"${po.po_number || ''}","${po.order_date?.split('T')[0] || ''}","${po.supplier_name || ''}","${po.order_status || ''}",${po.order_items?.length || 0},${po.total_amount || 0}\n`;
+    });
+
+    return csv;
+  };
+
+  const generatePackagingReport = (expenses, startDate, endDate) => {
+    let csv = `Packaging & Courier Report: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Records: ${expenses.length}\n`;
+    csv += `Total Amount: ৳${expenses.reduce((s, e) => s + (e.total_amount || 0) + (e.courier_expense || 0), 0).toLocaleString()}\n\n`;
+    csv += 'Date,Type,Description,Packaging Cost,Courier Cost,Total\n';
+
+    expenses.forEach(e => {
+      csv += `"${e.expense_date?.split('T')[0] || ''}","${e.expense_type || ''}","${e.description || ''}",${e.total_amount || 0},${e.courier_expense || 0},${(e.total_amount || 0) + (e.courier_expense || 0)}\n`;
+    });
+
+    return csv;
+  };
+
+  const generateWasteReport = (movements, inventory, startDate, endDate) => {
+    const inventoryMap = {};
+    inventory.forEach(i => { inventoryMap[i.id] = i; });
+
+    let csv = `Waste & Damage Report: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Records: ${movements.length}\n`;
+    csv += `Total Loss: ৳${movements.reduce((s, m) => s + Math.abs(m.total_value || 0), 0).toLocaleString()}\n\n`;
+    csv += 'Date,Product,Quantity,Reason,Condition,Action,Loss Value\n';
+
+    movements.forEach(m => {
+      const prod = inventoryMap[m.inventory_item_id] || {};
+      const meta = m.metadata || {};
+      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}",${meta.original_quantity || Math.abs(m.quantity) || 1},"${meta.reason || m.reference_type}","${meta.condition || 'damaged'}","${meta.action || 'write_off'}",${Math.abs(m.total_value || 0)}\n`;
+    });
+
+    return csv;
+  };
+
+  const generateReturnsReport = (movements, inventory, startDate, endDate) => {
+    const inventoryMap = {};
+    inventory.forEach(i => { inventoryMap[i.id] = i; });
+
+    let csv = `Returns Report: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Returns: ${movements.length}\n`;
+    csv += `Total Value: ৳${movements.reduce((s, m) => s + Math.abs(m.total_value || 0), 0).toLocaleString()}\n\n`;
+    csv += 'Date,Product,Type,Quantity,Order #,Customer,Phone,Reason,Action,Value\n';
+
+    movements.forEach(m => {
+      const prod = inventoryMap[m.inventory_item_id] || {};
+      const meta = m.metadata || {};
+      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}","${meta.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return'}",${meta.original_quantity || Math.abs(m.quantity) || 1},"${m.reference_number || ''}","${meta.customer_name || meta.supplier_name || ''}","${meta.customer_phone || ''}","${meta.reason || ''}","${meta.action || ''}",${Math.abs(m.total_value || 0)}\n`;
+    });
+
+    return csv;
+  };
+
+  const generateStockValuationReport = (inventory) => {
+    const prodhanInventory = inventory.filter(i => i.department === 'prodhan_com_e_commerce');
+    const totalValue = prodhanInventory.reduce((s, i) => s + (i.current_stock || 0) * (i.selling_price || 0), 0);
+    const totalCostValue = prodhanInventory.reduce((s, i) => s + (i.current_stock || 0) * (i.purchase_price || 0), 0);
+
+    let csv = `Stock Valuation Report\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Products: ${prodhanInventory.length}\n`;
+    csv += `Total Stock Value (Selling): ৳${totalValue.toLocaleString()}\n`;
+    csv += `Total Stock Value (Cost): ৳${totalCostValue.toLocaleString()}\n\n`;
+    csv += 'Product Name,Category,Current Stock,Min Stock,Purchase Price,Selling Price,Stock Value (Cost),Stock Value (Selling)\n';
+
+    prodhanInventory.sort((a, b) => ((b.current_stock || 0) * (b.selling_price || 0)) - ((a.current_stock || 0) * (a.selling_price || 0))).forEach(i => {
+      csv += `"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${i.purchase_price || 0},${i.selling_price || 0},${(i.current_stock || 0) * (i.purchase_price || 0)},${(i.current_stock || 0) * (i.selling_price || 0)}\n`;
+    });
+
+    return csv;
+  };
+
+  const generateLowStockReport = (inventory) => {
+    const lowStock = inventory.filter(i => i.department === 'prodhan_com_e_commerce' && (i.current_stock || 0) < (i.minimum_stock || 0));
+
+    let csv = `Low Stock Alert Report\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Items Below Minimum: ${lowStock.length}\n\n`;
+    csv += 'Product Name,Category,Current Stock,Minimum Stock,Shortage,Status\n';
+
+    lowStock.sort((a, b) => (a.current_stock - a.minimum_stock) - (b.current_stock - b.minimum_stock)).forEach(i => {
+      const shortage = (i.minimum_stock || 0) - (i.current_stock || 0);
+      const status = (i.current_stock || 0) === 0 ? 'OUT OF STOCK' : 'LOW STOCK';
+      csv += `"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${shortage},"${status}"\n`;
+    });
+
+    return csv;
+  };
+
+  const generateMovementReport = (movements, inventory, startDate, endDate) => {
+    const inventoryMap = {};
+    inventory.forEach(i => { inventoryMap[i.id] = i; });
+
+    const summary = {
+      sales_out: 0,
+      purchase_in: 0,
+      return_in: 0,
+      damage_out: 0,
+      adjustment: 0
+    };
+
+    movements.forEach(m => {
+      const qty = Math.abs(m.quantity || 0);
+      if (m.movement_type === 'out' && m.reference_type === 'sale') summary.sales_out += qty;
+      else if (m.movement_type === 'in' && m.reference_type === 'purchase') summary.purchase_in += qty;
+      else if (m.reference_type === 'return') summary.return_in += qty;
+      else if (m.reference_type === 'damage' || m.reference_type === 'expired') summary.damage_out += qty;
+      else summary.adjustment += qty;
+    });
+
+    let csv = `Inventory Movement Summary: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Movements: ${movements.length}\n\n`;
+    csv += 'Summary:\n';
+    csv += `Sales Out,${summary.sales_out}\n`;
+    csv += `Purchase In,${summary.purchase_in}\n`;
+    csv += `Returns,${summary.return_in}\n`;
+    csv += `Damages/Waste,${summary.damage_out}\n`;
+    csv += `Adjustments,${summary.adjustment}\n\n`;
+    csv += 'Date,Product,Type,Reference Type,Quantity,Reference #,Notes\n';
+
+    movements.slice(0, 500).forEach(m => {
+      const prod = inventoryMap[m.inventory_item_id] || {};
+      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}","${m.movement_type || ''}","${m.reference_type || ''}",${m.quantity || 0},"${m.reference_number || ''}","${(m.notes || '').substring(0, 50)}"\n`;
+    });
+
+    return csv;
+  };
+
+  const generateSupplierReport = (purchaseOrders) => {
+    const supplierStats = {};
+    
+    purchaseOrders.forEach(po => {
+      const supplier = po.supplier_name || 'Unknown';
+      if (!supplierStats[supplier]) {
+        supplierStats[supplier] = { orders: 0, total: 0, items: 0 };
+      }
+      supplierStats[supplier].orders++;
+      supplierStats[supplier].total += po.total_amount || 0;
+      supplierStats[supplier].items += po.order_items?.length || 0;
+    });
+
+    let csv = `Supplier Performance Report\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
+    csv += `Total Suppliers: ${Object.keys(supplierStats).length}\n\n`;
+    csv += 'Supplier Name,Total Orders,Total Items,Total Value,Avg Order Value\n';
+
+    Object.entries(supplierStats).sort((a, b) => b[1].total - a[1].total).forEach(([name, stats]) => {
+      csv += `"${name}",${stats.orders},${stats.items},${stats.total},${stats.orders > 0 ? Math.round(stats.total / stats.orders) : 0}\n`;
+    });
+
+    return csv;
   };
 
   const handleCustomReport = async () => {
