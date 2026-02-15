@@ -271,8 +271,11 @@ function FinanceDashboardPage() {
   // Chart data - Expense breakdown
   const expenseBreakdown = [
     { name: 'Purchase Cost', value: financials.costOfGoods, fill: '#DC2626' },
-    { name: 'Packaging', value: financials.packagingCost, fill: '#F59E0B' },
-    { name: 'Returns/Loss', value: financials.returnLoss, fill: '#EF4444' }
+    { name: 'Packaging & Courier', value: financials.packagingCost, fill: '#F59E0B' },
+    { name: 'Returns/Wastage', value: financials.returnLoss, fill: '#EF4444' },
+    { name: 'Ad Spend', value: financials.totalAdSpend, fill: '#8B5CF6' },
+    { name: 'Other Expenses', value: financials.otherExpenses, fill: '#EC4899' },
+    { name: 'Salaries', value: financials.totalSalaries, fill: '#6366F1' }
   ].filter(item => item.value > 0);
 
   // Daily sales trend
