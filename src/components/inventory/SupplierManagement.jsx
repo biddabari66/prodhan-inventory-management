@@ -412,6 +412,49 @@ export default function SupplierManagement({ selectedDepartment }) {
     queryFn: () => base44.entities.Supplier.list(),
   });
 
+  // Fetch inventory to map products to suppliers
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['inventory-for-suppliers'],
+    queryFn: () => base44.entities.Inventory.list('-created_date', 2000),
+  });
+
+  // Fetch purchase orders to calculate total orders and value
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ['purchase-orders-for-suppliers'],
+    queryFn: () => base44.entities.PurchaseOrder.list('-created_date', 500),
+  });
+
+  // Calculate supplier stats from real data
+  const supplierStats = React.useMemo(() => {
+    const stats = {};
+    
+    // Count products per supplier
+    inventory.forEach(item => {
+      if (item.supplier_id) {
+        if (!stats[item.supplier_id]) {
+          stats[item.supplier_id] = { productCount: 0, products: [], totalOrders: 0, totalValue: 0 };
+        }
+        stats[item.supplier_id].productCount++;
+        stats[item.supplier_id].products.push({
+          id: item.id,
+          name: item.item_name,
+          stock: item.current_stock,
+          price: item.purchase_price
+        });
+      }
+    });
+
+    // Count orders and value per supplier
+    purchaseOrders.forEach(po => {
+      if (po.supplier_id && stats[po.supplier_id]) {
+        stats[po.supplier_id].totalOrders++;
+        stats[po.supplier_id].totalValue += po.total_amount || 0;
+      }
+    });
+
+    return stats;
+  }, [inventory, purchaseOrders]);
+
   // Create supplier mutation
   const createSupplierMutation = useMutation({
     mutationFn: (data) => base44.entities.Supplier.create({
