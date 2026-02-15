@@ -262,10 +262,11 @@ function FinanceDashboardPage() {
       purchaseCount: purchaseOrders.length,
       totalAdSpend,
       totalSalaries,
+      otherExpenses,
       netProfit,
       roi
     };
-  }, [orders, purchaseOrders, packagingExpenses, returns, adSpends, payrollRecords]);
+  }, [orders, purchaseOrders, packagingExpenses, returns, adSpends, payrollRecords, generalExpenses]);
 
   // Chart data - Expense breakdown
   const expenseBreakdown = [
