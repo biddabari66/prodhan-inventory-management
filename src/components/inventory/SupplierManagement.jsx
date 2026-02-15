@@ -825,9 +825,10 @@ export default function SupplierManagement({ selectedDepartment }) {
                 <TableHead>Supplier</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Department</TableHead>
+                <TableHead className="text-center">Products</TableHead>
+                <TableHead className="text-center">Total Orders</TableHead>
+                <TableHead className="text-right">Total Value</TableHead>
                 <TableHead>Payment Terms</TableHead>
-                <TableHead>Lead Time</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
