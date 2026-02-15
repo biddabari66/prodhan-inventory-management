@@ -858,21 +858,68 @@ export default function SupplierManagement({ selectedDepartment }) {
                           <Phone className="w-3 h-3" />
                           {supplier.contact_phone}
                         </p>
+                        {supplier.contact_email && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                            {supplier.contact_email}
+                          </p>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{supplier.supplier_type}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={
-                        supplier.department === 'boibari' ? 'bg-yellow-100 text-yellow-800' :
-                        supplier.department === 'prodhan_com_e_commerce' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
+                        supplier.supplier_type === 'manufacturer' ? 'bg-purple-100 text-purple-800' :
+                        supplier.supplier_type === 'publisher' ? 'bg-blue-100 text-blue-800' :
+                        supplier.supplier_type === 'wholesaler' ? 'bg-green-100 text-green-800' :
+                        'bg-slate-100 text-slate-800'
                       }>
-                        {supplier.department === 'boibari' ? '📚 Boibari' :
-                         supplier.department === 'prodhan_com_e_commerce' ? '🛒 Prodhan' : '📦 Both'}
+                        {supplier.supplier_type?.replace('_', ' ')}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-bold text-slate-900">
+                          {supplierStats[supplier.id]?.productCount || 0}
+                        </span>
+                        {supplierStats[supplier.id]?.products?.length > 0 && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">
+                                View Products
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-72 max-h-64 overflow-y-auto">
+                              <DropdownMenuLabel>Products from {supplier.supplier_name}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {supplierStats[supplier.id]?.products?.slice(0, 10).map((prod) => (
+                                <DropdownMenuItem key={prod.id} className="flex justify-between">
+                                  <span className="truncate max-w-[180px]">{prod.name}</span>
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    {prod.stock} pcs
+                                  </Badge>
+                                </DropdownMenuItem>
+                              ))}
+                              {(supplierStats[supplier.id]?.products?.length || 0) > 10 && (
+                                <DropdownMenuItem className="text-muted-foreground text-center">
+                                  +{supplierStats[supplier.id].products.length - 10} more products
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-semibold text-slate-700">
+                        {supplierStats[supplier.id]?.totalOrders || supplier.total_orders || 0}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="font-semibold text-emerald-600">
+                        ৳{((supplierStats[supplier.id]?.totalValue || supplier.total_value || 0)).toLocaleString()}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm">{supplier.payment_terms?.replace('_', ' ')}</TableCell>
-                    <TableCell className="text-sm">{supplier.lead_time_days} days</TableCell>
                     <TableCell>
                       <div className="text-sm">
                         {getRatingStars(supplier.rating)}
