@@ -43,23 +43,6 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
-// Helper function to format date in BDT
-const formatDateBDT = (dateStr) => {
-  if (!dateStr) return '';
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(dateStr));
-};
-
-// Helper for nice date display (e.g., 08 Feb 2026)
-const formatDisplayDate = (dateStr) => {
-  if (!dateStr) return 'N/A';
-  try {
-    const date = new Date(dateStr);
-    return format(date, 'dd MMM yyyy, hh:mm a');
-  } catch (e) {
-    return dateStr;
-  }
-};
-
 // Enhanced Order Form Component
 const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) => {
   const defaultDepartment = 'prodhan_com_e_commerce';
@@ -147,6 +130,28 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
       return;
     }
 
+    // Check combo product component availability
+    if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
+      let canFulfillCombo = true;
+      let unavailableComponent = null;
+
+      for (const bundleItem of inventoryItem.bundle_items) {
+        const component = inventory.find(i => i.id === bundleItem.inventory_id);
+        const requiredQty = bundleItem.quantity * itemQuantity;
+
+        if (!component || component.current_stock < requiredQty) {
+          canFulfillCombo = false;
+          unavailableComponent = component?.item_name || 'Unknown';
+          break;
+        }
+      }
+
+      if (!canFulfillCombo) {
+        toast.error(`Cannot fulfill combo: Insufficient stock for component "${unavailableComponent}"`);
+        return;
+      }
+    }
+
     if (inventoryItem.current_stock < itemQuantity) {
       toast.error(`Only ${inventoryItem.current_stock} units available in stock`);
       return;
@@ -187,7 +192,7 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
     e.preventDefault();
 
     if (formData.order_items.length === 0) {
-      toast.error('Please add at least one item to order');
+      toast.error('Please add at least one item to the order');
       return;
     }
 
@@ -201,6 +206,7 @@ const OrderForm = ({ order, customers, inventory, onSubmit, onCancel, currentUse
       return;
     }
 
+    // Generate short order number: PD + 6 digits (e.g., PD020483)
     const generateShortOrderNumber = () => {
       const timestamp = Date.now().toString().slice(-5);
       const random = Math.floor(Math.random() * 10);
@@ -608,13 +614,14 @@ function SalesPage() {
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => User.me(),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 min cache
     gcTime: 30 * 60 * 1000,
   });
 
   // 🚀 LIGHTNING FAST: Orders with pagination for ALL orders + fast initial load
   const [allOrdersLoaded, setAllOrdersLoaded] = useState(false);
   
+  // First load: Get recent 500 orders fast
   const { data: recentOrders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['orders-sales-recent'],
     queryFn: () => Order.list('-order_date', 500),
@@ -626,9 +633,11 @@ function SalesPage() {
     placeholderData: (prev) => prev,
   });
 
+  // Background load: Get ALL orders (runs after initial render)
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-sales-all'],
     queryFn: async () => {
+      // Load in batches for smoother UI
       const batchSize = 1000;
       let allData = [];
       let offset = 0;
@@ -644,18 +653,21 @@ function SalesPage() {
       setAllOrdersLoaded(true);
       return allData;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 min cache for full data
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    enabled: recentOrders.length > 0,
+    enabled: recentOrders.length > 0, // Only run after initial load
   });
 
+  // Use all orders if loaded, otherwise use recent
   const orders = allOrdersLoaded && allOrders.length > 0 ? allOrders : recentOrders;
 
+  // 🚀 LIGHTNING FAST: Real-time subscription with debounce
   useEffect(() => {
     let timeoutId = null;
     const unsubscribe = Order.subscribe(() => {
+      // Debounce to avoid rapid refetches
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['orders-sales'] });
@@ -667,19 +679,21 @@ function SalesPage() {
     };
   }, [queryClient]);
 
+  // 🚀 LIGHTNING FAST: Customers with very long cache
   const { data: customers = [] } = useQuery({
     queryKey: ['customers-sales'],
     queryFn: () => Customer.list('-created_date', 500),
-    staleTime: 30 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 min cache
     gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 
+  // 🚀 LIGHTNING FAST: Inventory with very long cache
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-sales'],
     queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500),
-    staleTime: 30 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 min cache
     gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -703,11 +717,12 @@ function SalesPage() {
     }
   }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
 
+  // 🚀 LIGHTNING FAST: Permissions with long cache
   const { data: rawUserPermissions = [] } = useQuery({
     queryKey: ['user-permissions', currentUser?.id],
     queryFn: () => base44.entities.UserPermission.filter({ user_id: currentUser.id }),
     enabled: !!currentUser?.id,
-    staleTime: 15 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 min cache
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -727,7 +742,9 @@ function SalesPage() {
     return permMap;
   }, [rawUserPermissions]);
 
+  // Check if user has specific permission
   const hasPermission = useCallback((module, action) => {
+    // Super admin and admin have all permissions
     if (['admin', 'super_admin'].includes(currentUser?.job_role?.toLowerCase())) return true;
     return userPermissions[module]?.[action] === true;
   }, [currentUser?.job_role, userPermissions]);
@@ -742,11 +759,13 @@ function SalesPage() {
     return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
   }, [currentUser]);
 
+  // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
       let customerId = orderData.customer_id;
 
       if (!customerId) {
+        // Check for duplicates by phone or email
         const existingByPhone = customers.find(c => c.customer_phone === orderData.customer_phone);
         const existingByEmail = orderData.customer_email 
           ? customers.find(c => c.customer_email === orderData.customer_email)
@@ -883,6 +902,7 @@ function SalesPage() {
     },
   });
 
+  // Update order mutation
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const updatedOrder = await Order.update(id, data);
@@ -899,6 +919,7 @@ function SalesPage() {
     },
   });
 
+  // Update order status
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
       return await Order.update(orderId, { order_status: newStatus });
@@ -916,6 +937,7 @@ function SalesPage() {
     updateOrderStatusMutation.mutate({ orderId: order.id, newStatus });
   };
 
+  // Payment status update mutation
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ orderId, newPaymentStatus }) => {
       return await Order.update(orderId, { payment_status: newPaymentStatus });
@@ -946,20 +968,19 @@ function SalesPage() {
       
       try {
         await Promise.all(selectedOrderIds.map(id => Order.delete(id)));
-        queryClient.invalidateQueries({ queryKey: ['orders-sales-recent'] });
-        queryClient.invalidateQueries({ queryKey: ['orders-sales-all'] });
+        queryClient.invalidateQueries(['orders']);
         toast.success(`${selectedOrderIds.length} order(s) deleted successfully`);
         setSelectedOrderIds([]);
       } catch (error) {
         toast.error('Failed to delete orders: ' + error.message);
       }
     } else {
+      // Bulk status update
       try {
         await Promise.all(selectedOrderIds.map(id => 
           Order.update(id, { order_status: action })
         ));
-        queryClient.invalidateQueries({ queryKey: ['orders-sales-recent'] });
-        queryClient.invalidateQueries({ queryKey: ['orders-sales-all'] });
+        queryClient.invalidateQueries(['orders']);
         toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
         setSelectedOrderIds([]);
       } catch (error) {
@@ -994,11 +1015,13 @@ function SalesPage() {
 
   const handleEditOrder = (order) => {
     try {
+      // Validate order data before editing
       if (!order || !order.id) {
         toast.error('Invalid order data');
         return;
       }
       
+      // Ensure order has required fields
       const validatedOrder = {
         ...order,
         order_items: Array.isArray(order.order_items) ? order.order_items : [],
@@ -1038,13 +1061,15 @@ function SalesPage() {
     setDepartmentFilter(value);
   };
 
-  const [displayLimit, setDisplayLimit] = useState(50);
+  // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
+  const [displayLimit, setDisplayLimit] = useState(50); // Start with less for instant render
   
+  // 🚀 Pre-compute date strings for ALL orders ONCE (expensive operation done only when orders change)
   const ordersWithDateStr = useMemo(() => {
     if (!orders || orders.length === 0) return [];
     return orders.map(o => ({
       ...o,
-      _dateStr: formatDateBDT(o.order_date || o.created_date) 
+      _dateStr: new Date(o.order_date || o.created_date).toISOString().slice(0, 10) // YYYY-MM-DD format, much faster
     }));
   }, [orders]);
   
@@ -1053,26 +1078,31 @@ function SalesPage() {
     
     let filtered = ordersWithDateStr;
     
+    // 🚀 Fast path: Department filter first (most selective)
     if (!canViewAllDepartments) {
       filtered = filtered.filter(o => o.department === userDepartment);
     } else if (departmentFilter !== 'all') {
       filtered = filtered.filter(o => o.department === departmentFilter);
     }
 
+    // 🚀 Date filter - now uses pre-computed _dateStr (O(1) per item)
     if (dateRange.from) {
       const fromDateStr = dateRange.from;
       const toDateStr = dateRange.to || dateRange.from;
       filtered = filtered.filter(o => o._dateStr >= fromDateStr && o._dateStr <= toDateStr);
     }
 
+    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(o => o.order_status === statusFilter);
     }
 
+    // Payment filter
     if (paymentFilter !== 'all') {
       filtered = filtered.filter(o => o.payment_status === paymentFilter);
     }
 
+    // 🚀 Search filter - only if query exists (expensive)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(o =>
@@ -1082,6 +1112,7 @@ function SalesPage() {
       );
     }
 
+    // Product filter
     if (productFilter !== 'all') {
       filtered = filtered.filter(o => 
         o.order_items?.some(item => item.inventory_id === productFilter)
@@ -1091,14 +1122,17 @@ function SalesPage() {
     return filtered;
   }, [ordersWithDateStr, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
+  // 🚀 Display only limited rows for smooth scrolling
   const displayedOrders = useMemo(() => {
     return filteredOrders.slice(0, displayLimit);
   }, [filteredOrders, displayLimit]);
 
+  // Load more handler
   const loadMoreOrders = useCallback(() => {
     setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
   }, [filteredOrders.length]);
 
+  // Fast Excel Export Function
   const handleExportExcel = useCallback(() => {
     const ordersToExport = exportOptions.onlyFiltered ? filteredOrders : orders;
     
@@ -1109,8 +1143,10 @@ function SalesPage() {
     
     toast.loading('Generating Excel...', { id: 'export' });
     
+    // Use setTimeout to not block UI
     setTimeout(() => {
       try {
+        // Build headers dynamically
         const headers = ['Order #', 'Date', 'Status', 'Payment Status'];
         
         if (exportOptions.includeCustomerDetails) {
@@ -1131,10 +1167,11 @@ function SalesPage() {
         
         headers.push('Notes', 'Created Date');
         
+        // Build rows
         const rows = ordersToExport.map(order => {
           const row = [
             order.order_number || '',
-            order.order_date ? formatDateBDT(order.order_date) : '',
+            order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
             order.order_status || '',
             order.payment_status || ''
           ];
@@ -1181,12 +1218,13 @@ function SalesPage() {
           
           row.push(
             order.customer_notes || '',
-            order.created_date ? formatDateBDT(order.created_date) : ''
+            order.created_date ? format(new Date(order.created_date), 'yyyy-MM-dd HH:mm') : ''
           );
           
           return row;
         });
         
+        // Generate CSV content (Excel compatible)
         const escapeCSV = (val) => {
           if (val === null || val === undefined) return '';
           const str = String(val);
@@ -1201,12 +1239,13 @@ function SalesPage() {
           ...rows.map(row => row.map(escapeCSV).join(','))
         ].join('\n');
         
+        // Add BOM for Excel UTF-8 compatibility
         const BOM = '\uFEFF';
         const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `sales_orders_${formatDateBDT(new Date())}.csv`;
+        a.download = `sales_orders_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1220,18 +1259,23 @@ function SalesPage() {
     }, 100);
   }, [filteredOrders, orders, exportOptions]);
 
+  // Check if date filter is applied to determine which stats to show
   const hasDateFilter = dateRange.from !== undefined;
 
+  // 🚀 LIGHTNING FAST: Pre-compute inventory map for O(1) lookups
   const inventoryMap = useMemo(() => {
     const map = new Map();
     inventory.forEach(i => map.set(i.id, i));
     return map;
   }, [inventory]);
 
+  // 🚀 LIGHTNING FAST: Stats with optimized calculations using BDT timezone
   const stats = useMemo(() => {
-    const todayStr = formatDateBDT(new Date());
+    // Get today's date in Bangladesh timezone (Asia/Dhaka) - YYYY-MM-DD format
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
     
+    // Single pass for main stats
     let pendingOrders = 0, confirmedOrders = 0, shippedOrders = 0, totalReturns = 0, totalProductQuantity = 0;
     
     for (const o of statsOrders) {
@@ -1240,17 +1284,23 @@ function SalesPage() {
       if (['shipped', 'out_for_delivery'].includes(o.order_status)) shippedOrders++;
       if (o.order_status === 'returned') totalReturns++;
       
+      // Product qty with O(1) lookup
       for (const item of (o.order_items || [])) {
         const invItem = inventoryMap.get(item.inventory_id);
         totalProductQuantity += getActualQuantity(item.quantity || 0, invItem, item);
       }
     }
 
+    // Today's stats - single pass using BDT date comparison
     let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
     
     for (const o of ordersWithDateStr) {
-      const orderDateBDT = o._dateStr;
-      if (!orderDateBDT || orderDateBDT !== todayStr) continue;
+      // Convert order date to BDT timezone for accurate comparison
+      const orderDate = o.order_date || o.created_date;
+      if (!orderDate) continue;
+      
+      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(orderDate));
+      if (orderDateBDT !== todayStr) continue;
       
       todayOrdersCount++;
       if (o.order_status === 'pending') todayPending++;
@@ -1272,6 +1322,7 @@ function SalesPage() {
     };
   }, [ordersWithDateStr, filteredOrders, hasDateFilter, inventoryMap]);
 
+  // Premium Pill Badges
   const getStatusBadge = (status) => {
     const config = {
       pending: { label: 'Pending', class: 'bg-slate-100 text-slate-700 border border-slate-200' },
@@ -1297,224 +1348,6 @@ function SalesPage() {
     };
     const { label, class: className } = config[status] || config.pending;
     return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
-  };
-
-  const getCorrectOrderId = (order) => {
-    if (!order) return 'N/A';
-    if (order.order_number && order.order_number.startsWith('PD')) {
-      return order.order_number;
-    }
-    if (order.order_number && order.order_number.startsWith('WC-')) {
-      const digits = order.order_number.replace(/\D/g, '').slice(-6);
-      return `PD${digits.padStart(6, '0')}`;
-    }
-    const fallbackDigits = (order.id || '000000').replace(/\D/g, '').slice(-6);
-    return `PD${fallbackDigits.padStart(6, '0')}`;
-  };
-
-  const PRODHAN_LOGO = "https://z-cdn-media.chatglm.cn/files/ce97af84-8f81-419d-b062-e3bbb9bb0ff9.png?auth_key=1869978983-2c45fe054a014d9389481fe00700cc8c-0-8957bc7ab0a2e8e8d935b312e5b678f1";
-
-  // 🆕 MASTER INVOICE GENERATOR (Complete and Finalized)
-  const generateMasterInvoiceHTML = (order) => {
-    const displayId = getCorrectOrderId(order);
-    const address = order.shipping_address || {};
-    const orderDate = formatDisplayDate(order.order_date);
-
-    return `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd;">
-        
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #D32F2F; padding-bottom: 15px;">
-          <img src="${PRODHAN_LOGO}" alt="Prodhan Logo" style="height: 60px; margin-bottom: 10px;" />
-          <h2 style="margin: 0; font-size: 14px; color: #555; text-transform: uppercase; letter-spacing: 1px;">Prodhan.com</h2>
-          <h1 style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #222;">Your Trusted E-Commerce Partner</h1>
-          <div style="margin-top: 10px; display: inline-block; background: #D32F2F; color: white; padding: 5px 15px; border-radius: 4px; font-weight: bold;">
-            INVOICE
-          </div>
-        </div>
-
-        <!-- Meta Info Grid -->
-        <div style="display: flex; justify-content: space-between; margin-bottom: 25px; gap: 20px;">
-          <!-- From -->
-          <div style="flex: 1;">
-            <h3 style="margin: 0 0 8px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700;">From:</h3>
-            <p style="margin: 2px 0; font-size: 14px; font-weight: 600; color: #222;">Prodhan.com</p>
-            <p style="margin: 2px 0; font-size: 13px; color: #444;">Head Office: 1st-4th-5th-6th Floor, Jashore Malik Shamiti</p>
-            <p style="margin: 2px 0; font-size: 13px; color: #444;">Vobon, Gausul Azam Super Market, Nilkhet, Katabon Rd</p>
-            <p style="margin: 2px 0; font-size: 13px; color: #444;">1205 Dhaka</p>
-            <p style="margin: 2px 0; font-size: 13px; color: #444;">+8809643330000</p>
-            <p style="margin: 2px 0; font-size: 13px; color: #444;">support@prodhan.com</p>
-          </div>
-
-          <!-- Bill To & Invoice Details -->
-          <div style="flex: 1.2;">
-            <div style="margin-bottom: 15px;">
-               <h3 style="margin: 0 0 8px 0; font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700;">Bill To:</h3>
-               <p style="margin: 4px 0; font-size: 16px; font-weight: 600; color: #222;">${order.customer_name || 'N/A'}</p>
-               <p style="margin: 4px 0; font-size: 14px; color: #444;">${address.address_line || ''}</p>
-               <p style="margin: 4px 0; font-size: 14px; color: #444;">${address.city || ''}, ${address.district || ''}</p>
-               <p style="margin: 4px 0; font-size: 14px; color: #444;">${address.postal_code || ''}</p>
-               <p style="margin: 4px 0; font-size: 14px; color: #444;">${order.customer_phone || 'N/A'}</p>
-            </div>
-            
-            <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid #D32F2F;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span style="font-size: 12px; color: #666; font-weight: bold;">Invoice #:</span>
-                <span style="font-size: 14px; color: #D32F2F; font-weight: bold;">${displayId}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span style="font-size: 12px; color: #666; font-weight: bold;">Date:</span>
-                <span style="font-size: 13px; color: #333;">${orderDate}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Order Details Table -->
-        <div style="margin-bottom: 20px;">
-          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700;">Order Details</h3>
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead>
-              <tr style="background-color: #D32F2F; color: white;">
-                <th style="padding: 10px; text-align: left; font-weight: 600; border: 1px solid #b71c1c;">Item</th>
-                <th style="padding: 10px; text-align: center; width: 70px; font-weight: 600; border: 1px solid #b71c1c;">Qty</th>
-                <th style="padding: 10px; text-align: right; width: 100px; font-weight: 600; border: 1px solid #b71c1c;">Unit Price</th>
-                <th style="padding: 10px; text-align: right; width: 100px; font-weight: 600; border: 1px solid #b71c1c;">Item Discount</th>
-                <th style="padding: 10px; text-align: right; width: 100px; font-weight: 600; border: 1px solid #b71c1c;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(order.order_items || []).map(item => `
-                <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding: 10px; color: #333; font-weight: 500;">${item.item_name || 'Product'}</td>
-                  <td style="padding: 10px; text-align: center; color: #555;">${item.quantity || 1}</td>
-                  <td style="padding: 10px; text-align: right; color: #555;">৳${(item.unit_price || 0).toLocaleString()}</td>
-                  <td style="padding: 10px; text-align: right; color: #c62828;">৳${(item.discount || 0).toLocaleString()}</td>
-                  <td style="padding: 10px; text-align: right; color: #333; font-weight: 600;">৳${(item.subtotal || 0).toLocaleString()}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Totals Section -->
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-          <div style="width: 250px;">
-            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #555; font-size: 13px;">
-              <span>Items Total:</span>
-              <span>৳${(order.subtotal || 0).toLocaleString()}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #555; font-size: 13px;">
-              <span>Shipping Cost:</span>
-              <span>৳${(order.shipping_cost || 0).toLocaleString()}</span>
-            </div>
-            <div style="border-top: 1px solid #ccc; margin: 5px 0;"></div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 16px; font-weight: bold; color: #D32F2F;">
-              <span>Total Amount:</span>
-              <span>৳${(order.total_amount || 0).toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer Details (Payment Status, Method, Special Instructions) -->
-        <div style="border-top: 1px dashed #ccc; padding-top: 15px; margin-top: 20px;">
-           <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-             <div style="flex: 1;">
-               <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Payment Status:</h3>
-               <p style="margin: 0; font-weight: 600; color: ${order.payment_status === 'paid' ? 'green' : 'red'};">${order.payment_status?.toUpperCase() || 'PENDING'}</p>
-             </div>
-             <div style="flex: 1;">
-               <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Payment Method:</h3>
-               <p style="margin: 0; font-weight: 600; color: #333;">${order.payment_method === 'cod' ? 'CASH_ON_DELIVERY' : (order.payment_method || 'COD').toUpperCase()}</p>
-             </div>
-             <div style="flex: 1;">
-               <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Due Amount:</h3>
-               <p style="margin: 0; font-weight: bold; color: #D32F2F;">৳${(order.total_amount - (order.paid_amount || 0)).toLocaleString()}</p>
-             </div>
-           </div>
-           <div>
-             <h3 style="margin: 0 0 5px 0; font-size: 12px; color: #888; text-transform: uppercase;">Special Instructions:</h3>
-             <p style="margin: 0; font-size: 13px; color: #555; font-style: italic;">${order.customer_notes || 'None'}</p>
-           </div>
-        </div>
-
-      </div>
-    `;
-  };
-  
-  // 🆕 SMALL RECEPT GENERATOR (4in x 3.3in)
-  const generateSmallReceiptHTML = (order) => {
-    const displayId = getCorrectOrderId(order);
-    const address = order.shipping_address || {};
-    
-    return `
-      <style>
-        /* STRICT SIZE CONTROL: 4in width x 3.3in height */
-        @page {
-          size: 4in 3.3in;
-          margin: 0;
-        }
-        body {
-          margin: 0;
-          padding: 8px;
-          font-family: 'Courier New', Courier, monospace;
-          font-size: 11px;
-          width: 4in;
-          height: 3.3in;
-          box-sizing: border-box;
-          overflow: hidden; /* Prevents spillover */
-          color: #000;
-          background: white;
-        }
-        .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
-        .logo { height: 35px; object-fit: contain; }
-        .shop-name { font-weight: bold; font-size: 14px; margin: 2px 0; text-transform: uppercase; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-        .customer-row { margin-bottom: 4px; font-weight: bold; }
-        .items-container { margin: 5px 0; border-bottom: 1px dashed #000; padding-bottom: 5px; max-height: 1.8in; overflow-y: hidden; }
-        .item-row { display: flex; justify-content: space-between; margin-bottom: 2px; line-height: 1.2; }
-        .item-name { width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .item-qty { width: 15%; text-align: center; }
-        .item-price { width: 20%; text-align: right; }
-        .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 5px; border-top: 1px solid #000; padding-top: 2px; }
-        .footer { text-align: center; margin-top: auto; font-size: 10px; }
-      </style>
-
-      <div class="header">
-        <img src="${PRODHAN_LOGO}" class="logo" />
-        <div class="shop-name">Prodhan.com</div>
-        <div>+8809643330000</div>
-      </div>
-
-      <div class="info-row">
-        <span>INV: ${displayId}</span>
-        <span>${formatDateBDT(order.order_date)}</span>
-      </div>
-      <div class="customer-row">
-        ${order.customer_name.substring(0, 18)}<br/>
-        ${address.city || ''}, ${address.district || ''}
-      </div>
-
-      <div class="items-container">
-        ${(order.order_items || []).map(item => `
-          <div class="item-row">
-            <span class="item-name">${item.item_name}</span>
-            <span class="item-qty">x${item.quantity}</span>
-            <span class="item-price">${item.subtotal}</span>
-          </div>
-        `).join('')}
-      </div>
-
-      <div class="total-row">
-        <span>TOTAL</span>
-        <span>৳${(order.total_amount || 0).toLocaleString()}</span>
-      </div>
-
-      <div class="footer">
-        Paid: ${order.payment_status?.toUpperCase() || 'COD'}<br/>
-        Thank You!
-      </div>
-    `;
   };
 
   // 🚀 LIGHTNING FAST: Show skeleton only on first load, not on refetch
@@ -1549,6 +1382,7 @@ function SalesPage() {
           <p className="text-sm text-slate-500 mt-0.5">Track and manage all your sales orders</p>
         </div>
         <div className="flex items-center gap-3 w-full lg:w-auto">
+          {/* Glassmorphism Search Bar */}
           <div className="relative flex-1 lg:w-96">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
@@ -1579,7 +1413,8 @@ function SalesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const todayBDT = formatDateBDT(new Date());
+                        // Use Bangladesh timezone (Asia/Dhaka) for today
+                        const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
                         setDateRange({ from: todayBDT, to: todayBDT });
                       }}
                       className="text-sm"
@@ -1590,10 +1425,11 @@ function SalesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
+                        // Use Bangladesh timezone for yesterday
                         const now = new Date();
                         const bdtNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
                         bdtNow.setDate(bdtNow.getDate() - 1);
-                        const yesterdayBDT = formatDateBDT(bdtNow);
+                        const yesterdayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
                         setDateRange({ from: yesterdayBDT, to: yesterdayBDT });
                       }}
                       className="text-sm"
@@ -1727,7 +1563,7 @@ function SalesPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Premium Minimalist Stats Cards */}
       {stats.isFiltered && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
           <Filter className="w-4 h-4 text-blue-600" />
@@ -1737,6 +1573,7 @@ function SalesPage() {
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* Total Orders */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -1752,6 +1589,7 @@ function SalesPage() {
           </CardContent>
         </Card>
 
+        {/* Total Product Qty */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -1767,6 +1605,7 @@ function SalesPage() {
           </CardContent>
         </Card>
 
+        {/* Total Returns */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -1782,6 +1621,7 @@ function SalesPage() {
           </CardContent>
         </Card>
 
+        {/* Pending Orders */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -1797,6 +1637,7 @@ function SalesPage() {
           </CardContent>
         </Card>
 
+        {/* Confirmed Orders */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -1812,6 +1653,7 @@ function SalesPage() {
           </CardContent>
         </Card>
 
+        {/* Shipped Orders */}
         <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -1827,6 +1669,8 @@ function SalesPage() {
           </CardContent>
         </Card>
       </div>
+
+
 
       {/* Premium Bulk Actions Bar */}
       {selectedOrderIds.length > 0 && (
@@ -1847,7 +1691,7 @@ function SalesPage() {
                 </Button>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* 🚀 IMPROVED: Bulk Print Invoices - Uses Master Function */}
+                {/* Bulk Print Invoices */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -1858,30 +1702,61 @@ function SalesPage() {
                       return;
                     }
                     
-                    const printWindow = window.open('', '_blank', 'width=800,height=900');
+                    // Open new window for bulk printing
+                    const printWindow = window.open('', '_blank', 'width=800,height=600');
                     if (!printWindow) {
                       toast.error('Please allow popups for bulk printing');
                       return;
                     }
 
-                    const invoicesHTML = selectedOrders.map((order, idx) => {
-                      return `
-                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; margin-bottom: 20px;">
-                        ${generateMasterInvoiceHTML(order)}
+                    const invoicesHTML = selectedOrders.map((order, idx) => `
+                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; padding: 20px; font-family: Arial, sans-serif;">
+                        <div style="text-align: center; margin-bottom: 15px;">
+                          <h2 style="margin: 0; color: #D32F2F;">Prodhan.com</h2>
+                          <p style="margin: 5px 0; font-size: 12px;">প্রোধান.কম - অনলাইন শপিং</p>
+                        </div>
+                        <hr/>
+                        <p><strong>Order:</strong> ${order.order_number || 'N/A'}</p>
+                        <p><strong>Date:</strong> ${order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A'}</p>
+                        <p><strong>Customer:</strong> ${order.customer_name || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${order.customer_phone || 'N/A'}</p>
+                        <p><strong>Address:</strong> ${order.shipping_address?.address_line || ''}, ${order.shipping_address?.city || ''}</p>
+                        <hr/>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                          <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 5px; text-align: left;">Item</th>
+                            <th style="border: 1px solid #ddd; padding: 5px; text-align: center;">Qty</th>
+                            <th style="border: 1px solid #ddd; padding: 5px; text-align: right;">Price</th>
+                          </tr>
+                          ${(order.order_items || []).map(item => `
+                            <tr>
+                              <td style="border: 1px solid #ddd; padding: 5px;">${item.item_name || 'Product'}</td>
+                              <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantity || 1}</td>
+                              <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">৳${(item.subtotal || 0).toLocaleString()}</td>
+                            </tr>
+                          `).join('')}
+                        </table>
+                        <hr/>
+                        <div style="text-align: right;">
+                          <p><strong>Subtotal:</strong> ৳${(order.subtotal || 0).toLocaleString()}</p>
+                          ${(order.discount_amount || 0) + (order.coupon_discount || 0) > 0 ? `<p><strong>Discount:</strong> -৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</p>` : ''}
+                          <p><strong>Shipping:</strong> ৳${(order.shipping_cost || 0).toLocaleString()}</p>
+                          <p style="font-size: 16px;"><strong>Total: ৳${(order.total_amount || 0).toLocaleString()}</strong></p>
+                        </div>
+                        <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #666;">
+                          <p>Thank you for shopping with Prodhan.com!</p>
+                        </div>
                       </div>
-                      `;
-                    }).join('');
+                    `).join('');
 
                     printWindow.document.write(`
                       <html>
                         <head>
-                          <title>Print Invoices</title>
+                          <title>Bulk Invoices - ${selectedOrders.length} Orders</title>
                           <style>
-                            @media print { 
-                              body { margin: 0; -webkit-print-color-adjust: exact; } 
-                              @page { margin: 10mm; }
+                            @media print {
+                              body { margin: 0; }
                             }
-                            @page { size: A4; margin: 0; }
                           </style>
                         </head>
                         <body>${invoicesHTML}</body>
@@ -2025,7 +1900,7 @@ function SalesPage() {
                       </TableCell>
                       <TableCell>
                        <div className="flex flex-col gap-1">
-                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{getCorrectOrderId(order)}</span>
+                         <span className="font-mono font-bold text-[#D32F2F] text-sm">{order.order_number?.startsWith('PD') ? order.order_number : `PD${order.order_number?.replace(/\D/g, '').slice(-6) || order.id?.slice(-6) || '000000'}`}</span>
                          <div className="flex flex-wrap gap-1">
                            {order.adprofit_synced && (
                              <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
@@ -2042,7 +1917,7 @@ function SalesPage() {
                        </div>
                       </TableCell>
                       <TableCell>
-                        {formatDateBDT(order.order_date)}
+                        {format(new Date(order.order_date), 'dd MMM yyyy')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -2189,80 +2064,39 @@ function SalesPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                          
-                          {/* 🚀 IMPROVED COURIER UPDATE BUTTON: Only appears when status is 'shipped' or 'out_for_delivery' */}
-                          {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={async () => {
-      const loadingToast = toast.loading('🔄 Updating courier status...');
-      try {
-        const response = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            order_number: order.order_number,
-            tracking_code: order.courier_tracking_code,
-            consignment_id: order.courier_consignment_id
-          })
-        });
+                         {order.courier_placed && (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={async () => {
+                               const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
+                               try {
+                                 const response = await base44.functions.invoke('steadfastStatusWebhook', {
+                                   order_id: order.order_number,
+                                   action: 'get_status'
+                                 });
 
-        toast.dismiss(loadingToast);
+                                 toast.dismiss(loadingToast);
 
-        if (response.ok) {
-          const data = await response.json();
-          
-          const steadfastStatus = data.delivery_status || data.status;
-          let newOrderStatus = order.order_status;
-          
-          const statusMapping = {
-            'pending': 'processing',
-            'delivered_approval_pending': 'out_for_delivery',
-            'partial_delivered_approval_pending': 'out_for_delivery',
-            'cancelled_approval_pending': 'processing',
-            'unknown_approval_pending': 'processing',
-            'delivered': 'delivered',
-            'partial_delivered': 'delivered',
-            'cancelled': 'cancelled',
-            'hold': 'processing',
-            'in_review': 'processing',
-            'unknown': 'processing'
-          };
-          
-          if (steadfastStatus && statusMapping[steadfastStatus]) {
-            newOrderStatus = statusMapping[steadfastStatus];
-            
-            await Order.update(order.id, {
-              order_status: newOrderStatus,
-              courier_status: steadfastStatus
-            });
-            
-            queryClient.invalidateQueries(['orders-sales-recent']);
-            queryClient.invalidateQueries(['orders-sales-all']);
-            
-            toast.success(`✅ Status updated: ${steadfastStatus} → ${newOrderStatus}`);
-          } else {
-            toast.info(`ℹ️ Courier status: ${steadfastStatus || 'Unknown'}`);
-          }
-        } else {
-          const errorText = await response.text();
-          toast.error('Failed to fetch status: ' + (errorText || response.statusText));
-        }
-      } catch (error) {
-        toast.dismiss(loadingToast);
-        toast.error('Error updating status: ' + error.message);
-      }
-    }}
-    className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full mt-2"
-    title="Update Status from Steadfast Courier"
-  >
-    <RefreshCw className="w-3 h-3 mr-1" />
-    Update
-  </Button>
-                          )}
+                                 if (response.data?.success) {
+                                   queryClient.invalidateQueries(['orders-sales-recent']);
+                                   queryClient.invalidateQueries(['orders-sales-all']);
+                                   toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
+                                 } else {
+                                   toast.error(response.data?.error || 'Failed to fetch status');
+                                 }
+                               } catch (error) {
+                                 toast.dismiss(loadingToast);
+                                 toast.error('Error: ' + error.message);
+                               }
+                             }}
+                             className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
+                             title="Update Status from Steadfast"
+                           >
+                             <RefreshCw className="w-3 h-3 mr-1" />
+                             Update
+                           </Button>
+                         )}
                        </div>
                       </TableCell>
                       <TableCell>
@@ -2283,8 +2117,6 @@ function SalesPage() {
                                <p>View Invoice</p>
                              </TooltipContent>
                            </Tooltip>
-                            
-                            {/* 🆕 IMPROVED RECEIPT DIALOG (4x3.3in) */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Dialog>
@@ -2297,37 +2129,11 @@ function SalesPage() {
                                       <Receipt className="w-4 h-4 text-orange-600" />
                                     </Button>
                                   </DialogTrigger>
-                                  <DialogContent className="max-w-sm w-[380px] p-0 overflow-hidden">
-                                    <DialogHeader className="p-4 border-b bg-gray-50 flex flex-row items-center justify-between">
-                                      <DialogTitle className="text-sm font-medium">Thermal Receipt (4x3.3)</DialogTitle>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="h-8 px-3 text-xs"
-                                        onClick={() => {
-                                          const printContent = document.getElementById('thermal-receipt-content');
-                                          if(!printContent) return;
-                                          const printWindow = window.open('', '_blank', 'width=400,height=350');
-                                          printWindow.document.write(`
-                                            <html>
-                                              <head><title>Print Receipt</title></head>
-                                              <body>${printContent.innerHTML}</body>
-                                            </html>
-                                          `);
-                                          printWindow.document.close();
-                                          setTimeout(() => printWindow.print(), 250);
-                                        }}
-                                      >
-                                        <Printer className="w-3 h-3 mr-1" /> Print
-                                      </Button>
+                                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-center">Small Receipt</DialogTitle>
                                     </DialogHeader>
-                                    <div className="bg-white p-2 flex justify-center overflow-y-auto max-h-[80vh]">
-                                      <div 
-                                        id="thermal-receipt-content"
-                                        dangerouslySetInnerHTML={{ __html: generateSmallReceiptHTML(order) }} 
-                                        style={{ width: '384px', height: '316.8px', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}
-                                      />
-                                    </div>
+                                    <ThermalReceipt order={order} />
                                   </DialogContent>
                                 </Dialog>
                               </TooltipTrigger>
@@ -2335,7 +2141,6 @@ function SalesPage() {
                                 <p>Print Receipt</p>
                               </TooltipContent>
                             </Tooltip>
-                            
                             {canEdit && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -2359,20 +2164,14 @@ function SalesPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    const printWindow = window.open('', '_blank', 'width=800,height=900');
-                                    if (!printWindow) return;
-                                    
-                                    const orderHTML = generateMasterInvoiceHTML(order);
-
-                                    printWindow.document.write(`
-                                      <html>
-                                        <head><title>Invoice ${getCorrectOrderId(order)}</title></head>
-                                        <body>${orderHTML}</body>
-                                      </html>
-                                    `);
-                                    printWindow.document.close();
-                                    setTimeout(() => printWindow.print(), 250);
-                                    toast.success('Opening print dialog. Choose "Save as PDF".');
+                                    const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `invoice-${order.order_number}.pdf`;
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    toast.success('Invoice downloaded!');
                                   }}
                                   className="h-9 w-9 p-0 hover:bg-green-50"
                                 >
@@ -2380,7 +2179,7 @@ function SalesPage() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent side="bottom" className="text-xs">
-                                <p>Download PDF</p>
+                                <p>Download JSON</p>
                               </TooltipContent>
                             </Tooltip>
                             {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
@@ -2421,10 +2220,12 @@ function SalesPage() {
                                     onClick={async () => {
                                 const loadingToast = toast.loading('🚚 Sending to Courier...');
                                 try {
+                                  // Build item description
                                   const itemDescription = order.order_items?.map(item => 
                                     `${item.item_name} (×${item.quantity})`
                                   ).join(', ') || 'Products';
 
+                                  // Build full address
                                   const address = order.shipping_address || {};
                                   const fullAddress = [
                                     address.address_line,
@@ -2433,10 +2234,13 @@ function SalesPage() {
                                     address.postal_code
                                   ].filter(Boolean).join(', ');
 
+                                  // Calculate total items
                                   const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
 
-                                  const invoiceNumber = getCorrectOrderId(order);
+                                  // Use the actual order_number (e.g., PD020483) as invoice
+                                  const invoiceNumber = order.order_number || `PD${Date.now().toString().slice(-6)}`;
 
+                                  // Prepare payload as per Steadfast documentation
                                   const courierPayload = {
                                     invoice: invoiceNumber,
                                     recipient_name: order.customer_name,
@@ -2446,9 +2250,10 @@ function SalesPage() {
                                     note: order.customer_notes || '',
                                     item_description: itemDescription,
                                     total_lot: totalLot,
-                                    delivery_type: 0
+                                    delivery_type: 0 // 0 = home delivery
                                   };
 
+                                  // Send to webhook
                                   const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
                                     method: 'POST',
                                     headers: {
@@ -2462,10 +2267,13 @@ function SalesPage() {
                                   if (response.ok) {
                                     const result = await response.json();
 
+                                    // Handle response - can be array or object
                                     const consignmentData = Array.isArray(result) ? result[0] : result;
                                     const consignment = consignmentData?.consignment || consignmentData;
 
+                                    // Check if successful (status 200 or consignment exists)
                                     if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
+                                      // Update order with courier info
                                       await Order.update(order.id, {
                                         courier_placed: true,
                                         courier_placed_date: new Date().toISOString(),
@@ -2473,8 +2281,7 @@ function SalesPage() {
                                         courier_consignment_id: String(consignment?.consignment_id || '')
                                       });
 
-                                      queryClient.invalidateQueries(['orders-sales-recent']);
-                                      queryClient.invalidateQueries(['orders-sales-all']);
+                                      queryClient.invalidateQueries(['orders']);
                                       toast.success('✅ Order sent to courier successfully!');
                                     } else {
                                       toast.error('Courier response invalid: ' + JSON.stringify(result));
@@ -2510,6 +2317,7 @@ function SalesPage() {
                     </TableRow>
                   ))
                 )}
+                {/* Load More Row */}
                 {displayedOrders.length < filteredOrders.length && (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-4">

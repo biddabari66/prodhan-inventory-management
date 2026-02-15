@@ -1486,25 +1486,8 @@ function PurchaseOrdersPage() {
                             <span className="text-sm">{order.created_by_name || 'N/A'}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="min-w-[200px] max-w-[300px]">
-                          <div className="space-y-1.5">
-                            {order.order_items?.length > 0 ? (
-                              <ul className="space-y-1">
-                                {order.order_items.map((item, idx) => (
-                                  <li key={idx} className="flex flex-col">
-                                    <span className="font-medium text-slate-900 text-sm truncate" title={item.item_name}>
-                                      {item.item_name}
-                                    </span>
-                                    <span className="text-xs text-slate-500">
-                                      Qty: {item.quantity_ordered || 0} • Unit: {(item.unit || 'pc').toUpperCase()}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">No items</span>
-                            )}
-                          </div>
+                        <TableCell>
+                          <Badge variant="outline">{order.order_items?.length || 0} items</Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           ৳{order.total_amount?.toLocaleString()}
