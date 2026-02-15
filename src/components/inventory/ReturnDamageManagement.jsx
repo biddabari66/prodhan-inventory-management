@@ -302,13 +302,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           });
         }
 
-        // Process damaged items (write-off)
+        // Process damaged items (write-off) - Goes to DAMAGE tab
         if (damagedQty > 0) {
           await base44.entities.InventoryMovement.create({
             inventory_item_id: data.inventory_item_id,
             movement_type: 'adjustment',
-            quantity: 0,
-            reference_type: 'damage',
+            quantity: damagedQty,
+            reference_type: 'damage', // This ensures it shows in Damages tab
             reference_number: data.order_number || `RETURN-${Date.now()}-DAMAGED`,
             unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
             total_value: -Math.abs((data.financial_impact / data.quantity) * damagedQty),
