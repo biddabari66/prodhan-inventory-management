@@ -14,6 +14,14 @@ import {
   Plus, Phone, Mail, MapPin, Edit, Trash2, Star, Building2, Package, 
   TrendingUp, Clock, CreditCard, AlertCircle, CheckCircle, Upload, Download, FileSpreadsheet, Search
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 
