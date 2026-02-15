@@ -746,14 +746,30 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               />
             </div>
             
+            {/* Product Filter */}
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-48 h-10">
+                <SelectValue placeholder="Filter by Product" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="all">All Products</SelectItem>
+                {departmentFilteredInventory.slice(0, 100).map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.item_name?.substring(0, 30)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             {/* Clear Filters */}
-            {(searchQuery || dateFilter.from || dateFilter.to) && (
+            {(searchQuery || dateFilter.from || dateFilter.to || productFilter !== 'all') && (
               <Button
                 variant="outline"
                 onClick={() => {
                   setSearchQuery('');
                   setDateFilter({ from: '', to: '' });
                   setReasonFilter('all');
+                  setProductFilter('all');
                 }}
                 className="h-10"
               >
