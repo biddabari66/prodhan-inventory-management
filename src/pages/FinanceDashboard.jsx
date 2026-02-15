@@ -120,12 +120,27 @@ function FinanceDashboardPage() {
   const { data: returns = [] } = useQuery({
     queryKey: ['finance-returns', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allMovements = await base44.entities.InventoryMovement.filter({ 
-        reference_type: 'damage'
-      }, '-movement_date', 500);
+      const allMovements = await base44.entities.InventoryMovement.list('-movement_date', 1000);
       return allMovements.filter(m => {
         const mDate = m.movement_date?.split('T')[0];
-        return mDate >= dateRange.start && mDate <= dateRange.end;
+        const isReturnOrDamage = m.reference_type === 'damage' || m.reference_type === 'return' || m.reference_type === 'expired';
+        return mDate >= dateRange.start && mDate <= dateRange.end && isReturnOrDamage;
+      });
+    },
+    staleTime: 2 * 60 * 1000
+  });
+
+  // Fetch general expenses (Expense entity)
+  const { data: generalExpenses = [] } = useQuery({
+    queryKey: ['finance-general-expenses', dateRange.start, dateRange.end],
+    queryFn: async () => {
+      const allExpenses = await base44.entities.Expense.filter({ 
+        department: 'prodhan_com_e_commerce',
+        status: 'approved'
+      }, '-expense_date', 1000);
+      return allExpenses.filter(e => {
+        const expDate = e.expense_date?.split('T')[0];
+        return expDate >= dateRange.start && expDate <= dateRange.end;
       });
     },
     staleTime: 2 * 60 * 1000
