@@ -141,8 +141,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       filtered = filtered.filter(m => (m.metadata?.reason || '').toLowerCase().includes(reasonFilter.toLowerCase()));
     }
     
+    // Apply product filter
+    if (productFilter !== 'all') {
+      filtered = filtered.filter(m => m.inventory_item_id === productFilter);
+    }
+    
     return filtered;
-  }, [movements, inventory, departmentFilter, searchQuery, dateFilter, reasonFilter]);
+  }, [movements, inventory, departmentFilter, searchQuery, dateFilter, reasonFilter, productFilter]);
 
   const damagesData = useMemo(() => {
     let filtered = movements.filter(m =>
