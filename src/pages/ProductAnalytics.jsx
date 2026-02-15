@@ -265,7 +265,7 @@ function ProductAnalyticsDashboard() {
               </Card>
             )}
 
-            {selectedProductIds.length > 0 && !analyticsLoading && safeAnalyticsData.length > 0 && (
+            {safeAnalyticsData.length > 0 && !analyticsLoading && (
               <>
                 {/* Summary Stats */}
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">

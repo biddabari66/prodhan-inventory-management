@@ -37,7 +37,6 @@ import { ChevronDown } from 'lucide-react';
 import SearchableCustomerSelect from '../components/common/SearchableCustomerSelect';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
@@ -2023,201 +2022,134 @@ function SalesPage() {
                         </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                       <div className="flex flex-col gap-1.5">
-                         <DropdownMenu modal={false}>
-                           <DropdownMenuTrigger asChild>
-                             <Button variant="outline" size="sm" className="h-8 gap-1 w-full">
-                               {getStatusBadge(order.order_status)}
-                               <ChevronDown className="w-3 h-3" />
-                             </Button>
-                           </DropdownMenuTrigger>
-                           <DropdownMenuContent align="center" sideOffset={4}>
-                              {order.order_status === 'pending' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                  <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                  Confirm Order
-                                </DropdownMenuItem>
-                              )}
-                              {order.order_status === 'confirmed' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                  <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                  Mark as Processing
-                                </DropdownMenuItem>
-                              )}
-                              {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                  <Truck className="w-4 h-4 mr-2 text-purple-600" />
-                                  Mark as Shipped
-                                </DropdownMenuItem>
-                              )}
-                              {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                  Mark as Delivered
-                                </DropdownMenuItem>
-                              )}
-                              {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
-                                  <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                                  Cancel Order
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                         {order.courier_placed && (
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={async () => {
-                               const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
-                               try {
-                                 const response = await base44.functions.invoke('steadfastStatusWebhook', {
-                                   order_id: order.order_number,
-                                   action: 'get_status'
-                                 });
-
-                                 toast.dismiss(loadingToast);
-
-                                 if (response.data?.success) {
-                                   queryClient.invalidateQueries(['orders-sales-recent']);
-                                   queryClient.invalidateQueries(['orders-sales-all']);
-                                   toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
-                                 } else {
-                                   toast.error(response.data?.error || 'Failed to fetch status');
-                                 }
-                               } catch (error) {
-                                 toast.dismiss(loadingToast);
-                                 toast.error('Error: ' + error.message);
-                               }
-                             }}
-                             className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 w-full"
-                             title="Update Status from Steadfast"
-                           >
-                             <RefreshCw className="w-3 h-3 mr-1" />
-                             Update
+                       <DropdownMenu modal={false}>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="outline" size="sm" className="h-8 gap-1">
+                             {getStatusBadge(order.order_status)}
+                             <ChevronDown className="w-3 h-3" />
                            </Button>
-                         )}
-                       </div>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="center" sideOffset={4}>
+                            {order.order_status === 'pending' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
+                                Confirm Order
+                              </DropdownMenuItem>
+                            )}
+                            {order.order_status === 'confirmed' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
+                                <Package className="w-4 h-4 mr-2 text-indigo-600" />
+                                Mark as Processing
+                              </DropdownMenuItem>
+                            )}
+                            {(order.order_status === 'processing' || order.order_status === 'packed') && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                <Truck className="w-4 h-4 mr-2 text-purple-600" />
+                                Mark as Shipped
+                              </DropdownMenuItem>
+                            )}
+                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                Mark as Delivered
+                              </DropdownMenuItem>
+                            )}
+                            {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                              <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
+                                <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                                Cancel Order
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                       <div className="flex items-center gap-1">
-                         <TooltipProvider delayDuration={300}>
-                           <Tooltip>
-                             <TooltipTrigger asChild>
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={() => handleViewInvoice(order)}
-                                 className="h-9 w-9 p-0 hover:bg-blue-50"
-                               >
-                                 <FileText className="w-4 h-4 text-blue-600" />
-                               </Button>
-                             </TooltipTrigger>
-                             <TooltipContent side="bottom" className="text-xs">
-                               <p>View Invoice</p>
-                             </TooltipContent>
-                           </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-9 w-9 p-0 hover:bg-orange-50"
-                                    >
-                                      <Receipt className="w-4 h-4 text-orange-600" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-center">Small Receipt</DialogTitle>
-                                    </DialogHeader>
-                                    <ThermalReceipt order={order} />
-                                  </DialogContent>
-                                </Dialog>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">
-                                <p>Print Receipt</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            {canEdit && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditOrder(order)}
-                                    className="h-9 w-9 p-0 hover:bg-purple-50"
-                                  >
-                                    <Edit className="w-4 h-4 text-purple-600" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-xs">
-                                  <p>Edit Order</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `invoice-${order.order_number}.pdf`;
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    toast.success('Invoice downloaded!');
-                                  }}
-                                  className="h-9 w-9 p-0 hover:bg-green-50"
-                                >
-                                  <Download className="w-4 h-4 text-green-600" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">
-                                <p>Download JSON</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      base44.functions.invoke('syncToAdprofit', { order_id: order.id })
-                                        .then(async (response) => {
-                                          if (response.data?.success) {
-                                            queryClient.invalidateQueries(['orders']);
-                                          }
-                                        })
-                                        .catch((error) => {
-                                          console.error('Adprofit sync error:', error);
-                                        });
-                                      toast.success('Sync started in background');
-                                    }}
-                                    className="h-9 w-9 p-0 hover:bg-indigo-50"
-                                  >
-                                    <Send className="w-4 h-4 text-indigo-600" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-xs">
-                                  <p>Sync to Adprofit</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {/* Send to Courier Button */}
-                            {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={async () => {
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewInvoice(order)}
+                            className="h-9 w-9 p-0 hover:bg-blue-50"
+                            title="Full Invoice"
+                          >
+                            <FileText className="w-4 h-4 text-blue-600" />
+                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 hover:bg-orange-50"
+                                title="Print Small Receipt"
+                              >
+                                <Receipt className="w-4 h-4 text-orange-600" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="text-center">Small Receipt</DialogTitle>
+                              </DialogHeader>
+                              <ThermalReceipt order={order} />
+                            </DialogContent>
+                          </Dialog>
+                          {canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditOrder(order)}
+                              className="h-9 w-9 p-0 hover:bg-purple-50"
+                              title="Edit Order"
+                            >
+                              <Edit className="w-4 h-4 text-purple-600" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `invoice-${order.order_number}.pdf`;
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              toast.success('Invoice downloaded!');
+                            }}
+                            className="h-9 w-9 p-0 hover:bg-green-50"
+                            title="Download Invoice"
+                          >
+                            <Download className="w-4 h-4 text-green-600" />
+                          </Button>
+                          {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Silent background sync - no loading toast
+                                base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                  .then(async (response) => {
+                                    if (response.data?.success) {
+                                      queryClient.invalidateQueries(['orders']);
+                                    }
+                                  })
+                                  .catch((error) => {
+                                    console.error('Adprofit sync error:', error);
+                                  });
+                                toast.success('Sync started in background');
+                              }}
+                              className="h-9 w-9 p-0 hover:bg-indigo-50"
+                              title="Sync to Adprofit"
+                            >
+                              <Send className="w-4 h-4 text-indigo-600" />
+                            </Button>
+                          )}
+                          {/* Send to Courier Button */}
+                          {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
                                 const loadingToast = toast.loading('🚚 Sending to Courier...');
                                 try {
                                   // Build item description
@@ -2292,28 +2224,57 @@ function SalesPage() {
                                   }
                                 } catch (error) {
                                   toast.dismiss(loadingToast);
-                                      toast.error('Failed to send to courier: ' + error.message);
-                                    }
-                                  }}
-                                  className="h-9 w-9 p-0 hover:bg-orange-50"
-                                >
-                                  <Truck className="w-4 h-4 text-orange-600" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">
-                                <p>Send to Courier</p>
-                              </TooltipContent>
-                            </Tooltip>
+                                  toast.error('Failed to send to courier: ' + error.message);
+                                }
+                              }}
+                              className="h-9 w-9 p-0 hover:bg-orange-50"
+                              title="Send to Courier"
+                            >
+                              <Truck className="w-4 h-4 text-orange-600" />
+                            </Button>
                           )}
                           {order.courier_placed && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
-                              <PackageCheck className="w-3 h-3 mr-1" />
-                              {order.courier_status || 'Sent'}
-                            </Badge>
+                            <>
+                              <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
+                                <PackageCheck className="w-3 h-3 mr-1" />
+                                {order.courier_status || 'Sent'}
+                              </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
+                                  try {
+                                    // Call our backend function which will call Steadfast API
+                                    const response = await base44.functions.invoke('steadfastStatusWebhook', {
+                                      order_id: order.order_number,
+                                      action: 'get_status'
+                                    });
+                                    
+                                    toast.dismiss(loadingToast);
+                                    
+                                    if (response.data?.success) {
+                                      queryClient.invalidateQueries(['orders-sales-recent']);
+                                      queryClient.invalidateQueries(['orders-sales-all']);
+                                      toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
+                                    } else {
+                                      toast.error(response.data?.error || 'Failed to fetch status');
+                                    }
+                                  } catch (error) {
+                                    toast.dismiss(loadingToast);
+                                    toast.error('Error: ' + error.message);
+                                  }
+                                }}
+                                className="h-8 px-3 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                title="Update Status from Steadfast"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Update
+                              </Button>
+                            </>
                           )}
-                          </TooltipProvider>
-                          </div>
-                          </TableCell>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

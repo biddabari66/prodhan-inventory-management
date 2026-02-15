@@ -1685,12 +1685,11 @@ export default function Layout({ children, currentPageName }) {
                   {isSidebarOpen && window.innerWidth < 1024 ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </Button>
                 
-                {/* Compact search button */}
+                {/* Mobile-optimized search */}
                 <div className="flex-1 max-w-xs lg:max-w-md">
                   <UniversalSearch
                     entities={{ User, Lead, Admission, Expense, Income, Inventory }}
-                    className="w-full"
-                    compact={true} />
+                    className="w-full" />
 
                 </div>
               </div>

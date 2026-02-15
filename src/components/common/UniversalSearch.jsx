@@ -63,7 +63,7 @@ const SEARCH_CONFIG = {
   }
 };
 
-export const UniversalSearch = ({ entities, className = "", compact = false }) => {
+export const UniversalSearch = ({ entities, className = "" }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -261,26 +261,26 @@ export const UniversalSearch = ({ entities, className = "", compact = false }) =
   return (
     <div className={`relative ${className}`} ref={searchRef}>
       <div className="relative">
-        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} text-muted-foreground`} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder={compact ? "Search..." : "Search across all modules..."}
+          placeholder="Search across all modules..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setShowResults(true)}
-          className={`${compact ? 'pl-8 pr-8 h-9 text-sm' : 'pl-9 pr-10'} bg-background/80 backdrop-blur-sm border-border/50`}
+          className="pl-9 pr-10 bg-background/80 backdrop-blur-sm border-border/50"
         />
         {searchTerm && (
           <Button
             variant="ghost"
             size="sm"
             onClick={clearSearch}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 ${compact ? 'h-5 w-5' : 'h-6 w-6'} p-0`}
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
           >
-            <X className={`${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} />
+            <X className="h-3 w-3" />
           </Button>
         )}
         {loading && (
-          <Loader2 className={`absolute right-3 top-1/2 -translate-y-1/2 ${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} animate-spin text-muted-foreground`} />
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
         )}
       </div>
 
