@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Calculator, Info, CheckCircle, XCircle, AlertCircle, Package } from 'lucide-react';
+import { Calculator, Info, CheckCircle, XCircle, AlertCircle, Package, Search, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import SearchableProductSelect from '@/components/common/SearchableProductSelect';
@@ -35,6 +37,53 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isManualFinancialImpact, setIsManualFinancialImpact] = useState(false);
   const [productItems, setProductItems] = useState([]);
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [isSearchingOrder, setIsSearchingOrder] = useState(false);
+  const [matchedOrder, setMatchedOrder] = useState(null);
+  const [orderSearchResults, setOrderSearchResults] = useState([]);
+
+  // Fetch orders for lookup
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['orders-for-return-lookup'],
+    queryFn: () => base44.entities.Order.list('-order_date', 5000),
+    staleTime: 5 * 60 * 1000
+  });
+
+  // Search orders by order number
+  const handleOrderSearch = async (query) => {
+    if (!query || query.length < 2) {
+      setOrderSearchResults([]);
+      return;
+    }
+    
+    setIsSearchingOrder(true);
+    try {
+      const searchLower = query.toLowerCase();
+      const results = allOrders.filter(o => 
+        (o.order_number || '').toLowerCase().includes(searchLower) ||
+        (o.customer_phone || '').includes(query) ||
+        (o.customer_name || '').toLowerCase().includes(searchLower)
+      ).slice(0, 10);
+      
+      setOrderSearchResults(results);
+    } finally {
+      setIsSearchingOrder(false);
+    }
+  };
+
+  // Select an order and auto-fill customer details
+  const handleSelectOrder = (order) => {
+    setMatchedOrder(order);
+    setFormData(prev => ({
+      ...prev,
+      order_number: order.order_number || '',
+      customer_name: order.customer_name || '',
+      customer_phone: order.customer_phone || ''
+    }));
+    setOrderSearchQuery(order.order_number || '');
+    setOrderSearchResults([]);
+    toast.success(`Order ${order.order_number} loaded - customer details auto-filled`);
+  };
 
   // Auto-sync condition breakdown with total quantity
   useEffect(() => {
@@ -44,7 +93,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                    formData.condition_breakdown.damaged.quantity;
       
       if (total !== formData.quantity && total === 0 && formData.quantity > 0) {
-        // Initialize with all good condition
         setFormData(prev => ({
           ...prev,
           condition_breakdown: {
@@ -65,7 +113,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       if (formData.return_type === 'sales_return') {
         const { good, fair, damaged } = formData.condition_breakdown;
         
-        // Calculate based on action for each condition
         const goodValue = good.action === 'restock' ? good.quantity * selectedProduct.selling_price : 
                          good.action === 'return_to_supplier' ? good.quantity * selectedProduct.purchase_price * 0.8 : 0;
         const fairValue = fair.action === 'restock' ? fair.quantity * selectedProduct.selling_price * 0.7 :
@@ -91,7 +138,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       const item = inventory.find(i => i.id === initialData.inventory_item_id);
       if (item) {
         setSelectedProduct(item);
-        // If editing, add the item to the product list
         if (initialData.id) {
           setProductItems([{
             id: initialData.id,
@@ -113,7 +159,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     const item = inventory.find(i => i.id === value);
     setSelectedProduct(item);
     
-    // Auto-calculate initial financial impact
     const priceToUse = formData.return_type === 'purchase_return' 
       ? item?.purchase_price 
       : item?.selling_price;
@@ -129,7 +174,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
   const handleFinancialImpactChange = (value) => {
     setFormData(prev => ({ ...prev, financial_impact: value }));
-    setIsManualFinancialImpact(true); // User is manually editing
+    setIsManualFinancialImpact(true);
   };
 
   const resetToAutoCalculate = () => {
@@ -163,7 +208,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
     setProductItems([...productItems, newItem]);
     
-    // Reset product selection but keep customer info
     setFormData({
       ...formData,
       inventory_item_id: '',
@@ -188,6 +232,12 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Validate Order ID is required
+    if (type === 'return' && formData.return_type === 'sales_return' && !formData.order_number) {
+      toast.error('Order ID is required for sales returns');
+      return;
+    }
+
     if (productItems.length === 0) {
       toast.error('Please add at least one product to return/damage');
       return;
@@ -198,7 +248,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       return;
     }
 
-    // Submit all products
     onSubmit({
       items: productItems,
       type,
@@ -247,13 +296,108 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         </div>
       )}
 
+      {/* Order ID Search - REQUIRED for sales returns */}
+      {type === 'return' && formData.return_type === 'sales_return' && (
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Search className="w-4 h-4 text-amber-600" />
+              Search Order ID (Required) *
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="relative">
+              <Input
+                placeholder="Search by Order ID, Phone, or Customer Name..."
+                value={orderSearchQuery}
+                onChange={(e) => {
+                  setOrderSearchQuery(e.target.value);
+                  handleOrderSearch(e.target.value);
+                }}
+                className="pr-10 border-amber-300"
+              />
+              {isSearchingOrder && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-amber-600" />
+              )}
+            </div>
+            
+            {/* Search Results Dropdown */}
+            {orderSearchResults.length > 0 && (
+              <div className="max-h-48 overflow-y-auto border border-amber-200 rounded-lg bg-white shadow-lg">
+                {orderSearchResults.map((order) => (
+                  <button
+                    key={order.id}
+                    type="button"
+                    onClick={() => handleSelectOrder(order)}
+                    className="w-full p-3 text-left hover:bg-amber-50 border-b border-amber-100 last:border-b-0 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-sm text-amber-900">{order.order_number}</p>
+                        <p className="text-xs text-slate-600">{order.customer_name} • {order.customer_phone}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className="text-xs">
+                          {order.order_status}
+                        </Badge>
+                        <p className="text-xs text-slate-500 mt-1">৳{(order.total_amount || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Selected Order Info */}
+            {matchedOrder && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="font-semibold text-green-800">Order Found</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-slate-500">Order #</p>
+                    <p className="font-medium">{matchedOrder.order_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Customer</p>
+                    <p className="font-medium">{matchedOrder.customer_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Phone</p>
+                    <p className="font-medium">{matchedOrder.customer_phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Amount</p>
+                    <p className="font-medium">৳{(matchedOrder.total_amount || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+                {matchedOrder.order_items && matchedOrder.order_items.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-green-200">
+                    <p className="text-xs text-slate-500 mb-1">Order Items:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {matchedOrder.order_items.map((item, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {item.product_name || 'Product'} x{item.quantity}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Added Products List */}
       {productItems.length > 0 && (
         <Card className="bg-violet-50 border-2 border-violet-300">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Package className="w-4 h-4" />
-              Products to Return/Damage ({productItems.length})
+              Products to {type === 'return' ? 'Return' : 'Mark as Damaged'} ({productItems.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -326,31 +470,36 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         {type === 'return' && formData.return_type === 'sales_return' && (
           <>
             <div>
-              <Label>Order Number (Optional)</Label>
+              <Label>Order Number * (Required)</Label>
               <Input
                 value={formData.order_number}
                 onChange={(e) => setFormData({...formData, order_number: e.target.value})}
                 placeholder="ORD-XXXX"
+                required
+                className="border-amber-300"
               />
             </div>
 
             <div>
-              <Label>Customer Name (Optional)</Label>
+              <Label>Customer Name</Label>
               <Input
                 value={formData.customer_name}
                 onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
-                placeholder="Customer name"
+                placeholder="Auto-filled from order"
+                readOnly={!!matchedOrder}
+                className={matchedOrder ? 'bg-slate-50' : ''}
               />
             </div>
 
             <div>
-              <Label>Customer Phone (Optional)</Label>
+              <Label>Customer Phone</Label>
               <Input
                 value={formData.customer_phone}
                 onChange={(e) => setFormData({...formData, customer_phone: e.target.value})}
-                placeholder="01XXXXXXXXX (not required)"
+                placeholder="Auto-filled from order"
+                readOnly={!!matchedOrder}
+                className={matchedOrder ? 'bg-slate-50' : ''}
               />
-              <p className="text-xs text-muted-foreground mt-1">Phone number is optional - returns can be recorded without it</p>
             </div>
           </>
         )}
@@ -380,6 +529,9 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                   <SelectItem value="wrong_item">Wrong Item Delivered</SelectItem>
                   <SelectItem value="quality_issue">Quality Issue</SelectItem>
                   <SelectItem value="late_delivery">Late Delivery</SelectItem>
+                  <SelectItem value="customer_changed_mind">Customer Changed Mind</SelectItem>
+                  <SelectItem value="size_color_issue">Size/Color Issue</SelectItem>
+                  <SelectItem value="not_as_described">Not As Described</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </>
               ) : (
@@ -467,11 +619,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {selectedProduct && formData.condition_breakdown.good.quantity > 0 && (
-                      <p className="text-xs font-semibold text-green-800 text-center">
-                        ৳{(formData.condition_breakdown.good.quantity * selectedProduct.selling_price).toLocaleString()}
-                      </p>
-                    )}
                   </div>
 
                   {/* Fair Product */}
@@ -511,28 +658,11 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="restock">
-                          <span className="flex items-center gap-2">
-                            <CheckCircle className="w-3 h-3 text-green-600" /> Restock (Repair)
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="return_to_supplier">
-                          <span className="flex items-center gap-2">
-                            <AlertCircle className="w-3 h-3 text-orange-600" /> Return to Supplier
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="write_off">
-                          <span className="flex items-center gap-2">
-                            <XCircle className="w-3 h-3 text-red-600" /> Write-off
-                          </span>
-                        </SelectItem>
+                        <SelectItem value="restock">Restock (Repair)</SelectItem>
+                        <SelectItem value="return_to_supplier">Return to Supplier</SelectItem>
+                        <SelectItem value="write_off">Write-off</SelectItem>
                       </SelectContent>
                     </Select>
-                    {selectedProduct && formData.condition_breakdown.fair.quantity > 0 && (
-                      <p className="text-xs font-semibold text-orange-800 text-center">
-                        ৳{(formData.condition_breakdown.fair.quantity * selectedProduct.selling_price * 0.7).toLocaleString()}
-                      </p>
-                    )}
                   </div>
 
                   {/* Damaged Product */}
@@ -542,7 +672,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                         <XCircle className="w-4 h-4 text-red-600" />
                         Damaged Product
                       </Label>
-                      <Badge className="bg-red-100 text-red-800 text-xs">30% value</Badge>
+                      <Badge className="bg-red-100 text-red-800 text-xs">Write-off</Badge>
                     </div>
                     <Input
                       type="number"
@@ -572,67 +702,12 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="write_off">
-                          <span className="flex items-center gap-2">
-                            <XCircle className="w-3 h-3 text-red-600" /> Write-off (Loss)
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="return_to_supplier">
-                          <span className="flex items-center gap-2">
-                            <AlertCircle className="w-3 h-3 text-orange-600" /> Return to Supplier
-                          </span>
-                        </SelectItem>
+                        <SelectItem value="write_off">Write-off (Loss)</SelectItem>
+                        <SelectItem value="return_to_supplier">Return to Supplier</SelectItem>
                       </SelectContent>
                     </Select>
-                    {selectedProduct && formData.condition_breakdown.damaged.quantity > 0 && (
-                      <p className="text-xs font-semibold text-red-800 text-center">
-                        ৳{(formData.condition_breakdown.damaged.quantity * selectedProduct.selling_price * 0.3).toLocaleString()}
-                      </p>
-                    )}
                   </div>
                 </div>
-
-                {/* Summary */}
-                {selectedProduct && (
-                  <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border-2 border-violet-300">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="text-center">
-                        <p className="text-violet-600 font-medium">Total Items</p>
-                        <p className="text-2xl font-bold text-violet-900">{formData.quantity}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-violet-600 font-medium">Actions Summary</p>
-                        <div className="flex justify-center gap-2 mt-1 flex-wrap">
-                          {formData.condition_breakdown.good.quantity > 0 && (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              {formData.condition_breakdown.good.quantity} {formData.condition_breakdown.good.action === 'restock' ? 'Restock' : 'Return'}
-                            </Badge>
-                          )}
-                          {formData.condition_breakdown.fair.quantity > 0 && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs">
-                              {formData.condition_breakdown.fair.quantity} {formData.condition_breakdown.fair.action === 'restock' ? 'Repair' : formData.condition_breakdown.fair.action === 'return_to_supplier' ? 'Return' : 'Write-off'}
-                            </Badge>
-                          )}
-                          {formData.condition_breakdown.damaged.quantity > 0 && (
-                            <Badge className="bg-red-100 text-red-800 text-xs">
-                              {formData.condition_breakdown.damaged.quantity} {formData.condition_breakdown.damaged.action === 'write_off' ? 'Write-off' : 'Return'}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-violet-600 font-medium">Est. Recovery Value</p>
-                        <p className="text-2xl font-bold text-violet-900">
-                          ৳{(
-                            formData.condition_breakdown.good.quantity * selectedProduct.selling_price +
-                            formData.condition_breakdown.fair.quantity * selectedProduct.selling_price * 0.7 +
-                            formData.condition_breakdown.damaged.quantity * selectedProduct.selling_price * 0.3
-                          ).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -654,24 +729,9 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="restock">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    Restock (Add back to inventory)
-                  </div>
-                </SelectItem>
-                <SelectItem value="return_to_supplier">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-orange-600" />
-                    Return to Supplier
-                  </div>
-                </SelectItem>
-                <SelectItem value="write_off">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-red-600" />
-                    Write-off (Total Loss)
-                  </div>
-                </SelectItem>
+                <SelectItem value="restock">Restock (Add back to inventory)</SelectItem>
+                <SelectItem value="return_to_supplier">Return to Supplier</SelectItem>
+                <SelectItem value="write_off">Write-off (Total Loss)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -709,23 +769,6 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
             value={formData.financial_impact}
             onChange={(e) => handleFinancialImpactChange(e.target.value)}
           />
-          {!isManualFinancialImpact && selectedProduct && (
-            <div className="flex items-center gap-1 mt-1">
-              <Info className="w-3 h-3 text-blue-500" />
-              <p className="text-xs text-blue-600">
-                {formData.return_type === 'sales_return' 
-                  ? 'Auto-calculated from condition breakdown' 
-                  : `Auto-calculated: ৳${selectedProduct.purchase_price} × ${formData.quantity}`}
-              </p>
-            </div>
-          )}
-          {isManualFinancialImpact && (
-            <div className="flex items-center gap-1 mt-1">
-              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-xs">
-                Manual Entry
-              </Badge>
-            </div>
-          )}
         </div>
 
         {type === 'return' && (formData.condition_breakdown.good.action === 'restock' || formData.condition_breakdown.fair.action === 'restock') && (
@@ -753,13 +796,12 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       </div>
 
       <div>
-        <Label>Detailed Notes *</Label>
+        <Label>Detailed Notes</Label>
         <Textarea
           value={formData.notes}
           onChange={(e) => setFormData({...formData, notes: e.target.value})}
           placeholder="Provide detailed information about the incident..."
           rows={3}
-          required
         />
       </div>
 
