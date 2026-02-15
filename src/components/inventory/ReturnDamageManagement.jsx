@@ -250,11 +250,17 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     toast.success(`Exported ${dataToExport.length} ${dataType} records`);
   };
 
-  // Record return/damage mutation
+  // Record return/damage mutation - PROPERLY SEPARATES RETURNS FROM DAMAGES
   const recordIncidentMutation = useMutation({
     mutationFn: async (data) => {
       const item = inventory.find(i => i.id === data.inventory_item_id);
       if (!item) throw new Error('Product not found');
+      
+      // Determine if this should go to Returns tab or Damages tab
+      const isDamageRecord = data.type === 'damage' || 
+                            (data.condition_breakdown?.damaged?.quantity > 0 && 
+                             data.condition_breakdown?.good?.quantity === 0 && 
+                             data.condition_breakdown?.fair?.quantity === 0);
 
       // Handle partial returns
       if (data.use_partial_return && data.type === 'return') {
