@@ -44,6 +44,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [movementToDelete, setMovementToDelete] = useState(null);
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' });
   const [reasonFilter, setReasonFilter] = useState('all');
+  const [productFilter, setProductFilter] = useState('all');
 
   // Fetch data with optimized queries
   const { data: inventory = [] } = useQuery({
