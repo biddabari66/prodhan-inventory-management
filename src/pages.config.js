@@ -60,7 +60,6 @@ import Budget from './pages/Budget';
 import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
 import Courses from './pages/Courses';
-import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
 import Dashboard from './pages/Dashboard';
 import DocumentCenter from './pages/DocumentCenter';
@@ -80,13 +79,11 @@ import Home from './pages/Home';
 import IncentiveManagement from './pages/IncentiveManagement';
 import Incentives from './pages/Incentives';
 import Income from './pages/Income';
-import Integrations from './pages/Integrations';
 import InventoryAIInsights from './pages/InventoryAIInsights';
 import InventoryMovements from './pages/InventoryMovements';
 import InventoryOverview from './pages/InventoryOverview';
 import InventoryReconciliation from './pages/InventoryReconciliation';
 import InventoryReports from './pages/InventoryReports';
-import InventoryReturns from './pages/InventoryReturns';
 import InventorySuppliers from './pages/InventorySuppliers';
 import KPIDashboard from './pages/KPIDashboard';
 import LeadDatabase from './pages/LeadDatabase';
@@ -94,19 +91,17 @@ import ManualReporting from './pages/ManualReporting';
 import MyAttendance from './pages/MyAttendance';
 import NotificationPreferences from './pages/NotificationPreferences';
 import NotificationSettings from './pages/NotificationSettings';
+import Payroll from './pages/Payroll';
 import PayrollReport from './pages/PayrollReport';
 import Performance from './pages/Performance';
 import PerformanceHub from './pages/PerformanceHub';
 import Permissions from './pages/Permissions';
 import Procurement from './pages/Procurement';
 import ProdhanComIntegration from './pages/ProdhanComIntegration';
-import ProductAnalytics from './pages/ProductAnalytics';
 import ProductionHouse from './pages/ProductionHouse';
-import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
 import ReportGenerator from './pages/ReportGenerator';
 import Reports from './pages/Reports';
-import Sales from './pages/Sales';
 import ScheduledReports from './pages/ScheduledReports';
 import SendEmail from './pages/SendEmail';
 import Settings from './pages/Settings';
@@ -124,7 +119,12 @@ import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import employees from './pages/employees';
 import expenses from './pages/expenses';
 import performanceHub from './pages/performance-hub';
-import Payroll from './pages/Payroll';
+import PurchaseOrders from './pages/PurchaseOrders';
+import CustomerManagement from './pages/CustomerManagement';
+import Integrations from './pages/Integrations';
+import ProductAnalytics from './pages/ProductAnalytics';
+import InventoryReturns from './pages/InventoryReturns';
+import Sales from './pages/Sales';
 import __Layout from './Layout.jsx';
 
 
@@ -142,7 +142,6 @@ export const PAGES = {
     "CRM": CRM,
     "CategorySettings": CategorySettings,
     "Courses": Courses,
-    "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
     "Dashboard": Dashboard,
     "DocumentCenter": DocumentCenter,
@@ -162,13 +161,11 @@ export const PAGES = {
     "IncentiveManagement": IncentiveManagement,
     "Incentives": Incentives,
     "Income": Income,
-    "Integrations": Integrations,
     "InventoryAIInsights": InventoryAIInsights,
     "InventoryMovements": InventoryMovements,
     "InventoryOverview": InventoryOverview,
     "InventoryReconciliation": InventoryReconciliation,
     "InventoryReports": InventoryReports,
-    "InventoryReturns": InventoryReturns,
     "InventorySuppliers": InventorySuppliers,
     "KPIDashboard": KPIDashboard,
     "LeadDatabase": LeadDatabase,
@@ -176,19 +173,17 @@ export const PAGES = {
     "MyAttendance": MyAttendance,
     "NotificationPreferences": NotificationPreferences,
     "NotificationSettings": NotificationSettings,
+    "Payroll": Payroll,
     "PayrollReport": PayrollReport,
     "Performance": Performance,
     "PerformanceHub": PerformanceHub,
     "Permissions": Permissions,
     "Procurement": Procurement,
     "ProdhanComIntegration": ProdhanComIntegration,
-    "ProductAnalytics": ProductAnalytics,
     "ProductionHouse": ProductionHouse,
-    "PurchaseOrders": PurchaseOrders,
     "ReportBuilder": ReportBuilder,
     "ReportGenerator": ReportGenerator,
     "Reports": Reports,
-    "Sales": Sales,
     "ScheduledReports": ScheduledReports,
     "SendEmail": SendEmail,
     "Settings": Settings,
@@ -206,7 +201,12 @@ export const PAGES = {
     "employees": employees,
     "expenses": expenses,
     "performance-hub": performanceHub,
-    "Payroll": Payroll,
+    "PurchaseOrders": PurchaseOrders,
+    "CustomerManagement": CustomerManagement,
+    "Integrations": Integrations,
+    "ProductAnalytics": ProductAnalytics,
+    "InventoryReturns": InventoryReturns,
+    "Sales": Sales,
 }
 
 export const pagesConfig = {
