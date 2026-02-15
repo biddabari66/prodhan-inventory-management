@@ -772,6 +772,12 @@ function FinanceDashboardPage() {
                 <span className="text-sm text-slate-600">Returns & Wastage</span>
                 <span className="font-bold text-orange-600">৳{financials.returnLoss.toLocaleString()}</span>
               </div>
+              {financials.otherExpenses > 0 && (
+                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                  <span className="text-sm text-slate-600">Other Expenses</span>
+                  <span className="font-bold text-pink-600">৳{financials.otherExpenses.toLocaleString()}</span>
+                </div>
+              )}
               {financials.totalSalaries > 0 && (
                 <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
                   <span className="text-sm text-slate-600">Employee Salaries</span>
