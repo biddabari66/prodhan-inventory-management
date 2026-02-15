@@ -183,11 +183,19 @@ function InventoryOverviewPage() {
 
       const movementData = movementsByItem[m.inventory_item_id];
 
-      if (m.movement_type === 'return') {
-        movementData.total_returned_qty += Math.abs(m.quantity || 0);
+      // Returns - check reference_type for 'return'
+      if (m.reference_type === 'return') {
+        const metadata = m.metadata || {};
+        // Get quantity from metadata if available, otherwise use movement quantity
+        const qty = metadata.original_quantity || metadata.good_qty || metadata.damaged_qty || Math.abs(m.quantity || 0);
+        movementData.total_returned_qty += qty;
         movementData.total_returned_value += Math.abs(m.total_value || 0);
-      } else if (m.reference_type === 'damage') {
-        movementData.total_damaged_qty += Math.abs(m.quantity || 0);
+      } 
+      // Damages - check reference_type for 'damage' or 'expired'
+      else if (m.reference_type === 'damage' || m.reference_type === 'expired') {
+        const metadata = m.metadata || {};
+        const qty = metadata.original_quantity || Math.abs(m.quantity || 0);
+        movementData.total_damaged_qty += qty;
         movementData.total_damaged_value += Math.abs(m.total_value || 0);
       }
     });
