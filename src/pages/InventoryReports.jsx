@@ -494,53 +494,8 @@ function InventoryReportsPage() {
       
       const dateRange = getDateRange(customReport.dateRange);
       
-      const [orders, inventory, movements, purchaseOrders, packagingExpenses] = await Promise.all([
-        base44.entities.Order.list('-order_date'),
-        base44.entities.Inventory.list(),
-        base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.list('-order_date'),
-        base44.entities.PackagingExpense.list('-expense_date', 1000)
-      ]);
-
-      const response = await base44.functions.invoke('generateInventorySalesReport', { 
-        reportType: customReport.reportType,
-        department: 'prodhan_com_e_commerce',
-        dateFrom: dateRange.start,
-        dateTo: dateRange.end,
-        groupBy: customReport.groupBy,
-        includeFields: customReport.includeFields,
-        sortBy: customReport.sortBy,
-        sortOrder: customReport.sortOrder,
-        orders,
-        inventory,
-        movements,
-        purchaseOrders,
-        suppliers
-      });
-
-      if (response.data?.pdfBase64) {
-        const binaryString = atob(response.data.pdfBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        
-        const mimeType = customReport.format === 'pdf' ? 'application/pdf' : 'image/jpeg';
-        const extension = customReport.format === 'pdf' ? 'pdf' : 'jpg';
-        const blob = new Blob([bytes], { type: mimeType });
-        
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `custom_${customReport.reportType}_report_${toBDTDate()}.${extension}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        toast.success('✅ Custom report downloaded!');
-      } else {
-        throw new Error('No report data received');
-      }
+      // Use the same logic as quick reports
+      await handleQuickReport(customReport.reportType);
     } catch (error) {
       console.error('Error generating custom report:', error);
       toast.error(`Error: ${error.message || 'Failed to generate report'}`);
