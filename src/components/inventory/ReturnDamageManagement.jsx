@@ -792,10 +792,15 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           </div>
           
           {/* Active Filters Summary */}
-          {(searchQuery || dateFilter.from || dateFilter.to) && (
+          {(searchQuery || dateFilter.from || dateFilter.to || productFilter !== 'all') && (
             <div className="mt-3 pt-3 border-t flex items-center gap-2 text-sm text-slate-600">
               <Filter className="w-4 h-4" />
               <span>Showing {activeTab === 'returns' ? returnsData.length : damagesData.length} filtered results</span>
+              {productFilter !== 'all' && (
+                <Badge variant="outline" className="ml-2">
+                  Product: {departmentFilteredInventory.find(i => i.id === productFilter)?.item_name?.substring(0, 20) || 'Selected'}
+                </Badge>
+              )}
             </div>
           )}
         </CardContent>
