@@ -6,8 +6,9 @@ const DEPARTMENT_BRANDING = {
   prodhan_com_e_commerce: {
     name: 'Prodhan.com',
     logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/85b255904_LOGO_PRODHAN-removebg-preview1.png',
-    primaryColor: '#DC2626',
+    primaryColor: '#B91C1C',
     secondaryColor: '#FEE2E2',
+    accentColor: '#DC2626',
     phone: '+8809643330000',
     email: 'support@prodhan.com',
     address: 'Head Office: 1st-4th-5th-6th Floor, Jashore Malik Shamiti Vobon, Gausul Azam Super Market, Nilkhet, Kataban Rd 1205 Dhaka',
@@ -18,11 +19,20 @@ const DEPARTMENT_BRANDING = {
     logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/391b002f2_image.png',
     primaryColor: '#F59E0B',
     secondaryColor: '#FEF3C7',
+    accentColor: '#D97706',
     phone: '8801896060865',
     email: 'boibari.biddabari@gmail.com',
     address: 'Head Office: 1st-4th-5th-6th Floor, Jashore Malik Shamiti Vobon, Gausul Azam Super Market, Nilkhet, Kataban Rd 1205 Dhaka',
     tagline: 'Your Gateway to Knowledge'
   }
+};
+
+// Helper to format order number as PD******
+const formatOrderNumber = (order) => {
+  const rawNumber = order.order_number || order.id || '';
+  if (rawNumber.startsWith('PD')) return rawNumber;
+  const digits = rawNumber.replace(/\D/g, '').slice(-6).padStart(6, '0');
+  return `PD${digits}`;
 };
 
 export function generateBulkInvoiceHTML(orders) {
