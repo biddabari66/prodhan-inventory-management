@@ -354,29 +354,51 @@ export function generateBulkInvoiceHTML(orders) {
           flex-shrink: 0;
         }
         
+        .order-section {
+          padding: 0 30px;
+        }
+        
         .order-section h3 {
           font-size: 14px;
           font-weight: 600;
           margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .order-section h3::before {
+          content: '';
+          width: 4px;
+          height: 18px;
+          background: currentColor;
+          border-radius: 2px;
         }
         
         .items-table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 20px;
+          border-radius: 8px;
+          overflow: hidden;
         }
         
         .items-table th {
-          padding: 10px 8px;
+          padding: 12px 10px;
           font-size: 11px;
           font-weight: 600;
           text-transform: uppercase;
+          background: #fafafa;
         }
         
         .items-table td {
-          padding: 12px 8px;
+          padding: 14px 10px;
           border-bottom: 1px solid #f3f4f6;
           font-size: 12px;
+        }
+        
+        .items-table tr:hover {
+          background: #fafafa;
         }
         
         .text-left { text-align: left; }
