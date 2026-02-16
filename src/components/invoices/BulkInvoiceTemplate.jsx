@@ -227,8 +227,20 @@ export function generateBulkInvoiceHTML(orders) {
         .invoice-page {
           max-width: 210mm;
           margin: 0 auto;
-          padding: 20px 30px;
+          padding: 0;
           background: #fff;
+          position: relative;
+        }
+        
+        .top-accent {
+          height: 6px;
+          width: 100%;
+        }
+        
+        .bottom-accent {
+          height: 4px;
+          width: 100%;
+          margin-top: 20px;
         }
         
         .header {
@@ -236,6 +248,7 @@ export function generateBulkInvoiceHTML(orders) {
           justify-content: space-between;
           align-items: flex-start;
           margin-bottom: 20px;
+          padding: 20px 30px 0;
         }
         
         .brand {
@@ -244,33 +257,52 @@ export function generateBulkInvoiceHTML(orders) {
           gap: 15px;
         }
         
+        .logo-container {
+          padding: 12px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
         .logo {
-          height: 60px;
+          height: 55px;
           width: auto;
           object-fit: contain;
         }
         
         .brand-info h1 {
-          font-size: 28px;
+          font-size: 30px;
           font-weight: 700;
           margin: 0;
+          letter-spacing: -0.5px;
         }
         
         .tagline {
-          font-size: 12px;
+          font-size: 11px;
           color: #666;
           margin-top: 4px;
+          font-style: italic;
         }
         
         .invoice-meta {
           text-align: right;
         }
         
-        .invoice-meta h2 {
-          font-size: 24px;
+        .invoice-badge {
+          display: inline-block;
+          color: #fff;
+          font-size: 18px;
           font-weight: 700;
-          color: #333;
-          margin-bottom: 8px;
+          padding: 8px 20px;
+          border-radius: 6px;
+          letter-spacing: 2px;
+          margin-bottom: 10px;
+        }
+        
+        .invoice-number {
+          font-size: 13px !important;
+          margin-bottom: 4px !important;
         }
         
         .invoice-meta p {
