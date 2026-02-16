@@ -420,17 +420,21 @@ export function generateBulkInvoiceHTML(orders) {
         .totals-section {
           display: flex;
           justify-content: flex-end;
-          margin: 20px 0;
+          margin: 20px 30px;
         }
         
         .totals-box {
           width: 320px;
+          background: #fafafa;
+          padding: 16px 20px;
+          border-radius: 10px;
+          border: 1px solid #f0f0f0;
         }
         
         .total-row {
           display: flex;
           justify-content: space-between;
-          padding: 6px 0;
+          padding: 8px 0;
           font-size: 12px;
         }
         
@@ -440,14 +444,18 @@ export function generateBulkInvoiceHTML(orders) {
         
         .mini-divider {
           border: none;
-          border-top: 1px solid #e5e7eb;
-          margin: 8px 0;
+          border-top: 2px solid #e5e7eb;
+          margin: 10px 0;
         }
         
         .grand-total {
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 700;
-          padding: 10px 0;
+          padding: 12px 0;
+          border-radius: 6px;
+          margin: 8px -8px;
+          padding-left: 8px;
+          padding-right: 8px;
         }
         
         .status-paid { color: #16a34a; font-weight: 600; }
