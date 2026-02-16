@@ -47,6 +47,7 @@ export function generateBulkInvoiceHTML(orders) {
     const shippingCost = order.shipping_cost || 0;
     const finalTotal = order.total_amount || (itemsTotal - totalDiscount + shippingCost);
     const dueAmount = finalTotal - (order.paid_amount || 0);
+    const orderNumber = formatOrderNumber(order);
 
     // Build address
     const address = order.shipping_address || {};
@@ -58,18 +59,23 @@ export function generateBulkInvoiceHTML(orders) {
 
     return `
       <div class="invoice-page" style="page-break-after: ${idx < orders.length - 1 ? 'always' : 'auto'};">
+        <!-- Red accent bar at top -->
+        <div class="top-accent" style="background: linear-gradient(90deg, ${branding.primaryColor}, ${branding.accentColor || branding.primaryColor});"></div>
+        
         <!-- Header -->
         <div class="header">
           <div class="brand">
-            <img src="${branding.logo}" alt="${branding.name}" class="logo" crossorigin="anonymous" />
+            <div class="logo-container" style="background: linear-gradient(135deg, ${branding.primaryColor}15, ${branding.primaryColor}08);">
+              <img src="${branding.logo}" alt="${branding.name}" class="logo" crossorigin="anonymous" />
+            </div>
             <div class="brand-info">
               <h1 style="color: ${branding.primaryColor};">${branding.name}</h1>
               <p class="tagline">${branding.tagline}</p>
             </div>
           </div>
           <div class="invoice-meta">
-            <h2>INVOICE</h2>
-            <p><strong>Invoice #:</strong> ${order.order_number || 'N/A'}</p>
+            <div class="invoice-badge" style="background: ${branding.primaryColor};">INVOICE</div>
+            <p class="invoice-number"><strong>Invoice #:</strong> <span style="color: ${branding.primaryColor}; font-weight: 700;">${orderNumber}</span></p>
             <p><strong>Date:</strong> ${order.order_date ? format(new Date(order.order_date), 'dd MMM yyyy, hh:mm a') : 'N/A'}</p>
           </div>
         </div>
