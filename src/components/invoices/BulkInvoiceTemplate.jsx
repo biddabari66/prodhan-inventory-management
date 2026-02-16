@@ -187,12 +187,16 @@ export function generateBulkInvoiceHTML(orders) {
 
         <!-- Footer -->
         <div class="footer">
-          <div class="thank-you" style="background-color: ${branding.secondaryColor};">
+          <div class="thank-you" style="background: linear-gradient(135deg, ${branding.secondaryColor}, ${branding.primaryColor}15);">
             <p style="color: ${branding.primaryColor}; font-weight: 600; margin: 0;">Thank you for shopping with ${branding.name}!</p>
+            <p style="font-size: 11px; color: #666; margin: 4px 0 0 0;">For queries: ${branding.email} | ${branding.phone}</p>
           </div>
           <p class="disclaimer">This is a computer-generated invoice and does not require a signature.</p>
           <p class="generated-date">Invoice generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}</p>
         </div>
+        
+        <!-- Bottom accent bar -->
+        <div class="bottom-accent" style="background: linear-gradient(90deg, ${branding.primaryColor}, ${branding.accentColor || branding.primaryColor});"></div>
       </div>
     `;
   }).join('');
