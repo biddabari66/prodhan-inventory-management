@@ -143,7 +143,7 @@ export default function OrderInvoice({ order }) {
             <div className="text-right">
               <h2 className="text-2xl font-bold mb-2">INVOICE</h2>
               <p className="text-sm text-muted-foreground">
-                <strong>Invoice #:</strong> {order.order_number}
+                <strong>Invoice #:</strong> <span className="text-red-600 font-bold">{order.order_number?.startsWith('PD') ? order.order_number : `PD${(order.order_number || order.id || '').replace(/\D/g, '').slice(-6).padStart(6, '0')}`}</span>
               </p>
               <p className="text-sm text-muted-foreground">
                 <strong>Date:</strong> {format(new Date(order.order_date), 'dd MMM yyyy, hh:mm a')}
