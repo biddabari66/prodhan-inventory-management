@@ -55,6 +55,7 @@ import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
 import AutoReportSettings from './pages/AutoReportSettings';
 import CategorySettings from './pages/CategorySettings';
+import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
 import DocumentCenter from './pages/DocumentCenter';
 import Documentation from './pages/Documentation';
@@ -68,11 +69,13 @@ import FeludaAnalytics from './pages/FeludaAnalytics';
 import FinanceDashboard from './pages/FinanceDashboard';
 import FinanceReports from './pages/FinanceReports';
 import Home from './pages/Home';
+import Integrations from './pages/Integrations';
 import InventoryAIInsights from './pages/InventoryAIInsights';
 import InventoryMovements from './pages/InventoryMovements';
 import InventoryOverview from './pages/InventoryOverview';
 import InventoryReconciliation from './pages/InventoryReconciliation';
 import InventoryReports from './pages/InventoryReports';
+import InventoryReturns from './pages/InventoryReturns';
 import InventorySuppliers from './pages/InventorySuppliers';
 import KPIDashboard from './pages/KPIDashboard';
 import ManualReporting from './pages/ManualReporting';
@@ -84,10 +87,13 @@ import PayrollReport from './pages/PayrollReport';
 import Permissions from './pages/Permissions';
 import Procurement from './pages/Procurement';
 import ProdhanComIntegration from './pages/ProdhanComIntegration';
+import ProductAnalytics from './pages/ProductAnalytics';
 import ProductionHouse from './pages/ProductionHouse';
+import PurchaseOrders from './pages/PurchaseOrders';
 import ReportBuilder from './pages/ReportBuilder';
 import ReportGenerator from './pages/ReportGenerator';
 import Reports from './pages/Reports';
+import Sales from './pages/Sales';
 import ScheduledReports from './pages/ScheduledReports';
 import SendEmail from './pages/SendEmail';
 import Settings from './pages/Settings';
@@ -99,12 +105,6 @@ import ThirdPartyApps from './pages/ThirdPartyApps';
 import UserAccessManager from './pages/UserAccessManager';
 import Webhooks from './pages/Webhooks';
 import WhatsAppWebhook from './pages/WhatsAppWebhook';
-import PurchaseOrders from './pages/PurchaseOrders';
-import CustomerManagement from './pages/CustomerManagement';
-import Integrations from './pages/Integrations';
-import ProductAnalytics from './pages/ProductAnalytics';
-import InventoryReturns from './pages/InventoryReturns';
-import Sales from './pages/Sales';
 import __Layout from './Layout.jsx';
 
 
@@ -117,6 +117,7 @@ export const PAGES = {
     "Auth": Auth,
     "AutoReportSettings": AutoReportSettings,
     "CategorySettings": CategorySettings,
+    "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
     "DocumentCenter": DocumentCenter,
     "Documentation": Documentation,
@@ -130,11 +131,13 @@ export const PAGES = {
     "FinanceDashboard": FinanceDashboard,
     "FinanceReports": FinanceReports,
     "Home": Home,
+    "Integrations": Integrations,
     "InventoryAIInsights": InventoryAIInsights,
     "InventoryMovements": InventoryMovements,
     "InventoryOverview": InventoryOverview,
     "InventoryReconciliation": InventoryReconciliation,
     "InventoryReports": InventoryReports,
+    "InventoryReturns": InventoryReturns,
     "InventorySuppliers": InventorySuppliers,
     "KPIDashboard": KPIDashboard,
     "ManualReporting": ManualReporting,
@@ -146,10 +149,13 @@ export const PAGES = {
     "Permissions": Permissions,
     "Procurement": Procurement,
     "ProdhanComIntegration": ProdhanComIntegration,
+    "ProductAnalytics": ProductAnalytics,
     "ProductionHouse": ProductionHouse,
+    "PurchaseOrders": PurchaseOrders,
     "ReportBuilder": ReportBuilder,
     "ReportGenerator": ReportGenerator,
     "Reports": Reports,
+    "Sales": Sales,
     "ScheduledReports": ScheduledReports,
     "SendEmail": SendEmail,
     "Settings": Settings,
@@ -161,12 +167,6 @@ export const PAGES = {
     "UserAccessManager": UserAccessManager,
     "Webhooks": Webhooks,
     "WhatsAppWebhook": WhatsAppWebhook,
-    "PurchaseOrders": PurchaseOrders,
-    "CustomerManagement": CustomerManagement,
-    "Integrations": Integrations,
-    "ProductAnalytics": ProductAnalytics,
-    "InventoryReturns": InventoryReturns,
-    "Sales": Sales,
 }
 
 export const pagesConfig = {

@@ -1708,64 +1708,20 @@ function SalesPage() {
                       return;
                     }
 
-                    const invoicesHTML = selectedOrders.map((order, idx) => `
-                      <div style="page-break-after: ${idx < selectedOrders.length - 1 ? 'always' : 'auto'}; padding: 20px; font-family: Arial, sans-serif;">
-                        <div style="text-align: center; margin-bottom: 15px;">
-                          <h2 style="margin: 0; color: #D32F2F;">Prodhan.com</h2>
-                          <p style="margin: 5px 0; font-size: 12px;">প্রোধান.কম - অনলাইন শপিং</p>
-                        </div>
-                        <hr/>
-                        <p><strong>Order:</strong> ${order.order_number || 'N/A'}</p>
-                        <p><strong>Date:</strong> ${order.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A'}</p>
-                        <p><strong>Customer:</strong> ${order.customer_name || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${order.customer_phone || 'N/A'}</p>
-                        <p><strong>Address:</strong> ${order.shipping_address?.address_line || ''}, ${order.shipping_address?.city || ''}</p>
-                        <hr/>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                          <tr style="background: #f0f0f0;">
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: left;">Item</th>
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: center;">Qty</th>
-                            <th style="border: 1px solid #ddd; padding: 5px; text-align: right;">Price</th>
-                          </tr>
-                          ${(order.order_items || []).map(item => `
-                            <tr>
-                              <td style="border: 1px solid #ddd; padding: 5px;">${item.item_name || 'Product'}</td>
-                              <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantity || 1}</td>
-                              <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">৳${(item.subtotal || 0).toLocaleString()}</td>
-                            </tr>
-                          `).join('')}
-                        </table>
-                        <hr/>
-                        <div style="text-align: right;">
-                          <p><strong>Subtotal:</strong> ৳${(order.subtotal || 0).toLocaleString()}</p>
-                          ${(order.discount_amount || 0) + (order.coupon_discount || 0) > 0 ? `<p><strong>Discount:</strong> -৳${((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()}</p>` : ''}
-                          <p><strong>Shipping:</strong> ৳${(order.shipping_cost || 0).toLocaleString()}</p>
-                          <p style="font-size: 16px;"><strong>Total: ৳${(order.total_amount || 0).toLocaleString()}</strong></p>
-                        </div>
-                        <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #666;">
-                          <p>Thank you for shopping with Prodhan.com!</p>
-                        </div>
-                      </div>
-                    `).join('');
-
-                    printWindow.document.write(`
-                      <html>
-                        <head>
-                          <title>Bulk Invoices - ${selectedOrders.length} Orders</title>
-                          <style>
-                            @media print {
-                              body { margin: 0; }
-                            }
-                          </style>
-                        </head>
-                        <body>${invoicesHTML}</body>
-                      </html>
-                    `);
-                    printWindow.document.close();
-                    setTimeout(() => {
-                      printWindow.print();
-                    }, 500);
-                    toast.success(`Printing ${selectedOrders.length} invoices...`);
+                    // Use the branded invoice template
+                    import('../components/invoices/BulkInvoiceTemplate').then(module => {
+                      const html = module.generateBulkInvoiceHTML(selectedOrders);
+                      printWindow.document.write(html);
+                      printWindow.document.close();
+                      setTimeout(() => {
+                        printWindow.print();
+                      }, 800);
+                      toast.success(`Printing ${selectedOrders.length} branded invoices...`);
+                    }).catch(err => {
+                      console.error('Failed to load invoice template:', err);
+                      toast.error('Failed to generate invoices');
+                      printWindow.close();
+                    });
                   }}
                   className="text-orange-600 hover:bg-orange-50"
                 >
