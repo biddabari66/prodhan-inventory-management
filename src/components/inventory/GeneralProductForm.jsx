@@ -152,15 +152,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
       return;
     }
 
-    // Validate color variants only if they exist AND have quantities
-    if (formData.color_variants?.length > 0) {
-      const totalColorStock = formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
-      // Only enforce validation if color quantities are actually defined (not all zeros)
-      if (totalColorStock > 0 && totalColorStock !== formData.current_stock) {
-        toast.error(`Color quantities (${totalColorStock}) must equal total stock (${formData.current_stock})`);
-        return;
-      }
-    }
+    // Note: Stock validation is optional - users can set stock manually
+    // Color/variant quantities are informational only, not enforced
 
     // Check for duplicate barcode (only for new products with barcode)
     if (!product?.id && formData.barcode) {
