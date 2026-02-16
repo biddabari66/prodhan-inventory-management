@@ -672,17 +672,28 @@ Return ONLY valid JSON with no additional text.`,
             <AdvancedVariantManager
               variants={formData.product_variants || []}
               onChange={(variants) => {
-                setFormData({ ...formData, product_variants: variants });
-                // Auto-update current stock to match total variants
-                const totalQty = variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
-                if (totalQty > 0) {
-                  setFormData(prev => ({ ...prev, current_stock: totalQty }));
-                }
+                setFormData(prev => ({ ...prev, product_variants: variants }));
               }}
               basePrice={formData.selling_price}
               baseWeight={formData.weight_kg}
               baseSKU={formData.barcode}
             />
+            {formData.product_variants?.length > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const totalQty = formData.product_variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+                    setFormData(prev => ({ ...prev, current_stock: totalQty }));
+                    toast.success(`Stock updated to ${totalQty} (sum of variants)`);
+                  }}
+                >
+                  Sync Stock from Variants ({formData.product_variants.reduce((sum, v) => sum + (v.quantity || 0), 0)})
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Supplier Information */}
