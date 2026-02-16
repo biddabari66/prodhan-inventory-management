@@ -313,14 +313,15 @@ export function generateBulkInvoiceHTML(orders) {
         
         .divider {
           border: none;
-          border-top: 1px solid #e5e7eb;
-          margin: 20px 0;
+          border-top: 2px solid #f3f4f6;
+          margin: 20px 30px;
         }
         
         .addresses {
           display: flex;
           justify-content: space-between;
           gap: 40px;
+          padding: 0 30px;
         }
         
         .from, .bill-to {
