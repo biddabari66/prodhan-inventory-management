@@ -577,29 +577,20 @@ Return ONLY valid JSON with no additional text.`,
               <div>
                 <Label htmlFor="current_stock">
                   Current Stock *
-                  {formData.color_variants?.length > 0 && (
-                    <span className="text-xs text-slate-500 ml-2">
-                      (Total of colors: {formData.color_variants.reduce((sum, v) => sum + v.quantity, 0)})
+                  {formData.color_variants?.length > 0 && formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0) > 0 && (
+                    <span className="text-xs text-blue-500 ml-2">
+                      (Variants total: {formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0)})
                     </span>
                   )}
                 </Label>
                 <Input
                   id="current_stock"
-                  type="text"
-                  inputMode="numeric"
+                  type="number"
+                  min="0"
                   value={formData.current_stock}
                   onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value) || 0})}
                   required
                 />
-                {formData.color_variants?.length > 0 && (() => {
-                  const totalColorStock = formData.color_variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
-                  return totalColorStock > 0 && totalColorStock !== formData.current_stock;
-                })() && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Color quantities must equal total stock
-                  </p>
-                )}
               </div>
 
               <div>
