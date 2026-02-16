@@ -471,7 +471,7 @@ export function generateBulkInvoiceHTML(orders) {
         }
         
         .notes-section {
-          margin: 20px 0;
+          margin: 20px 30px;
         }
         
         .notes-section h4 {
@@ -481,22 +481,24 @@ export function generateBulkInvoiceHTML(orders) {
         }
         
         .notes-box {
-          background: #f9fafb;
+          background: #fef2f2;
           padding: 12px 15px;
           border-radius: 8px;
           font-size: 11px;
           color: #666;
+          border-left: 3px solid #DC2626;
         }
         
         .footer {
           margin-top: 30px;
           text-align: center;
+          padding: 0 30px;
         }
         
         .thank-you {
           display: inline-block;
-          padding: 12px 24px;
-          border-radius: 8px;
+          padding: 16px 32px;
+          border-radius: 10px;
           margin-bottom: 15px;
         }
         
