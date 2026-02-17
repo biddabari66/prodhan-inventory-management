@@ -2097,6 +2097,12 @@ function SalesPage() {
                                         ? `PD${rawNumber.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
                                         : `PD${Date.now().toString().slice(-6)}`;
 
+                                    // If order_number in DB is not PD format, update it now so
+                                    // all future lookups (status check, invoice etc.) use PD format
+                                    if (rawNumber !== invoiceNumber) {
+                                      await Order.update(order.id, { order_number: invoiceNumber });
+                                    }
+
                                     // Prepare payload as per Steadfast documentation
                                     const courierPayload = {
                                       invoice: invoiceNumber,
@@ -2170,8 +2176,16 @@ function SalesPage() {
                                   onClick={async () => {
                                     const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
                                     try {
+                                      // Normalize to PD format — WooCommerce orders may still have WC***** in DB
+                                      const rawNum = order.order_number || '';
+                                      const pdOrderNumber = rawNum.startsWith('PD')
+                                        ? rawNum
+                                        : rawNum
+                                          ? `PD${rawNum.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
+                                          : `PD${order.id?.slice(-6) || '000000'}`;
+
                                       const response = await base44.functions.invoke('steadfastStatusWebhook', {
-                                        order_id: order.order_number,
+                                        order_id: pdOrderNumber,
                                         action: 'get_status'
                                       });
 
