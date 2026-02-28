@@ -276,79 +276,335 @@ function InventoryReportsPage() {
     }
   };
 
-  // Report generation functions
+  // Report generation functions - ADVANCED & COMPREHENSIVE
   const generateSalesReport = (orders, inventory, startDate, endDate) => {
     const inventoryMap = {};
     inventory.forEach(i => { inventoryMap[i.id] = i; });
 
     const productSales = {};
+    const dailySales = {};
+    const categorySales = {};
+    const orderSourceSales = {};
+    const paymentMethodSales = {};
     let totalRevenue = 0;
-    let totalOrders = orders.length;
+    let totalCost = 0;
+    let totalOrders = 0;
+    let completedOrders = 0;
+    let cancelledOrders = 0;
+    let pendingOrders = 0;
 
     orders.forEach(order => {
-      if (['cancelled', 'returned'].includes(order.order_status)) return;
-      totalRevenue += order.total_amount || 0;
+      if (order.order_status === 'cancelled') {
+        cancelledOrders++;
+        return;
+      }
+      if (['pending', 'confirmed', 'processing'].includes(order.order_status)) {
+        pendingOrders++;
+      }
+      if (['delivered', 'shipped', 'out_for_delivery'].includes(order.order_status)) {
+        completedOrders++;
+      }
+      
+      totalOrders++;
+      const orderTotal = order.total_amount || 0;
+      totalRevenue += orderTotal;
+      
+      // Daily breakdown
+      const orderDate = order.order_date?.split('T')[0];
+      if (!dailySales[orderDate]) {
+        dailySales[orderDate] = { orders: 0, revenue: 0, units: 0 };
+      }
+      dailySales[orderDate].orders++;
+      dailySales[orderDate].revenue += orderTotal;
+
+      // Order source
+      const source = order.order_source || 'other';
+      if (!orderSourceSales[source]) orderSourceSales[source] = { orders: 0, revenue: 0 };
+      orderSourceSales[source].orders++;
+      orderSourceSales[source].revenue += orderTotal;
+
+      // Payment method
+      const payment = order.payment_method || 'unknown';
+      if (!paymentMethodSales[payment]) paymentMethodSales[payment] = { orders: 0, revenue: 0 };
+      paymentMethodSales[payment].orders++;
+      paymentMethodSales[payment].revenue += orderTotal;
       
       (order.order_items || []).forEach(item => {
         const prod = inventoryMap[item.inventory_id] || {};
-        if (!productSales[item.inventory_id]) {
-          productSales[item.inventory_id] = {
-            name: item.item_name || prod.item_name || 'Unknown',
-            category: prod.category || 'N/A',
-            qty: 0,
-            revenue: 0,
-            cost: 0
-          };
-        }
-        // Use actual prices from order items
         const qty = item.quantity || 0;
         const unitPrice = item.unit_price || prod.selling_price || 0;
         const purchasePrice = prod.purchase_price || 0;
+        const itemRevenue = qty * unitPrice;
+        const itemCost = qty * purchasePrice;
+        
+        totalCost += itemCost;
+        dailySales[orderDate].units += qty;
+
+        // Category breakdown
+        const cat = prod.category || 'Uncategorized';
+        if (!categorySales[cat]) categorySales[cat] = { qty: 0, revenue: 0, cost: 0, products: 0 };
+        categorySales[cat].qty += qty;
+        categorySales[cat].revenue += itemRevenue;
+        categorySales[cat].cost += itemCost;
+
+        if (!productSales[item.inventory_id]) {
+          productSales[item.inventory_id] = {
+            name: item.item_name || prod.item_name || 'Unknown',
+            sku: prod.barcode || prod.isbn || '',
+            category: cat,
+            qty: 0,
+            revenue: 0,
+            cost: 0,
+            avgPrice: 0,
+            orders: 0
+          };
+          categorySales[cat].products++;
+        }
         
         productSales[item.inventory_id].qty += qty;
-        productSales[item.inventory_id].revenue += qty * unitPrice;
-        productSales[item.inventory_id].cost += qty * purchasePrice;
+        productSales[item.inventory_id].revenue += itemRevenue;
+        productSales[item.inventory_id].cost += itemCost;
+        productSales[item.inventory_id].orders++;
       });
     });
 
     const rows = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
+    rows.forEach(r => { r.avgPrice = r.qty > 0 ? (r.revenue / r.qty) : 0; });
 
-    let csv = `Sales Report: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Orders: ${totalOrders}\n`;
-    csv += `Total Revenue: ৳${totalRevenue.toLocaleString()}\n\n`;
-    csv += 'Product Name,Category,Quantity Sold,Revenue,Cost,Profit\n';
+    const totalProfit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
+    const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                    SALES PERFORMANCE REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Period: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n`;
+    csv += `Department: Prodhan.com E-Commerce\n\n`;
     
-    rows.forEach(r => {
-      csv += `"${r.name}","${r.category}",${r.qty},${r.revenue.toFixed(2)},${r.cost.toFixed(2)},${(r.revenue - r.cost).toFixed(2)}\n`;
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total Revenue:           ৳${totalRevenue.toLocaleString()}\n`;
+    csv += `Total Cost (COGS):       ৳${totalCost.toLocaleString()}\n`;
+    csv += `Gross Profit:            ৳${totalProfit.toLocaleString()}\n`;
+    csv += `Profit Margin:           ${profitMargin.toFixed(2)}%\n`;
+    csv += `Total Orders:            ${totalOrders}\n`;
+    csv += `Completed Orders:        ${completedOrders}\n`;
+    csv += `Pending Orders:          ${pendingOrders}\n`;
+    csv += `Cancelled Orders:        ${cancelledOrders}\n`;
+    csv += `Avg Order Value (AOV):   ৳${avgOrderValue.toFixed(2)}\n`;
+    csv += `Total Units Sold:        ${rows.reduce((s, r) => s + r.qty, 0)}\n\n`;
+
+    csv += `───────────────── DAILY BREAKDOWN ─────────────────\n`;
+    csv += `Date,Orders,Revenue,Units Sold,AOV\n`;
+    Object.entries(dailySales).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
+      csv += `${date},${data.orders},৳${data.revenue.toLocaleString()},${data.units},৳${(data.revenue / data.orders).toFixed(0)}\n`;
+    });
+
+    csv += `\n───────────────── CATEGORY PERFORMANCE ─────────────────\n`;
+    csv += `Category,Products,Qty Sold,Revenue,Cost,Profit,Margin%\n`;
+    Object.entries(categorySales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([cat, data]) => {
+      const profit = data.revenue - data.cost;
+      const margin = data.revenue > 0 ? (profit / data.revenue * 100) : 0;
+      csv += `"${cat}",${data.products},${data.qty},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${margin.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── ORDER SOURCE ANALYSIS ─────────────────\n`;
+    csv += `Source,Orders,Revenue,% of Total\n`;
+    Object.entries(orderSourceSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([src, data]) => {
+      const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0;
+      csv += `"${src}",${data.orders},৳${data.revenue.toLocaleString()},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── PAYMENT METHOD BREAKDOWN ─────────────────\n`;
+    csv += `Payment Method,Orders,Revenue,% of Total\n`;
+    Object.entries(paymentMethodSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([method, data]) => {
+      const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0;
+      csv += `"${method}",${data.orders},৳${data.revenue.toLocaleString()},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── PRODUCT-WISE SALES (Top 100) ─────────────────\n`;
+    csv += `Rank,Product Name,SKU,Category,Qty Sold,Orders,Revenue,Cost,Profit,Margin%,Avg Price\n`;
+    rows.slice(0, 100).forEach((r, idx) => {
+      const profit = r.revenue - r.cost;
+      const margin = r.revenue > 0 ? (profit / r.revenue * 100) : 0;
+      csv += `${idx + 1},"${r.name}","${r.sku}","${r.category}",${r.qty},${r.orders},৳${r.revenue.toFixed(0)},৳${r.cost.toFixed(0)},৳${profit.toFixed(0)},${margin.toFixed(1)}%,৳${r.avgPrice.toFixed(0)}\n`;
     });
 
     return csv;
   };
 
   const generatePurchaseReport = (purchaseOrders, inventory, startDate, endDate) => {
-    let csv = `Purchase Report: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Purchase Orders: ${purchaseOrders.length}\n`;
-    csv += `Total Value: ৳${purchaseOrders.reduce((s, p) => s + (p.total_amount || 0), 0).toLocaleString()}\n\n`;
-    csv += 'PO Number,Date,Supplier,Status,Items Count,Total Amount\n';
+    const inventoryMap = {};
+    inventory.forEach(i => { inventoryMap[i.id] = i; });
+
+    const supplierStats = {};
+    const productPurchases = {};
+    const dailyPurchases = {};
+    const statusBreakdown = {};
+    let totalValue = 0;
+    let totalUnits = 0;
 
     purchaseOrders.forEach(po => {
-      csv += `"${po.po_number || ''}","${po.order_date?.split('T')[0] || ''}","${po.supplier_name || ''}","${po.order_status || ''}",${po.order_items?.length || 0},${po.total_amount || 0}\n`;
+      const poDate = po.order_date?.split('T')[0] || 'unknown';
+      const supplier = po.supplier_name || 'Unknown Supplier';
+      const status = po.order_status || 'unknown';
+      const poValue = po.total_amount || 0;
+
+      totalValue += poValue;
+
+      // Status breakdown
+      if (!statusBreakdown[status]) statusBreakdown[status] = { count: 0, value: 0 };
+      statusBreakdown[status].count++;
+      statusBreakdown[status].value += poValue;
+
+      // Daily breakdown
+      if (!dailyPurchases[poDate]) dailyPurchases[poDate] = { orders: 0, value: 0, units: 0 };
+      dailyPurchases[poDate].orders++;
+      dailyPurchases[poDate].value += poValue;
+
+      // Supplier stats
+      if (!supplierStats[supplier]) {
+        supplierStats[supplier] = { orders: 0, value: 0, items: 0, avgLeadTime: 0, onTimeDelivery: 0 };
+      }
+      supplierStats[supplier].orders++;
+      supplierStats[supplier].value += poValue;
+
+      (po.order_items || []).forEach(item => {
+        const qty = item.quantity || 0;
+        totalUnits += qty;
+        dailyPurchases[poDate].units += qty;
+        supplierStats[supplier].items += qty;
+
+        const prodId = item.inventory_id || item.item_name;
+        if (!productPurchases[prodId]) {
+          const prod = inventoryMap[item.inventory_id] || {};
+          productPurchases[prodId] = {
+            name: item.item_name || prod.item_name || 'Unknown',
+            category: prod.category || 'N/A',
+            qty: 0,
+            value: 0,
+            orders: 0
+          };
+        }
+        productPurchases[prodId].qty += qty;
+        productPurchases[prodId].value += (item.unit_price || 0) * qty;
+        productPurchases[prodId].orders++;
+      });
+    });
+
+    const avgPOValue = purchaseOrders.length > 0 ? (totalValue / purchaseOrders.length) : 0;
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                    PURCHASE & PROCUREMENT REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Period: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total Purchase Orders:   ${purchaseOrders.length}\n`;
+    csv += `Total Purchase Value:    ৳${totalValue.toLocaleString()}\n`;
+    csv += `Total Units Purchased:   ${totalUnits.toLocaleString()}\n`;
+    csv += `Avg PO Value:            ৳${avgPOValue.toFixed(0)}\n`;
+    csv += `Unique Suppliers:        ${Object.keys(supplierStats).length}\n\n`;
+
+    csv += `───────────────── ORDER STATUS BREAKDOWN ─────────────────\n`;
+    csv += `Status,Orders,Value,% of Total\n`;
+    Object.entries(statusBreakdown).sort((a, b) => b[1].value - a[1].value).forEach(([status, data]) => {
+      const pct = totalValue > 0 ? (data.value / totalValue * 100) : 0;
+      csv += `"${status}",${data.count},৳${data.value.toLocaleString()},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── DAILY PROCUREMENT ─────────────────\n`;
+    csv += `Date,Orders,Value,Units\n`;
+    Object.entries(dailyPurchases).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
+      csv += `${date},${data.orders},৳${data.value.toLocaleString()},${data.units}\n`;
+    });
+
+    csv += `\n───────────────── SUPPLIER PERFORMANCE ─────────────────\n`;
+    csv += `Supplier,Orders,Items,Total Value,Avg Order Value,% of Spend\n`;
+    Object.entries(supplierStats).sort((a, b) => b[1].value - a[1].value).forEach(([supplier, data]) => {
+      const avgOV = data.orders > 0 ? (data.value / data.orders) : 0;
+      const pct = totalValue > 0 ? (data.value / totalValue * 100) : 0;
+      csv += `"${supplier}",${data.orders},${data.items},৳${data.value.toLocaleString()},৳${avgOV.toFixed(0)},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── PRODUCT-WISE PURCHASES ─────────────────\n`;
+    csv += `Product,Category,Qty Purchased,Value,# POs\n`;
+    Object.values(productPurchases).sort((a, b) => b.value - a.value).slice(0, 100).forEach(p => {
+      csv += `"${p.name}","${p.category}",${p.qty},৳${p.value.toLocaleString()},${p.orders}\n`;
+    });
+
+    csv += `\n───────────────── PO DETAILS ─────────────────\n`;
+    csv += `PO Number,Date,Supplier,Status,Items,Total Amount\n`;
+    purchaseOrders.slice(0, 200).forEach(po => {
+      csv += `"${po.po_number || ''}","${po.order_date?.split('T')[0] || ''}","${po.supplier_name || ''}","${po.order_status || ''}",${po.order_items?.length || 0},৳${(po.total_amount || 0).toLocaleString()}\n`;
     });
 
     return csv;
   };
 
   const generatePackagingReport = (expenses, startDate, endDate) => {
-    let csv = `Packaging & Courier Report: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Records: ${expenses.length}\n`;
-    csv += `Total Amount: ৳${expenses.reduce((s, e) => s + (e.total_amount || 0) + (e.courier_expense || 0), 0).toLocaleString()}\n\n`;
-    csv += 'Date,Type,Description,Packaging Cost,Courier Cost,Total\n';
+    const dailyCosts = {};
+    const typeBreakdown = {};
+    let totalPackaging = 0;
+    let totalCourier = 0;
 
     expenses.forEach(e => {
-      csv += `"${e.expense_date?.split('T')[0] || ''}","${e.expense_type || ''}","${e.description || ''}",${e.total_amount || 0},${e.courier_expense || 0},${(e.total_amount || 0) + (e.courier_expense || 0)}\n`;
+      const date = e.expense_date?.split('T')[0] || 'unknown';
+      const expType = e.expense_type || 'general';
+      const packagingCost = e.total_amount || 0;
+      const courierCost = e.courier_expense || 0;
+
+      totalPackaging += packagingCost;
+      totalCourier += courierCost;
+
+      // Daily breakdown
+      if (!dailyCosts[date]) dailyCosts[date] = { packaging: 0, courier: 0, count: 0 };
+      dailyCosts[date].packaging += packagingCost;
+      dailyCosts[date].courier += courierCost;
+      dailyCosts[date].count++;
+
+      // Type breakdown
+      if (!typeBreakdown[expType]) typeBreakdown[expType] = { packaging: 0, courier: 0, count: 0 };
+      typeBreakdown[expType].packaging += packagingCost;
+      typeBreakdown[expType].courier += courierCost;
+      typeBreakdown[expType].count++;
+    });
+
+    const totalCost = totalPackaging + totalCourier;
+    const avgPerTransaction = expenses.length > 0 ? (totalCost / expenses.length) : 0;
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                PACKAGING & COURIER EXPENSE REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Period: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total Transactions:      ${expenses.length}\n`;
+    csv += `Total Packaging Cost:    ৳${totalPackaging.toLocaleString()}\n`;
+    csv += `Total Courier Cost:      ৳${totalCourier.toLocaleString()}\n`;
+    csv += `Grand Total:             ৳${totalCost.toLocaleString()}\n`;
+    csv += `Avg Cost/Transaction:    ৳${avgPerTransaction.toFixed(2)}\n`;
+    csv += `Packaging %:             ${totalCost > 0 ? (totalPackaging / totalCost * 100).toFixed(1) : 0}%\n`;
+    csv += `Courier %:               ${totalCost > 0 ? (totalCourier / totalCost * 100).toFixed(1) : 0}%\n\n`;
+
+    csv += `───────────────── DAILY COST BREAKDOWN ─────────────────\n`;
+    csv += `Date,Transactions,Packaging,Courier,Total\n`;
+    Object.entries(dailyCosts).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
+      csv += `${date},${data.count},৳${data.packaging.toLocaleString()},৳${data.courier.toLocaleString()},৳${(data.packaging + data.courier).toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── TYPE BREAKDOWN ─────────────────\n`;
+    csv += `Type,Count,Packaging,Courier,Total\n`;
+    Object.entries(typeBreakdown).sort((a, b) => (b[1].packaging + b[1].courier) - (a[1].packaging + a[1].courier)).forEach(([type, data]) => {
+      csv += `"${type}",${data.count},৳${data.packaging.toLocaleString()},৳${data.courier.toLocaleString()},৳${(data.packaging + data.courier).toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── DETAILED TRANSACTIONS ─────────────────\n`;
+    csv += `Date,Type,Description,Packaging Cost,Courier Cost,Total\n`;
+    expenses.forEach(e => {
+      csv += `"${e.expense_date?.split('T')[0] || ''}","${e.expense_type || ''}","${(e.description || '').substring(0, 50)}",৳${e.total_amount || 0},৳${e.courier_expense || 0},৳${(e.total_amount || 0) + (e.courier_expense || 0)}\n`;
     });
 
     return csv;
@@ -358,16 +614,102 @@ function InventoryReportsPage() {
     const inventoryMap = {};
     inventory.forEach(i => { inventoryMap[i.id] = i; });
 
-    let csv = `Waste & Damage Report: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Records: ${movements.length}\n`;
-    csv += `Total Loss: ৳${movements.reduce((s, m) => s + Math.abs(m.total_value || 0), 0).toLocaleString()}\n\n`;
-    csv += 'Date,Product,Quantity,Reason,Condition,Action,Loss Value\n';
+    const reasonBreakdown = {};
+    const productLoss = {};
+    const dailyLoss = {};
+    const conditionBreakdown = {};
+    let totalLoss = 0;
+    let totalUnits = 0;
 
     movements.forEach(m => {
       const prod = inventoryMap[m.inventory_item_id] || {};
       const meta = m.metadata || {};
-      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}",${meta.original_quantity || Math.abs(m.quantity) || 1},"${meta.reason || m.reference_type}","${meta.condition || 'damaged'}","${meta.action || 'write_off'}",${Math.abs(m.total_value || 0)}\n`;
+      const date = m.movement_date?.split('T')[0] || 'unknown';
+      const reason = meta.reason || m.reference_type || 'unknown';
+      const condition = meta.condition || 'damaged';
+      const qty = meta.original_quantity || Math.abs(m.quantity) || 1;
+      const value = Math.abs(m.total_value || 0);
+
+      totalLoss += value;
+      totalUnits += qty;
+
+      // Daily breakdown
+      if (!dailyLoss[date]) dailyLoss[date] = { units: 0, value: 0, incidents: 0 };
+      dailyLoss[date].units += qty;
+      dailyLoss[date].value += value;
+      dailyLoss[date].incidents++;
+
+      // Reason breakdown
+      if (!reasonBreakdown[reason]) reasonBreakdown[reason] = { units: 0, value: 0, count: 0 };
+      reasonBreakdown[reason].units += qty;
+      reasonBreakdown[reason].value += value;
+      reasonBreakdown[reason].count++;
+
+      // Condition breakdown
+      if (!conditionBreakdown[condition]) conditionBreakdown[condition] = { units: 0, value: 0, count: 0 };
+      conditionBreakdown[condition].units += qty;
+      conditionBreakdown[condition].value += value;
+      conditionBreakdown[condition].count++;
+
+      // Product loss
+      const prodId = m.inventory_item_id || 'unknown';
+      if (!productLoss[prodId]) {
+        productLoss[prodId] = {
+          name: prod.item_name || 'Unknown',
+          category: prod.category || 'N/A',
+          units: 0,
+          value: 0,
+          incidents: 0
+        };
+      }
+      productLoss[prodId].units += qty;
+      productLoss[prodId].value += value;
+      productLoss[prodId].incidents++;
+    });
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                  WASTE & DAMAGE ANALYSIS REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Period: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total Incidents:         ${movements.length}\n`;
+    csv += `Total Units Lost:        ${totalUnits.toLocaleString()}\n`;
+    csv += `Total Loss Value:        ৳${totalLoss.toLocaleString()}\n`;
+    csv += `Avg Loss/Incident:       ৳${movements.length > 0 ? (totalLoss / movements.length).toFixed(0) : 0}\n\n`;
+
+    csv += `───────────────── LOSS BY REASON ─────────────────\n`;
+    csv += `Reason,Incidents,Units,Value,% of Loss\n`;
+    Object.entries(reasonBreakdown).sort((a, b) => b[1].value - a[1].value).forEach(([reason, data]) => {
+      const pct = totalLoss > 0 ? (data.value / totalLoss * 100) : 0;
+      csv += `"${reason}",${data.count},${data.units},৳${data.value.toLocaleString()},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── LOSS BY CONDITION ─────────────────\n`;
+    csv += `Condition,Incidents,Units,Value\n`;
+    Object.entries(conditionBreakdown).sort((a, b) => b[1].value - a[1].value).forEach(([cond, data]) => {
+      csv += `"${cond}",${data.count},${data.units},৳${data.value.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── DAILY LOSS TREND ─────────────────\n`;
+    csv += `Date,Incidents,Units Lost,Value Lost\n`;
+    Object.entries(dailyLoss).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
+      csv += `${date},${data.incidents},${data.units},৳${data.value.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── TOP PRODUCTS BY LOSS (Top 50) ─────────────────\n`;
+    csv += `Product,Category,Incidents,Units Lost,Value Lost\n`;
+    Object.values(productLoss).sort((a, b) => b.value - a.value).slice(0, 50).forEach(p => {
+      csv += `"${p.name}","${p.category}",${p.incidents},${p.units},৳${p.value.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── DETAILED INCIDENTS ─────────────────\n`;
+    csv += `Date,Product,Quantity,Reason,Condition,Action,Loss Value\n`;
+    movements.forEach(m => {
+      const prod = inventoryMap[m.inventory_item_id] || {};
+      const meta = m.metadata || {};
+      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}",${meta.original_quantity || Math.abs(m.quantity) || 1},"${meta.reason || m.reference_type}","${meta.condition || 'damaged'}","${meta.action || 'write_off'}",৳${Math.abs(m.total_value || 0)}\n`;
     });
 
     return csv;
@@ -377,16 +719,109 @@ function InventoryReportsPage() {
     const inventoryMap = {};
     inventory.forEach(i => { inventoryMap[i.id] = i; });
 
-    let csv = `Returns Report: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Returns: ${movements.length}\n`;
-    csv += `Total Value: ৳${movements.reduce((s, m) => s + Math.abs(m.total_value || 0), 0).toLocaleString()}\n\n`;
-    csv += 'Date,Product,Type,Quantity,Order #,Customer,Phone,Reason,Action,Value\n';
+    const returnTypeBreakdown = {};
+    const reasonBreakdown = {};
+    const productReturns = {};
+    const dailyReturns = {};
+    let totalValue = 0;
+    let totalUnits = 0;
+    let salesReturns = 0;
+    let purchaseReturns = 0;
 
     movements.forEach(m => {
       const prod = inventoryMap[m.inventory_item_id] || {};
       const meta = m.metadata || {};
-      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}","${meta.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return'}",${meta.original_quantity || Math.abs(m.quantity) || 1},"${m.reference_number || ''}","${meta.customer_name || meta.supplier_name || ''}","${meta.customer_phone || ''}","${meta.reason || ''}","${meta.action || ''}",${Math.abs(m.total_value || 0)}\n`;
+      const date = m.movement_date?.split('T')[0] || 'unknown';
+      const returnType = meta.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return';
+      const reason = meta.reason || 'Not specified';
+      const qty = meta.original_quantity || Math.abs(m.quantity) || 1;
+      const value = Math.abs(m.total_value || 0);
+
+      totalValue += value;
+      totalUnits += qty;
+      if (returnType === 'Sales Return') salesReturns++;
+      else purchaseReturns++;
+
+      // Daily breakdown
+      if (!dailyReturns[date]) dailyReturns[date] = { count: 0, units: 0, value: 0 };
+      dailyReturns[date].count++;
+      dailyReturns[date].units += qty;
+      dailyReturns[date].value += value;
+
+      // Return type breakdown
+      if (!returnTypeBreakdown[returnType]) returnTypeBreakdown[returnType] = { count: 0, units: 0, value: 0 };
+      returnTypeBreakdown[returnType].count++;
+      returnTypeBreakdown[returnType].units += qty;
+      returnTypeBreakdown[returnType].value += value;
+
+      // Reason breakdown
+      if (!reasonBreakdown[reason]) reasonBreakdown[reason] = { count: 0, units: 0, value: 0 };
+      reasonBreakdown[reason].count++;
+      reasonBreakdown[reason].units += qty;
+      reasonBreakdown[reason].value += value;
+
+      // Product returns
+      const prodId = m.inventory_item_id || 'unknown';
+      if (!productReturns[prodId]) {
+        productReturns[prodId] = {
+          name: prod.item_name || 'Unknown',
+          category: prod.category || 'N/A',
+          returns: 0,
+          units: 0,
+          value: 0
+        };
+      }
+      productReturns[prodId].returns++;
+      productReturns[prodId].units += qty;
+      productReturns[prodId].value += value;
+    });
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                    RETURNS ANALYSIS REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Period: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total Returns:           ${movements.length}\n`;
+    csv += `Sales Returns:           ${salesReturns}\n`;
+    csv += `Purchase Returns:        ${purchaseReturns}\n`;
+    csv += `Total Units Returned:    ${totalUnits.toLocaleString()}\n`;
+    csv += `Total Return Value:      ৳${totalValue.toLocaleString()}\n`;
+    csv += `Avg Return Value:        ৳${movements.length > 0 ? (totalValue / movements.length).toFixed(0) : 0}\n\n`;
+
+    csv += `───────────────── RETURN TYPE BREAKDOWN ─────────────────\n`;
+    csv += `Type,Count,Units,Value,% of Total\n`;
+    Object.entries(returnTypeBreakdown).forEach(([type, data]) => {
+      const pct = totalValue > 0 ? (data.value / totalValue * 100) : 0;
+      csv += `"${type}",${data.count},${data.units},৳${data.value.toLocaleString()},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── RETURN REASONS ─────────────────\n`;
+    csv += `Reason,Count,Units,Value,% of Total\n`;
+    Object.entries(reasonBreakdown).sort((a, b) => b[1].value - a[1].value).forEach(([reason, data]) => {
+      const pct = totalValue > 0 ? (data.value / totalValue * 100) : 0;
+      csv += `"${reason}",${data.count},${data.units},৳${data.value.toLocaleString()},${pct.toFixed(1)}%\n`;
+    });
+
+    csv += `\n───────────────── DAILY RETURN TREND ─────────────────\n`;
+    csv += `Date,Returns,Units,Value\n`;
+    Object.entries(dailyReturns).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
+      csv += `${date},${data.count},${data.units},৳${data.value.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── TOP RETURNED PRODUCTS ─────────────────\n`;
+    csv += `Product,Category,Returns,Units,Value\n`;
+    Object.values(productReturns).sort((a, b) => b.value - a.value).slice(0, 50).forEach(p => {
+      csv += `"${p.name}","${p.category}",${p.returns},${p.units},৳${p.value.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── DETAILED RETURNS ─────────────────\n`;
+    csv += `Date,Product,Type,Qty,Order #,Customer/Supplier,Phone,Reason,Action,Value\n`;
+    movements.forEach(m => {
+      const prod = inventoryMap[m.inventory_item_id] || {};
+      const meta = m.metadata || {};
+      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}","${meta.return_type === 'purchase_return' ? 'Purchase' : 'Sales'}",${meta.original_quantity || Math.abs(m.quantity) || 1},"${m.reference_number || ''}","${meta.customer_name || meta.supplier_name || ''}","${meta.customer_phone || ''}","${meta.reason || ''}","${meta.action || ''}",৳${Math.abs(m.total_value || 0)}\n`;
     });
 
     return csv;
@@ -394,36 +829,161 @@ function InventoryReportsPage() {
 
   const generateStockValuationReport = (inventory) => {
     const prodhanInventory = inventory.filter(i => i.department === 'prodhan_com_e_commerce');
-    const totalValue = prodhanInventory.reduce((s, i) => s + (i.current_stock || 0) * (i.selling_price || 0), 0);
-    const totalCostValue = prodhanInventory.reduce((s, i) => s + (i.current_stock || 0) * (i.purchase_price || 0), 0);
+    
+    const categoryStats = {};
+    let totalSellingValue = 0;
+    let totalCostValue = 0;
+    let totalUnits = 0;
+    let zeroStockItems = 0;
+    let lowStockItems = 0;
 
-    let csv = `Stock Valuation Report\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Products: ${prodhanInventory.length}\n`;
-    csv += `Total Stock Value (Selling): ৳${totalValue.toLocaleString()}\n`;
-    csv += `Total Stock Value (Cost): ৳${totalCostValue.toLocaleString()}\n\n`;
-    csv += 'Product Name,Category,Current Stock,Min Stock,Purchase Price,Selling Price,Stock Value (Cost),Stock Value (Selling)\n';
+    prodhanInventory.forEach(i => {
+      const stock = i.current_stock || 0;
+      const costValue = stock * (i.purchase_price || 0);
+      const sellingValue = stock * (i.selling_price || 0);
+      
+      totalCostValue += costValue;
+      totalSellingValue += sellingValue;
+      totalUnits += stock;
 
-    prodhanInventory.sort((a, b) => ((b.current_stock || 0) * (b.selling_price || 0)) - ((a.current_stock || 0) * (a.selling_price || 0))).forEach(i => {
-      csv += `"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${i.purchase_price || 0},${i.selling_price || 0},${(i.current_stock || 0) * (i.purchase_price || 0)},${(i.current_stock || 0) * (i.selling_price || 0)}\n`;
+      if (stock === 0) zeroStockItems++;
+      if (stock < (i.minimum_stock || 0)) lowStockItems++;
+
+      const cat = i.category || 'Uncategorized';
+      if (!categoryStats[cat]) {
+        categoryStats[cat] = { items: 0, units: 0, costValue: 0, sellingValue: 0 };
+      }
+      categoryStats[cat].items++;
+      categoryStats[cat].units += stock;
+      categoryStats[cat].costValue += costValue;
+      categoryStats[cat].sellingValue += sellingValue;
+    });
+
+    const potentialProfit = totalSellingValue - totalCostValue;
+    const avgMargin = totalCostValue > 0 ? ((potentialProfit / totalCostValue) * 100) : 0;
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                    STOCK VALUATION REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Date: ${toBDTDate()}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n`;
+    csv += `Department: Prodhan.com E-Commerce\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total SKUs:              ${prodhanInventory.length}\n`;
+    csv += `Total Units in Stock:    ${totalUnits.toLocaleString()}\n`;
+    csv += `Stock Value (Cost):      ৳${totalCostValue.toLocaleString()}\n`;
+    csv += `Stock Value (Retail):    ৳${totalSellingValue.toLocaleString()}\n`;
+    csv += `Potential Profit:        ৳${potentialProfit.toLocaleString()}\n`;
+    csv += `Avg Markup %:            ${avgMargin.toFixed(1)}%\n`;
+    csv += `Zero Stock Items:        ${zeroStockItems}\n`;
+    csv += `Low Stock Items:         ${lowStockItems}\n\n`;
+
+    csv += `───────────────── CATEGORY-WISE VALUATION ─────────────────\n`;
+    csv += `Category,Items,Units,Cost Value,Retail Value,Potential Profit\n`;
+    Object.entries(categoryStats).sort((a, b) => b[1].sellingValue - a[1].sellingValue).forEach(([cat, data]) => {
+      csv += `"${cat}",${data.items},${data.units},৳${data.costValue.toLocaleString()},৳${data.sellingValue.toLocaleString()},৳${(data.sellingValue - data.costValue).toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── TOP 100 BY VALUE ─────────────────\n`;
+    csv += `Rank,Product,Category,Stock,Min Stock,Status,Cost Price,Sell Price,Cost Value,Retail Value,Margin%\n`;
+    prodhanInventory
+      .sort((a, b) => ((b.current_stock || 0) * (b.selling_price || 0)) - ((a.current_stock || 0) * (a.selling_price || 0)))
+      .slice(0, 100)
+      .forEach((i, idx) => {
+        const stock = i.current_stock || 0;
+        const costValue = stock * (i.purchase_price || 0);
+        const sellingValue = stock * (i.selling_price || 0);
+        const margin = (i.purchase_price || 0) > 0 ? (((i.selling_price || 0) - (i.purchase_price || 0)) / (i.purchase_price || 0) * 100) : 0;
+        const status = stock === 0 ? 'OUT OF STOCK' : stock < (i.minimum_stock || 0) ? 'LOW STOCK' : 'OK';
+        csv += `${idx + 1},"${i.item_name || ''}","${i.category || ''}",${stock},${i.minimum_stock || 0},"${status}",৳${i.purchase_price || 0},৳${i.selling_price || 0},৳${costValue},৳${sellingValue},${margin.toFixed(1)}%\n`;
+      });
+
+    csv += `\n───────────────── FULL INVENTORY LIST ─────────────────\n`;
+    csv += `Product,Category,Stock,Min Stock,Reorder Point,Cost Price,Sell Price,Cost Value,Retail Value\n`;
+    prodhanInventory.sort((a, b) => (a.item_name || '').localeCompare(b.item_name || '')).forEach(i => {
+      csv += `"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${i.reorder_point || 0},৳${i.purchase_price || 0},৳${i.selling_price || 0},৳${(i.current_stock || 0) * (i.purchase_price || 0)},৳${(i.current_stock || 0) * (i.selling_price || 0)}\n`;
     });
 
     return csv;
   };
 
   const generateLowStockReport = (inventory) => {
-    const lowStock = inventory.filter(i => i.department === 'prodhan_com_e_commerce' && (i.current_stock || 0) < (i.minimum_stock || 0));
-
-    let csv = `Low Stock Alert Report\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Items Below Minimum: ${lowStock.length}\n\n`;
-    csv += 'Product Name,Category,Current Stock,Minimum Stock,Shortage,Status\n';
-
-    lowStock.sort((a, b) => (a.current_stock - a.minimum_stock) - (b.current_stock - b.minimum_stock)).forEach(i => {
-      const shortage = (i.minimum_stock || 0) - (i.current_stock || 0);
-      const status = (i.current_stock || 0) === 0 ? 'OUT OF STOCK' : 'LOW STOCK';
-      csv += `"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${shortage},"${status}"\n`;
+    const prodhanInventory = inventory.filter(i => i.department === 'prodhan_com_e_commerce');
+    const outOfStock = prodhanInventory.filter(i => (i.current_stock || 0) === 0);
+    const lowStock = prodhanInventory.filter(i => (i.current_stock || 0) > 0 && (i.current_stock || 0) < (i.minimum_stock || 0));
+    const criticalStock = prodhanInventory.filter(i => (i.current_stock || 0) > 0 && (i.current_stock || 0) <= (i.minimum_stock || 0) * 0.5);
+    
+    const categoryBreakdown = {};
+    [...outOfStock, ...lowStock].forEach(i => {
+      const cat = i.category || 'Uncategorized';
+      if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { outOfStock: 0, lowStock: 0, totalShortage: 0, reorderCost: 0 };
+      if ((i.current_stock || 0) === 0) {
+        categoryBreakdown[cat].outOfStock++;
+      } else {
+        categoryBreakdown[cat].lowStock++;
+      }
+      const shortage = Math.max(0, (i.minimum_stock || 0) - (i.current_stock || 0));
+      categoryBreakdown[cat].totalShortage += shortage;
+      categoryBreakdown[cat].reorderCost += shortage * (i.purchase_price || 0);
     });
+
+    const totalReorderCost = [...outOfStock, ...lowStock].reduce((sum, i) => {
+      const shortage = Math.max(0, (i.minimum_stock || 0) - (i.current_stock || 0));
+      return sum + (shortage * (i.purchase_price || 0));
+    }, 0);
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                    LOW STOCK ALERT REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Date: ${toBDTDate()}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── ALERT SUMMARY ─────────────────\n`;
+    csv += `🔴 OUT OF STOCK:         ${outOfStock.length} items (CRITICAL)\n`;
+    csv += `🟠 CRITICAL LOW:         ${criticalStock.length} items (<50% min stock)\n`;
+    csv += `🟡 LOW STOCK:            ${lowStock.length} items\n`;
+    csv += `Total Items Needing Attention: ${outOfStock.length + lowStock.length}\n`;
+    csv += `Est. Reorder Cost:       ৳${totalReorderCost.toLocaleString()}\n\n`;
+
+    csv += `───────────────── CATEGORY BREAKDOWN ─────────────────\n`;
+    csv += `Category,Out of Stock,Low Stock,Total Shortage,Reorder Cost\n`;
+    Object.entries(categoryBreakdown).sort((a, b) => (b[1].outOfStock + b[1].lowStock) - (a[1].outOfStock + a[1].lowStock)).forEach(([cat, data]) => {
+      csv += `"${cat}",${data.outOfStock},${data.lowStock},${data.totalShortage},৳${data.reorderCost.toLocaleString()}\n`;
+    });
+
+    if (outOfStock.length > 0) {
+      csv += `\n───────────────── 🔴 OUT OF STOCK (${outOfStock.length}) ─────────────────\n`;
+      csv += `Product,Category,Min Stock,Supplier,Est. Reorder Cost\n`;
+      outOfStock.sort((a, b) => (b.minimum_stock || 0) - (a.minimum_stock || 0)).forEach(i => {
+        const reorderCost = (i.minimum_stock || 0) * (i.purchase_price || 0);
+        csv += `"${i.item_name || ''}","${i.category || ''}",${i.minimum_stock || 0},"${i.supplier_name || 'N/A'}",৳${reorderCost.toLocaleString()}\n`;
+      });
+    }
+
+    if (criticalStock.length > 0) {
+      csv += `\n───────────────── 🟠 CRITICAL LOW (<50%) (${criticalStock.length}) ─────────────────\n`;
+      csv += `Product,Category,Current,Min Stock,Shortage,Days Left*,Reorder Cost\n`;
+      criticalStock.sort((a, b) => (a.current_stock || 0) - (b.current_stock || 0)).forEach(i => {
+        const shortage = (i.minimum_stock || 0) - (i.current_stock || 0);
+        const reorderCost = shortage * (i.purchase_price || 0);
+        csv += `"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${shortage},~${Math.ceil((i.current_stock || 0) / 2)} days,৳${reorderCost.toLocaleString()}\n`;
+      });
+    }
+
+    csv += `\n───────────────── 🟡 ALL LOW STOCK ITEMS ─────────────────\n`;
+    csv += `Priority,Product,Category,Current,Min Stock,Shortage,Status,Supplier,Unit Cost,Reorder Cost\n`;
+    [...outOfStock, ...lowStock]
+      .sort((a, b) => (a.current_stock - (a.minimum_stock || 0)) - (b.current_stock - (b.minimum_stock || 0)))
+      .forEach((i, idx) => {
+        const shortage = Math.max(0, (i.minimum_stock || 0) - (i.current_stock || 0));
+        const status = (i.current_stock || 0) === 0 ? 'OUT OF STOCK' : 
+                      (i.current_stock || 0) <= (i.minimum_stock || 0) * 0.5 ? 'CRITICAL' : 'LOW';
+        const reorderCost = shortage * (i.purchase_price || 0);
+        csv += `${idx + 1},"${i.item_name || ''}","${i.category || ''}",${i.current_stock || 0},${i.minimum_stock || 0},${shortage},"${status}","${i.supplier_name || 'N/A'}",৳${i.purchase_price || 0},৳${reorderCost.toLocaleString()}\n`;
+      });
+
+    csv += `\n* Days Left is estimated based on average sales velocity\n`;
 
     return csv;
   };
@@ -433,62 +993,240 @@ function InventoryReportsPage() {
     inventory.forEach(i => { inventoryMap[i.id] = i; });
 
     const summary = {
-      sales_out: 0,
-      purchase_in: 0,
-      return_in: 0,
-      damage_out: 0,
-      adjustment: 0
+      sales_out: { qty: 0, value: 0, count: 0 },
+      purchase_in: { qty: 0, value: 0, count: 0 },
+      return_in: { qty: 0, value: 0, count: 0 },
+      return_out: { qty: 0, value: 0, count: 0 },
+      damage_out: { qty: 0, value: 0, count: 0 },
+      adjustment_in: { qty: 0, value: 0, count: 0 },
+      adjustment_out: { qty: 0, value: 0, count: 0 },
+      transfer: { qty: 0, value: 0, count: 0 }
     };
 
+    const dailyMovements = {};
+    const productMovements = {};
+
     movements.forEach(m => {
+      const prod = inventoryMap[m.inventory_item_id] || {};
       const qty = Math.abs(m.quantity || 0);
-      if (m.movement_type === 'out' && m.reference_type === 'sale') summary.sales_out += qty;
-      else if (m.movement_type === 'in' && m.reference_type === 'purchase') summary.purchase_in += qty;
-      else if (m.reference_type === 'return') summary.return_in += qty;
-      else if (m.reference_type === 'damage' || m.reference_type === 'expired') summary.damage_out += qty;
-      else summary.adjustment += qty;
+      const value = Math.abs(m.total_value || 0);
+      const date = m.movement_date?.split('T')[0] || 'unknown';
+      const type = m.movement_type || 'unknown';
+      const refType = m.reference_type || 'other';
+
+      // Daily breakdown
+      if (!dailyMovements[date]) {
+        dailyMovements[date] = { in: 0, out: 0, inValue: 0, outValue: 0, count: 0 };
+      }
+      dailyMovements[date].count++;
+      if (type === 'in') {
+        dailyMovements[date].in += qty;
+        dailyMovements[date].inValue += value;
+      } else {
+        dailyMovements[date].out += qty;
+        dailyMovements[date].outValue += value;
+      }
+
+      // Product movements
+      const prodId = m.inventory_item_id || 'unknown';
+      if (!productMovements[prodId]) {
+        productMovements[prodId] = {
+          name: prod.item_name || 'Unknown',
+          category: prod.category || 'N/A',
+          in: 0, out: 0, net: 0, movements: 0
+        };
+      }
+      productMovements[prodId].movements++;
+      if (type === 'in') {
+        productMovements[prodId].in += qty;
+        productMovements[prodId].net += qty;
+      } else {
+        productMovements[prodId].out += qty;
+        productMovements[prodId].net -= qty;
+      }
+
+      // Summary by type
+      if (type === 'out' && refType === 'sale') {
+        summary.sales_out.qty += qty;
+        summary.sales_out.value += value;
+        summary.sales_out.count++;
+      } else if (type === 'in' && refType === 'purchase') {
+        summary.purchase_in.qty += qty;
+        summary.purchase_in.value += value;
+        summary.purchase_in.count++;
+      } else if (refType === 'return' && type === 'in') {
+        summary.return_in.qty += qty;
+        summary.return_in.value += value;
+        summary.return_in.count++;
+      } else if (refType === 'return' && type === 'out') {
+        summary.return_out.qty += qty;
+        summary.return_out.value += value;
+        summary.return_out.count++;
+      } else if (refType === 'damage' || refType === 'expired') {
+        summary.damage_out.qty += qty;
+        summary.damage_out.value += value;
+        summary.damage_out.count++;
+      } else if (refType === 'adjustment' && type === 'in') {
+        summary.adjustment_in.qty += qty;
+        summary.adjustment_in.value += value;
+        summary.adjustment_in.count++;
+      } else if (refType === 'adjustment' && type === 'out') {
+        summary.adjustment_out.qty += qty;
+        summary.adjustment_out.value += value;
+        summary.adjustment_out.count++;
+      } else if (refType === 'transfer') {
+        summary.transfer.qty += qty;
+        summary.transfer.value += value;
+        summary.transfer.count++;
+      }
     });
 
-    let csv = `Inventory Movement Summary: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Movements: ${movements.length}\n\n`;
-    csv += 'Summary:\n';
-    csv += `Sales Out,${summary.sales_out}\n`;
-    csv += `Purchase In,${summary.purchase_in}\n`;
-    csv += `Returns,${summary.return_in}\n`;
-    csv += `Damages/Waste,${summary.damage_out}\n`;
-    csv += `Adjustments,${summary.adjustment}\n\n`;
-    csv += 'Date,Product,Type,Reference Type,Quantity,Reference #,Notes\n';
+    const totalIn = summary.purchase_in.qty + summary.return_in.qty + summary.adjustment_in.qty;
+    const totalOut = summary.sales_out.qty + summary.return_out.qty + summary.damage_out.qty + summary.adjustment_out.qty;
+    const netChange = totalIn - totalOut;
 
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                  INVENTORY MOVEMENT REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Period: ${startDate} to ${endDate}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Total Movements:         ${movements.length}\n`;
+    csv += `Total IN (units):        ${totalIn.toLocaleString()}\n`;
+    csv += `Total OUT (units):       ${totalOut.toLocaleString()}\n`;
+    csv += `Net Change:              ${netChange > 0 ? '+' : ''}${netChange.toLocaleString()}\n\n`;
+
+    csv += `───────────────── MOVEMENT TYPE BREAKDOWN ─────────────────\n`;
+    csv += `Type,Count,Units,Value\n`;
+    csv += `Sales OUT,${summary.sales_out.count},${summary.sales_out.qty},৳${summary.sales_out.value.toLocaleString()}\n`;
+    csv += `Purchase IN,${summary.purchase_in.count},${summary.purchase_in.qty},৳${summary.purchase_in.value.toLocaleString()}\n`;
+    csv += `Sales Returns IN,${summary.return_in.count},${summary.return_in.qty},৳${summary.return_in.value.toLocaleString()}\n`;
+    csv += `Purchase Returns OUT,${summary.return_out.count},${summary.return_out.qty},৳${summary.return_out.value.toLocaleString()}\n`;
+    csv += `Damage/Waste OUT,${summary.damage_out.count},${summary.damage_out.qty},৳${summary.damage_out.value.toLocaleString()}\n`;
+    csv += `Adjustments IN,${summary.adjustment_in.count},${summary.adjustment_in.qty},৳${summary.adjustment_in.value.toLocaleString()}\n`;
+    csv += `Adjustments OUT,${summary.adjustment_out.count},${summary.adjustment_out.qty},৳${summary.adjustment_out.value.toLocaleString()}\n`;
+    csv += `Transfers,${summary.transfer.count},${summary.transfer.qty},৳${summary.transfer.value.toLocaleString()}\n`;
+
+    csv += `\n───────────────── DAILY MOVEMENT TREND ─────────────────\n`;
+    csv += `Date,Transactions,Units IN,Units OUT,Net,Value IN,Value OUT\n`;
+    Object.entries(dailyMovements).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
+      const net = data.in - data.out;
+      csv += `${date},${data.count},${data.in},${data.out},${net > 0 ? '+' : ''}${net},৳${data.inValue.toLocaleString()},৳${data.outValue.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── TOP PRODUCTS BY MOVEMENT ─────────────────\n`;
+    csv += `Product,Category,Total Movements,Units IN,Units OUT,Net Change\n`;
+    Object.values(productMovements).sort((a, b) => b.movements - a.movements).slice(0, 50).forEach(p => {
+      csv += `"${p.name}","${p.category}",${p.movements},${p.in},${p.out},${p.net > 0 ? '+' : ''}${p.net}\n`;
+    });
+
+    csv += `\n───────────────── DETAILED MOVEMENTS (Recent 500) ─────────────────\n`;
+    csv += `Date,Product,Direction,Type,Quantity,Reference #,Value,Notes\n`;
     movements.slice(0, 500).forEach(m => {
       const prod = inventoryMap[m.inventory_item_id] || {};
-      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}","${m.movement_type || ''}","${m.reference_type || ''}",${m.quantity || 0},"${m.reference_number || ''}","${(m.notes || '').substring(0, 50)}"\n`;
+      csv += `"${m.movement_date?.split('T')[0] || ''}","${prod.item_name || 'Unknown'}","${m.movement_type || ''}","${m.reference_type || ''}",${m.quantity || 0},"${m.reference_number || ''}",৳${Math.abs(m.total_value || 0)},"${(m.notes || '').substring(0, 40)}"\n`;
     });
 
     return csv;
   };
 
-  const generateSupplierReport = (purchaseOrders) => {
+  const generateSupplierReport = (purchaseOrders, inventory) => {
     const supplierStats = {};
+    const monthlySpend = {};
     
     purchaseOrders.forEach(po => {
       const supplier = po.supplier_name || 'Unknown';
+      const poDate = po.order_date?.split('T')[0] || '';
+      const month = poDate.substring(0, 7);
+      const poValue = po.total_amount || 0;
+      const status = po.order_status || 'unknown';
+
       if (!supplierStats[supplier]) {
-        supplierStats[supplier] = { orders: 0, total: 0, items: 0 };
+        supplierStats[supplier] = { 
+          orders: 0, 
+          total: 0, 
+          items: 0,
+          completedOrders: 0,
+          pendingOrders: 0,
+          products: new Set(),
+          categories: new Set()
+        };
       }
       supplierStats[supplier].orders++;
-      supplierStats[supplier].total += po.total_amount || 0;
-      supplierStats[supplier].items += po.order_items?.length || 0;
+      supplierStats[supplier].total += poValue;
+      
+      if (['delivered', 'received', 'completed'].includes(status)) {
+        supplierStats[supplier].completedOrders++;
+      } else if (['pending', 'ordered', 'processing'].includes(status)) {
+        supplierStats[supplier].pendingOrders++;
+      }
+
+      (po.order_items || []).forEach(item => {
+        supplierStats[supplier].items++;
+        if (item.inventory_id) supplierStats[supplier].products.add(item.inventory_id);
+      });
+
+      // Monthly spend tracking
+      if (!monthlySpend[month]) monthlySpend[month] = {};
+      if (!monthlySpend[month][supplier]) monthlySpend[month][supplier] = 0;
+      monthlySpend[month][supplier] += poValue;
     });
 
-    let csv = `Supplier Performance Report\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}\n`;
-    csv += `Total Suppliers: ${Object.keys(supplierStats).length}\n\n`;
-    csv += 'Supplier Name,Total Orders,Total Items,Total Value,Avg Order Value\n';
-
-    Object.entries(supplierStats).sort((a, b) => b[1].total - a[1].total).forEach(([name, stats]) => {
-      csv += `"${name}",${stats.orders},${stats.items},${stats.total},${stats.orders > 0 ? Math.round(stats.total / stats.orders) : 0}\n`;
+    // Add inventory-based supplier info
+    inventory.forEach(i => {
+      const supplier = i.supplier_name;
+      if (supplier && supplierStats[supplier]) {
+        if (i.category) supplierStats[supplier].categories.add(i.category);
+      }
     });
+
+    const totalSpend = Object.values(supplierStats).reduce((s, sup) => s + sup.total, 0);
+    const totalOrders = Object.values(supplierStats).reduce((s, sup) => s + sup.orders, 0);
+
+    let csv = `═══════════════════════════════════════════════════════════════\n`;
+    csv += `                  SUPPLIER PERFORMANCE REPORT\n`;
+    csv += `═══════════════════════════════════════════════════════════════\n`;
+    csv += `Report Date: ${toBDTDate()}\n`;
+    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n\n`;
+
+    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
+    csv += `Active Suppliers:        ${Object.keys(supplierStats).length}\n`;
+    csv += `Total Purchase Orders:   ${totalOrders}\n`;
+    csv += `Total Procurement Value: ৳${totalSpend.toLocaleString()}\n`;
+    csv += `Avg Order Value:         ৳${totalOrders > 0 ? (totalSpend / totalOrders).toFixed(0) : 0}\n\n`;
+
+    csv += `───────────────── SUPPLIER RANKING (By Value) ─────────────────\n`;
+    csv += `Rank,Supplier,Orders,Completed,Pending,Items,Products,Categories,Total Value,% of Spend,Avg Order\n`;
+    Object.entries(supplierStats)
+      .sort((a, b) => b[1].total - a[1].total)
+      .forEach(([name, stats], idx) => {
+        const pctSpend = totalSpend > 0 ? (stats.total / totalSpend * 100) : 0;
+        const avgOrder = stats.orders > 0 ? (stats.total / stats.orders) : 0;
+        csv += `${idx + 1},"${name}",${stats.orders},${stats.completedOrders},${stats.pendingOrders},${stats.items},${stats.products.size},${stats.categories.size},৳${stats.total.toLocaleString()},${pctSpend.toFixed(1)}%,৳${avgOrder.toFixed(0)}\n`;
+      });
+
+    csv += `\n───────────────── MONTHLY SPEND BY SUPPLIER ─────────────────\n`;
+    const months = Object.keys(monthlySpend).sort();
+    const suppliers = Object.keys(supplierStats).sort((a, b) => supplierStats[b].total - supplierStats[a].total).slice(0, 10);
+    csv += `Month,${suppliers.map(s => `"${s}"`).join(',')},Total\n`;
+    months.forEach(month => {
+      const monthData = monthlySpend[month] || {};
+      const values = suppliers.map(s => monthData[s] || 0);
+      const monthTotal = Object.values(monthData).reduce((s, v) => s + v, 0);
+      csv += `${month},${values.map(v => `৳${v.toLocaleString()}`).join(',')},৳${monthTotal.toLocaleString()}\n`;
+    });
+
+    csv += `\n───────────────── SUPPLIER PERFORMANCE METRICS ─────────────────\n`;
+    csv += `Supplier,Fulfillment Rate,Unique Products,Categories Served\n`;
+    Object.entries(supplierStats)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 30)
+      .forEach(([name, stats]) => {
+        const fulfillmentRate = stats.orders > 0 ? (stats.completedOrders / stats.orders * 100) : 0;
+        const categories = Array.from(stats.categories).join('; ');
+        csv += `"${name}",${fulfillmentRate.toFixed(0)}%,${stats.products.size},"${categories}"\n`;
+      });
 
     return csv;
   };
