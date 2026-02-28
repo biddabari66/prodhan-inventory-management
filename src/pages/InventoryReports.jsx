@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { withPermission } from '../components/common/PermissionGuard';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import ComprehensiveReportGenerator from '../components/reports/ComprehensiveReportGenerator';
 
 // BDT timezone helpers
 const toBDTDate = (date = new Date()) => {
@@ -553,9 +554,12 @@ function InventoryReportsPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-2 h-12 p-1 bg-slate-100 rounded-xl">
+          <TabsList className="grid w-full max-w-xl grid-cols-3 h-12 p-1 bg-slate-100 rounded-xl">
             <TabsTrigger value="quick" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
               Quick Reports
+            </TabsTrigger>
+            <TabsTrigger value="comprehensive" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+              📊 Comprehensive
             </TabsTrigger>
             <TabsTrigger value="custom" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
               Report Builder
@@ -678,6 +682,11 @@ function InventoryReportsPage() {
                 />
               ))}
             </div>
+          </TabsContent>
+
+          {/* Comprehensive Report Tab */}
+          <TabsContent value="comprehensive" className="space-y-6 mt-6">
+            <ComprehensiveReportGenerator />
           </TabsContent>
 
           {/* Custom Report Builder Tab */}
