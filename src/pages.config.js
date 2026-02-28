@@ -105,6 +105,7 @@ import ThirdPartyApps from './pages/ThirdPartyApps';
 import UserAccessManager from './pages/UserAccessManager';
 import Webhooks from './pages/Webhooks';
 import WhatsAppWebhook from './pages/WhatsAppWebhook';
+import CRM from './pages/CRM';
 import __Layout from './Layout.jsx';
 
 
@@ -167,6 +168,7 @@ export const PAGES = {
     "UserAccessManager": UserAccessManager,
     "Webhooks": Webhooks,
     "WhatsAppWebhook": WhatsAppWebhook,
+    "CRM": CRM,
 }
 
 export const pagesConfig = {

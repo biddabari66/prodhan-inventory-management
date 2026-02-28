@@ -43,48 +43,39 @@ function CustomerManagementPage() {
   const [customerDateFrom, setCustomerDateFrom] = useState('');
   const [customerDateTo, setCustomerDateTo] = useState('');
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
+  // Initial load handled by currentPage effect above
 
   useEffect(() => {
     filterCustomers();
   }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const pageSize = 50;
+
   const loadCustomers = async () => {
     try {
-      // 🚀 FAST LOADING: Load ALL customers in batches for complete history
-      const batchSize = 1000;
-      let allCustomers = [];
-      let offset = 0;
-      let hasMore = true;
+      // 🚀 PAGINATION: Load only current page for fast performance
+      const offset = (currentPage - 1) * pageSize;
+      const pageData = await base44.entities.Customer.list('-total_spent', pageSize, offset);
+      setCustomers(pageData);
       
-      // First batch loads immediately for fast UI render
-      const firstBatch = await base44.entities.Customer.list('-total_spent', batchSize);
-      setCustomers(firstBatch);
-      allCustomers = firstBatch;
-      
-      // Continue loading remaining batches in background
-      if (firstBatch.length === batchSize) {
-        offset = batchSize;
-        while (hasMore) {
-          const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
-          allCustomers = [...allCustomers, ...batch];
-          setCustomers([...allCustomers]); // Progressive update
-          offset += batchSize;
-          hasMore = batch.length === batchSize;
-          
-          // Safety limit
-          if (allCustomers.length >= 10000) break;
-        }
+      // Get total count for pagination (first time only)
+      if (totalCustomers === 0) {
+        const allCount = await base44.entities.Customer.list('-total_spent', 10000);
+        setTotalCustomers(allCount.length);
       }
-      
-      setCustomers(allCustomers);
     } catch (error) {
       console.error('Error loading customers:', error);
       toast.error('Failed to load customers');
     }
   };
+
+  // Reload when page changes
+  useEffect(() => {
+    loadCustomers();
+  }, [currentPage]);
 
   const filterCustomers = () => {
     let filtered = [...customers];
@@ -157,12 +148,28 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  const stats = {
-    total: customers.length,
-    vip: customers.filter(c => c.total_spent >= 50000).length,
-    regular: customers.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
-    totalRevenue: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
-  };
+  // All-time stats from total customers (not just current page)
+  const [allTimeStats, setAllTimeStats] = useState({ total: 0, vip: 0, regular: 0, totalRevenue: 0 });
+  
+  useEffect(() => {
+    const loadAllTimeStats = async () => {
+      try {
+        const allCustomers = await base44.entities.Customer.list('-total_spent', 10000);
+        setAllTimeStats({
+          total: allCustomers.length,
+          vip: allCustomers.filter(c => c.total_spent >= 50000).length,
+          regular: allCustomers.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
+          totalRevenue: allCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
+        });
+        setTotalCustomers(allCustomers.length);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    };
+    loadAllTimeStats();
+  }, []);
+
+  const stats = allTimeStats;
 
   const handleExportCustomers = () => {
     const headers = ['Customer Name', 'Phone', 'Email', 'Type', 'Total Orders', 'Total Spent', 'Customer Since', 'Notes'];
@@ -471,6 +478,47 @@ function CustomerManagementPage() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+            {/* Pagination */}
+            <div className="flex items-center justify-between p-4 border-t">
+              <p className="text-sm text-slate-500">
+                Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCustomers)} of {totalCustomers} customers
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, Math.ceil(totalCustomers / pageSize)) }, (_, i) => {
+                    const pageNum = currentPage <= 3 ? i + 1 : currentPage - 2 + i;
+                    if (pageNum > Math.ceil(totalCustomers / pageSize)) return null;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={currentPage === pageNum ? 'bg-red-600' : ''}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= Math.ceil(totalCustomers / pageSize)}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
