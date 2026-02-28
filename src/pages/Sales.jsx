@@ -66,6 +66,7 @@ function SalesPage() {
     includePaymentInfo: true,
     onlyFiltered: true
   });
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   // 🚀 LIGHTNING FAST: Cached current user
   const { data: currentUser } = useQuery({
@@ -968,16 +969,26 @@ function SalesPage() {
               </Button>
             )}
             {canCreate && (
-              <Button
-                onClick={() => {
-                  setEditingOrder(null);
-                  setIsOrderFormOpen(true);
-                }}
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Create Sale
-              </Button>
+              <>
+                <Button
+                  onClick={() => setIsBulkUploadOpen(true)}
+                  variant="outline"
+                  className="h-11 px-4 bg-white border-blue-500 text-blue-700 hover:bg-blue-50 shadow-sm rounded-xl"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Bulk CSV
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEditingOrder(null);
+                    setIsOrderFormOpen(true);
+                  }}
+                  className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Sale
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -1811,6 +1822,29 @@ function SalesPage() {
             {selectedOrder && (
               <OrderInvoice order={selectedOrder} />
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Upload Dialog */}
+        <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0">
+            <DialogHeader className="px-6 pt-6 pb-2">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <Upload className="w-6 h-6 text-blue-600" />
+                Bulk Order Import (CSV)
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6 overflow-y-auto max-h-[80vh]">
+              <BulkOrderCSVUpload
+                inventory={inventory}
+                customers={customers}
+                onComplete={() => {
+                  queryClient.invalidateQueries(['orders-sales-recent']);
+                  queryClient.invalidateQueries(['orders-sales-all']);
+                  setIsBulkUploadOpen(false);
+                }}
+              />
+            </div>
           </DialogContent>
         </Dialog>
 
