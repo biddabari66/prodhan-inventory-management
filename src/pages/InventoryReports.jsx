@@ -289,19 +289,24 @@ function InventoryReportsPage() {
       totalRevenue += order.total_amount || 0;
       
       (order.order_items || []).forEach(item => {
+        const prod = inventoryMap[item.inventory_id] || {};
         if (!productSales[item.inventory_id]) {
-          const prod = inventoryMap[item.inventory_id] || {};
           productSales[item.inventory_id] = {
-            name: item.product_name || prod.item_name || 'Unknown',
+            name: item.item_name || prod.item_name || 'Unknown',
             category: prod.category || 'N/A',
             qty: 0,
             revenue: 0,
             cost: 0
           };
         }
-        productSales[item.inventory_id].qty += item.quantity || 0;
-        productSales[item.inventory_id].revenue += (item.quantity || 0) * (item.unit_price || 0);
-        productSales[item.inventory_id].cost += (item.quantity || 0) * (inventoryMap[item.inventory_id]?.purchase_price || 0);
+        // Use actual prices from order items
+        const qty = item.quantity || 0;
+        const unitPrice = item.unit_price || prod.selling_price || 0;
+        const purchasePrice = prod.purchase_price || 0;
+        
+        productSales[item.inventory_id].qty += qty;
+        productSales[item.inventory_id].revenue += qty * unitPrice;
+        productSales[item.inventory_id].cost += qty * purchasePrice;
       });
     });
 
@@ -314,7 +319,7 @@ function InventoryReportsPage() {
     csv += 'Product Name,Category,Quantity Sold,Revenue,Cost,Profit\n';
     
     rows.forEach(r => {
-      csv += `"${r.name}","${r.category}",${r.qty},${r.revenue},${r.cost},${r.revenue - r.cost}\n`;
+      csv += `"${r.name}","${r.category}",${r.qty},${r.revenue.toFixed(2)},${r.cost.toFixed(2)},${(r.revenue - r.cost).toFixed(2)}\n`;
     });
 
     return csv;

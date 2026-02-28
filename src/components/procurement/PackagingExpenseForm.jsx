@@ -218,16 +218,22 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
     e.preventDefault();
 
     if (formData.items.length === 0) {
-      toast.error('Please add at least one packaging item');
+      toast.error('Please add at least one packaging item or expense');
       return;
     }
 
+    // Recalculate total to ensure accuracy
+    const itemsTotal = formData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const finalTotal = itemsTotal + (formData.courier_expense || 0);
+
     const expenseData = {
       ...formData,
+      total_amount: finalTotal,
       expense_number: expense?.expense_number || `PKG-${Date.now()}`,
       created_by_id: currentUser?.id,
       created_by_name: currentUser?.display_name || currentUser?.full_name,
-      status: expense ? formData.status : 'pending_approval'
+      status: expense?.status || 'pending_approval',
+      expense_type: 'packaging'
     };
 
     onSubmit(expenseData);

@@ -116,11 +116,11 @@ function FinanceDashboardPage() {
     staleTime: 2 * 60 * 1000
   });
 
-  // Fetch returns/damages
+  // Fetch returns/damages with proper value calculation
   const { data: returns = [] } = useQuery({
     queryKey: ['finance-returns', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allMovements = await base44.entities.InventoryMovement.list('-movement_date', 1000);
+      const allMovements = await base44.entities.InventoryMovement.list('-movement_date', 10000);
       return allMovements.filter(m => {
         const mDate = m.movement_date?.split('T')[0];
         const isReturnOrDamage = m.reference_type === 'damage' || m.reference_type === 'return' || m.reference_type === 'expired';
@@ -128,6 +128,13 @@ function FinanceDashboardPage() {
       });
     },
     staleTime: 2 * 60 * 1000
+  });
+
+  // Fetch inventory for actual pricing
+  const { data: inventoryData = [] } = useQuery({
+    queryKey: ['finance-inventory'],
+    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    staleTime: 10 * 60 * 1000
   });
 
   // Fetch general expenses (Expense entity)
@@ -199,8 +206,21 @@ function FinanceDashboardPage() {
       .filter(e => e.status === 'approved')
       .reduce((sum, e) => sum + (e.total_amount || 0) + (e.courier_expense || 0), 0);
 
-    // Returns/Damage loss
-    const returnLoss = returns.reduce((sum, r) => sum + Math.abs(r.total_value || 0), 0);
+    // Returns/Damage loss - calculate using actual selling price from inventory
+    const inventoryPriceMap = {};
+    inventoryData.forEach(inv => {
+      inventoryPriceMap[inv.id] = inv.selling_price || 0;
+    });
+    
+    const returnLoss = returns.reduce((sum, r) => {
+      // Use total_value if present, otherwise calculate from quantity * selling price
+      if (r.total_value && r.total_value !== 0) {
+        return sum + Math.abs(r.total_value);
+      }
+      const price = inventoryPriceMap[r.inventory_item_id] || 0;
+      const qty = Math.abs(r.quantity || (r.metadata?.original_quantity || 1));
+      return sum + (qty * price);
+    }, 0);
 
     // General expenses (from Expense entity - not purchase orders)
     const otherExpenses = generalExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -596,42 +616,43 @@ function FinanceDashboardPage() {
 
         {/* Secondary Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-lg font-bold text-slate-900">{financials.deliveredOrders}</p>
-              <p className="text-xs text-slate-500">Delivered</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-lg font-bold text-amber-600">{financials.pendingOrders}</p>
-              <p className="text-xs text-slate-500">Pending</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-lg font-bold text-red-600">{financials.cancelledOrders}</p>
-              <p className="text-xs text-slate-500">Cancelled</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-lg font-bold text-purple-600">{financials.returnedOrders}</p>
-              <p className="text-xs text-slate-500">Returned</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-lg font-bold text-slate-900">৳{financials.shippingRevenue.toLocaleString()}</p>
-              <p className="text-xs text-slate-500">Shipping Rev</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-lg font-bold text-orange-600">৳{financials.totalDiscount.toLocaleString()}</p>
-              <p className="text-xs text-slate-500">Discounts Given</p>
-            </CardContent>
-          </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-lg font-bold text-slate-900">{financials.deliveredOrders}</p>
+            <p className="text-xs text-slate-500">Delivered</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-lg font-bold text-amber-600">{financials.pendingOrders}</p>
+            <p className="text-xs text-slate-500">Pending</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-lg font-bold text-red-600">{financials.cancelledOrders}</p>
+            <p className="text-xs text-slate-500">Cancelled</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-help" title={`${returns.length} return/damage records`}>
+          <CardContent className="p-4 text-center">
+            <p className="text-lg font-bold text-purple-600">{financials.returnedOrders}</p>
+            <p className="text-xs text-slate-500">Returns</p>
+            <p className="text-xs text-red-600 font-semibold mt-1">Loss: ৳{financials.returnLoss.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-lg font-bold text-slate-900">৳{financials.shippingRevenue.toLocaleString()}</p>
+            <p className="text-xs text-slate-500">Shipping Rev</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-lg font-bold text-orange-600">৳{financials.totalDiscount.toLocaleString()}</p>
+            <p className="text-xs text-slate-500">Discounts Given</p>
+          </CardContent>
+        </Card>
         </div>
 
         {/* Charts Row */}
