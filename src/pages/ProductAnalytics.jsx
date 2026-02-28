@@ -24,6 +24,9 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdSpendTracker from '../components/analytics/AdSpendTracker';
 import ROIGenerator from '../components/analytics/ROIGenerator';
+import ProductTrends from '../components/analytics/ProductTrends';
+import LowStockAlerts from '../components/analytics/LowStockAlerts';
+import InventoryABCAnalysis from '../components/analytics/InventoryABCAnalysis';
 
 const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#06B6D4', '#A855F7'];
 
@@ -41,6 +44,18 @@ function ProductAnalyticsDashboard() {
     staleTime: 3 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['all-orders-analytics'],
+    queryFn: () => base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+    staleTime: 5 * 60 * 1000
+  });
+
+  const { data: allMovements = [] } = useQuery({
+    queryKey: ['all-movements-analytics'],
+    queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 5000),
+    staleTime: 5 * 60 * 1000
   });
 
   const { data: analyticsData = { success: true, data: [] }, isLoading: analyticsLoading } = useQuery({
@@ -145,18 +160,30 @@ function ProductAnalyticsDashboard() {
         
         {/* Tabs for different sections */}
         <Tabs defaultValue="analytics" className="w-full space-y-6">
-          <TabsList className="bg-white p-1 rounded-xl border shadow-sm">
+          <TabsList className="bg-white p-1 rounded-xl border shadow-sm flex-wrap">
             <TabsTrigger value="analytics" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4" />
-              Product Analytics
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="trends" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+              <Activity className="w-4 h-4" />
+              Trends
+            </TabsTrigger>
+            <TabsTrigger value="lowstock" className="gap-2 rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+              <Package className="w-4 h-4" />
+              Stock Alerts
+            </TabsTrigger>
+            <TabsTrigger value="abc" className="gap-2 rounded-lg data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+              <Target className="w-4 h-4" />
+              ABC Analysis
             </TabsTrigger>
             <TabsTrigger value="adspend" className="gap-2 rounded-lg data-[state=active]:bg-amber-600 data-[state=active]:text-white">
-              <Target className="w-4 h-4" />
+              <DollarSign className="w-4 h-4" />
               Ad Spend
             </TabsTrigger>
             <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white">
               <DollarSign className="w-4 h-4" />
-              ROI Generator
+              ROI
             </TabsTrigger>
           </TabsList>
 
@@ -455,6 +482,18 @@ function ProductAnalyticsDashboard() {
             )}
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="trends">
+            <ProductTrends inventory={inventory} orders={allOrders} movements={allMovements} />
+          </TabsContent>
+
+          <TabsContent value="lowstock">
+            <LowStockAlerts inventory={inventory} orders={allOrders} movements={allMovements} />
+          </TabsContent>
+
+          <TabsContent value="abc">
+            <InventoryABCAnalysis inventory={inventory} orders={allOrders} movements={allMovements} />
           </TabsContent>
 
           <TabsContent value="adspend">

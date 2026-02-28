@@ -15,10 +15,12 @@ import { Progress } from '@/components/ui/progress';
 import {
   TrendingUp, TrendingDown, DollarSign, Target, Megaphone, PieChart,
   Plus, Download, Filter, Calendar, BarChart3, Zap, AlertTriangle,
-  CheckCircle, XCircle, ArrowUpRight, ArrowDownRight, Loader2
+  CheckCircle, XCircle, ArrowUpRight, ArrowDownRight, Loader2, Package, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission } from '../components/common/PermissionGuard';
+import CampaignManager from '../components/marketing/CampaignManager';
+import BudgetAlerts from '../components/marketing/BudgetAlerts';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { 
   PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, 
@@ -293,10 +295,7 @@ function MarketingROIPage() {
               <Target className="w-4 h-4 mr-2" />
               Set Budget
             </Button>
-            <Button onClick={() => setIsAddCampaignOpen(true)} className="bg-pink-600 hover:bg-pink-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Record Ad Spend
-            </Button>
+            <CampaignManager onCampaignCreated={() => queryClient.invalidateQueries(['ad-spends'])} />
           </div>
         </div>
 
@@ -388,6 +387,9 @@ function MarketingROIPage() {
           </Card>
         </div>
 
+        {/* Budget Alerts */}
+        <BudgetAlerts budgets={budgets} adSpends={adSpends} />
+
         {/* Budget Progress */}
         {currentMonthBudget && (
           <Card className="bg-white border-0 shadow-sm">
@@ -437,6 +439,9 @@ function MarketingROIPage() {
             </TabsTrigger>
             <TabsTrigger value="budgets" className="gap-2 rounded-lg data-[state=active]:bg-pink-600 data-[state=active]:text-white">
               <DollarSign className="w-4 h-4" />Budgets
+            </TabsTrigger>
+            <TabsTrigger value="channels" className="gap-2 rounded-lg data-[state=active]:bg-pink-600 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4" />Channels
             </TabsTrigger>
           </TabsList>
 
@@ -575,7 +580,7 @@ function MarketingROIPage() {
           <TabsContent value="budgets" className="mt-6">
             <Card className="bg-white border-0 shadow-sm overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Marketing Budgets</CardTitle>
+                <CardTitle>Marketing Budgets by Period</CardTitle>
                 <Button size="sm" onClick={() => setIsAddBudgetOpen(true)}>
                   <Plus className="w-4 h-4 mr-1" />Add Budget
                 </Button>
@@ -627,6 +632,87 @@ function MarketingROIPage() {
                   })}
                 </TableBody>
               </Table>
+            </Card>
+          </TabsContent>
+
+          {/* Channels Performance Tab */}
+          <TabsContent value="channels" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(metrics.platformStats).map(([platform, data], idx) => {
+                const platformOrders = filteredOrders.filter(o => {
+                  const orderProducts = (o.order_items || []).map(i => i.inventory_id);
+                  const platformProducts = filteredAdSpends
+                    .filter(s => s.platform === platform)
+                    .flatMap(s => (s.products || []).map(p => p.inventory_id));
+                  return orderProducts.some(p => platformProducts.includes(p));
+                });
+                const platformRevenue = platformOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+                const platformROI = data.spend > 0 ? ((platformRevenue - data.spend) / data.spend) * 100 : 0;
+                
+                return (
+                  <Card key={platform} className="bg-white border-0 shadow-sm">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            platform === 'facebook' ? 'bg-blue-100' :
+                            platform === 'google' ? 'bg-red-100' :
+                            platform === 'instagram' ? 'bg-pink-100' :
+                            platform === 'tiktok' ? 'bg-slate-100' : 'bg-purple-100'
+                          }`}>
+                            <Megaphone className={`w-5 h-5 ${
+                              platform === 'facebook' ? 'text-blue-600' :
+                              platform === 'google' ? 'text-red-600' :
+                              platform === 'instagram' ? 'text-pink-600' :
+                              platform === 'tiktok' ? 'text-slate-600' : 'text-purple-600'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="font-semibold capitalize">{platform}</p>
+                            <p className="text-xs text-slate-500">{data.campaigns} campaigns</p>
+                          </div>
+                        </div>
+                        <Badge className={platformROI >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          {platformROI.toFixed(0)}% ROI
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-slate-500">Spend</p>
+                          <p className="font-bold text-pink-600">৳{data.spend.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500">Revenue</p>
+                          <p className="font-bold text-green-600">৳{platformRevenue.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Channel Budget Allocation */}
+            <Card className="bg-white border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Set Channel Budgets</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-500 mb-4">
+                  Set monthly budgets per channel using the "Set Budget" button. Select the platform when creating the budget to track channel-specific spending.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {['facebook', 'google', 'instagram', 'tiktok', 'youtube', 'other'].map(platform => {
+                    const spend = metrics.platformStats[platform]?.spend || 0;
+                    return (
+                      <div key={platform} className="p-3 bg-slate-50 rounded-lg text-center">
+                        <p className="text-xs text-slate-500 capitalize">{platform}</p>
+                        <p className="font-bold">৳{(spend / 1000).toFixed(1)}K</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>

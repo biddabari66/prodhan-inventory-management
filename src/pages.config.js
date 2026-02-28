@@ -54,6 +54,7 @@ import AttendanceMy from './pages/AttendanceMy';
 import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
 import AutoReportSettings from './pages/AutoReportSettings';
+import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
 import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
@@ -79,6 +80,7 @@ import InventoryReturns from './pages/InventoryReturns';
 import InventorySuppliers from './pages/InventorySuppliers';
 import KPIDashboard from './pages/KPIDashboard';
 import ManualReporting from './pages/ManualReporting';
+import MarketingROI from './pages/MarketingROI';
 import MyAttendance from './pages/MyAttendance';
 import NotificationPreferences from './pages/NotificationPreferences';
 import NotificationSettings from './pages/NotificationSettings';
@@ -105,8 +107,6 @@ import ThirdPartyApps from './pages/ThirdPartyApps';
 import UserAccessManager from './pages/UserAccessManager';
 import Webhooks from './pages/Webhooks';
 import WhatsAppWebhook from './pages/WhatsAppWebhook';
-import CRM from './pages/CRM';
-import MarketingROI from './pages/MarketingROI';
 import __Layout from './Layout.jsx';
 
 
@@ -118,6 +118,7 @@ export const PAGES = {
     "AuditTrailViewer": AuditTrailViewer,
     "Auth": Auth,
     "AutoReportSettings": AutoReportSettings,
+    "CRM": CRM,
     "CategorySettings": CategorySettings,
     "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
@@ -143,6 +144,7 @@ export const PAGES = {
     "InventorySuppliers": InventorySuppliers,
     "KPIDashboard": KPIDashboard,
     "ManualReporting": ManualReporting,
+    "MarketingROI": MarketingROI,
     "MyAttendance": MyAttendance,
     "NotificationPreferences": NotificationPreferences,
     "NotificationSettings": NotificationSettings,
@@ -169,8 +171,6 @@ export const PAGES = {
     "UserAccessManager": UserAccessManager,
     "Webhooks": Webhooks,
     "WhatsAppWebhook": WhatsAppWebhook,
-    "CRM": CRM,
-    "MarketingROI": MarketingROI,
 }
 
 export const pagesConfig = {
