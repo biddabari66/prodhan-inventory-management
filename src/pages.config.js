@@ -106,6 +106,7 @@ import UserAccessManager from './pages/UserAccessManager';
 import Webhooks from './pages/Webhooks';
 import WhatsAppWebhook from './pages/WhatsAppWebhook';
 import CRM from './pages/CRM';
+import MarketingROI from './pages/MarketingROI';
 import __Layout from './Layout.jsx';
 
 
@@ -169,6 +170,7 @@ export const PAGES = {
     "Webhooks": Webhooks,
     "WhatsAppWebhook": WhatsAppWebhook,
     "CRM": CRM,
+    "MarketingROI": MarketingROI,
 }
 
 export const pagesConfig = {
