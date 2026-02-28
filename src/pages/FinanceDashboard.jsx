@@ -634,10 +634,10 @@ function FinanceDashboardPage() {
             <p className="text-xs text-slate-500">Cancelled</p>
           </CardContent>
         </Card>
-        <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-help" title={`${returns.length} return/damage records`}>
+        <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-help" title={`${returns.length} return/damage records from Inventory Returns page`}>
           <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-purple-600">{financials.returnedOrders}</p>
-            <p className="text-xs text-slate-500">Returns</p>
+            <p className="text-lg font-bold text-purple-600">{returns.length}</p>
+            <p className="text-xs text-slate-500">Returns/Damages</p>
             <p className="text-xs text-red-600 font-semibold mt-1">Loss: ৳{financials.returnLoss.toLocaleString()}</p>
           </CardContent>
         </Card>
