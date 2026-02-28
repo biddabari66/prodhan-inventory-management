@@ -299,6 +299,10 @@ function CRMPage() {
               <Users className="w-4 h-4" />
               All Leads
             </TabsTrigger>
+            <TabsTrigger value="conversion" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+              <ArrowRight className="w-4 h-4" />
+              Conversion
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
               <PieChart className="w-4 h-4" />
               Analytics
@@ -480,6 +484,120 @@ function CRMPage() {
             </Card>
           </TabsContent>
 
+          {/* Lead to Customer Conversion View */}
+          <TabsContent value="conversion" className="mt-6 space-y-6">
+            {/* Conversion Funnel */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              {[
+                { stage: 'New Leads', count: stats.newLeads, color: 'bg-blue-500', percentage: 100 },
+                { stage: 'Contacted', count: stats.contacted, color: 'bg-yellow-500', percentage: stats.total > 0 ? ((stats.contacted / stats.total) * 100) : 0 },
+                { stage: 'Qualified', count: stats.qualified, color: 'bg-purple-500', percentage: stats.total > 0 ? ((stats.qualified / stats.total) * 100) : 0 },
+                { stage: 'Negotiation', count: leads.filter(l => l.lead_status === 'negotiation').length, color: 'bg-orange-500', percentage: stats.total > 0 ? ((leads.filter(l => l.lead_status === 'negotiation').length / stats.total) * 100) : 0 },
+                { stage: 'Converted', count: stats.converted, color: 'bg-green-500', percentage: stats.total > 0 ? ((stats.converted / stats.total) * 100) : 0 },
+              ].map((item, idx) => (
+                <Card key={idx} className="bg-white border-0 shadow-sm relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${item.color}`}></div>
+                  <CardContent className="p-5 text-center">
+                    <div className={`w-12 h-12 mx-auto rounded-full ${item.color} bg-opacity-20 flex items-center justify-center mb-3`}>
+                      <span className="text-xl font-bold">{item.count}</span>
+                    </div>
+                    <p className="font-semibold text-slate-800">{item.stage}</p>
+                    <p className="text-xs text-slate-500">{item.percentage.toFixed(1)}% of total</p>
+                    {idx < 4 && (
+                      <ArrowRight className="w-5 h-5 text-slate-300 absolute right-2 top-1/2 -translate-y-1/2 hidden lg:block" />
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Recent Conversions */}
+            <Card className="bg-white border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  Recently Converted to Customers
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {leads.filter(l => l.lead_status === 'converted').slice(0, 10).map(lead => {
+                    const customerOrders = orders.filter(o => o.customer_phone === lead.phone);
+                    const totalRevenue = customerOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+                    return (
+                      <div key={lead.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                            <CheckCircle className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{lead.student_name}</p>
+                            <p className="text-sm text-slate-500">{lead.phone}</p>
+                            <div className="flex gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">{lead.lead_source}</Badge>
+                              <Badge className="bg-green-100 text-green-800 text-xs">{customerOrders.length} orders</Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-green-600">৳{totalRevenue.toLocaleString()}</p>
+                          <p className="text-xs text-slate-500">Total Revenue</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {leads.filter(l => l.lead_status === 'converted').length === 0 && (
+                    <div className="text-center py-8 text-slate-500">
+                      <Target className="w-12 h-12 mx-auto text-slate-300 mb-2" />
+                      <p>No conversions yet. Keep nurturing your leads!</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ready to Convert - Hot Leads */}
+            <Card className="bg-white border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  Hot Leads - Ready to Convert
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {leads.filter(l => ['qualified', 'negotiation'].includes(l.lead_status)).slice(0, 8).map(lead => (
+                    <div key={lead.id} className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-100 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                          {lead.student_name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{lead.student_name}</p>
+                          <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <Phone className="w-3 h-3" />
+                            {lead.phone}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {getStatusBadge(lead.lead_status)}
+                        <Button 
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => handleStatusChange(lead, 'converted')}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Convert
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Analytics View */}
           <TabsContent value="analytics" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -515,26 +633,56 @@ function CRMPage() {
               {/* Source Performance */}
               <Card className="bg-white border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Lead Sources</CardTitle>
+                  <CardTitle className="text-lg">Lead Sources Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {Object.entries(stats.sourceStats).sort((a, b) => b[1].count - a[1].count).slice(0, 6).map(([source, data], idx) => (
-                      <div key={source} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                          <span className="font-medium capitalize">{source.replace('_', ' ')}</span>
+                    {Object.entries(stats.sourceStats).sort((a, b) => b[1].count - a[1].count).slice(0, 6).map(([source, data], idx) => {
+                      const convRate = data.count > 0 ? ((data.converted / data.count) * 100) : 0;
+                      return (
+                        <div key={source} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                            <span className="font-medium capitalize">{source.replace('_', ' ')}</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{data.count} leads</p>
+                            <p className="text-xs text-green-600">{data.converted} converted ({convRate.toFixed(1)}%)</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold">{data.count}</p>
-                          <p className="text-xs text-green-600">{data.converted} converted</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Conversion Rate by Time */}
+            <Card className="bg-white border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Key Metrics Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-blue-600">{stats.weekLeads}</p>
+                    <p className="text-xs text-slate-600">Leads This Week</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-green-600">{stats.conversionRate}%</p>
+                    <p className="text-xs text-slate-600">Conversion Rate</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-purple-600">৳{(stats.convertedRevenue / stats.converted || 0).toFixed(0)}</p>
+                    <p className="text-xs text-slate-600">Avg Customer Value</p>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-amber-600">{stats.newLeads + stats.contacted}</p>
+                    <p className="text-xs text-slate-600">Active Pipeline</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
