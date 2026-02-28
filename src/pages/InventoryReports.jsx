@@ -277,6 +277,8 @@ function InventoryReportsPage() {
   };
 
   // Report generation functions - ADVANCED & COMPREHENSIVE
+  // Revenue = sum of (unit_price * quantity) from order items
+  // Profit = Revenue - COGS (COGS = purchase_price * quantity)
   const generateSalesReport = (orders, inventory, startDate, endDate) => {
     const inventoryMap = {};
     inventory.forEach(i => { inventoryMap[i.id] = i; });
@@ -292,6 +294,7 @@ function InventoryReportsPage() {
     let completedOrders = 0;
     let cancelledOrders = 0;
     let pendingOrders = 0;
+    let totalUnitsSold = 0;
 
     orders.forEach(order => {
       if (order.order_status === 'cancelled') {
@@ -304,96 +307,113 @@ function InventoryReportsPage() {
       if (['delivered', 'shipped', 'out_for_delivery'].includes(order.order_status)) {
         completedOrders++;
       }
-      
+
       totalOrders++;
-      
-      // Calculate order total from items if total_amount is missing or 0
-      let orderTotal = order.total_amount || 0;
-      if (!orderTotal || orderTotal === 0) {
-        orderTotal = (order.order_items || []).reduce((sum, item) => {
-          return sum + ((item.quantity || 0) * (item.unit_price || 0));
-        }, 0);
-      }
-      totalRevenue += orderTotal;
-      
-      // Daily breakdown
       const orderDate = order.order_date?.split('T')[0] || 'unknown';
+
+      // Initialize daily tracking
       if (!dailySales[orderDate]) {
-        dailySales[orderDate] = { orders: 0, revenue: 0, units: 0 };
+        dailySales[orderDate] = { orders: 0, revenue: 0, cost: 0, units: 0, profit: 0 };
       }
       dailySales[orderDate].orders++;
-      dailySales[orderDate].revenue += orderTotal;
 
-      // Order source
-      const source = order.order_source || 'other';
-      if (!orderSourceSales[source]) orderSourceSales[source] = { orders: 0, revenue: 0 };
-      orderSourceSales[source].orders++;
-      orderSourceSales[source].revenue += orderTotal;
+      // Calculate revenue & cost from each order item (most accurate method)
+      let orderRevenue = 0;
+      let orderCost = 0;
+      let orderUnits = 0;
 
-      // Payment method
-      const payment = order.payment_method || 'unknown';
-      if (!paymentMethodSales[payment]) paymentMethodSales[payment] = { orders: 0, revenue: 0 };
-      paymentMethodSales[payment].orders++;
-      paymentMethodSales[payment].revenue += orderTotal;
-      
       (order.order_items || []).forEach(item => {
         const prod = inventoryMap[item.inventory_id] || {};
-        const qty = item.quantity || 0;
-        // Use item's actual unit_price first, then subtotal/qty, then product selling price
-        let unitPrice = item.unit_price || 0;
-        if (!unitPrice && item.subtotal && qty > 0) {
-          unitPrice = item.subtotal / qty;
+        const qty = item.quantity || 1;
+
+        // Revenue: Use item.subtotal if available, else unit_price * qty, else selling_price * qty
+        let itemRevenue = 0;
+        if (item.subtotal && item.subtotal > 0) {
+          itemRevenue = item.subtotal;
+        } else if (item.unit_price && item.unit_price > 0) {
+          itemRevenue = item.unit_price * qty;
+        } else if (prod.selling_price && prod.selling_price > 0) {
+          itemRevenue = prod.selling_price * qty;
         }
-        if (!unitPrice) {
-          unitPrice = prod.selling_price || 0;
-        }
+
+        // Cost: purchase_price from inventory * quantity
         const purchasePrice = prod.purchase_price || 0;
-        const itemRevenue = qty * unitPrice;
-        const itemCost = qty * purchasePrice;
-        
-        totalCost += itemCost;
-        if (dailySales[orderDate]) {
-          dailySales[orderDate].units += qty;
-        }
+        const itemCost = purchasePrice * qty;
+
+        orderRevenue += itemRevenue;
+        orderCost += itemCost;
+        orderUnits += qty;
 
         // Category breakdown
         const cat = prod.category || 'Uncategorized';
-        if (!categorySales[cat]) categorySales[cat] = { qty: 0, revenue: 0, cost: 0, products: 0 };
+        if (!categorySales[cat]) categorySales[cat] = { qty: 0, revenue: 0, cost: 0, products: new Set() };
         categorySales[cat].qty += qty;
         categorySales[cat].revenue += itemRevenue;
         categorySales[cat].cost += itemCost;
+        categorySales[cat].products.add(item.inventory_id);
 
-        if (!productSales[item.inventory_id]) {
-          productSales[item.inventory_id] = {
+        // Product breakdown
+        const prodKey = item.inventory_id || item.item_name || 'unknown';
+        if (!productSales[prodKey]) {
+          productSales[prodKey] = {
             name: item.item_name || prod.item_name || 'Unknown',
             sku: prod.barcode || prod.isbn || '',
             category: cat,
             qty: 0,
             revenue: 0,
             cost: 0,
+            profit: 0,
+            orders: 0,
             avgPrice: 0,
-            orders: 0
+            purchasePrice: purchasePrice,
+            sellingPrice: prod.selling_price || 0
           };
-          categorySales[cat].products++;
         }
-        
-        productSales[item.inventory_id].qty += qty;
-        productSales[item.inventory_id].revenue += itemRevenue;
-        productSales[item.inventory_id].cost += itemCost;
-        productSales[item.inventory_id].orders++;
+
+        productSales[prodKey].qty += qty;
+        productSales[prodKey].revenue += itemRevenue;
+        productSales[prodKey].cost += itemCost;
+        productSales[prodKey].profit += (itemRevenue - itemCost);
+        productSales[prodKey].orders++;
       });
+
+      // Add to totals
+      totalRevenue += orderRevenue;
+      totalCost += orderCost;
+      totalUnitsSold += orderUnits;
+
+      // Update daily sales
+      dailySales[orderDate].revenue += orderRevenue;
+      dailySales[orderDate].cost += orderCost;
+      dailySales[orderDate].units += orderUnits;
+      dailySales[orderDate].profit += (orderRevenue - orderCost);
+
+      // Order source breakdown
+      const source = order.order_source || 'other';
+      if (!orderSourceSales[source]) orderSourceSales[source] = { orders: 0, revenue: 0, cost: 0 };
+      orderSourceSales[source].orders++;
+      orderSourceSales[source].revenue += orderRevenue;
+      orderSourceSales[source].cost += orderCost;
+
+      // Payment method breakdown
+      const payment = order.payment_method || 'unknown';
+      if (!paymentMethodSales[payment]) paymentMethodSales[payment] = { orders: 0, revenue: 0, cost: 0 };
+      paymentMethodSales[payment].orders++;
+      paymentMethodSales[payment].revenue += orderRevenue;
+      paymentMethodSales[payment].cost += orderCost;
     });
 
+    // Calculate product averages
     const rows = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
-    rows.forEach(r => { r.avgPrice = r.qty > 0 ? (r.revenue / r.qty) : 0; });
+    rows.forEach(r => { 
+      r.avgPrice = r.qty > 0 ? (r.revenue / r.qty) : 0;
+      r.margin = r.revenue > 0 ? ((r.profit / r.revenue) * 100) : 0;
+    });
 
-    // Recalculate total revenue from product sales if needed (more accurate)
-    const calculatedRevenue = rows.reduce((s, r) => s + r.revenue, 0);
-    const finalRevenue = calculatedRevenue > totalRevenue ? calculatedRevenue : totalRevenue;
-    const finalProfit = finalRevenue - totalCost;
-    const finalMargin = finalRevenue > 0 ? (finalProfit / finalRevenue * 100) : 0;
-    const finalAOV = totalOrders > 0 ? (finalRevenue / totalOrders) : 0;
-    const totalUnitsSold = rows.reduce((s, r) => s + r.qty, 0);
+    // Final calculations
+    const totalProfit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
+    const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
 
     let csv = `═══════════════════════════════════════════════════════════════\n`;
     csv += `                    SALES PERFORMANCE REPORT\n`;
@@ -415,9 +435,10 @@ function InventoryReportsPage() {
     csv += `Total Units Sold:        ${totalUnitsSold}\n\n`;
 
     csv += `───────────────── DAILY BREAKDOWN ─────────────────\n`;
-    csv += `Date,Orders,Revenue,Units Sold,AOV\n`;
+    csv += `Date,Orders,Revenue,Cost,Profit,Units,AOV\n`;
     Object.entries(dailySales).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
-      csv += `${date},${data.orders},৳${data.revenue.toLocaleString()},${data.units},৳${(data.revenue / data.orders).toFixed(0)}\n`;
+      const aov = data.orders > 0 ? data.revenue / data.orders : 0;
+      csv += `${date},${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${data.profit.toLocaleString()},${data.units},৳${aov.toFixed(0)}\n`;
     });
 
     csv += `\n───────────────── CATEGORY PERFORMANCE ─────────────────\n`;
@@ -425,29 +446,30 @@ function InventoryReportsPage() {
     Object.entries(categorySales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([cat, data]) => {
       const profit = data.revenue - data.cost;
       const margin = data.revenue > 0 ? (profit / data.revenue * 100) : 0;
-      csv += `"${cat}",${data.products},${data.qty},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${margin.toFixed(1)}%\n`;
+      const productCount = data.products instanceof Set ? data.products.size : data.products;
+      csv += `"${cat}",${productCount},${data.qty},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${margin.toFixed(1)}%\n`;
     });
 
     csv += `\n───────────────── ORDER SOURCE ANALYSIS ─────────────────\n`;
-    csv += `Source,Orders,Revenue,% of Total\n`;
+    csv += `Source,Orders,Revenue,Cost,Profit,% of Revenue\n`;
     Object.entries(orderSourceSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([src, data]) => {
+      const profit = data.revenue - data.cost;
       const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0;
-      csv += `"${src}",${data.orders},৳${data.revenue.toLocaleString()},${pct.toFixed(1)}%\n`;
+      csv += `"${src}",${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${pct.toFixed(1)}%\n`;
     });
 
     csv += `\n───────────────── PAYMENT METHOD BREAKDOWN ─────────────────\n`;
-    csv += `Payment Method,Orders,Revenue,% of Total\n`;
+    csv += `Payment Method,Orders,Revenue,Cost,Profit,% of Revenue\n`;
     Object.entries(paymentMethodSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([method, data]) => {
+      const profit = data.revenue - data.cost;
       const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0;
-      csv += `"${method}",${data.orders},৳${data.revenue.toLocaleString()},${pct.toFixed(1)}%\n`;
+      csv += `"${method}",${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${pct.toFixed(1)}%\n`;
     });
 
     csv += `\n───────────────── PRODUCT-WISE SALES (Top 100) ─────────────────\n`;
-    csv += `Rank,Product Name,SKU,Category,Qty Sold,Orders,Revenue,Cost,Profit,Margin%,Avg Price\n`;
+    csv += `Rank,Product Name,SKU,Category,Qty Sold,Orders,Revenue,Cost,Profit,Margin%,Avg Sell Price,Purchase Price\n`;
     rows.slice(0, 100).forEach((r, idx) => {
-      const profit = r.revenue - r.cost;
-      const margin = r.revenue > 0 ? (profit / r.revenue * 100) : 0;
-      csv += `${idx + 1},"${r.name}","${r.sku}","${r.category}",${r.qty},${r.orders},৳${r.revenue.toFixed(0)},৳${r.cost.toFixed(0)},৳${profit.toFixed(0)},${margin.toFixed(1)}%,৳${r.avgPrice.toFixed(0)}\n`;
+      csv += `${idx + 1},"${r.name}","${r.sku}","${r.category}",${r.qty},${r.orders},৳${r.revenue.toFixed(0)},৳${r.cost.toFixed(0)},৳${r.profit.toFixed(0)},${r.margin.toFixed(1)}%,৳${r.avgPrice.toFixed(0)},৳${r.purchasePrice.toFixed(0)}\n`;
     });
 
     return csv;
