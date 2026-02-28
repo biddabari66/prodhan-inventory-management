@@ -298,7 +298,7 @@ function InventoryReportsPage() {
         cancelledOrders++;
         return;
       }
-      if (['pending', 'confirmed', 'processing'].includes(order.order_status)) {
+      if (['pending', 'confirmed', 'processing', 'packed'].includes(order.order_status)) {
         pendingOrders++;
       }
       if (['delivered', 'shipped', 'out_for_delivery'].includes(order.order_status)) {
@@ -306,11 +306,18 @@ function InventoryReportsPage() {
       }
       
       totalOrders++;
-      const orderTotal = order.total_amount || 0;
+      
+      // Calculate order total from items if total_amount is missing or 0
+      let orderTotal = order.total_amount || 0;
+      if (!orderTotal || orderTotal === 0) {
+        orderTotal = (order.order_items || []).reduce((sum, item) => {
+          return sum + ((item.quantity || 0) * (item.unit_price || 0));
+        }, 0);
+      }
       totalRevenue += orderTotal;
       
       // Daily breakdown
-      const orderDate = order.order_date?.split('T')[0];
+      const orderDate = order.order_date?.split('T')[0] || 'unknown';
       if (!dailySales[orderDate]) {
         dailySales[orderDate] = { orders: 0, revenue: 0, units: 0 };
       }
@@ -332,13 +339,22 @@ function InventoryReportsPage() {
       (order.order_items || []).forEach(item => {
         const prod = inventoryMap[item.inventory_id] || {};
         const qty = item.quantity || 0;
-        const unitPrice = item.unit_price || prod.selling_price || 0;
+        // Use item's actual unit_price first, then subtotal/qty, then product selling price
+        let unitPrice = item.unit_price || 0;
+        if (!unitPrice && item.subtotal && qty > 0) {
+          unitPrice = item.subtotal / qty;
+        }
+        if (!unitPrice) {
+          unitPrice = prod.selling_price || 0;
+        }
         const purchasePrice = prod.purchase_price || 0;
         const itemRevenue = qty * unitPrice;
         const itemCost = qty * purchasePrice;
         
         totalCost += itemCost;
-        dailySales[orderDate].units += qty;
+        if (dailySales[orderDate]) {
+          dailySales[orderDate].units += qty;
+        }
 
         // Category breakdown
         const cat = prod.category || 'Uncategorized';
@@ -371,9 +387,13 @@ function InventoryReportsPage() {
     const rows = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
     rows.forEach(r => { r.avgPrice = r.qty > 0 ? (r.revenue / r.qty) : 0; });
 
-    const totalProfit = totalRevenue - totalCost;
-    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
-    const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+    // Recalculate total revenue from product sales if needed (more accurate)
+    const calculatedRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+    const finalRevenue = calculatedRevenue > totalRevenue ? calculatedRevenue : totalRevenue;
+    const finalProfit = finalRevenue - totalCost;
+    const finalMargin = finalRevenue > 0 ? (finalProfit / finalRevenue * 100) : 0;
+    const finalAOV = totalOrders > 0 ? (finalRevenue / totalOrders) : 0;
+    const totalUnitsSold = rows.reduce((s, r) => s + r.qty, 0);
 
     let csv = `═══════════════════════════════════════════════════════════════\n`;
     csv += `                    SALES PERFORMANCE REPORT\n`;
@@ -383,16 +403,16 @@ function InventoryReportsPage() {
     csv += `Department: Prodhan.com E-Commerce\n\n`;
     
     csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
-    csv += `Total Revenue:           ৳${totalRevenue.toLocaleString()}\n`;
+    csv += `Total Revenue:           ৳${finalRevenue.toLocaleString()}\n`;
     csv += `Total Cost (COGS):       ৳${totalCost.toLocaleString()}\n`;
-    csv += `Gross Profit:            ৳${totalProfit.toLocaleString()}\n`;
-    csv += `Profit Margin:           ${profitMargin.toFixed(2)}%\n`;
+    csv += `Gross Profit:            ৳${finalProfit.toLocaleString()}\n`;
+    csv += `Profit Margin:           ${finalMargin.toFixed(2)}%\n`;
     csv += `Total Orders:            ${totalOrders}\n`;
     csv += `Completed Orders:        ${completedOrders}\n`;
     csv += `Pending Orders:          ${pendingOrders}\n`;
     csv += `Cancelled Orders:        ${cancelledOrders}\n`;
-    csv += `Avg Order Value (AOV):   ৳${avgOrderValue.toFixed(2)}\n`;
-    csv += `Total Units Sold:        ${rows.reduce((s, r) => s + r.qty, 0)}\n\n`;
+    csv += `Avg Order Value (AOV):   ৳${finalAOV.toFixed(2)}\n`;
+    csv += `Total Units Sold:        ${totalUnitsSold}\n\n`;
 
     csv += `───────────────── DAILY BREAKDOWN ─────────────────\n`;
     csv += `Date,Orders,Revenue,Units Sold,AOV\n`;
