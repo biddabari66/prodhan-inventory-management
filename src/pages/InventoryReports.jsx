@@ -423,15 +423,15 @@ function InventoryReportsPage() {
     csv += `Department: Prodhan.com E-Commerce\n\n`;
     
     csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
-    csv += `Total Revenue:           ৳${finalRevenue.toLocaleString()}\n`;
+    csv += `Total Revenue:           ৳${totalRevenue.toLocaleString()}\n`;
     csv += `Total Cost (COGS):       ৳${totalCost.toLocaleString()}\n`;
-    csv += `Gross Profit:            ৳${finalProfit.toLocaleString()}\n`;
-    csv += `Profit Margin:           ${finalMargin.toFixed(2)}%\n`;
+    csv += `Gross Profit:            ৳${totalProfit.toLocaleString()}\n`;
+    csv += `Profit Margin:           ${profitMargin.toFixed(2)}%\n`;
     csv += `Total Orders:            ${totalOrders}\n`;
     csv += `Completed Orders:        ${completedOrders}\n`;
     csv += `Pending Orders:          ${pendingOrders}\n`;
     csv += `Cancelled Orders:        ${cancelledOrders}\n`;
-    csv += `Avg Order Value (AOV):   ৳${finalAOV.toFixed(2)}\n`;
+    csv += `Avg Order Value (AOV):   ৳${avgOrderValue.toFixed(2)}\n`;
     csv += `Total Units Sold:        ${totalUnitsSold}\n\n`;
 
     csv += `───────────────── DAILY BREAKDOWN ─────────────────\n`;
