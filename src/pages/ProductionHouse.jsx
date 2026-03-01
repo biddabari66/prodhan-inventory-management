@@ -263,6 +263,8 @@ function ProductionHousePage() {
   const [viewBatchDialog, setViewBatchDialog] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [receiveDialog, setReceiveDialog] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Fetch data
   const { data: currentUser } = useQuery({
@@ -552,9 +554,22 @@ function ProductionHousePage() {
 
   // Filter batches
   const filteredBatches = useMemo(() => {
-    if (statusFilter === 'all') return productionBatches;
-    return productionBatches.filter(b => b.status === statusFilter);
-  }, [productionBatches, statusFilter]);
+    let filtered = [...productionBatches];
+    
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(b => b.status === statusFilter);
+    }
+    
+    if (startDate) {
+      filtered = filtered.filter(b => b.batch_date >= startDate);
+    }
+    
+    if (endDate) {
+      filtered = filtered.filter(b => b.batch_date <= endDate);
+    }
+    
+    return filtered;
+  }, [productionBatches, statusFilter, startDate, endDate]);
 
   // Batches with remaining stock (active production)
   const activeBatches = useMemo(() => {
@@ -682,11 +697,51 @@ function ProductionHousePage() {
           )}
         </div>
 
+        {/* Date Filters */}
+        <Card className="bg-white border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs text-slate-600 font-medium">Start Date</Label>
+                <Input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-600 font-medium">End Date</Label>
+                <Input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-600 font-medium">Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="inventory" className="space-y-4">
           <TabsList>
             <TabsTrigger value="inventory">🏭 Production Inventory ({activeBatches.length})</TabsTrigger>
             <TabsTrigger value="pending_pos">📦 Pending POs ({purchaseOrders.length})</TabsTrigger>
-            <TabsTrigger value="history">📜 All Batches</TabsTrigger>
+            <TabsTrigger value="history">📜 All Batches ({filteredBatches.length})</TabsTrigger>
             <TabsTrigger value="waste">🗑️ Waste Log</TabsTrigger>
           </TabsList>
 

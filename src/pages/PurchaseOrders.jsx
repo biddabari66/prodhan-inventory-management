@@ -1487,7 +1487,17 @@ function PurchaseOrdersPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{order.order_items?.length || 0} items</Badge>
+                          <div className="space-y-1 max-w-xs">
+                            {order.order_items?.slice(0, 2).map((item, idx) => (
+                              <div key={idx} className="text-sm">
+                                <span className="font-medium">{item.item_name}</span>
+                                <span className="text-slate-500 ml-1">({item.quantity_ordered} {item.unit || 'pc'})</span>
+                              </div>
+                            ))}
+                            {order.order_items?.length > 2 && (
+                              <Badge variant="outline" className="text-xs">+{order.order_items.length - 2} more</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           ৳{order.total_amount?.toLocaleString()}

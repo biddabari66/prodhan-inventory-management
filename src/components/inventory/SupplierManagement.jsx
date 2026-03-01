@@ -454,9 +454,12 @@ export default function SupplierManagement({ selectedDepartment }) {
 
     // Count orders and value per supplier
     purchaseOrders.forEach(po => {
-      if (po.supplier_id && stats[po.supplier_id]) {
+      if (po.supplier_id) {
+        if (!stats[po.supplier_id]) {
+          stats[po.supplier_id] = { productCount: 0, products: [], totalOrders: 0, totalValue: 0 };
+        }
         stats[po.supplier_id].totalOrders++;
-        stats[po.supplier_id].totalValue += po.total_amount || 0;
+        stats[po.supplier_id].totalValue += (po.total_amount || 0);
       }
     });
 
