@@ -83,12 +83,17 @@ Deno.serve(async (req) => {
     };
     
     const now = new Date();
-    const batchSize = 50;
+    const batchSize = 10; // Smaller batches to avoid rate limiting
+    const delayMs = 500; // Delay between batches
+    
+    // Helper to delay execution
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     
     for (let i = 0; i < customers.length; i += batchSize) {
       const batch = customers.slice(i, i + batchSize);
       
-      const updatePromises = batch.map(async (customer) => {
+      // Process batch sequentially to avoid rate limits
+      for (const customer of batch) {
         try {
           const customerOrders = ordersByPhone[customer.customer_phone] || [];
           results.processed++;
