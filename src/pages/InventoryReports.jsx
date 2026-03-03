@@ -186,30 +186,60 @@ function InventoryReportsPage() {
         base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000)
       ]);
 
-      // Filter data by date range (BDT timezone)
+      // Filter data by date range AND time (BDT timezone)
       const filteredOrders = orders.filter(o => {
         const orderDate = o.order_date?.split('T')[0];
-        return orderDate >= startDate && orderDate <= endDate;
+        const orderTime = o.order_date ? new Date(o.order_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit' }) : '00:00';
+        
+        if (orderDate < startDate || orderDate > endDate) return false;
+        if (orderDate === startDate && orderTime < startTime) return false;
+        if (orderDate === endDate && orderTime > endTime) return false;
+        
+        return true;
       });
 
       const filteredMovements = movements.filter(m => {
         const mDate = m.movement_date?.split('T')[0];
-        return mDate >= startDate && mDate <= endDate;
+        const mTime = m.created_date ? new Date(m.created_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit' }) : '00:00';
+        
+        if (mDate < startDate || mDate > endDate) return false;
+        if (mDate === startDate && mTime < startTime) return false;
+        if (mDate === endDate && mTime > endTime) return false;
+        
+        return true;
       });
 
       const filteredPurchaseOrders = purchaseOrders.filter(p => {
         const pDate = p.order_date?.split('T')[0];
-        return pDate >= startDate && pDate <= endDate;
+        const pTime = p.created_date ? new Date(p.created_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit' }) : '00:00';
+        
+        if (pDate < startDate || pDate > endDate) return false;
+        if (pDate === startDate && pTime < startTime) return false;
+        if (pDate === endDate && pTime > endTime) return false;
+        
+        return true;
       });
 
       const filteredPackaging = packagingExpenses.filter(e => {
         const eDate = e.expense_date?.split('T')[0];
-        return eDate >= startDate && eDate <= endDate;
+        const eTime = e.created_date ? new Date(e.created_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit' }) : '00:00';
+        
+        if (eDate < startDate || eDate > endDate) return false;
+        if (eDate === startDate && eTime < startTime) return false;
+        if (eDate === endDate && eTime > endTime) return false;
+        
+        return true;
       });
 
       const filteredExpenses = expenses.filter(e => {
         const eDate = e.expense_date?.split('T')[0];
-        return eDate >= startDate && eDate <= endDate;
+        const eTime = e.created_date ? new Date(e.created_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit' }) : '00:00';
+        
+        if (eDate < startDate || eDate > endDate) return false;
+        if (eDate === startDate && eTime < startTime) return false;
+        if (eDate === endDate && eTime > endTime) return false;
+        
+        return true;
       });
 
       // Generate CSV report based on type
