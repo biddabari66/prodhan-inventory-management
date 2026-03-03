@@ -52,15 +52,16 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     toast.info('Generating comprehensive report...');
 
     try {
-      // Fetch all required data in parallel
-      const [orders, inventory, movements, adSpends, purchaseOrders, packagingExpenses, customers] = await Promise.all([
+      // Fetch all required data in parallel (including production waste)
+      const [orders, inventory, movements, adSpends, purchaseOrders, packagingExpenses, customers, productionWaste] = await Promise.all([
         base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 10000),
         base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
         base44.entities.AdSpend.list('-spend_date', 1000),
         base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
         base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }),
-        base44.entities.Customer.list('-total_spent', 5000)
+        base44.entities.Customer.list('-total_spent', 5000),
+        base44.entities.ProductionWasteLog.list('-waste_date', 5000)
       ]);
 
       // Filter by date range (BDT)
@@ -87,6 +88,12 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       const filteredPackaging = packagingExpenses.filter(e => {
         const eDate = e.expense_date?.split('T')[0];
         return eDate >= startDate && eDate <= endDate;
+      });
+
+      // Filter production waste by date
+      const filteredWaste = productionWaste.filter(w => {
+        const wDate = w.waste_date?.split('T')[0];
+        return wDate >= startDate && wDate <= endDate;
       });
 
       // Build inventory map
@@ -175,8 +182,11 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       const totalAdSpend = filteredAdSpends.reduce((s, a) => s + (a.total_spend_bdt || 0), 0);
       const totalPackaging = filteredPackaging.reduce((s, e) => s + (e.total_amount || 0) + (e.courier_expense || 0), 0);
       
+      // Calculate production waste cost
+      const totalProductionWaste = filteredWaste.reduce((s, w) => s + (w.waste_value || 0), 0);
+      
       const grossProfit = totalRevenue - totalCost;
-      const netProfit = grossProfit - totalReturns - totalDamages - totalAdSpend - totalPackaging;
+      const netProfit = grossProfit - totalReturns - totalDamages - totalAdSpend - totalPackaging - totalProductionWaste;
       const roi = (totalAdSpend + totalCost) > 0 ? ((netProfit / (totalAdSpend + totalCost)) * 100) : 0;
 
       // Generate report
@@ -232,6 +242,7 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     csv += '───────────────────────────────────────────────────────────────\n';
     csv += `Returns Value,৳${summary.totalReturns.toLocaleString()}\n`;
     csv += `Damages/Waste Value,৳${summary.totalDamages.toLocaleString()}\n`;
+    csv += `Production Waste,৳${(summary.totalProductionWaste || 0).toLocaleString()}\n`;
     csv += `Ad Spend,৳${summary.totalAdSpend.toLocaleString()}\n`;
     csv += `Packaging & Courier,৳${summary.totalPackaging.toLocaleString()}\n`;
     csv += '\n';
@@ -337,6 +348,10 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     <div class="summary-card red">
       <h3>৳${summary.totalDamages.toLocaleString()}</h3>
       <p>Damage Loss</p>
+    </div>
+    <div class="summary-card red">
+      <h3>৳${(summary.totalProductionWaste || 0).toLocaleString()}</h3>
+      <p>Production Waste</p>
     </div>
     <div class="summary-card blue">
       <h3>৳${summary.totalAdSpend.toLocaleString()}</h3>

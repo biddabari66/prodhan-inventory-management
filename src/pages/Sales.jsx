@@ -1437,7 +1437,35 @@ function SalesPage() {
                                 </DropdownMenuItem>
                               )}
                               {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'cancelled')}>
+                                <DropdownMenuItem onClick={async () => {
+                                  // For shipped orders, use the revert function
+                                  if (['shipped', 'out_for_delivery'].includes(order.order_status)) {
+                                    const reason = prompt('Enter cancellation reason (inventory will be reverted):');
+                                    if (reason === null) return;
+                                    
+                                    const loadingToast = toast.loading('Cancelling order and reverting inventory...');
+                                    try {
+                                      const response = await base44.functions.invoke('revertInventoryOnCancel', {
+                                        order_id: order.id,
+                                        reason: reason
+                                      });
+                                      toast.dismiss(loadingToast);
+                                      
+                                      if (response.data?.success) {
+                                        queryClient.invalidateQueries(['orders']);
+                                        queryClient.invalidateQueries(['inventory']);
+                                        toast.success(`Order cancelled. ${response.data.items_reverted} items restored to inventory.`);
+                                      } else {
+                                        toast.error(response.data?.error || 'Failed to cancel order');
+                                      }
+                                    } catch (error) {
+                                      toast.dismiss(loadingToast);
+                                      toast.error('Error: ' + error.message);
+                                    }
+                                  } else {
+                                    handleQuickStatusChange(order, 'cancelled');
+                                  }
+                                }}>
                                   <XCircle className="w-4 h-4 mr-2 text-red-600" />
                                   Cancel Order
                                 </DropdownMenuItem>
