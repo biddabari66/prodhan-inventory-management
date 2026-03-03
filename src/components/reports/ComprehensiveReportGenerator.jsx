@@ -193,14 +193,14 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       if (reportFormat === 'excel') {
         generateColorfulExcel(
           productStats, 
-          { totalRevenue, totalCost, totalReturns, totalDamages, totalAdSpend, totalPackaging, grossProfit, netProfit, roi },
+          { totalRevenue, totalCost, totalReturns, totalDamages, totalAdSpend, totalPackaging, totalProductionWaste, grossProfit, netProfit, roi },
           filteredOrders.length,
           startDate, endDate
         );
       } else {
         await generatePDFReport(
           productStats,
-          { totalRevenue, totalCost, totalReturns, totalDamages, totalAdSpend, totalPackaging, grossProfit, netProfit, roi },
+          { totalRevenue, totalCost, totalReturns, totalDamages, totalAdSpend, totalPackaging, totalProductionWaste, grossProfit, netProfit, roi },
           filteredOrders.length,
           startDate, endDate
         );
