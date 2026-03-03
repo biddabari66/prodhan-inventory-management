@@ -747,6 +747,32 @@ function CustomerDetails({ customer }) {
                 <span className="text-sm text-slate-600">Customer Since:</span>
                 <span className="text-sm">{customer.customer_since ? new Date(customer.customer_since).toLocaleDateString() : 'N/A'}</span>
               </div>
+              {customer.clv > 0 && (
+                <>
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-600">CLV:</span>
+                      <span className="text-sm font-bold text-purple-600">৳{(customer.clv || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Avg Order:</span>
+                    <span className="text-sm">৳{(customer.avg_order_value || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Segment:</span>
+                    <Badge className={
+                      customer.clv_segment === 'platinum' ? 'bg-purple-100 text-purple-800' :
+                      customer.clv_segment === 'gold' ? 'bg-amber-100 text-amber-800' :
+                      customer.clv_segment === 'silver' ? 'bg-slate-200 text-slate-700' :
+                      customer.clv_segment === 'at_risk' ? 'bg-red-100 text-red-800' :
+                      'bg-blue-100 text-blue-800'
+                    }>
+                      {customer.clv_segment?.toUpperCase() || 'N/A'}
+                    </Badge>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -788,12 +814,34 @@ function CustomerDetails({ customer }) {
                           {order.order_status}
                         </Badge>
                       </div>
-                      <p className="text-sm text-slate-600">
-                        {order.order_items?.length || 0} items • ৳{order.total_amount?.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {new Date(order.order_date).toLocaleDateString()}
-                      </p>
+                      {/* Product Details */}
+                      <div className="bg-slate-50 rounded-lg p-2 mt-2">
+                        {order.order_items && order.order_items.length > 0 ? (
+                          <div className="space-y-1">
+                            {order.order_items.map((item, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-sm">
+                                <span className="text-slate-700 font-medium truncate max-w-[200px]">
+                                  {item.item_name}
+                                </span>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <span>×{item.quantity}</span>
+                                  <span className="text-green-600 font-medium">৳{(item.subtotal || item.unit_price * item.quantity).toLocaleString()}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500 italic">No item details available</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <p className="text-xs text-slate-500">
+                          {new Date(order.order_date).toLocaleDateString()}
+                        </p>
+                        <p className="text-sm font-bold text-green-600">
+                          Total: ৳{order.total_amount?.toLocaleString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
