@@ -213,7 +213,7 @@ function SalesPage() {
     return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
   }, [currentUser]);
 
-  // Create order mutation
+  // Create order mutation - NO inventory deduction on create
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
       let customerId = orderData.customer_id;
@@ -253,95 +253,14 @@ function SalesPage() {
         customer_id: customerId
       });
 
-      // Update inventory with combo and variant support
-      for (const item of orderData.order_items) {
-        const inventoryItem = inventory.find(i => i.id === item.inventory_id);
-        if (!inventoryItem) continue;
-
-        if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
-          for (const bundleItem of inventoryItem.bundle_items) {
-            const componentItem = inventory.find(i => i.id === bundleItem.inventory_id);
-            if (componentItem) {
-              const deductQty = bundleItem.quantity * item.quantity;
-              const newComponentStock = componentItem.current_stock - deductQty;
-
-              await Inventory.update(bundleItem.inventory_id, {
-                current_stock: newComponentStock
-              });
-
-              await base44.entities.InventoryMovement.create({
-                inventory_item_id: bundleItem.inventory_id,
-                movement_type: 'out',
-                quantity: -deductQty,
-                reference_type: 'sale',
-                reference_id: order.id,
-                reference_number: order.order_number,
-                unit_cost: componentItem.selling_price,
-                total_value: -(deductQty * componentItem.selling_price),
-                performed_by: currentUser?.id || 'system',
-                notes: `Combo Sale: ${order.order_number} - Component of ${inventoryItem.item_name} (${item.quantity}×)`,
-                movement_date: new Date().toISOString().split('T')[0],
-                balance_after: newComponentStock
-              });
-            }
-          }
-
-          await base44.entities.InventoryMovement.create({
-            inventory_item_id: item.inventory_id,
-            movement_type: 'out',
-            quantity: -item.quantity,
-            reference_type: 'sale',
-            reference_id: order.id,
-            reference_number: order.order_number,
-            unit_cost: item.unit_price,
-            total_value: -(item.quantity * item.unit_price),
-            performed_by: currentUser?.id || 'system',
-            notes: `Combo Sale: ${order.order_number} - ${inventoryItem.bundle_items.length} components auto-deducted`,
-            movement_date: new Date().toISOString().split('T')[0],
-            balance_after: inventoryItem.current_stock
-          });
-        } else {
-          const newStock = inventoryItem.current_stock - item.quantity;
-
-          let updatedColorVariants = inventoryItem.color_variants;
-          if (item.selected_color && inventoryItem.color_variants?.length > 0) {
-            updatedColorVariants = inventoryItem.color_variants.map(variant => {
-              if (variant.color === item.selected_color) {
-                return { ...variant, quantity: variant.quantity - item.quantity };
-              }
-              return variant;
-            });
-          }
-
-          await Inventory.update(item.inventory_id, {
-            current_stock: newStock,
-            ...(updatedColorVariants && { color_variants: updatedColorVariants })
-          });
-
-          await base44.entities.InventoryMovement.create({
-            inventory_item_id: item.inventory_id,
-            movement_type: 'out',
-            quantity: -item.quantity,
-            reference_type: 'sale',
-            reference_id: order.id,
-            reference_number: order.order_number,
-            unit_cost: item.unit_price,
-            total_value: -(item.quantity * item.unit_price),
-            performed_by: currentUser?.id || 'system',
-            notes: `Sale: ${order.order_number} - Customer: ${order.customer_name}${item.selected_color ? ` - Color: ${item.selected_color}` : ''}`,
-            movement_date: new Date().toISOString().split('T')[0],
-            balance_after: newStock
-          });
-        }
-      }
+      // NO inventory deduction here - only when shipped
 
       return order;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['orders']);
       queryClient.invalidateQueries(['customers']);
-      queryClient.invalidateQueries(['inventory']);
-      toast.success('Sale order created successfully!');
+      toast.success('Sale order created successfully! Inventory will be deducted when shipped.');
       setIsOrderFormOpen(false);
       setEditingOrder(null);
     },
@@ -367,13 +286,87 @@ function SalesPage() {
     },
   });
 
-  // Update order status
+  // Update order status with automatic inventory deduction on ship
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, newStatus }) => {
+      const order = orders.find(o => o.id === orderId);
+      
+      // If status is changing to 'shipped', deduct inventory
+      if (newStatus === 'shipped' && order.order_status !== 'shipped') {
+        for (const item of order.order_items || []) {
+          const inventoryItem = inventory.find(i => i.id === item.inventory_id);
+          if (!inventoryItem) continue;
+
+          // Handle bundles
+          if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
+            for (const bundleItem of inventoryItem.bundle_items) {
+              const componentItem = inventory.find(i => i.id === bundleItem.inventory_id);
+              if (componentItem) {
+                const deductQty = bundleItem.quantity * item.quantity;
+                const newComponentStock = componentItem.current_stock - deductQty;
+
+                await Inventory.update(bundleItem.inventory_id, {
+                  current_stock: newComponentStock
+                });
+
+                await base44.entities.InventoryMovement.create({
+                  inventory_item_id: bundleItem.inventory_id,
+                  movement_type: 'out',
+                  quantity: -deductQty,
+                  reference_type: 'sale',
+                  reference_id: order.id,
+                  reference_number: order.order_number,
+                  unit_cost: componentItem.selling_price,
+                  total_value: -(deductQty * componentItem.selling_price),
+                  performed_by: currentUser?.id || 'system',
+                  notes: `Shipped - Combo Component: ${order.order_number}`,
+                  movement_date: new Date().toISOString().split('T')[0],
+                  balance_after: newComponentStock
+                });
+              }
+            }
+          } else {
+            // Regular product
+            const newStock = inventoryItem.current_stock - item.quantity;
+
+            let updatedColorVariants = inventoryItem.color_variants;
+            if (item.selected_color && inventoryItem.color_variants?.length > 0) {
+              updatedColorVariants = inventoryItem.color_variants.map(variant => {
+                if (variant.color === item.selected_color) {
+                  return { ...variant, quantity: variant.quantity - item.quantity };
+                }
+                return variant;
+              });
+            }
+
+            await Inventory.update(item.inventory_id, {
+              current_stock: newStock,
+              ...(updatedColorVariants && { color_variants: updatedColorVariants })
+            });
+
+            await base44.entities.InventoryMovement.create({
+              inventory_item_id: item.inventory_id,
+              movement_type: 'out',
+              quantity: -item.quantity,
+              reference_type: 'sale',
+              reference_id: order.id,
+              reference_number: order.order_number,
+              unit_cost: item.unit_price,
+              total_value: -(item.quantity * item.unit_price),
+              performed_by: currentUser?.id || 'system',
+              notes: `Shipped - Order: ${order.order_number}${item.selected_color ? ` - Color: ${item.selected_color}` : ''}`,
+              movement_date: new Date().toISOString().split('T')[0],
+              balance_after: newStock
+            });
+          }
+        }
+      }
+      
       return await Order.update(orderId, { order_status: newStatus });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['inventory']);
       toast.success('Order status updated!');
     },
     onError: (error) => {

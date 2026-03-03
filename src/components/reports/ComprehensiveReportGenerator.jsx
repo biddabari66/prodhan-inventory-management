@@ -97,10 +97,10 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       const returns = filteredMovements.filter(m => m.reference_type === 'return');
       const damages = filteredMovements.filter(m => m.reference_type === 'damage' || m.reference_type === 'expired');
 
-      // Product-level breakdown
+      // Product-level breakdown with accurate pricing
       const productStats = {};
       filteredOrders.forEach(order => {
-        if (order.order_status === 'returned') return;
+        if (order.order_status === 'returned' || order.order_status === 'cancelled') return;
         
         (order.order_items || []).forEach(item => {
           const inv = inventoryMap[item.inventory_id] || {};
@@ -123,13 +123,16 @@ export default function ComprehensiveReportGenerator({ onClose }) {
           }
           
           const qty = item.quantity || 0;
-          const unitPrice = item.unit_price || inv.selling_price || 0;
+          // Revenue: Use item.subtotal if available, else unit_price * qty
+          const itemRevenue = item.subtotal || (item.unit_price * qty) || (inv.selling_price * qty) || 0;
+          // Cost: Use purchase_price from inventory
           const purchasePrice = inv.purchase_price || 0;
+          const itemCost = purchasePrice * qty;
           
           productStats[key].qtySold += qty;
-          productStats[key].revenue += qty * unitPrice;
-          productStats[key].cost += qty * purchasePrice;
-          productStats[key].profit += (qty * unitPrice) - (qty * purchasePrice);
+          productStats[key].revenue += itemRevenue;
+          productStats[key].cost += itemCost;
+          productStats[key].profit += (itemRevenue - itemCost);
         });
       });
 
