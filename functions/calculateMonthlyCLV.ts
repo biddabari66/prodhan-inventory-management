@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     // Group orders by customer phone
     const ordersByPhone = {};
     for (const order of allOrders) {
-      if (!order.customer_phone) return;
+      if (!order.customer_phone) continue;
       if (!ordersByPhone[order.customer_phone]) {
         ordersByPhone[order.customer_phone] = [];
       }
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       if (order.order_status !== 'cancelled') {
         ordersByPhone[order.customer_phone].push(order);
       }
-    });
+    }
     
     const results = {
       processed: 0,
