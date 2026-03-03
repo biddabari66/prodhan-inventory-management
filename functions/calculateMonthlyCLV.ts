@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
             });
             results.segments.new++;
             results.updated++;
-            return;
+            continue;
           }
           
           // Sort orders by date
@@ -163,9 +163,12 @@ Deno.serve(async (req) => {
         } catch (error) {
           console.error(`Error processing customer ${customer.id}:`, error);
         }
-      });
+      }
       
-      await Promise.all(updatePromises);
+      // Delay between batches to avoid rate limiting
+      if (i + batchSize < customers.length) {
+        await delay(delayMs);
+      }
     }
     
     // Create audit log
