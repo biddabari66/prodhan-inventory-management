@@ -3,15 +3,28 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 /**
  * REVERT INVENTORY ON ORDER CANCELLATION
  * When a shipped order is cancelled or returned, restore inventory
+ * Can be called by:
+ * 1. Manual cancellation from Sales page
+ * 2. Auto-update scheduler when courier reports cancelled/returned
  */
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
     
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // Allow both authenticated users and service role calls
+    let performedBy = 'system';
+    let performedByName = 'System Auto-Revert';
+    
+    try {
+      const user = await base44.auth.me();
+      if (user) {
+        performedBy = user.id;
+        performedByName = user.full_name;
+      }
+    } catch (e) {
+      // Service role call - continue without user
+      console.log('Service role call - no user context');
     }
     
     const { order_id, reason } = await req.json();
@@ -73,7 +86,7 @@ Deno.serve(async (req) => {
                 reference_number: order.order_number,
                 unit_cost: componentItem.purchase_price || 0,
                 total_value: restoreQty * (componentItem.purchase_price || 0),
-                performed_by: user.id,
+                performed_by: performedBy,
                 notes: `Reverted from cancelled order: ${order.order_number} - ${reason || 'Order cancelled'}`,
                 movement_date: new Date().toISOString().split('T')[0],
                 balance_after: newStock
@@ -117,7 +130,7 @@ Deno.serve(async (req) => {
             reference_number: order.order_number,
             unit_cost: item.unit_price || inventoryItem.purchase_price || 0,
             total_value: restoreQty * (item.unit_price || inventoryItem.purchase_price || 0),
-            performed_by: user.id,
+            performed_by: performedBy,
             notes: `Reverted from cancelled order: ${order.order_number}${item.selected_color ? ` - Color: ${item.selected_color}` : ''} - ${reason || 'Order cancelled'}`,
             movement_date: new Date().toISOString().split('T')[0],
             balance_after: newStock
@@ -139,22 +152,24 @@ Deno.serve(async (req) => {
       }
     }
     
-    // Update order status
-    await base44.asServiceRole.entities.Order.update(order.id, {
-      order_status: 'cancelled',
-      notes: `${order.notes || ''}\n[${new Date().toISOString()}] Cancelled: ${reason || 'No reason provided'}. Inventory reverted.`
-    });
+    // Update order status (only if not already cancelled)
+    if (order.order_status !== 'cancelled') {
+      await base44.asServiceRole.entities.Order.update(order.id, {
+        order_status: 'cancelled',
+        notes: `${order.notes || ''}\n[${new Date().toISOString()}] Cancelled: ${reason || 'No reason provided'}. Inventory reverted by ${performedByName}.`
+      });
+    }
     
     // Audit log
     await base44.asServiceRole.entities.AuditLog.create({
-      user_id: user.id,
-      user_name: user.full_name,
+      user_id: performedBy,
+      user_name: performedByName,
       action: 'update',
       entity_type: 'Order',
       entity_id: order.id,
       module: 'sales',
-      description: `Order ${order.order_number} cancelled and inventory reverted`,
-      new_values: { order_status: 'cancelled', inventory_reverted: true, items_reverted: results.length },
+      description: `Order ${order.order_number} cancelled and inventory reverted - ${reason || 'No reason'}`,
+      new_values: { order_status: 'cancelled', inventory_reverted: true, items_reverted: results.filter(r => r.success).length },
       timestamp: new Date().toISOString()
     });
     

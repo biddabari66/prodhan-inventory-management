@@ -12,15 +12,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 function mapSteadfastStatus(steadfastStatus) {
   const statusStr = (steadfastStatus || '').toLowerCase();
   
-  if (statusStr.includes('delivered') || statusStr.includes('complete')) {
+  // Delivered states
+  if (statusStr.includes('delivered') || statusStr.includes('complete') || statusStr.includes('partial_delivered')) {
     return 'delivered';
   }
-  if (statusStr.includes('cancelled') || statusStr.includes('return')) {
-    return 'returned';
+  
+  // Cancelled/Returned states - maps to 'cancelled' order status
+  if (statusStr.includes('cancelled') || statusStr.includes('cancel') || 
+      statusStr.includes('return') || statusStr.includes('returned')) {
+    return 'cancelled';
   }
-  if (statusStr.includes('partial')) {
-    return 'delivered';
-  }
+  
+  // All other states remain as 'shipped'
   return 'shipped';
 }
 
@@ -91,20 +94,40 @@ Deno.serve(async (req) => {
     // Map external status to internal order status
     const newOrderStatus = mapSteadfastStatus(externalStatus);
     
+    // Only update order_status for delivered or cancelled, keep as shipped for other states
+    const shouldUpdateOrderStatus = (newOrderStatus === 'delivered' || newOrderStatus === 'cancelled');
+    
     // Prepare update data
     const updateData = {
       courier_status: externalStatus,
+      // Only update order_status for delivered or cancelled
       ...(newOrderStatus === 'delivered' && {
         order_status: 'delivered',
         delivery_date: new Date().toISOString().split('T')[0]
       }),
-      ...(newOrderStatus === 'returned' && {
-        order_status: 'returned'
+      ...(newOrderStatus === 'cancelled' && {
+        order_status: 'cancelled'
       })
+      // For all other states (pending, in_review, hold, etc.), keep order_status as 'shipped'
     };
     
     // Update order
     await base44.asServiceRole.entities.Order.update(order.id, updateData);
+    
+    // If cancelled and was shipped, revert inventory
+    let inventoryReverted = false;
+    if (newOrderStatus === 'cancelled' && order.order_status === 'shipped') {
+      try {
+        await base44.asServiceRole.functions.invoke('revertInventoryOnCancel', {
+          order_id: order.id,
+          reason: `Cancelled via webhook/manual update: ${externalStatus}`
+        });
+        inventoryReverted = true;
+        console.log(`✅ Inventory reverted for cancelled order ${order.order_number}`);
+      } catch (revertError) {
+        console.error(`Failed to revert inventory for ${order.order_number}:`, revertError);
+      }
+    }
     
     // Create audit log
     await base44.asServiceRole.entities.AuditLog.create({
@@ -114,21 +137,23 @@ Deno.serve(async (req) => {
       entity_type: 'Order',
       entity_id: order.id,
       module: 'sales',
-      description: `Order ${order.order_number} status: ${order.courier_status || 'unknown'} → ${externalStatus}`,
+      description: `Order ${order.order_number} courier: ${order.courier_status || 'unknown'} → ${externalStatus}${shouldUpdateOrderStatus ? ` | order: ${newOrderStatus}` : ''}${inventoryReverted ? ' | Inventory reverted' : ''}`,
       new_values: updateData,
       timestamp: new Date().toISOString()
     });
     
-    console.log(`✅ Updated ${order.order_number}: ${externalStatus} → ${newOrderStatus}`);
+    console.log(`✅ Updated ${order.order_number}: courier=${externalStatus}, order=${shouldUpdateOrderStatus ? newOrderStatus : 'unchanged'}`);
     
     return Response.json({ 
       success: true, 
       order_number: order.order_number,
       order_id: order.id,
-      previous_status: order.order_status,
+      previous_order_status: order.order_status,
       previous_courier_status: order.courier_status,
-      new_status: newOrderStatus,
-      steadfast_status: externalStatus,
+      new_order_status: shouldUpdateOrderStatus ? newOrderStatus : order.order_status,
+      new_courier_status: externalStatus,
+      order_status_changed: shouldUpdateOrderStatus,
+      inventory_reverted: inventoryReverted,
       tracking_code: order.courier_tracking_code,
       consignment_id: order.courier_consignment_id
     });

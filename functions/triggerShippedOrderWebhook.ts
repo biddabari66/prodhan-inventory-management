@@ -16,15 +16,18 @@ const N8N_STATUS_WEBHOOK = 'https://primary-production-2437.up.railway.app/webho
 function mapSteadfastStatus(steadfastStatus) {
   const statusStr = (steadfastStatus || '').toLowerCase();
   
-  if (statusStr.includes('delivered') || statusStr.includes('complete')) {
+  // Delivered states
+  if (statusStr.includes('delivered') || statusStr.includes('complete') || statusStr.includes('partial_delivered')) {
     return 'delivered';
   }
-  if (statusStr.includes('cancelled') || statusStr.includes('return')) {
-    return 'returned';
+  
+  // Cancelled/Returned states - maps to 'cancelled' order status
+  if (statusStr.includes('cancelled') || statusStr.includes('cancel') || 
+      statusStr.includes('return') || statusStr.includes('returned')) {
+    return 'cancelled';
   }
-  if (statusStr.includes('partial')) {
-    return 'delivered';
-  }
+  
+  // All other states remain as 'shipped'
   return 'shipped';
 }
 
@@ -110,20 +113,37 @@ Deno.serve(async (req) => {
         
         const newStatus = mapSteadfastStatus(delivery);
         
-        // Only update if status changed
-        if (order.order_status !== newStatus || order.courier_status !== delivery) {
+        // Only update if status changed to delivered or cancelled
+        const shouldUpdateOrderStatus = (newStatus === 'delivered' || newStatus === 'cancelled');
+        
+        if (order.courier_status !== delivery || (shouldUpdateOrderStatus && order.order_status !== newStatus)) {
           const updateData = {
             courier_status: delivery,
+            // Only update order_status for delivered or cancelled
             ...(newStatus === 'delivered' && {
               order_status: 'delivered',
               delivery_date: new Date().toISOString().split('T')[0]
             }),
-            ...(newStatus === 'returned' && {
-              order_status: 'returned'
+            ...(newStatus === 'cancelled' && {
+              order_status: 'cancelled'
             })
+            // For all other states (pending, in_review, hold, etc.), keep order_status as 'shipped'
           };
           
           await base44.asServiceRole.entities.Order.update(order.id, updateData);
+          
+          // If cancelled, revert inventory
+          if (newStatus === 'cancelled' && order.order_status === 'shipped') {
+            try {
+              await base44.asServiceRole.functions.invoke('revertInventoryOnCancel', {
+                order_id: order.id,
+                reason: `Auto-cancelled by courier: ${delivery}`
+              });
+              console.log(`✅ Inventory reverted for cancelled order ${order.order_number}`);
+            } catch (revertError) {
+              console.error(`Failed to revert inventory for ${order.order_number}:`, revertError);
+            }
+          }
           
           // Create audit log
           await base44.asServiceRole.entities.AuditLog.create({
@@ -133,7 +153,7 @@ Deno.serve(async (req) => {
             entity_type: 'Order',
             entity_id: order.id,
             module: 'sales',
-            description: `Order ${order.order_number} auto-updated: ${order.courier_status || 'shipped'} → ${delivery}`,
+            description: `Order ${order.order_number} auto-updated: ${order.courier_status || 'shipped'} → ${delivery}${shouldUpdateOrderStatus ? ` (order status: ${newStatus})` : ' (order status unchanged)'}`,
             new_values: updateData,
             timestamp: new Date().toISOString()
           });
@@ -145,9 +165,11 @@ Deno.serve(async (req) => {
             order_number: order.order_number,
             consignment_id: consignmentId,
             success: true,
-            previous_status: order.courier_status,
+            previous_courier_status: order.courier_status,
             new_courier_status: delivery,
-            new_order_status: newStatus
+            previous_order_status: order.order_status,
+            new_order_status: shouldUpdateOrderStatus ? newStatus : order.order_status,
+            inventory_reverted: newStatus === 'cancelled' && order.order_status === 'shipped'
           });
         } else {
           results.push({
