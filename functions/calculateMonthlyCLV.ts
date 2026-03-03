@@ -45,15 +45,27 @@ Deno.serve(async (req) => {
     console.log(`📊 Calculating CLV for ${customers.length} customers...`);
     
     // Fetch all orders for analysis
-    const allOrders = await base44.asServiceRole.entities.Order.filter(
-      { department: 'prodhan_com_e_commerce' }, 
-      '-order_date', 
-      50000
-    );
+    let allOrders = [];
+    try {
+      allOrders = await base44.asServiceRole.entities.Order.filter(
+        { department: 'prodhan_com_e_commerce' }, 
+        '-order_date', 
+        50000
+      );
+      // Ensure it's an array
+      if (!Array.isArray(allOrders)) {
+        allOrders = [];
+      }
+    } catch (orderError) {
+      console.error('Error fetching orders:', orderError);
+      allOrders = [];
+    }
+    
+    console.log(`📊 Found ${allOrders.length} orders to analyze`);
     
     // Group orders by customer phone
     const ordersByPhone = {};
-    allOrders.forEach(order => {
+    for (const order of allOrders) {
       if (!order.customer_phone) return;
       if (!ordersByPhone[order.customer_phone]) {
         ordersByPhone[order.customer_phone] = [];
