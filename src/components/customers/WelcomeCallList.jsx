@@ -17,12 +17,27 @@ export default function WelcomeCallList() {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const pageSize = 50;
 
-  // 🚀 FAST: Fetch orders with optimized caching
+  // 🚀 FAST: Fetch orders with pagination
   const { data: orders = [], isLoading: ordersLoading, refetch } = useQuery({
-    queryKey: ['orders-welcome-calls'],
-    queryFn: () => base44.entities.Order.list('-order_date', 2000),
-    staleTime: 30000, // 30 sec cache for fast reloads
+    queryKey: ['orders-welcome-calls', currentPage],
+    queryFn: async () => {
+      const offset = (currentPage - 1) * pageSize;
+      const pageData = await base44.entities.Order.list('-order_date', pageSize, offset);
+      
+      // Get total count on first load
+      if (totalOrders === 0) {
+        const allOrders = await base44.entities.Order.list('-order_date', 10000);
+        const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+        setTotalOrders(allOrders.filter(o => validStatuses.includes(o.order_status)).length);
+      }
+      
+      return pageData;
+    },
+    staleTime: 30000,
     cacheTime: 5 * 60 * 1000
   });
 
@@ -381,6 +396,37 @@ export default function WelcomeCallList() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && totalOrders > pageSize && (
+        <Card className="bg-white border-0 shadow-sm mt-4">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">
+                Page {currentPage} of {Math.ceil(totalOrders / pageSize)}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= Math.ceil(totalOrders / pageSize)}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

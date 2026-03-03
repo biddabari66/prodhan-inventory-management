@@ -22,11 +22,25 @@ export default function FeedbackCallList() {
   const [dateTo, setDateTo] = useState('');
   const [feedbackDialog, setFeedbackDialog] = useState({ open: false, order: null, status: null });
   const [feedbackNotes, setFeedbackNotes] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const pageSize = 50;
 
-  // 🚀 FAST: Fetch delivered orders for feedback calls
+  // 🚀 FAST: Fetch shipped + delivered orders for feedback calls with pagination
   const { data: orders = [], isLoading: ordersLoading, refetch } = useQuery({
-    queryKey: ['orders-feedback-calls'],
-    queryFn: () => base44.entities.Order.list('-order_date', 2000),
+    queryKey: ['orders-feedback-calls', currentPage],
+    queryFn: async () => {
+      const offset = (currentPage - 1) * pageSize;
+      const pageData = await base44.entities.Order.list('-order_date', pageSize, offset);
+      
+      // Get total count on first load
+      if (totalOrders === 0) {
+        const allOrders = await base44.entities.Order.list('-order_date', 10000);
+        setTotalOrders(allOrders.filter(o => ['shipped', 'delivered'].includes(o.order_status)).length);
+      }
+      
+      return pageData;
+    },
     staleTime: 30000,
     cacheTime: 5 * 60 * 1000
   });
@@ -54,13 +68,13 @@ export default function FeedbackCallList() {
     return map;
   }, [feedbackStatuses]);
 
-  // 🚀 OPTIMIZED: Convert delivered orders to feedback cards
+  // 🚀 OPTIMIZED: Convert shipped + delivered orders to feedback cards
   const orderCards = useMemo(() => {
     if (!orders.length) return [];
     
-    // Only delivered orders need feedback calls
+    // Shipped and delivered orders need feedback calls
     return orders
-      .filter(order => order.order_status === 'delivered')
+      .filter(order => ['shipped', 'delivered'].includes(order.order_status))
       .map(order => {
         const existingStatus = statusMap.get(order.order_number);
         return {

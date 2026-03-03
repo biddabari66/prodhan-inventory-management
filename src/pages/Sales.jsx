@@ -1636,9 +1636,9 @@ function SalesPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={async () => {
-                                    const loadingToast = toast.loading('🔄 Fetching status from Steadfast...');
+                                    const loadingToast = toast.loading('🔄 Updating status...');
                                     try {
-                                      // Normalize to PD format — WooCommerce orders may still have WC***** in DB
+                                      // Normalize to PD format
                                       const rawNum = order.order_number || '';
                                       const pdOrderNumber = rawNum.startsWith('PD')
                                         ? rawNum
@@ -1646,19 +1646,27 @@ function SalesPage() {
                                           ? `PD${rawNum.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
                                           : `PD${order.id?.slice(-6) || '000000'}`;
 
-                                      const response = await base44.functions.invoke('steadfastStatusWebhook', {
-                                        order_id: pdOrderNumber,
-                                        action: 'get_status'
+                                      // Send webhook to status update endpoint
+                                      const webhookResponse = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          tracking_code: order.courier_tracking_code,
+                                          consignment_id: order.courier_consignment_id,
+                                          order_number: pdOrderNumber
+                                        })
                                       });
 
                                       toast.dismiss(loadingToast);
 
-                                      if (response.data?.success) {
+                                      if (webhookResponse.ok) {
+                                        const result = await webhookResponse.json();
                                         queryClient.invalidateQueries(['orders-sales-recent']);
                                         queryClient.invalidateQueries(['orders-sales-all']);
-                                        toast.success(`✅ Status: ${response.data.steadfast_status || 'Updated'}`);
+                                        toast.success(`✅ Status: ${result.new_status || 'Updated'}`);
                                       } else {
-                                        toast.error(response.data?.error || 'Failed to fetch status');
+                                        const errorText = await webhookResponse.text();
+                                        toast.error('Failed: ' + (errorText || webhookResponse.statusText));
                                       }
                                     } catch (error) {
                                       toast.dismiss(loadingToast);

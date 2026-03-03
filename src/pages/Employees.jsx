@@ -297,12 +297,36 @@ function EmployeesPage() {
     );
   };
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      const promises = ids.map(id => base44.entities.User.delete(id));
+      return Promise.all(promises);
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries(['all-employees']);
+      toast.success(`${ids.length} employees deleted successfully`);
+      setSelectedEmployees([]);
+      setBulkActionDialog({ open: false, action: null });
+    },
+    onError: (error) => {
+      toast.error(`Bulk delete failed: ${error.message}`);
+    }
+  });
+
   // Handle bulk actions
   const handleBulkAction = (action) => {
     if (selectedEmployees.length === 0) {
       toast.error('No employees selected');
       return;
     }
+    
+    // Prevent deleting own account
+    if (action === 'delete' && selectedEmployees.includes(currentUser?.id)) {
+      toast.error('Cannot delete your own account');
+      return;
+    }
+    
     setBulkActionDialog({ open: true, action });
   };
 
@@ -316,8 +340,8 @@ function EmployeesPage() {
       case 'deactivate':
         bulkUpdateMutation.mutate({ ids: selectedEmployees, data: { is_active: false } });
         break;
-      case 'change_department':
-        // This will be handled by a separate dialog
+      case 'delete':
+        bulkDeleteMutation.mutate(selectedEmployees);
         break;
       default:
         setBulkActionDialog({ open: false, action: null });
@@ -487,10 +511,19 @@ function EmployeesPage() {
                     variant="outline" 
                     size="sm"
                     onClick={() => handleBulkAction('deactivate')}
-                    className="gap-2 text-red-700 border-red-300 hover:bg-red-50"
+                    className="gap-2 text-amber-700 border-amber-300 hover:bg-amber-50"
                   >
                     <UserX className="w-4 h-4" />
                     Deactivate
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleBulkAction('delete')}
+                    className="gap-2 text-red-700 border-red-300 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedEmployees.length}
                   </Button>
                   <Button 
                     variant="ghost" 
@@ -679,19 +712,31 @@ function EmployeesPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {bulkActionDialog.action === 'activate' ? 'Activate Employees?' : 'Deactivate Employees?'}
+                {bulkActionDialog.action === 'activate' ? 'Activate Employees?' : 
+                 bulkActionDialog.action === 'deactivate' ? 'Deactivate Employees?' : 
+                 'Delete Employees?'}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will {bulkActionDialog.action === 'activate' ? 'activate' : 'deactivate'} {selectedEmployees.length} selected employees.
+                {bulkActionDialog.action === 'delete' ? (
+                  <>This will <strong>permanently delete</strong> {selectedEmployees.length} selected employees. This action cannot be undone.</>
+                ) : (
+                  <>This will {bulkActionDialog.action} {selectedEmployees.length} selected employees.</>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={executeBulkAction}
-                className={bulkActionDialog.action === 'activate' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+                className={
+                  bulkActionDialog.action === 'activate' ? 'bg-green-600 hover:bg-green-700' : 
+                  bulkActionDialog.action === 'delete' ? 'bg-red-600 hover:bg-red-700' :
+                  'bg-amber-600 hover:bg-amber-700'
+                }
               >
-                {bulkActionDialog.action === 'activate' ? 'Activate' : 'Deactivate'}
+                {bulkActionDialog.action === 'activate' ? 'Activate' : 
+                 bulkActionDialog.action === 'deactivate' ? 'Deactivate' : 
+                 'Delete'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
