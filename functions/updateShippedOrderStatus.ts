@@ -2,52 +2,26 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
  * MANUAL/WEBHOOK ORDER STATUS UPDATE
- * Can be called from:
- * 1. Sales page "Update" button
- * 2. External n8n webhook
+ * Called from:
+ * 1. Sales page "Update" button (sends to n8n, n8n returns status here)
+ * 2. External n8n webhook (n8n sends delivery_status directly)
  * 
  * Accepts: order_number, tracking_code, consignment_id, delivery_status
  */
 
-const STEADFAST_API_KEY = Deno.env.get('STEADFAST_API_KEY');
-const STEADFAST_SECRET_KEY = Deno.env.get('STEADFAST_SECRET_KEY');
-
-async function fetchSteadfastStatus(consignmentId) {
-  try {
-    if (!consignmentId) return null;
-    
-    const response = await fetch(`https://portal.packzy.com/api/v1/status_by_cid/${consignmentId}`, {
-      method: 'GET',
-      headers: {
-        'Api-Key': STEADFAST_API_KEY,
-        'Secret-Key': STEADFAST_SECRET_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      console.log(`Steadfast API returned ${response.status}`);
-      return null;
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Steadfast API error:', error);
-    return null;
-  }
-}
-
 function mapSteadfastStatus(steadfastStatus) {
-  const statusMap = {
-    'pending': 'shipped',
-    'in_review': 'shipped',
-    'delivered': 'delivered',
-    'partial_delivered': 'delivered',
-    'cancelled': 'returned',
-    'hold': 'shipped',
-    'unknown': 'shipped'
-  };
-  return statusMap[steadfastStatus?.toLowerCase()] || 'shipped';
+  const statusStr = (steadfastStatus || '').toLowerCase();
+  
+  if (statusStr.includes('delivered') || statusStr.includes('complete')) {
+    return 'delivered';
+  }
+  if (statusStr.includes('cancelled') || statusStr.includes('return')) {
+    return 'returned';
+  }
+  if (statusStr.includes('partial')) {
+    return 'delivered';
+  }
+  return 'shipped';
 }
 
 Deno.serve(async (req) => {
@@ -96,27 +70,21 @@ Deno.serve(async (req) => {
       }, { status: 404 });
     }
     
-    // Determine status - either from payload or fetch from Steadfast
+    // Get status from payload (should be provided by n8n after fetching from Steadfast)
     let externalStatus = delivery_status || status;
-    let steadfastData = null;
     
-    // If no status provided or action is 'get_status', fetch from Steadfast
-    if (!externalStatus || action === 'get_status') {
-      const cid = consignment_id || order.courier_consignment_id;
-      if (cid) {
-        steadfastData = await fetchSteadfastStatus(cid);
-        if (steadfastData?.status === 200) {
-          externalStatus = steadfastData.delivery_status;
-        }
-      }
-    }
-    
+    // If no status provided, return info about the order for manual lookup
     if (!externalStatus) {
       return Response.json({ 
         success: false, 
-        error: 'Could not determine status',
+        error: 'No delivery_status provided. Please configure your n8n workflow to fetch status from Steadfast and include delivery_status in the response.',
         order_number: order.order_number,
-        steadfast_response: steadfastData
+        order_id: order.id,
+        consignment_id: order.courier_consignment_id,
+        tracking_code: order.courier_tracking_code,
+        current_status: order.order_status,
+        current_courier_status: order.courier_status,
+        hint: 'Your n8n workflow should call Steadfast API: GET https://portal.packzy.com/api/v1/status_by_cid/{consignment_id} with Api-Key and Secret-Key headers'
       }, { status: 400 });
     }
     

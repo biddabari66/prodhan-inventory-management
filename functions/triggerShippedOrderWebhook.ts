@@ -2,55 +2,35 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
  * AUTO-UPDATE SHIPPED ORDERS STATUS
- * Fetches status from Steadfast courier API directly and updates orders
+ * Sends orders to n8n webhook which fetches status from Steadfast and returns the result
  * Runs via scheduled automation (twice daily)
+ * 
+ * IMPORTANT: The n8n workflow at the webhook URL should:
+ * 1. Receive { consignment_id, order_number, tracking_code }
+ * 2. Call Steadfast API: GET https://portal.packzy.com/api/v1/status_by_cid/{consignment_id}
+ * 3. Return { delivery_status: "...", success: true/false }
  */
 
-const STEADFAST_API_KEY = Deno.env.get('STEADFAST_API_KEY');
-const STEADFAST_SECRET_KEY = Deno.env.get('STEADFAST_SECRET_KEY');
-
-async function getStatusFromSteadfast(consignmentId) {
-  try {
-    if (!consignmentId) return null;
-    
-    const response = await fetch(`https://portal.packzy.com/api/v1/status_by_cid/${consignmentId}`, {
-      method: 'GET',
-      headers: {
-        'Api-Key': STEADFAST_API_KEY,
-        'Secret-Key': STEADFAST_SECRET_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      console.log(`Steadfast API error for ${consignmentId}: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error(`Error fetching Steadfast status for ${consignmentId}:`, error);
-    return null;
-  }
-}
+const N8N_STATUS_WEBHOOK = 'https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a';
 
 function mapSteadfastStatus(steadfastStatus) {
-  const statusMap = {
-    'pending': 'shipped',
-    'in_review': 'shipped',
-    'delivered': 'delivered',
-    'partial_delivered': 'delivered',
-    'cancelled': 'returned',
-    'hold': 'shipped',
-    'unknown': 'shipped'
-  };
-  return statusMap[steadfastStatus?.toLowerCase()] || 'shipped';
+  const statusStr = (steadfastStatus || '').toLowerCase();
+  
+  if (statusStr.includes('delivered') || statusStr.includes('complete')) {
+    return 'delivered';
+  }
+  if (statusStr.includes('cancelled') || statusStr.includes('return')) {
+    return 'returned';
+  }
+  if (statusStr.includes('partial')) {
+    return 'delivered';
+  }
+  return 'shipped';
 }
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  const maxExecutionTime = 55000; // 55 seconds max to avoid timeout
+  const maxExecutionTime = 50000; // 50 seconds max to avoid timeout
   
   try {
     const base44 = createClientFromRequest(req);
@@ -59,7 +39,7 @@ Deno.serve(async (req) => {
     const shippedOrders = await base44.asServiceRole.entities.Order.filter({ 
       order_status: 'shipped',
       courier_placed: true
-    }, '-order_date', 100); // Process max 100 orders per run
+    }, '-order_date', 30); // Process max 30 orders per run to stay under timeout
     
     if (shippedOrders.length === 0) {
       return Response.json({ 
@@ -69,7 +49,7 @@ Deno.serve(async (req) => {
       });
     }
     
-    console.log(`📦 Checking ${shippedOrders.length} shipped orders...`);
+    console.log(`📦 Checking ${shippedOrders.length} shipped orders via n8n webhook...`);
     
     const results = [];
     let updatedCount = 0;
@@ -84,29 +64,50 @@ Deno.serve(async (req) => {
       
       try {
         const consignmentId = order.courier_consignment_id;
+        const trackingCode = order.courier_tracking_code;
         
-        if (!consignmentId) {
+        if (!consignmentId && !trackingCode) {
           results.push({
             order_number: order.order_number,
             skipped: true,
-            reason: 'No consignment ID'
+            reason: 'No consignment ID or tracking code'
           });
           continue;
         }
         
-        // Get status from Steadfast
-        const steadfastData = await getStatusFromSteadfast(consignmentId);
+        // Send to n8n webhook to fetch status
+        const webhookResponse = await fetch(N8N_STATUS_WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            consignment_id: consignmentId,
+            tracking_code: trackingCode,
+            order_number: order.order_number,
+            order_id: order.id
+          })
+        });
         
-        if (!steadfastData || steadfastData.status !== 200) {
+        if (!webhookResponse.ok) {
           results.push({
             order_number: order.order_number,
             skipped: true,
-            reason: 'Steadfast API error or no data'
+            reason: `Webhook error: ${webhookResponse.status}`
           });
           continue;
         }
         
-        const delivery = steadfastData.delivery_status || '';
+        const webhookResult = await webhookResponse.json();
+        const delivery = webhookResult.delivery_status || webhookResult.status || webhookResult.steadfast_status;
+        
+        if (!delivery) {
+          results.push({
+            order_number: order.order_number,
+            skipped: true,
+            reason: 'No status returned from webhook'
+          });
+          continue;
+        }
+        
         const newStatus = mapSteadfastStatus(delivery);
         
         // Only update if status changed
@@ -116,6 +117,9 @@ Deno.serve(async (req) => {
             ...(newStatus === 'delivered' && {
               order_status: 'delivered',
               delivery_date: new Date().toISOString().split('T')[0]
+            }),
+            ...(newStatus === 'returned' && {
+              order_status: 'returned'
             })
           };
           
@@ -129,7 +133,7 @@ Deno.serve(async (req) => {
             entity_type: 'Order',
             entity_id: order.id,
             module: 'sales',
-            description: `Order ${order.order_number} auto-updated: ${order.courier_status || 'unknown'} → ${delivery}`,
+            description: `Order ${order.order_number} auto-updated: ${order.courier_status || 'shipped'} → ${delivery}`,
             new_values: updateData,
             timestamp: new Date().toISOString()
           });
@@ -139,20 +143,23 @@ Deno.serve(async (req) => {
           
           results.push({
             order_number: order.order_number,
+            consignment_id: consignmentId,
             success: true,
             previous_status: order.courier_status,
-            new_status: delivery,
-            order_status: newStatus
+            new_courier_status: delivery,
+            new_order_status: newStatus
           });
         } else {
           results.push({
             order_number: order.order_number,
             skipped: true,
-            reason: 'No status change'
+            reason: 'No status change',
+            current_status: delivery
           });
         }
         
       } catch (error) {
+        console.error(`Error processing ${order.order_number}:`, error);
         results.push({
           order_number: order.order_number,
           success: false,
@@ -166,6 +173,7 @@ Deno.serve(async (req) => {
     return Response.json({ 
       success: true, 
       checked: shippedOrders.length,
+      processed: results.length,
       updated: updatedCount,
       delivered: deliveredCount,
       execution_time: `${executionTime}s`,
