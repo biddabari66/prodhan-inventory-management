@@ -258,7 +258,7 @@ export default function WelcomeCallList() {
       {/* Order Cards Grid */}
       {!isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredCards.map(order => (
+          {filteredCards.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(order => (
             <Card key={order.id} className="group hover:shadow-lg transition-all border-0 shadow-sm rounded-2xl overflow-hidden bg-white">
               <CardContent className="p-0">
                 {/* Header */}
