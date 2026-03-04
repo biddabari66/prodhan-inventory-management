@@ -76,7 +76,7 @@ export default function WelcomeCallList() {
           notes: existingStatus?.notes
         };
       });
-  }, [orders, statusMap]);
+  }, [allOrders, statusMap]);
 
   // Total for stats
   const totalOrders = orderCards.length;
