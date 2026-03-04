@@ -78,6 +78,9 @@ export default function WelcomeCallList() {
       });
   }, [orders, statusMap]);
 
+  // Total for stats
+  const totalOrders = orderCards.length;
+
   // 🚀 FAST FILTERING with useMemo
   const filteredCards = useMemo(() => {
     const searchLower = searchTerm?.toLowerCase() || '';
