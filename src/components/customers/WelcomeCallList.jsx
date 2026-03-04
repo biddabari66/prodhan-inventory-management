@@ -18,27 +18,22 @@ export default function WelcomeCallList() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
   const pageSize = 50;
 
-  // 🚀 FAST: Fetch orders with pagination
-  const { data: orders = [], isLoading: ordersLoading, refetch } = useQuery({
-    queryKey: ['orders-welcome-calls', currentPage],
+  // 🚀 FIXED: Fetch ALL confirmed+ orders for welcome calls (all-time history)
+  const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
+    queryKey: ['orders-welcome-calls-all'],
     queryFn: async () => {
-      const offset = (currentPage - 1) * pageSize;
-      const pageData = await base44.entities.Order.list('-order_date', pageSize, offset);
-      
-      // Get total count on first load
-      if (totalOrders === 0) {
-        const allOrders = await base44.entities.Order.list('-order_date', 10000);
-        const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-        setTotalOrders(allOrders.filter(o => validStatuses.includes(o.order_status)).length);
-      }
-      
-      return pageData;
+      // Fetch all orders with valid statuses - no pagination limit for call history
+      const orders = await base44.entities.Order.filter(
+        { order_status: { $in: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'] } },
+        '-order_date',
+        10000
+      );
+      return orders;
     },
-    staleTime: 30000,
-    cacheTime: 5 * 60 * 1000
+    staleTime: 60000,
+    cacheTime: 10 * 60 * 1000
   });
 
   // Fetch welcome call statuses
