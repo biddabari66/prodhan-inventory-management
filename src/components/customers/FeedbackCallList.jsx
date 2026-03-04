@@ -409,10 +409,41 @@ export default function FeedbackCallList() {
             <div className="col-span-full text-center py-16 bg-white rounded-2xl shadow-sm">
               <Users className="w-16 h-16 mx-auto text-slate-200 mb-4" />
               <p className="text-slate-500 text-lg">No delivered orders found</p>
-              <p className="text-slate-400 text-sm mt-1">Feedback calls are for delivered orders only</p>
+              <p className="text-slate-400 text-sm mt-1">Feedback calls are for shipped/delivered orders only</p>
             </div>
           )}
         </div>
+      )}
+
+      {/* Pagination for filtered results */}
+      {!isLoading && filteredCards.length > pageSize && (
+        <Card className="bg-white border-0 shadow-sm mt-4">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">
+                Page {currentPage} of {Math.ceil(filteredCards.length / pageSize)} ({filteredCards.length} total)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= Math.ceil(filteredCards.length / pageSize)}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Feedback Notes Dialog */}

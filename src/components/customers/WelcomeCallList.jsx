@@ -389,13 +389,13 @@ export default function WelcomeCallList() {
         </div>
       )}
 
-      {/* Pagination */}
-      {!isLoading && totalOrders > pageSize && (
+      {/* Pagination for filtered results */}
+      {!isLoading && filteredCards.length > pageSize && (
         <Card className="bg-white border-0 shadow-sm mt-4">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-500">
-                Page {currentPage} of {Math.ceil(totalOrders / pageSize)}
+                Page {currentPage} of {Math.ceil(filteredCards.length / pageSize)} ({filteredCards.length} total)
               </p>
               <div className="flex gap-2">
                 <Button
@@ -409,7 +409,7 @@ export default function WelcomeCallList() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage >= Math.ceil(totalOrders / pageSize)}
+                  disabled={currentPage >= Math.ceil(filteredCards.length / pageSize)}
                   onClick={() => setCurrentPage(p => p + 1)}
                 >
                   Next
