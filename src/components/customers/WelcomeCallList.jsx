@@ -62,14 +62,10 @@ export default function WelcomeCallList() {
 
   // 🚀 OPTIMIZED: Convert orders to call cards with status
   const orderCards = useMemo(() => {
-    if (!orders.length) return [];
+    if (!allOrders.length) return [];
     
-    // Filter for valid statuses (confirmed orders that need welcome calls)
-    const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
-    
-    return orders
-      .filter(order => validStatuses.includes(order.order_status))
-      .map(order => {
+    // All orders already filtered by query
+    return allOrders.map(order => {
         const existingStatus = statusMap.get(order.order_number);
         return {
           ...order,

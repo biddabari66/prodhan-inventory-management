@@ -66,12 +66,10 @@ export default function FeedbackCallList() {
 
   // 🚀 OPTIMIZED: Convert shipped + delivered orders to feedback cards
   const orderCards = useMemo(() => {
-    if (!orders.length) return [];
+    if (!allOrders.length) return [];
     
-    // Shipped and delivered orders need feedback calls
-    return orders
-      .filter(order => ['shipped', 'delivered'].includes(order.order_status))
-      .map(order => {
+    // All orders already filtered by query
+    return allOrders.map(order => {
         const existingStatus = statusMap.get(order.order_number);
         return {
           ...order,
