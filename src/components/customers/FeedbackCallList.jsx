@@ -80,7 +80,7 @@ export default function FeedbackCallList() {
           feedback_notes: existingStatus?.feedback_notes
         };
       });
-  }, [orders, statusMap]);
+  }, [allOrders, statusMap]);
 
   // 🚀 FAST FILTERING
   const filteredCards = useMemo(() => {
