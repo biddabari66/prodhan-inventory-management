@@ -73,6 +73,7 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
   
   // Other expense (non-product related)
   const [isOtherExpense, setIsOtherExpense] = useState(false);
+  const [isDistributedExpense, setIsDistributedExpense] = useState(false);
   const [otherExpenseType, setOtherExpenseType] = useState('');
   const [otherExpenseDescription, setOtherExpenseDescription] = useState('');
 
@@ -133,7 +134,8 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
         quantity: 1,
         unit: 'service',
         amount: amount,
-        is_other_expense: true
+        is_other_expense: true,
+        is_distributed: false
       };
 
       const newItems = [...formData.items, newItem];
@@ -153,11 +155,50 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
       return;
     }
 
-    // Handle product packaging expense
-    if (!selectedProduct) {
-      toast.error('Please select a product');
+    if (isDistributedExpense) {
+      // Handle distributed packaging expense (no product selected - applies to all)
+      if (!packagingType) {
+        toast.error('Please select a packaging type');
+        return;
+      }
+      if (amount <= 0) {
+        toast.error('Please enter a valid amount');
+        return;
+      }
+
+      const newItem = {
+        id: Date.now(),
+        inventory_id: null,
+        product_name: 'All Products (Distributed)',
+        packaging_type: packagingType,
+        quantity: quantity,
+        unit: unit,
+        amount: amount,
+        is_other_expense: false,
+        is_distributed: true
+      };
+
+      const newItems = [...formData.items, newItem];
+      const itemsTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const distributedTotal = newItems.filter(i => i.is_distributed).reduce((sum, item) => sum + (item.amount || 0), 0);
+      const newTotal = itemsTotal + (formData.courier_expense || 0);
+
+      setFormData(prev => ({
+        ...prev,
+        items: newItems,
+        total_amount: newTotal,
+        distributed_amount: distributedTotal
+      }));
+
+      // Reset fields
+      setPackagingType('');
+      setQuantity(1);
+      setUnit('pc');
+      setAmount(0);
       return;
     }
+
+    // Handle product-specific packaging expense (product is now optional)
     if (!packagingType) {
       toast.error('Please select a packaging type');
       return;
@@ -167,31 +208,49 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
       return;
     }
 
-    const product = departmentInventory.find(i => i.id === selectedProduct);
-    if (!product) {
-      toast.error('Product not found');
-      return;
+    let newItem;
+    if (selectedProduct) {
+      const product = departmentInventory.find(i => i.id === selectedProduct);
+      if (!product) {
+        toast.error('Product not found');
+        return;
+      }
+      newItem = {
+        id: Date.now(),
+        inventory_id: product.id,
+        product_name: product.item_name,
+        packaging_type: packagingType,
+        quantity: quantity,
+        unit: unit,
+        amount: amount,
+        is_other_expense: false,
+        is_distributed: false
+      };
+    } else {
+      // No product selected in Product Packaging mode - treat as distributed
+      newItem = {
+        id: Date.now(),
+        inventory_id: null,
+        product_name: 'All Products (Distributed)',
+        packaging_type: packagingType,
+        quantity: quantity,
+        unit: unit,
+        amount: amount,
+        is_other_expense: false,
+        is_distributed: true
+      };
     }
-
-    const newItem = {
-      id: Date.now(),
-      inventory_id: product.id,
-      product_name: product.item_name,
-      packaging_type: packagingType,
-      quantity: quantity,
-      unit: unit,
-      amount: amount,
-      is_other_expense: false
-    };
 
     const newItems = [...formData.items, newItem];
     const itemsTotal = newItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const distributedTotal = newItems.filter(i => i.is_distributed).reduce((sum, item) => sum + (item.amount || 0), 0);
     const newTotal = itemsTotal + (formData.courier_expense || 0);
 
     setFormData(prev => ({
       ...prev,
       items: newItems,
-      total_amount: newTotal
+      total_amount: newTotal,
+      distributed_amount: distributedTotal
     }));
 
     // Reset fields
