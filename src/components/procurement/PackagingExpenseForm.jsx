@@ -448,19 +448,89 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
           </div>
 
           {/* Add Item Form */}
-          <div className={`p-4 rounded-lg border space-y-4 ${isOtherExpense ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
-            {!isOtherExpense ? (
+          <div className={`p-4 rounded-lg border space-y-4 ${isOtherExpense ? 'bg-blue-50 border-blue-200' : isDistributedExpense ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+            {isDistributedExpense ? (
               <>
-                {/* Product Packaging Form */}
+                {/* Distributed Packaging Form - No Product Required */}
+                <div className="bg-green-100 border border-green-300 rounded-lg p-3 mb-3">
+                  <p className="text-sm text-green-800 font-medium">💡 This expense will be distributed across ALL products proportionally in reports</p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Select Product *</Label>
+                    <Label>Packaging Type *</Label>
+                    <Select value={packagingType} onValueChange={setPackagingType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select packaging type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {packagingTypes.map(opt => (
+                          <SelectItem key={opt.name} value={opt.name}>
+                            {opt.icon} {opt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Amount (BDT) *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={amount}
+                      onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                      placeholder="Enter total cost"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Unit</Label>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unitOptions.map(u => (
+                          <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button 
+                      type="button" 
+                      onClick={handleAddItem} 
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add General Expense
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : !isOtherExpense ? (
+              <>
+                {/* Product Packaging Form - Product is OPTIONAL */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Select Product (Optional)</Label>
                     <SearchableProductSelect
                       inventory={departmentInventory}
                       value={selectedProduct}
                       onValueChange={setSelectedProduct}
-                      placeholder="Search and select product..."
+                      placeholder="Search product or leave empty for all..."
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Leave empty to distribute across all products</p>
                   </div>
                   <div>
                     <Label>Packaging Type *</Label>
