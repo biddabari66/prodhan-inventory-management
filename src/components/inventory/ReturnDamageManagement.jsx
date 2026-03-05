@@ -781,6 +781,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                   setDateFilter({ from: '', to: '' });
                   setReasonFilter('all');
                   setProductFilter('all');
+                  setReturnsPage(1);
+                  setDamagesPage(1);
                 }}
                 className="h-10"
               >
