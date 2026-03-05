@@ -45,6 +45,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' });
   const [reasonFilter, setReasonFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
+  
+  // Pagination state
+  const [returnsPage, setReturnsPage] = useState(1);
+  const [damagesPage, setDamagesPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   // Fetch data with optimized queries
   const { data: inventory = [] } = useQuery({
@@ -904,19 +909,24 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           <TableCell className="text-sm text-muted-foreground">
                             {movement.reference_number || '-'}
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-sm font-medium">
                             {metadata.return_type === 'purchase_return' 
-                              ? metadata.supplier_name || '-'
-                              : metadata.customer_name || '-'}
+                              ? (metadata.supplier_name || '-')
+                              : (metadata.customer_name || movement.notes?.match(/Customer:\s*([^,\n]+)/)?.[1] || '-')}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {metadata.customer_phone || '-'}
+                            {metadata.customer_phone || movement.notes?.match(/Phone:\s*([0-9+\-\s]+)/)?.[1]?.trim() || '-'}
                           </TableCell>
                           <TableCell className="text-sm max-w-[200px]">
                             <div className="flex flex-col gap-1">
                               <span className="font-medium text-slate-700">
                                 {metadata.reason || movement.notes?.split('Reason:')[1]?.split('.')[0]?.trim() || 'Not specified'}
                               </span>
+                              {movement.notes && !metadata.reason && (
+                                <span className="text-xs text-slate-500 truncate max-w-[180px]" title={movement.notes}>
+                                  {movement.notes.substring(0, 50)}{movement.notes.length > 50 ? '...' : ''}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
