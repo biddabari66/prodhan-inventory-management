@@ -926,7 +926,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                             {movement.reference_number || '-'}
                           </TableCell>
                           <TableCell className="text-sm text-slate-500 whitespace-nowrap">
-                            {metadata.order_date ? format(new Date(metadata.order_date), 'MMM dd, yyyy') : '-'}
+                            {metadata.order_date 
+                              ? format(new Date(metadata.order_date), 'MMM dd, yyyy') 
+                              : (movement.reference_number && movement.reference_number.startsWith('PD') 
+                                ? '-' 
+                                : '-')}
                           </TableCell>
                           <TableCell className="text-sm font-medium">
                             {metadata.return_type === 'purchase_return' 
