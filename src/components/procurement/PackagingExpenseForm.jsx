@@ -655,18 +655,21 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
           {formData.items.length > 0 ? (
             <div className="space-y-2">
               {formData.items.map((item) => (
-                <div key={item.id} className={`flex items-center justify-between p-4 bg-white rounded-lg border ${item.is_other_expense ? 'border-blue-200' : ''}`}>
+                <div key={item.id} className={`flex items-center justify-between p-4 bg-white rounded-lg border ${item.is_other_expense ? 'border-blue-200' : item.is_distributed ? 'border-green-200' : ''}`}>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-lg">
                         {item.is_other_expense 
                           ? expenseTypes.find(t => t.name === item.packaging_type)?.icon || '📝'
                           : packagingTypes.find(t => t.name === item.packaging_type)?.icon || '📦'}
                       </span>
                       <span className="font-semibold">{item.product_name}</span>
-                      <Badge variant="outline" className={`text-xs ${item.is_other_expense ? 'bg-blue-50 text-blue-700' : ''}`}>
+                      <Badge variant="outline" className={`text-xs ${item.is_other_expense ? 'bg-blue-50 text-blue-700' : item.is_distributed ? 'bg-green-50 text-green-700' : ''}`}>
                         {item.is_other_expense ? 'Other Expense' : item.packaging_type}
                       </Badge>
+                      {item.is_distributed && (
+                        <Badge className="bg-green-600 text-white text-xs">🔄 Distributed</Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {item.is_other_expense ? item.packaging_type : `${item.quantity} ${item.unit.toUpperCase()}`}
