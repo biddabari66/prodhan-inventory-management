@@ -125,7 +125,8 @@ export default function ComprehensiveReportGenerator({ onClose }) {
               returnValue: 0,
               damages: 0,
               damageValue: 0,
-              adSpend: 0
+              adSpend: 0,
+              packagingCost: 0
             };
           }
           
@@ -290,17 +291,17 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     csv += '═══════════════════════════════════════════════════════════════\n';
     csv += '📦 PRODUCT-WISE BREAKDOWN\n';
     csv += '═══════════════════════════════════════════════════════════════\n';
-    csv += 'Product Name,Category,Qty Sold,Revenue,Cost,Profit,Returns,Return Value,Damages,Damage Value,Ad Spend,Net Profit,ROI%\n';
+    csv += 'Product Name,Category,Qty Sold,Revenue,Cost,Profit,Returns,Return Value,Damages,Damage Value,Ad Spend,Packaging,Net Profit,ROI%\n';
     
     products.forEach(p => {
-      const productNetProfit = p.profit - p.returnValue - p.damageValue - p.adSpend;
-      const productROI = (p.cost + p.adSpend) > 0 ? ((productNetProfit / (p.cost + p.adSpend)) * 100) : 0;
+      const productNetProfit = p.profit - p.returnValue - p.damageValue - p.adSpend - (p.packagingCost || 0);
+      const productROI = (p.cost + p.adSpend + (p.packagingCost || 0)) > 0 ? ((productNetProfit / (p.cost + p.adSpend + (p.packagingCost || 0))) * 100) : 0;
       
-      csv += `"${p.name}","${p.category}",${p.qtySold},${p.revenue.toFixed(2)},${p.cost.toFixed(2)},${p.profit.toFixed(2)},${p.returns},${p.returnValue.toFixed(2)},${p.damages},${p.damageValue.toFixed(2)},${p.adSpend.toFixed(2)},${productNetProfit.toFixed(2)},${productROI.toFixed(2)}\n`;
+      csv += `"${p.name}","${p.category}",${p.qtySold},${p.revenue.toFixed(2)},${p.cost.toFixed(2)},${p.profit.toFixed(2)},${p.returns},${p.returnValue.toFixed(2)},${p.damages},${p.damageValue.toFixed(2)},${p.adSpend.toFixed(2)},${(p.packagingCost || 0).toFixed(2)},${productNetProfit.toFixed(2)},${productROI.toFixed(2)}\n`;
     });
     
     csv += '\n';
-    csv += `TOTAL,,${products.reduce((s, p) => s + p.qtySold, 0)},${summary.totalRevenue.toFixed(2)},${summary.totalCost.toFixed(2)},${summary.grossProfit.toFixed(2)},${products.reduce((s, p) => s + p.returns, 0)},${summary.totalReturns.toFixed(2)},${products.reduce((s, p) => s + p.damages, 0)},${summary.totalDamages.toFixed(2)},${summary.totalAdSpend.toFixed(2)},${summary.netProfit.toFixed(2)},${summary.roi.toFixed(2)}\n`;
+    csv += `TOTAL,,${products.reduce((s, p) => s + p.qtySold, 0)},${summary.totalRevenue.toFixed(2)},${summary.totalCost.toFixed(2)},${summary.grossProfit.toFixed(2)},${products.reduce((s, p) => s + p.returns, 0)},${summary.totalReturns.toFixed(2)},${products.reduce((s, p) => s + p.damages, 0)},${summary.totalDamages.toFixed(2)},${summary.totalAdSpend.toFixed(2)},${summary.totalPackaging.toFixed(2)},${summary.netProfit.toFixed(2)},${summary.roi.toFixed(2)}\n`;
 
     // Download
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
