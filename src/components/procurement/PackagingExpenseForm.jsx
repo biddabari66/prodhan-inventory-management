@@ -357,24 +357,33 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
             Select products and record their packaging expenses (stickers, boxes, jars, labels, etc.)
           </p>
 
-          {/* Toggle between Product Expense and Other Expense */}
-          <div className="flex gap-2 mb-4">
+          {/* Toggle between Product Expense, General Packaging and Other Expense */}
+          <div className="flex flex-wrap gap-2 mb-4">
             <Button
               type="button"
-              variant={!isOtherExpense ? "default" : "outline"}
-              onClick={() => setIsOtherExpense(false)}
-              className={!isOtherExpense ? "bg-amber-600 hover:bg-amber-700" : ""}
+              variant={!isOtherExpense && !isDistributedExpense ? "default" : "outline"}
+              onClick={() => { setIsOtherExpense(false); setIsDistributedExpense(false); }}
+              className={!isOtherExpense && !isDistributedExpense ? "bg-amber-600 hover:bg-amber-700" : ""}
             >
               <Package className="w-4 h-4 mr-2" />
               Product Packaging
             </Button>
             <Button
               type="button"
-              variant={isOtherExpense ? "default" : "outline"}
-              onClick={() => setIsOtherExpense(true)}
-              className={isOtherExpense ? "bg-blue-600 hover:bg-blue-700" : ""}
+              variant={isDistributedExpense ? "default" : "outline"}
+              onClick={() => { setIsOtherExpense(false); setIsDistributedExpense(true); }}
+              className={isDistributedExpense ? "bg-green-600 hover:bg-green-700" : ""}
             >
               <Box className="w-4 h-4 mr-2" />
+              General (All Products)
+            </Button>
+            <Button
+              type="button"
+              variant={isOtherExpense ? "default" : "outline"}
+              onClick={() => { setIsOtherExpense(true); setIsDistributedExpense(false); }}
+              className={isOtherExpense ? "bg-blue-600 hover:bg-blue-700" : ""}
+            >
+              <Truck className="w-4 h-4 mr-2" />
               Other Expense
             </Button>
           </div>
