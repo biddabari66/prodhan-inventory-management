@@ -873,7 +873,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                       </TableCell>
                     </TableRow>
                   ) : (
-                    returnsData.map((movement) => {
+                    returnsData.slice((returnsPage - 1) * PAGE_SIZE, returnsPage * PAGE_SIZE).map((movement) => {
                       const metadata = movement.metadata || {};
                       return (
                         <TableRow key={movement.id}>
@@ -960,6 +960,36 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 </TableBody>
                 </Table>
               </div>
+              
+              {/* Returns Pagination */}
+              {returnsData.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
+                  <p className="text-sm text-slate-600">
+                    Showing {((returnsPage - 1) * PAGE_SIZE) + 1} - {Math.min(returnsPage * PAGE_SIZE, returnsData.length)} of {returnsData.length} records
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReturnsPage(p => Math.max(1, p - 1))}
+                      disabled={returnsPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm font-medium px-3">
+                      Page {returnsPage} of {Math.ceil(returnsData.length / PAGE_SIZE)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReturnsPage(p => Math.min(Math.ceil(returnsData.length / PAGE_SIZE), p + 1))}
+                      disabled={returnsPage >= Math.ceil(returnsData.length / PAGE_SIZE)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -994,7 +1024,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                       </TableCell>
                     </TableRow>
                   ) : (
-                    damagesData.map((movement) => {
+                    damagesData.slice((damagesPage - 1) * PAGE_SIZE, damagesPage * PAGE_SIZE).map((movement) => {
                       const metadata = movement.metadata || {};
                       return (
                         <TableRow key={movement.id}>
@@ -1049,6 +1079,36 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Damages Pagination */}
+              {damagesData.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
+                  <p className="text-sm text-slate-600">
+                    Showing {((damagesPage - 1) * PAGE_SIZE) + 1} - {Math.min(damagesPage * PAGE_SIZE, damagesData.length)} of {damagesData.length} records
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDamagesPage(p => Math.max(1, p - 1))}
+                      disabled={damagesPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm font-medium px-3">
+                      Page {damagesPage} of {Math.ceil(damagesData.length / PAGE_SIZE)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDamagesPage(p => Math.min(Math.ceil(damagesData.length / PAGE_SIZE), p + 1))}
+                      disabled={damagesPage >= Math.ceil(damagesData.length / PAGE_SIZE)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
