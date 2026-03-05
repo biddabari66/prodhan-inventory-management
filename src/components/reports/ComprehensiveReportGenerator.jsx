@@ -87,7 +87,7 @@ export default function ComprehensiveReportGenerator({ onClose }) {
 
       const filteredPackaging = packagingExpenses.filter(e => {
         const eDate = e.expense_date?.split('T')[0];
-        return eDate >= startDate && eDate <= endDate;
+        return eDate >= startDate && eDate <= endDate && e.status === 'approved';
       });
 
       // Filter production waste by date
@@ -180,7 +180,38 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       const totalReturns = Object.values(productStats).reduce((s, p) => s + p.returnValue, 0);
       const totalDamages = Object.values(productStats).reduce((s, p) => s + p.damageValue, 0);
       const totalAdSpend = filteredAdSpends.reduce((s, a) => s + (a.total_spend_bdt || 0), 0);
-      const totalPackaging = filteredPackaging.reduce((s, e) => s + (e.total_amount || 0) + (e.courier_expense || 0), 0);
+      // Calculate packaging expenses (including distributed amounts)
+      let totalPackagingDirect = 0;
+      let totalPackagingDistributed = 0;
+      let totalPackagingOther = 0;
+      let totalPackagingCourier = 0;
+      
+      filteredPackaging.forEach(exp => {
+        totalPackagingCourier += exp.courier_expense || 0;
+        exp.items?.forEach(item => {
+          if (item.is_other_expense) {
+            totalPackagingOther += item.amount || 0;
+          } else if (item.is_distributed) {
+            totalPackagingDistributed += item.amount || 0;
+          } else {
+            totalPackagingDirect += item.amount || 0;
+            // Add direct packaging cost to product stats
+            if (item.inventory_id && productStats[item.inventory_id]) {
+              productStats[item.inventory_id].packagingCost = (productStats[item.inventory_id].packagingCost || 0) + item.amount;
+            }
+          }
+        });
+      });
+      
+      const totalPackaging = totalPackagingDirect + totalPackagingDistributed + totalPackagingOther + totalPackagingCourier;
+      
+      // Distribute packaging costs proportionally to products based on revenue
+      if (totalPackagingDistributed > 0 && totalRevenue > 0) {
+        Object.values(productStats).forEach(p => {
+          const revenueShare = p.revenue / totalRevenue;
+          p.packagingCost = (p.packagingCost || 0) + (totalPackagingDistributed * revenueShare);
+        });
+      }
       
       // Calculate production waste cost
       const totalProductionWaste = filteredWaste.reduce((s, w) => s + (w.waste_value || 0), 0);
