@@ -24,6 +24,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     },
     reason: '',
     order_number: '',
+    order_date: '',
     customer_name: '',
     customer_phone: '',
     supplier_name: '',
@@ -78,7 +79,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       ...prev,
       order_number: order.order_number || '',
       customer_name: order.customer_name || '',
-      customer_phone: order.customer_phone || ''
+      customer_phone: order.customer_phone || '',
+      order_date: order.order_date || ''
     }));
     setOrderSearchQuery(order.order_number || '');
     setOrderSearchResults([]);
@@ -257,6 +259,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       customer_name: formData.customer_name,
       customer_phone: formData.customer_phone,
       supplier_name: formData.supplier_name,
+      order_date: formData.order_date,
       notes: formData.notes,
       incident_date: formData.incident_date
     });
