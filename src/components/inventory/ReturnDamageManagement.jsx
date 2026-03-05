@@ -854,15 +854,16 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead className="whitespace-nowrap">Return Date</TableHead>
+                    <TableHead className="min-w-[180px]">Product</TableHead>
+                    <TableHead className="text-center">Qty</TableHead>
+                    <TableHead className="whitespace-nowrap">Order #</TableHead>
+                    <TableHead className="whitespace-nowrap">Order Date</TableHead>
+                    <TableHead className="min-w-[120px]">Customer</TableHead>
+                    <TableHead className="whitespace-nowrap">Phone</TableHead>
+                    <TableHead className="min-w-[150px]">Reason</TableHead>
                     <TableHead>Action</TableHead>
-                    <TableHead className="text-right">Impact</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Impact</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -879,60 +880,56 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                       const metadata = movement.metadata || {};
                       return (
                         <TableRow key={movement.id}>
-                          <TableCell>{format(new Date(movement.movement_date), 'MMM dd, yyyy')}</TableCell>
-                          <TableCell className="font-medium">
-                            {getItemName(movement.inventory_item_id)}
-                            {metadata.return_type && (
-                              <Badge variant="outline" className={`ml-2 text-xs ${
-                                metadata.return_type === 'purchase_return' 
-                                  ? 'bg-purple-100 text-purple-800' 
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
-                                {metadata.return_type === 'purchase_return' ? 'Purchase' : 'Sales'}
-                              </Badge>
-                            )}
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {format(new Date(movement.movement_date), 'MMM dd, yyyy')}
                           </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <Badge variant="outline" className="font-semibold">
-                                {metadata.is_partial 
-                                  ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
-                                  : metadata.original_quantity || Math.abs(movement.quantity) || 1
-                                }
-                              </Badge>
-                              {metadata.is_partial && (
-                                <div className="text-xs text-muted-foreground">
-                                  <p>Good: {metadata.good_qty || 0}</p>
-                                  <p>Damaged: {metadata.damaged_qty || 0}</p>
-                                </div>
+                          <TableCell className="font-medium">
+                            <div className="max-w-[200px]">
+                              <p className="truncate" title={getItemName(movement.inventory_item_id)}>
+                                {getItemName(movement.inventory_item_id)}
+                              </p>
+                              {metadata.return_type && (
+                                <Badge variant="outline" className={`mt-1 text-xs ${
+                                  metadata.return_type === 'purchase_return' 
+                                    ? 'bg-purple-100 text-purple-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {metadata.return_type === 'purchase_return' ? 'Purchase' : 'Sales'}
+                                </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="font-semibold">
+                              {metadata.is_partial 
+                                ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
+                                : metadata.original_quantity || Math.abs(movement.quantity) || 1
+                              }
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm font-mono">
                             {movement.reference_number || '-'}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-500 whitespace-nowrap">
+                            {metadata.order_date ? format(new Date(metadata.order_date), 'MMM dd, yyyy') : '-'}
                           </TableCell>
                           <TableCell className="text-sm font-medium">
                             {metadata.return_type === 'purchase_return' 
                               ? (metadata.supplier_name || '-')
-                              : (metadata.customer_name || movement.notes?.match(/Customer:\s*([^,\n]+)/)?.[1] || '-')}
+                              : (metadata.customer_name || '-')}
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {metadata.customer_phone || movement.notes?.match(/Phone:\s*([0-9+\-\s]+)/)?.[1]?.trim() || '-'}
+                          <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                            {metadata.customer_phone || '-'}
                           </TableCell>
-                          <TableCell className="text-sm max-w-[200px]">
-                            <div className="flex flex-col gap-1">
-                              <span className="font-medium text-slate-700">
-                                {metadata.reason || movement.notes?.split('Reason:')[1]?.split('.')[0]?.trim() || 'Not specified'}
+                          <TableCell className="text-sm">
+                            <div className="max-w-[150px]">
+                              <span className="font-medium text-slate-700 capitalize">
+                                {metadata.reason?.replace(/_/g, ' ') || 'Not specified'}
                               </span>
-                              {movement.notes && !metadata.reason && (
-                                <span className="text-xs text-slate-500 truncate max-w-[180px]" title={movement.notes}>
-                                  {movement.notes.substring(0, 50)}{movement.notes.length > 50 ? '...' : ''}
-                                </span>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
-                          <TableCell className="text-right text-red-600 font-medium">
+                          <TableCell className="text-right text-red-600 font-semibold whitespace-nowrap">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
                           </TableCell>
                           <TableCell>
