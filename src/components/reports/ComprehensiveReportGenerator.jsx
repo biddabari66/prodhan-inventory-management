@@ -407,12 +407,13 @@ export default function ComprehensiveReportGenerator({ onClose }) {
         <th>Returns</th>
         <th>Damages</th>
         <th>Ad Spend</th>
+        <th>Packaging</th>
         <th>Net Profit</th>
       </tr>
     </thead>
     <tbody>
       ${products.map(p => {
-        const netProfit = p.profit - p.returnValue - p.damageValue - p.adSpend;
+        const netProfit = p.profit - p.returnValue - p.damageValue - p.adSpend - (p.packagingCost || 0);
         return `
           <tr>
             <td>${p.name.substring(0, 40)}</td>
@@ -423,6 +424,7 @@ export default function ComprehensiveReportGenerator({ onClose }) {
             <td style="color: #EF4444;">${p.returns > 0 ? `-৳${p.returnValue.toLocaleString()}` : '-'}</td>
             <td style="color: #EF4444;">${p.damages > 0 ? `-৳${p.damageValue.toLocaleString()}` : '-'}</td>
             <td>৳${p.adSpend.toLocaleString()}</td>
+            <td>৳${(p.packagingCost || 0).toLocaleString()}</td>
             <td class="${netProfit >= 0 ? 'profit-positive' : 'profit-negative'}">৳${netProfit.toLocaleString()}</td>
           </tr>
         `;
