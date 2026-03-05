@@ -286,7 +286,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
             total_value: -Math.abs((data.financial_impact / data.quantity) * goodQty),
             performed_by: currentUser?.id || 'system',
-            notes: `${data.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return'} - Good Condition - Restocked. Reason: ${data.reason}. ${data.notes}`,
+            notes: data.notes || '',
             movement_date: data.incident_date,
             balance_after: newStock,
             metadata: {
@@ -319,7 +319,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
             total_value: -Math.abs((data.financial_impact / data.quantity) * damagedQty),
             performed_by: currentUser?.id || 'system',
-            notes: `${data.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return'} - Damaged - Written Off. Reason: ${data.reason}. ${data.notes}`,
+            notes: data.notes || '',
             movement_date: data.incident_date,
             balance_after: newStock,
             metadata: {
@@ -372,19 +372,19 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
         total_value: -Math.abs(data.financial_impact),
         performed_by: currentUser?.id || 'system',
-        notes: `${data.return_type === 'purchase_return' ? 'Purchase Return' : data.type === 'return' ? 'Sales Return' : 'Damage'} - Reason: ${data.reason}. Action: ${data.action}. ${data.notes}`,
+        notes: data.notes || '',
         movement_date: data.incident_date,
         balance_after: newStock,
         metadata: {
           type: data.type,
           return_type: data.return_type,
           reason: data.reason,
-          condition: data.condition,
-          action: data.action,
-          customer_name: data.customer_name,
-          customer_phone: data.customer_phone,
-          supplier_name: data.supplier_name,
-          order_date: data.order_date,
+          condition: data.condition || 'good',
+          action: data.action || data.condition_breakdown?.good?.action || 'restock',
+          customer_name: data.customer_name || '',
+          customer_phone: data.customer_phone || '',
+          supplier_name: data.supplier_name || '',
+          order_date: data.order_date || '',
           restocking_fee: data.restocking_fee,
           financial_impact: data.financial_impact,
           original_quantity: data.quantity
@@ -438,7 +438,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         reference_number: data.order_number || movement.reference_number,
         unit_cost: item.purchase_price || 0,
         total_value: -Math.abs(data.financial_impact),
-        notes: `${data.type === 'return' ? 'Return' : 'Damage'} - Reason: ${data.reason}. Action: ${data.action}. ${data.notes}`,
+        notes: data.notes || '',
         movement_date: data.incident_date,
         balance_after: newStock,
         metadata: {
@@ -565,12 +565,20 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       if (data.items && data.items.length > 0) {
         try {
           for (const item of data.items) {
+            // Determine action from condition breakdown
+            const goodAction = item.condition_breakdown?.good?.action || 'restock';
+            const goodQty = item.condition_breakdown?.good?.quantity || 0;
+            const damagedQty = item.condition_breakdown?.damaged?.quantity || 0;
+            const usePartialReturn = goodQty > 0 && damagedQty > 0;
+            
             await recordIncidentMutation.mutateAsync({
               inventory_item_id: item.inventory_item_id,
               quantity: item.quantity,
               type: data.type,
               return_type: item.return_type,
               reason: data.reason,
+              action: goodAction,
+              condition: goodQty > 0 ? 'good' : 'damaged',
               order_number: data.order_number,
               customer_name: data.customer_name,
               customer_phone: data.customer_phone,
@@ -580,7 +588,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               financial_impact: item.financial_impact,
               restocking_fee: item.restocking_fee,
               notes: data.notes,
-              incident_date: data.incident_date
+              incident_date: data.incident_date,
+              use_partial_return: usePartialReturn,
+              good_condition_qty: goodQty,
+              damaged_qty: damagedQty
             });
           }
           toast.success(`${data.items.length} product(s) processed successfully!`);
