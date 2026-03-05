@@ -803,7 +803,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         <Textarea
           value={formData.notes}
           onChange={(e) => setFormData({...formData, notes: e.target.value})}
-          placeholder="Provide detailed information about the incident..."
+          placeholder="Add any additional notes about this return/damage..."
           rows={3}
         />
       </div>
