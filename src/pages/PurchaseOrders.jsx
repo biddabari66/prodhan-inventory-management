@@ -1689,6 +1689,12 @@ function PurchaseOrdersPage() {
                                       </DropdownMenuItem>
                                     </>
                                   )}
+                                  {isAdmin && (
+                                    <DropdownMenuItem onClick={() => setDeleteDialog({ type: 'packaging', item: expense })} className="text-red-600">
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
