@@ -264,6 +264,7 @@ function ProductionHousePage() {
   const [viewBatchDialog, setViewBatchDialog] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [receiveDialog, setReceiveDialog] = useState(null);
+  const [manualWasteDialog, setManualWasteDialog] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
