@@ -112,18 +112,29 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     return inventory.filter(item => item.department === departmentFilter);
   }, [inventory, departmentFilter]);
 
+  // Build inventory lookup map for fast name resolution
+  const inventoryMap = useMemo(() => {
+    const map = {};
+    inventory.forEach(i => { map[i.id] = i; });
+    return map;
+  }, [inventory]);
+
+  const getItemName = (itemId) => {
+    return inventoryMap[itemId]?.item_name || 'Unknown Product';
+  };
+
   const returnsData = useMemo(() => {
     let filtered = movements.filter(m =>
       m.reference_type === 'return' &&
       (departmentFilter === 'all' ||
-       inventory.find(i => i.id === m.inventory_item_id)?.department === departmentFilter)
+       inventoryMap[m.inventory_item_id]?.department === departmentFilter)
     );
     
-    // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(m => {
-        const itemName = getItemName(m.inventory_item_id).toLowerCase();
+        const item = inventoryMap[m.inventory_item_id];
+        const itemName = (item?.item_name || '').toLowerCase();
         const metadata = m.metadata || {};
         return itemName.includes(query) ||
           (m.reference_number || '').toLowerCase().includes(query) ||
@@ -133,7 +144,6 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       });
     }
     
-    // Apply date filter
     if (dateFilter.from) {
       filtered = filtered.filter(m => m.movement_date >= dateFilter.from);
     }
@@ -141,38 +151,35 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       filtered = filtered.filter(m => m.movement_date <= dateFilter.to);
     }
     
-    // Apply reason filter
     if (reasonFilter !== 'all') {
       filtered = filtered.filter(m => (m.metadata?.reason || '').toLowerCase().includes(reasonFilter.toLowerCase()));
     }
     
-    // Apply product filter
     if (productFilter !== 'all') {
       filtered = filtered.filter(m => m.inventory_item_id === productFilter);
     }
     
     return filtered;
-  }, [movements, inventory, departmentFilter, searchQuery, dateFilter, reasonFilter, productFilter]);
+  }, [movements, inventoryMap, departmentFilter, searchQuery, dateFilter, reasonFilter, productFilter]);
 
   const damagesData = useMemo(() => {
     let filtered = movements.filter(m =>
       (m.reference_type === 'damage' || m.reference_type === 'expired') &&
       (departmentFilter === 'all' ||
-       inventory.find(i => i.id === m.inventory_item_id)?.department === departmentFilter)
+       inventoryMap[m.inventory_item_id]?.department === departmentFilter)
     );
     
-    // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(m => {
-        const itemName = getItemName(m.inventory_item_id).toLowerCase();
+        const item = inventoryMap[m.inventory_item_id];
+        const itemName = (item?.item_name || '').toLowerCase();
         const metadata = m.metadata || {};
         return itemName.includes(query) ||
           (metadata.reason || '').toLowerCase().includes(query);
       });
     }
     
-    // Apply date filter
     if (dateFilter.from) {
       filtered = filtered.filter(m => m.movement_date >= dateFilter.from);
     }
@@ -181,7 +188,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     }
     
     return filtered;
-  }, [movements, inventory, departmentFilter, searchQuery, dateFilter]);
+  }, [movements, inventoryMap, departmentFilter, searchQuery, dateFilter]);
   
   // Export to Excel function
   const handleExportExcel = (dataType) => {
