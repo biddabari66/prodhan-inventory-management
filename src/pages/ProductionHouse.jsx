@@ -632,6 +632,13 @@ function ProductionHousePage() {
               <p className="text-slate-500 text-sm">Receive POs → Store raw materials → Transfer to inventory</p>
             </div>
           </div>
+          <Button
+            onClick={() => setManualWasteDialog(true)}
+            className="bg-red-600 hover:bg-red-700 shadow-sm"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Submit Waste
+          </Button>
         </div>
 
         {/* Stats */}
