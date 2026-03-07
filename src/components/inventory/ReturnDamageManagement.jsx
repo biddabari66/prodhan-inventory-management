@@ -632,11 +632,6 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     return { returnCount, damageCount, returnValue, damageValue, totalLoss, lossQuantity };
   }, [returnsData, damagesData]);
 
-  const getItemName = (itemId) => {
-    const item = inventory.find(i => i.id === itemId);
-    return item?.item_name || 'Unknown Product';
-  };
-
   const getActionBadge = (action) => {
     const config = {
       restock: { label: 'Restocked', class: 'bg-green-100 text-green-800' },
