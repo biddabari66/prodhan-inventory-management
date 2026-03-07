@@ -1918,6 +1918,25 @@ function PurchaseOrdersPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>🗑️ Delete {deleteDialog?.type === 'po' ? 'Purchase Order' : 'Packaging Expense'}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Permanently delete <strong>{deleteDialog?.type === 'po' ? deleteDialog?.item?.po_number : deleteDialog?.item?.expense_number}</strong>? This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => {
+                if (deleteDialog?.type === 'po') deleteOrderMutation.mutate(deleteDialog.item);
+                else deletePackagingMutation.mutate(deleteDialog.item);
+              }}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Packaging Approval Dialog */}
         <AlertDialog open={!!packagingApprovalDialog} onOpenChange={() => setPackagingApprovalDialog(null)}>
           <AlertDialogContent>
