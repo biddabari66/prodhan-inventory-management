@@ -1235,15 +1235,10 @@ function PurchaseOrdersPage() {
     };
   }, [filteredOrders, purchaseOrders, packagingExpenses]);
 
-  // Packaging expense status badge
   const getPackagingStatusBadge = (status) => {
-    const config = {
-      pending_approval: { label: 'Pending Approval', class: 'bg-amber-100 text-amber-800' },
-      approved: { label: 'Approved', class: 'bg-green-100 text-green-800' },
-      rejected: { label: 'Rejected', class: 'bg-red-100 text-red-800' },
-    };
-    const { label, class: className } = config[status] || config.pending_approval;
-    return <Badge className={className}>{label}</Badge>;
+    const c = { pending_approval: { l: 'Pending Approval', c: 'bg-amber-100 text-amber-800' }, approved: { l: 'Approved', c: 'bg-green-100 text-green-800' }, rejected: { l: 'Rejected', c: 'bg-red-100 text-red-800' } };
+    const { l, c: cn } = c[status] || c.pending_approval;
+    return <Badge className={cn}>{l}</Badge>;
   };
 
   const getStatusBadge = (order) => {
