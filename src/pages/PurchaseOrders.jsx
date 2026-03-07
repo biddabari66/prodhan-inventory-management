@@ -1181,12 +1181,9 @@ function PurchaseOrdersPage() {
     }
   };
 
-  // Create supplier lookup map
   const supplierMap = useMemo(() => {
     const map = {};
-    suppliers.forEach(supplier => {
-      map[supplier.id] = supplier;
-    });
+    suppliers.forEach(s => { map[s.id] = s; });
     return map;
   }, [suppliers]);
 
