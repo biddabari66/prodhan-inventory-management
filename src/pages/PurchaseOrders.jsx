@@ -1115,35 +1115,43 @@ function PurchaseOrdersPage() {
   const rejectPackagingExpenseMutation = useMutation({
     mutationFn: async ({ expense, reason }) => {
       await base44.entities.PackagingExpense.update(expense.id, {
-        status: 'rejected',
-        rejection_reason: reason,
-        approved_by_id: currentUser?.id,
-        approved_by_name: currentUser?.display_name || currentUser?.full_name,
+        status: 'rejected', rejection_reason: reason,
+        approved_by_id: currentUser?.id, approved_by_name: currentUser?.display_name || currentUser?.full_name,
         approval_date: new Date().toISOString()
       });
-
-      // Notify creator
       if (expense.created_by_id) {
         await base44.entities.Notification.create({
-          user_id: expense.created_by_id,
-          title: '❌ Packaging Expense Rejected',
+          user_id: expense.created_by_id, title: '❌ Packaging Expense Rejected',
           message: `Your packaging expense ${expense.expense_number} has been rejected. Reason: ${reason}`,
-          category: 'inventory',
-          priority: 'high'
+          category: 'inventory', priority: 'high'
         });
       }
-
       return expense;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['packagingExpenses']);
-      toast.success('Packaging expense rejected');
-      setPackagingApprovalDialog(null);
-      setPackagingRejectionReason('');
+    onSuccess: () => { queryClient.invalidateQueries(['packagingExpenses']); toast.success('Packaging expense rejected'); setPackagingApprovalDialog(null); setPackagingRejectionReason(''); },
+    onError: (error) => toast.error('Failed to reject: ' + error.message),
+  });
+
+  // Delete PO mutation (admin only)
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (order) => {
+      await base44.entities.PurchaseOrder.delete(order.id);
+      await base44.entities.AuditLog.create({ user_id: currentUser?.id, user_name: currentUser?.full_name, action: 'delete', entity_type: 'PurchaseOrder', entity_id: order.id, module: 'purchase_orders', description: `Deleted PO ${order.po_number}`, timestamp: new Date().toISOString() });
+      return order;
     },
-    onError: (error) => {
-      toast.error('Failed to reject: ' + error.message);
+    onSuccess: (order) => { queryClient.invalidateQueries(['purchaseOrders']); toast.success(`PO ${order.po_number} deleted`); setDeleteDialog(null); },
+    onError: (error) => toast.error('Failed to delete: ' + error.message),
+  });
+
+  // Delete packaging expense mutation (admin only)
+  const deletePackagingMutation = useMutation({
+    mutationFn: async (expense) => {
+      await base44.entities.PackagingExpense.delete(expense.id);
+      await base44.entities.AuditLog.create({ user_id: currentUser?.id, user_name: currentUser?.full_name, action: 'delete', entity_type: 'PackagingExpense', entity_id: expense.id, module: 'purchase_orders', description: `Deleted expense ${expense.expense_number}`, timestamp: new Date().toISOString() });
+      return expense;
     },
+    onSuccess: (expense) => { queryClient.invalidateQueries(['packagingExpenses']); toast.success(`Expense ${expense.expense_number} deleted`); setDeleteDialog(null); },
+    onError: (error) => toast.error('Failed to delete: ' + error.message),
   });
 
   const handlePackagingExpenseSubmit = (expenseData) => {
