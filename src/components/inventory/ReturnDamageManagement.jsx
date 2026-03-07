@@ -112,7 +112,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     return inventory.filter(item => item.department === departmentFilter);
   }, [inventory, departmentFilter]);
 
-  // Build inventory lookup map for fast name resolution
+  // Inventory lookup map for fast name resolution
   const inventoryMap = useMemo(() => {
     const map = {};
     inventory.forEach(i => { map[i.id] = i; });
