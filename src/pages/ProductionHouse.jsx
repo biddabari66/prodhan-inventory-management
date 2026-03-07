@@ -15,11 +15,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import {
   Factory, Package, Truck, CheckCircle, Clock, AlertTriangle,
   ArrowRight, Recycle, Trash2, Eye, Play, Send, User, History,
-  Scale, Box, AlertCircle
+  Scale, Box, AlertCircle, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { withPermission } from '../components/common/PermissionGuard';
+import ManualWasteForm from '../components/production/ManualWasteForm';
 
 // Transfer to Inventory Form
 const TransferToInventoryForm = ({ batch, inventory, currentUser, onTransfer, onCancel }) => {
