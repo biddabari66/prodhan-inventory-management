@@ -1234,6 +1234,27 @@ function ProductionHousePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Manual Waste Entry Dialog */}
+        <Dialog open={manualWasteDialog} onOpenChange={setManualWasteDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-red-600" />
+                Manual Waste Submission
+              </DialogTitle>
+            </DialogHeader>
+            <ManualWasteForm
+              batches={productionBatches}
+              currentUser={currentUser}
+              onSubmit={({ batch, wasteData }) => {
+                markAsWasteMutation.mutate({ batch, wasteData });
+                setManualWasteDialog(false);
+              }}
+              onCancel={() => setManualWasteDialog(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
