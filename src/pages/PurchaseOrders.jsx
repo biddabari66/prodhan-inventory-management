@@ -811,6 +811,7 @@ function PurchaseOrdersPage() {
   const [editingPackagingExpense, setEditingPackagingExpense] = useState(null);
   const [packagingApprovalDialog, setPackagingApprovalDialog] = useState(null);
   const [packagingRejectionReason, setPackagingRejectionReason] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState(null);
 
   // Permission-based access control
   const { hasPermission: canCreate } = usePermission('purchase_orders', 'can_create');
