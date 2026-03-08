@@ -205,9 +205,14 @@ export default function ThermalReceipt({ order, onPrint }) {
             <span>Sub Total</span>
             <span>৳${subtotal.toLocaleString()}</span>
           </div>
+          ${totalDiscount > 0 ? `
+          <div class="total-row" style="color: #DC2626;">
+            <span>Discount:</span>
+            <span>-৳${totalDiscount.toLocaleString()}</span>
+          </div>` : ''}
           <div class="total-row">
             <span>Delivery:</span>
-            <span>৳${deliveryCharge.toLocaleString()}</span>
+            <span>${deliveryCharge === 0 ? 'FREE' : '৳' + deliveryCharge.toLocaleString()}</span>
           </div>
           <div class="total-row grand-total">
             <span>Grand Total:</span>
