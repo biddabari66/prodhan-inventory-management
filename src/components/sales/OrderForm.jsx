@@ -175,7 +175,7 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     if (formData.order_items.length === 0) {
