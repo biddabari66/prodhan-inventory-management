@@ -563,6 +563,14 @@ function InventoryOverviewPage() {
                           <div className="text-xs text-slate-500">৳{(item.damaged_value || 0).toLocaleString()}</div>
                         </TableCell>
                         <TableCell className="text-right">
+                          <div>
+                            <span className="font-semibold text-slate-700">৳{getPurchasePrice(item).toLocaleString()}</span>
+                            {getPurchasePrice(item) !== (item.purchase_price || 0) && (
+                              <p className="text-[10px] text-blue-500" title="Auto-calculated from Purchase Order">from PO</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
                           <span className="font-semibold text-slate-900">৳{(item.selling_price || 0).toLocaleString()}</span>
                         </TableCell>
                         <TableCell className="text-center">
