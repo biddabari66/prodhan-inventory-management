@@ -525,21 +525,71 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
             </div>
           </div>
 
+          {/* Active Campaigns Banner */}
+          {campaignResult.appliedCampaigns.length > 0 && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 p-4 rounded-xl space-y-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-green-600" />
+                <span className="font-semibold text-green-800">Offers Applied!</span>
+              </div>
+              {campaignResult.appliedCampaigns.map((c, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-sm">
+                  <Gift className="w-4 h-4 text-green-600" />
+                  <span className="font-medium text-green-700">{c.name}</span>
+                  {c.discount > 0 && <Badge className="bg-green-600 text-white">-৳{c.discount.toLocaleString()}</Badge>}
+                  {c.freeDelivery && <Badge className="bg-purple-600 text-white gap-1"><Truck className="w-3 h-3" /> Free Delivery</Badge>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Active Campaigns Info (when not yet applied) */}
+          {activeCampaigns.length > 0 && campaignResult.appliedCampaigns.length === 0 && formData.order_items.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+              <div className="flex items-center gap-2 text-sm text-amber-800">
+                <Tag className="w-4 h-4" />
+                <span className="font-medium">
+                  {activeCampaigns.length} offer(s) available — {activeCampaigns.map(c => c.campaign_name).join(', ')}
+                </span>
+              </div>
+              <p className="text-xs text-amber-600 mt-1">Add more items or meet conditions to unlock offers.</p>
+            </div>
+          )}
+
           {/* Order Summary */}
           <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 rounded-xl space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Items Total:</span>
               <span className="font-medium">BDT {(calculations.subtotal || 0).toLocaleString()}</span>
             </div>
-            {calculations.totalDiscount > 0 && (
+            {calculations.campaignDiscount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Discount:</span>
-                <span className="font-medium text-red-600">-BDT {(calculations.totalDiscount || 0).toLocaleString()}</span>
+                <span className="text-green-700 font-medium flex items-center gap-1"><Sparkles className="w-3 h-3" /> Campaign Discount:</span>
+                <span className="font-medium text-green-600">-BDT {(calculations.campaignDiscount || 0).toLocaleString()}</span>
+              </div>
+            )}
+            {calculations.regularDiscount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Manual Discount:</span>
+                <span className="font-medium text-red-600">-BDT {(calculations.regularDiscount || 0).toLocaleString()}</span>
+              </div>
+            )}
+            {calculations.couponDiscount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Coupon Discount:</span>
+                <span className="font-medium text-red-600">-BDT {(calculations.couponDiscount || 0).toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping:</span>
-              <span className="font-medium">BDT {(calculations.shippingCost || 0).toLocaleString()}</span>
+              {campaignResult.freeDelivery ? (
+                <span className="font-medium text-green-600 flex items-center gap-1">
+                  <Truck className="w-3 h-3" /> FREE
+                  <span className="line-through text-slate-400 ml-1">BDT 60</span>
+                </span>
+              ) : (
+                <span className="font-medium">BDT {(calculations.shippingCost || 0).toLocaleString()}</span>
+              )}
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
