@@ -511,7 +511,7 @@ function InventoryOverviewPage() {
                 <TableBody>
                   {filteredInventory.length === 0 ?
                   <TableRow>
-                      <TableCell colSpan={10} className="text-center py-16">
+                      <TableCell colSpan={11} className="text-center py-16">
                         <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No inventory items found</p>
                         <p className="text-slate-400 text-sm mt-1">Add items or adjust your filters</p>
