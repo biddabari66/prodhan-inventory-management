@@ -217,8 +217,6 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
       ]
     };
 
-    // Tag the order with applied campaign names for tracking
-
     onSubmit(orderData);
   };
 
