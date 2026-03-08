@@ -80,16 +80,30 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
     }
   }, [formData.customer_id, customers]);
 
+  // Auto-apply discount campaigns
+  const campaignResult = useMemo(() => {
+    const subtotal = formData.order_items.reduce((sum, item) => sum + item.subtotal, 0);
+    return calculateDiscount(formData.order_items, subtotal, formData.discount_code);
+  }, [formData.order_items, formData.discount_code, calculateDiscount]);
+
+  // Auto-apply free delivery from campaigns
+  useEffect(() => {
+    if (campaignResult.freeDelivery && formData.shipping_cost > 0 && !order) {
+      setFormData(prev => ({ ...prev, shipping_cost: 0 }));
+    }
+  }, [campaignResult.freeDelivery]);
+
   const calculations = useMemo(() => {
     const subtotal = formData.order_items.reduce((sum, item) => sum + item.subtotal, 0);
     const regularDiscount = formData.discount_amount || 0;
+    const campaignDiscount = campaignResult.discountAmount || 0;
     const couponDiscount = formData.coupon_discount || 0;
-    const totalDiscount = regularDiscount + couponDiscount;
-    const shippingCost = formData.shipping_cost || 0;
-    const total = subtotal - totalDiscount + shippingCost;
+    const totalDiscount = regularDiscount + campaignDiscount + couponDiscount;
+    const shippingCost = campaignResult.freeDelivery ? 0 : (formData.shipping_cost || 0);
+    const total = Math.max(0, subtotal - totalDiscount + shippingCost);
 
-    return { subtotal, regularDiscount, couponDiscount, totalDiscount, shippingCost, total };
-  }, [formData.order_items, formData.discount_amount, formData.coupon_discount, formData.shipping_cost]);
+    return { subtotal, regularDiscount, campaignDiscount, couponDiscount, totalDiscount, shippingCost, total };
+  }, [formData.order_items, formData.discount_amount, formData.coupon_discount, formData.shipping_cost, campaignResult]);
 
   const handleAddItem = () => {
     if (!selectedInventoryItem || itemQuantity <= 0) {
