@@ -135,9 +135,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       filtered = filtered.filter(m => {
         const item = inventoryMap[m.inventory_item_id];
         const itemName = (item?.item_name || '').toLowerCase();
+        const barcode = (item?.barcode || '').toLowerCase();
         const metadata = m.metadata || {};
+        const orderNumber = (metadata.order_number || m.reference_number || '').toLowerCase();
         return itemName.includes(query) ||
+          orderNumber.includes(query) ||
           (m.reference_number || '').toLowerCase().includes(query) ||
+          barcode.includes(query) ||
           (metadata.customer_name || '').toLowerCase().includes(query) ||
           (metadata.customer_phone || '').includes(query) ||
           (metadata.reason || '').toLowerCase().includes(query);
@@ -174,8 +178,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       filtered = filtered.filter(m => {
         const item = inventoryMap[m.inventory_item_id];
         const itemName = (item?.item_name || '').toLowerCase();
+        const barcode = (item?.barcode || '').toLowerCase();
         const metadata = m.metadata || {};
+        const orderNumber = (metadata.order_number || m.reference_number || '').toLowerCase();
         return itemName.includes(query) ||
+          orderNumber.includes(query) ||
+          (m.reference_number || '').toLowerCase().includes(query) ||
+          barcode.includes(query) ||
           (metadata.reason || '').toLowerCase().includes(query);
       });
     }

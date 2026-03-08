@@ -123,6 +123,45 @@ export default function FeedbackCallList() {
     return result;
   }, [orderCards]);
 
+  // Send review to external webhook
+  const sendReviewToWebhook = async (order, status, notes) => {
+    const products = (order.order_items || []).map(item => ({
+      product_name: item.item_name,
+      sku: item.inventory_id || '',
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      subtotal: item.subtotal,
+      selected_color: item.selected_color || '',
+      weight: item.weight || 0
+    }));
+
+    const payload = {
+      order_number: order.order_number,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      feedback_status: status,
+      feedback_notes: notes || '',
+      review_date: new Date().toISOString(),
+      reviewed_by: currentUser?.full_name || 'Unknown',
+      total_amount: order.total_amount,
+      products,
+      shipping_address: order.shipping_address || {}
+    };
+
+    try {
+      await fetch('https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api_key': '656fbd615f1540248c9a12f2a58c2c40'
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.warn('Webhook send failed:', err);
+    }
+  };
+
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ order, status, notes }) => {
@@ -136,6 +175,9 @@ export default function FeedbackCallList() {
         call_date: new Date().toISOString(),
         called_by: currentUser?.full_name || 'Unknown'
       };
+      
+      // Send to external webhook
+      sendReviewToWebhook(order, status, notes);
       
       if (order.feedback_call_id) {
         return base44.entities.FeedbackCall.update(order.feedback_call_id, data);

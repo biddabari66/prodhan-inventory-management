@@ -66,10 +66,10 @@ const DEPARTMENT_CONFIG = {
         borderColor: 'border-purple-200',
         defaultCategory: 'e-commerce',
         templateHeaders: [
-            'Product Name', 'Category', 'Current Stock', 'Selling Price', 'Description'
+            'Product Name', 'SKU', 'Category', 'Current Stock', 'Selling Price', 'Purchase Price', 'Description'
         ],
         sampleRow: [
-            'Wireless Mouse', 'Electronics & Gadgets', '50', '1200', 'High-quality wireless mouse with ergonomic design'
+            'Wireless Mouse', 'SKU-001', 'Electronics & Gadgets', '50', '1200', '800', 'High-quality wireless mouse with ergonomic design'
         ],
         // Simplified mapping for Prodhan.com (dynamic import - essential fields only)
         fieldMapping: {
@@ -461,9 +461,11 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
             } else {
                 return [
                     item.item_name,
+                    item.barcode || '',
                     item.category,
                     item.current_stock,
                     item.selling_price,
+                    item.purchase_price || 0,
                     item.description || ''
                 ];
             }
