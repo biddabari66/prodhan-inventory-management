@@ -205,10 +205,26 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
       order_number: order?.order_number || generateShortOrderNumber(),
       order_date: order?.order_date || new Date().toISOString(),
       subtotal: calculations.subtotal,
+      discount_amount: (formData.discount_amount || 0) + calculations.campaignDiscount,
+      shipping_cost: calculations.shippingCost,
       total_amount: calculations.total,
       order_status: order?.order_status || 'pending',
-      paid_amount: formData.payment_status === 'paid' ? calculations.total : 0
+      paid_amount: formData.payment_status === 'paid' ? calculations.total : 0,
+      tags: [
+        ...(formData.tags || []),
+        ...campaignResult.appliedCampaigns.map(c => `campaign:${c.name}`)
+      ]
     };
+
+    // Increment campaign usage counters
+    for (const c of campaignResult.appliedCampaigns) {
+      try {
+        const { base44 } = await import('@/api/base44Client');
+        await base44.entities.DiscountCampaign.update(c.id, {
+          usage_count: ((await base44.entities.DiscountCampaign.filter({ id: c.id }))?.[0]?.usage_count || 0) + 1
+        });
+      } catch (e) { /* ignore usage update failures */ }
+    }
 
     onSubmit(orderData);
   };
