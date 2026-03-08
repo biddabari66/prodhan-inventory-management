@@ -48,6 +48,17 @@ function InventoryOverviewPage() {
   const { hasPermission: canEdit } = usePermission('inventory_overview', 'can_edit');
   const { hasPermission: canDelete } = usePermission('inventory_overview', 'can_delete');
 
+  // Fetch POs for auto purchase price calculation
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ['purchase-orders-for-prices'],
+    queryFn: () => base44.entities.PurchaseOrder.filter(
+      { department: 'prodhan_com_e_commerce' }, '-order_date', 200
+    ),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const { getPurchasePrice } = usePurchasePriceResolver(purchaseOrders);
+
   // Fetch categories for filtering
   const { data: categories = [] } = useQuery({
     queryKey: ['product-categories', selectedDepartment],
