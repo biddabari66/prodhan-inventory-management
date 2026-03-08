@@ -10,34 +10,23 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
 
-    const url = 'https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview';
-
-    const response = await fetch(url, {
+    const response = await fetch('https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'api_key': '656fbd615f1540248c9a12f2a58c2c40'
       },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
+      body: JSON.stringify(payload)
     });
 
     const text = await response.text();
-    let responseData;
-    try { responseData = JSON.parse(text); } catch { responseData = { raw: text }; }
-
-    const responseText = await response.text();
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { raw: responseText };
-    }
+    let data;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     return Response.json({ 
       success: response.ok, 
       status: response.status,
-      data: responseData 
+      data 
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
