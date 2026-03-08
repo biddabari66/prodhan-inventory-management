@@ -11,20 +11,20 @@ Deno.serve(async (req) => {
     const payload = await req.json();
 
     const url = 'https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview';
-    
-    // Build headers exactly matching the curl example format
-    const headers = new Headers();
-    headers.set('Content-Type', 'application/json');
-    headers.set('api_key', '656fbd615f1540248c9a12f2a58c2c40');
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: headers,
-      body: JSON.stringify(payload)
+      headers: {
+        'Content-Type': 'application/json',
+        'api_key': '656fbd615f1540248c9a12f2a58c2c40'
+      },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
     });
 
-    console.log('Webhook response status:', response.status);
-    console.log('Webhook response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('Response status:', response.status);
+    const text = await response.text();
+    console.log('Response body:', text);
 
     const responseText = await response.text();
     let responseData;
