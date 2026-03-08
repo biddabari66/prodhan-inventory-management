@@ -58,6 +58,7 @@ import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
 import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
+import DiscountCampaigns from './pages/DiscountCampaigns';
 import DocumentCenter from './pages/DocumentCenter';
 import Documentation from './pages/Documentation';
 import EmailNotifications from './pages/EmailNotifications';
@@ -107,7 +108,6 @@ import ThirdPartyApps from './pages/ThirdPartyApps';
 import UserAccessManager from './pages/UserAccessManager';
 import Webhooks from './pages/Webhooks';
 import WhatsAppWebhook from './pages/WhatsAppWebhook';
-import DiscountCampaigns from './pages/DiscountCampaigns';
 import __Layout from './Layout.jsx';
 
 
@@ -123,6 +123,7 @@ export const PAGES = {
     "CategorySettings": CategorySettings,
     "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
+    "DiscountCampaigns": DiscountCampaigns,
     "DocumentCenter": DocumentCenter,
     "Documentation": Documentation,
     "EmailNotifications": EmailNotifications,
@@ -172,7 +173,6 @@ export const PAGES = {
     "UserAccessManager": UserAccessManager,
     "Webhooks": Webhooks,
     "WhatsAppWebhook": WhatsAppWebhook,
-    "DiscountCampaigns": DiscountCampaigns,
 }
 
 export const pagesConfig = {
