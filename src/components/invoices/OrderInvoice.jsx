@@ -90,7 +90,10 @@ export default function OrderInvoice({ order }) {
   const couponDiscount = order.coupon_discount || 0;
   const totalDiscount = regularDiscount + couponDiscount;
   const shippingCost = order.shipping_cost || 0;
-  const finalTotal = itemsTotal - totalDiscount + shippingCost;
+  const finalTotal = order.total_amount || (itemsTotal - totalDiscount + shippingCost);
+  
+  // Extract campaign names from tags
+  const campaignTags = (order.tags || []).filter(t => t?.startsWith('campaign:')).map(t => t.replace('campaign:', ''));
 
   return (
     <div className="space-y-4">
