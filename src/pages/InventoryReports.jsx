@@ -418,15 +418,14 @@ function InventoryReportsPage() {
       });
 
       // Add to totals
-      totalRevenue += orderRevenue;
+      totalItemRevenue += orderItemRevenue;
       totalCost += orderCost;
       totalUnitsSold += orderUnits;
 
       // Update daily sales
-      dailySales[orderDate].revenue += orderRevenue;
       dailySales[orderDate].cost += orderCost;
       dailySales[orderDate].units += orderUnits;
-      dailySales[orderDate].profit += (orderRevenue - orderCost);
+      dailySales[orderDate].profit += (orderSalesRevenue - orderCost);
 
       // Order source breakdown
       const source = order.order_source || 'other';
