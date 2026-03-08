@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { usePerformanceMonitor, CacheManager } from '../components/common/PerformanceOptimizer';
 import { withPermission, usePermission, PermissionGate } from '../components/common/PermissionGuard';
+import { usePurchasePriceResolver } from '../components/sales/useDiscountCampaigns';
 
 function InventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
   // Always use General Product Form for Prodhan.com
