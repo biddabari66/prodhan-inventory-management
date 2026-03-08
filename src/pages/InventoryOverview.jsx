@@ -611,7 +611,7 @@ function InventoryOverviewPage() {
                   {/* Load More */}
                   {displayedInventory.length < filteredInventory.length && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-4">
+                      <TableCell colSpan={11} className="text-center py-4">
                         <Button 
                           variant="outline" 
                           onClick={() => setDisplayLimit(prev => prev + 50)}
