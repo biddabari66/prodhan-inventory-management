@@ -11,16 +11,22 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const apiKey = '656fbd615f1540248c9a12f2a58c2c40';
 
-    // Send as query param since header-based api_key may get stripped/normalized
-    const url = `https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview?api_key=${apiKey}`;
+    const url = 'https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview';
 
-    const response = await fetch(url, {
+    // Include api_key in body, as query param, AND as header to cover all possibilities
+    const bodyWithKey = { ...payload, api_key: apiKey };
+
+    const response = await fetch(`${url}?api_key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api_key': apiKey
+        'api_key': apiKey,
+        'Api_Key': apiKey,
+        'Api-Key': apiKey,
+        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(bodyWithKey)
     });
 
     const text = await response.text();
