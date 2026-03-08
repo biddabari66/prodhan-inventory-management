@@ -48,6 +48,7 @@ function InventoryOverviewPage() {
   const { hasPermission: canCreate } = usePermission('inventory_overview', 'can_create');
   const { hasPermission: canEdit } = usePermission('inventory_overview', 'can_edit');
   const { hasPermission: canDelete } = usePermission('inventory_overview', 'can_delete');
+  const { canView: canViewPurchasePrice } = useConfidentialPermission('can_view_purchase_price');
 
   // Fetch POs for auto purchase price calculation
   const { data: purchaseOrders = [] } = useQuery({
