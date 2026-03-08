@@ -318,7 +318,9 @@ function InventoryReportsPage() {
     const categorySales = {};
     const orderSourceSales = {};
     const paymentMethodSales = {};
-    let totalRevenue = 0;
+    let totalSalesRevenue = 0;
+    let totalItemRevenue = 0;
+    let totalDiscount = 0;
     let totalCost = 0;
     let totalOrders = 0;
     let completedOrders = 0;
@@ -341,14 +343,22 @@ function InventoryReportsPage() {
       totalOrders++;
       const orderDate = order.order_date?.split('T')[0] || 'unknown';
 
+      // Use total_amount as actual sales revenue (after all discounts)
+      const orderSalesRevenue = order.total_amount || 0;
+      const orderDiscount = (order.discount_amount || 0) + (order.coupon_discount || 0);
+      totalSalesRevenue += orderSalesRevenue;
+      totalDiscount += orderDiscount;
+
       // Initialize daily tracking
       if (!dailySales[orderDate]) {
-        dailySales[orderDate] = { orders: 0, revenue: 0, cost: 0, units: 0, profit: 0 };
+        dailySales[orderDate] = { orders: 0, revenue: 0, cost: 0, units: 0, profit: 0, discount: 0 };
       }
       dailySales[orderDate].orders++;
+      dailySales[orderDate].revenue += orderSalesRevenue;
+      dailySales[orderDate].discount += orderDiscount;
 
-      // Calculate revenue & cost from each order item (most accurate method)
-      let orderRevenue = 0;
+      // Calculate cost from each order item
+      let orderItemRevenue = 0;
       let orderCost = 0;
       let orderUnits = 0;
 
@@ -356,7 +366,7 @@ function InventoryReportsPage() {
         const prod = inventoryMap[item.inventory_id] || {};
         const qty = item.quantity || 1;
 
-        // Revenue: Use item.subtotal if available, else unit_price * qty, else selling_price * qty
+        // Item-level revenue (before order-level discounts)
         let itemRevenue = 0;
         if (item.subtotal && item.subtotal > 0) {
           itemRevenue = item.subtotal;
@@ -370,7 +380,7 @@ function InventoryReportsPage() {
         const purchasePrice = prod.purchase_price || 0;
         const itemCost = purchasePrice * qty;
 
-        orderRevenue += itemRevenue;
+        orderItemRevenue += itemRevenue;
         orderCost += itemCost;
         orderUnits += qty;
 
