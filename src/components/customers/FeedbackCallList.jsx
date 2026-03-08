@@ -13,6 +13,7 @@ import {
   Users, Calendar, MapPin, Package, ShoppingBag, CreditCard, Truck, RefreshCw, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { sendFeedbackWebhook } from '@/functions/sendFeedbackWebhook';
 
 export default function FeedbackCallList() {
   const queryClient = useQueryClient();
@@ -123,7 +124,7 @@ export default function FeedbackCallList() {
     return result;
   }, [orderCards]);
 
-  // Send review to external webhook
+  // Send review to external webhook via backend function
   const sendReviewToWebhook = async (order, status, notes) => {
     const products = (order.order_items || []).map(item => ({
       product_name: item.item_name,
@@ -149,14 +150,8 @@ export default function FeedbackCallList() {
     };
 
     try {
-      await fetch('https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api_key': '656fbd615f1540248c9a12f2a58c2c40'
-        },
-        body: JSON.stringify(payload)
-      });
+      const res = await sendFeedbackWebhook(payload);
+      console.log('Webhook response:', res.data);
     } catch (err) {
       console.warn('Webhook send failed:', err);
     }
