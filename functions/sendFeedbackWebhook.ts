@@ -22,9 +22,9 @@ Deno.serve(async (req) => {
       redirect: 'follow'
     });
 
-    console.log('Response status:', response.status);
     const text = await response.text();
-    console.log('Response body:', text);
+    let responseData;
+    try { responseData = JSON.parse(text); } catch { responseData = { raw: text }; }
 
     const responseText = await response.text();
     let responseData;
