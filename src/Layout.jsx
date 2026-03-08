@@ -560,6 +560,8 @@ export default function Layout({ children, currentPageName }) {
           inventory_reports: { can_view: true, can_export: true },
           inventory_ai_insights: { can_view: true, can_export: true },
           financial_analytics: { can_view: true, can_export: true },
+          marketing_roi: { can_view: true, can_export: true },
+          discount_campaigns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
           auto_reports: { can_view: true, can_create: true, can_edit: true },
           user_access_manager: { can_view: true, can_create: true, can_edit: true },
           integrations: { can_view: true, can_create: true, can_edit: true },
