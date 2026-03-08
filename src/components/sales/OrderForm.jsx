@@ -217,13 +217,12 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
       ]
     };
 
-    // Increment campaign usage counters (fire and forget)
-    if (campaignResult.appliedCampaigns.length > 0) {
-      const { base44: b44 } = require('@/api/base44Client');
-      campaignResult.appliedCampaigns.forEach(c => {
-        b44.entities.DiscountCampaign.update(c.id, {}).catch(() => {});
-      });
-    }
+    // Increment campaign usage count (fire and forget)
+    campaignResult.appliedCampaigns.forEach(c => {
+      base44.entities.DiscountCampaign.filter({ id: c.id }).then(res => {
+        if (res?.[0]) base44.entities.DiscountCampaign.update(c.id, { usage_count: (res[0].usage_count || 0) + 1 });
+      }).catch(() => {});
+    });
 
     onSubmit(orderData);
   };
