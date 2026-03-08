@@ -46,6 +46,9 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
   const [itemQuantity, setItemQuantity] = useState(1);
   const [itemDiscount, setItemDiscount] = useState(0);
 
+  // Discount campaign integration
+  const { activeCampaigns, calculateDiscount } = useDiscountCampaigns();
+
   const departmentFilteredInventory = useMemo(() => {
     try {
       return inventory.filter(item => {
