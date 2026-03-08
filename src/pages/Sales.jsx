@@ -1377,7 +1377,14 @@ function SalesPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
+                            {((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 && (
+                              <Badge className="bg-green-50 text-green-700 border border-green-200 text-[10px] px-1.5 py-0 h-4 font-medium rounded-full">
+                                -৳{((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()} off
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu modal={false}>
