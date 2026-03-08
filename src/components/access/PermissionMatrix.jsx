@@ -3,114 +3,138 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
-  LayoutDashboard, Target, UserCheck, Users, Warehouse, Package, BookOpen, BarChart3,
-  Phone, MessageSquare, TrendingUp, TrendingDown, Award, Calculator, Clock, Briefcase, FileSignature,
-  Calendar, UserIcon, FileText, Plus, Shield, Link2, Bell, Mail, ShoppingCart, RotateCcw, PackageX,
-  Building2, Sparkles, Layers, DollarSign
+  Warehouse, ShoppingCart, Users, Package, Briefcase, RotateCcw, PackageX,
+  Shield, Building2, Layers, BarChart3, FileText, Sparkles, Calculator,
+  TrendingUp, Clock, Bell, Link2, DollarSign
 } from 'lucide-react';
 
 const MODULES = [
-  { id: 'inventory_overview', name: 'Inventory Overview', icon: Warehouse, category: 'Inventory' },
-  { id: 'sales', name: 'Sales Orders', icon: ShoppingCart, category: 'Inventory' },
-  { id: 'customer_management', name: 'Customer Management', icon: Users, category: 'Inventory' },
-  { id: 'purchase_orders', name: 'Purchase Orders', icon: Package, category: 'Inventory' },
-  { id: 'production_house', name: 'Production House', icon: Briefcase, category: 'Inventory' },
-  { id: 'inventory_movements', name: 'Stock Movements', icon: RotateCcw, category: 'Inventory' },
-  { id: 'inventory_returns', name: 'Returns & Damages', icon: PackageX, category: 'Inventory' },
-  { id: 'inventory_reconciliation', name: 'Reconciliation', icon: Shield, category: 'Inventory' },
-  { id: 'inventory_suppliers', name: 'Suppliers', icon: Building2, category: 'Inventory' },
-  { id: 'inventory_categories', name: 'Categories', icon: Layers, category: 'Inventory' },
-  { id: 'product_analytics', name: 'Product Analytics', icon: BarChart3, category: 'Analytics' },
-  { id: 'inventory_reports', name: 'Inventory Reports', icon: FileText, category: 'Analytics' },
-  { id: 'inventory_ai_insights', name: 'AI Insights', icon: Sparkles, category: 'Analytics' },
-  { id: 'finance', name: 'Finance Management', icon: Calculator, category: 'Finance' },
-  { id: 'finance_dashboard', name: 'Finance Dashboard', icon: TrendingUp, category: 'Finance' },
-  { id: 'financial_analytics', name: 'Financial Reports', icon: TrendingUp, category: 'Finance' },
-  { id: 'attendance', name: 'Employee Attendance', icon: Clock, category: 'HR' },
-  { id: 'auto_reports', name: 'Auto Report Settings', icon: Bell, category: 'System' },
-  { id: 'user_access_manager', name: 'User Access Manager', icon: Shield, category: 'System' },
-  { id: 'integrations', name: 'Integrations', icon: Link2, category: 'System' },
-  { id: 'system_alerts', name: 'System Alerts', icon: Bell, category: 'System' },
-  { id: 'audit_trail', name: 'Audit Trail', icon: FileText, category: 'System' }
+  // Inventory
+  { id: 'inventory_overview', name: 'Inventory Overview', icon: Warehouse, category: 'Inventory & Products' },
+  { id: 'sales', name: 'Sales Orders', icon: ShoppingCart, category: 'Inventory & Products' },
+  { id: 'customer_management', name: 'Customer Management', icon: Users, category: 'Inventory & Products' },
+  { id: 'discount_campaigns', name: 'Discount Campaigns', icon: Sparkles, category: 'Inventory & Products' },
+  { id: 'purchase_orders', name: 'Purchase Orders', icon: Package, category: 'Procurement & Warehouse' },
+  { id: 'production_house', name: 'Production House', icon: Briefcase, category: 'Procurement & Warehouse' },
+  { id: 'inventory_movements', name: 'Stock Movements', icon: RotateCcw, category: 'Procurement & Warehouse' },
+  { id: 'inventory_returns', name: 'Returns & Damages', icon: PackageX, category: 'Procurement & Warehouse' },
+  { id: 'inventory_reconciliation', name: 'Reconciliation', icon: Shield, category: 'Procurement & Warehouse' },
+  { id: 'inventory_suppliers', name: 'Suppliers', icon: Building2, category: 'Procurement & Warehouse' },
+  { id: 'inventory_categories', name: 'Categories', icon: Layers, category: 'Procurement & Warehouse' },
+  // Analytics
+  { id: 'product_analytics', name: 'Product Analytics', icon: BarChart3, category: 'Analytics & Reports' },
+  { id: 'marketing_roi', name: 'Marketing ROI', icon: TrendingUp, category: 'Analytics & Reports' },
+  { id: 'inventory_reports', name: 'Inventory Reports', icon: FileText, category: 'Analytics & Reports' },
+  { id: 'inventory_ai_insights', name: 'AI Insights', icon: Sparkles, category: 'Analytics & Reports' },
+  // Finance
+  { id: 'finance', name: 'Finance Management', icon: Calculator, category: 'Finance & Payroll' },
+  { id: 'finance_dashboard', name: 'Finance Dashboard', icon: TrendingUp, category: 'Finance & Payroll' },
+  { id: 'financial_analytics', name: 'Financial Reports', icon: DollarSign, category: 'Finance & Payroll' },
+  { id: 'payroll', name: 'Payroll', icon: Calculator, category: 'Finance & Payroll' },
+  // HR
+  { id: 'attendance', name: 'Employee Attendance', icon: Clock, category: 'Human Resources' },
+  // System
+  { id: 'auto_reports', name: 'Auto Report Settings', icon: Bell, category: 'System & Security' },
+  { id: 'user_access_manager', name: 'User Access Manager', icon: Shield, category: 'System & Security' },
+  { id: 'integrations', name: 'Integrations', icon: Link2, category: 'System & Security' },
+  { id: 'system_alerts', name: 'System Alerts', icon: Bell, category: 'System & Security' },
+  { id: 'audit_trail', name: 'Audit Trail', icon: FileText, category: 'System & Security' },
 ];
 
 const PERMISSIONS = [
-  { id: 'can_view', name: 'View', description: 'View data and access pages' },
-  { id: 'can_create', name: 'Create', description: 'Create new records' },
-  { id: 'can_edit', name: 'Edit', description: 'Edit existing records' },
-  { id: 'can_delete', name: 'Delete', description: 'Delete records' },
-  { id: 'can_approve', name: 'Approve', description: 'Approve requests and transactions' },
-  { id: 'can_export', name: 'Export', description: 'Export data to files' }
+  { id: 'can_view', name: 'View' },
+  { id: 'can_create', name: 'Create' },
+  { id: 'can_edit', name: 'Edit' },
+  { id: 'can_delete', name: 'Delete' },
+  { id: 'can_approve', name: 'Approve' },
+  { id: 'can_export', name: 'Export' },
 ];
 
-export default function PermissionMatrix({ employee, permissions, onPermissionChange, moduleGroups, roleDefinitions }) {
-  // Ensure permissions is always an object
+const CATEGORY_COLORS = {
+  'Inventory & Products': 'border-l-blue-600',
+  'Procurement & Warehouse': 'border-l-amber-600',
+  'Analytics & Reports': 'border-l-emerald-600',
+  'Finance & Payroll': 'border-l-red-600',
+  'Human Resources': 'border-l-purple-600',
+  'System & Security': 'border-l-slate-700',
+};
+
+export default function PermissionMatrix({ employee, permissions, onPermissionChange }) {
   const safePermissions = permissions || {};
-  
+
   const modulesByCategory = MODULES.reduce((acc, module) => {
     if (!acc[module.category]) acc[module.category] = [];
     acc[module.category].push(module);
     return acc;
   }, {});
 
-  const getRoleColor = (role) => {
-    const colors = {
-      admin: 'bg-red-100 text-red-800',
-      manager: 'bg-blue-100 text-blue-800',
-      department_head: 'bg-purple-100 text-purple-800',
-      employee: 'bg-green-100 text-green-800'
-    };
-    return colors[role] || 'bg-gray-100 text-gray-800';
-  };
-
   const isPermissionDisabled = (moduleId, permissionId) => {
-    // Super Admin has all permissions and cannot be restricted
     if (employee?.job_role === 'super_admin') return true;
-    
-    // Get module permissions safely
     const modulePerms = safePermissions[moduleId] || {};
-    
-    // View permission is required for all others (except for admin who can have all)
     if (permissionId !== 'can_view' && !modulePerms.can_view && employee?.job_role !== 'admin') return true;
-    
     return false;
   };
 
+  const toggleAllModule = (moduleId, enable) => {
+    PERMISSIONS.forEach(p => {
+      onPermissionChange(moduleId, p.id, enable);
+    });
+  };
+
   return (
-    <div className="h-full overflow-auto space-y-6">
+    <div className="space-y-6">
       {Object.entries(modulesByCategory).map(([category, modules]) => (
-        <Card key={category} className="border-l-4 border-l-slate-700">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+        <Card key={category} className={`border-l-4 ${CATEGORY_COLORS[category] || 'border-l-slate-400'}`}>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="flex items-center justify-between text-base">
               <span>{category}</span>
-              <Badge variant="outline">{modules.length} modules</Badge>
+              <Badge variant="outline" className="text-xs">{modules.length} modules</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-3">
               {modules.map(module => {
                 const modulePerms = safePermissions[module.id] || {};
                 const ModuleIcon = module.icon;
-                
+                const allEnabled = PERMISSIONS.every(p => modulePerms[p.id]);
+                const someEnabled = PERMISSIONS.some(p => modulePerms[p.id]);
+
                 return (
-                  <div key={module.id} className="border rounded-lg p-4 bg-gray-50/50">
-                    <div className="flex items-center gap-3 mb-3">
-                      {ModuleIcon && <ModuleIcon className="w-5 h-5 text-slate-700" />}
-                      <h4 className="font-medium">{module.name}</h4>
+                  <div key={module.id} className="border rounded-lg p-3 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <ModuleIcon className="w-4 h-4 text-slate-600" />
+                        <h4 className="font-medium text-sm">{module.name}</h4>
+                      </div>
+                      {employee?.job_role !== 'super_admin' && (
+                        <button
+                          onClick={() => toggleAllModule(module.id, !allEnabled)}
+                          className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                            allEnabled
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : someEnabled
+                                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {allEnabled ? 'Full Access' : someEnabled ? 'Partial' : 'No Access'}
+                        </button>
+                      )}
                     </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                       {PERMISSIONS.map(permission => (
-                        <div key={permission.id} className="flex items-center space-x-2">
+                        <div key={permission.id} className="flex items-center space-x-1.5">
                           <Switch
                             id={`${module.id}-${permission.id}`}
                             checked={modulePerms[permission.id] || false}
                             onCheckedChange={(checked) => onPermissionChange(module.id, permission.id, checked)}
                             disabled={isPermissionDisabled(module.id, permission.id)}
+                            className="scale-90"
                           />
-                          <label 
+                          <label
                             htmlFor={`${module.id}-${permission.id}`}
-                            className="text-sm font-medium cursor-pointer"
+                            className="text-xs font-medium cursor-pointer select-none"
                           >
                             {permission.name}
                           </label>
@@ -124,17 +148,8 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
           </CardContent>
         </Card>
       ))}
-      
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <h4 className="font-medium text-blue-900 mb-2">Permission Guidelines</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• <strong>Admin:</strong> Has all permissions automatically - cannot be restricted</li>
-          <li>• <strong>Manager:</strong> Can approve transactions and view all data</li>
-          <li>• <strong>Employee:</strong> Basic permissions for daily operations</li>
-          <li>• <strong>View permission</strong> is required before granting other permissions</li>
-          <li>• <strong>Changes take effect immediately</strong> across the entire system</li>
-        </ul>
-      </div>
     </div>
   );
 }
+
+export { MODULES, PERMISSIONS };
