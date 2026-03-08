@@ -216,14 +216,19 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
       ]
     };
 
-    // Increment campaign usage counters
-    for (const c of campaignResult.appliedCampaigns) {
-      try {
-        const { base44 } = await import('@/api/base44Client');
-        await base44.entities.DiscountCampaign.update(c.id, {
-          usage_count: ((await base44.entities.DiscountCampaign.filter({ id: c.id }))?.[0]?.usage_count || 0) + 1
+    // Increment campaign usage counters (fire and forget)
+    if (campaignResult.appliedCampaigns.length > 0) {
+      import('@/api/base44Client').then(({ base44 }) => {
+        campaignResult.appliedCampaigns.forEach(c => {
+          base44.entities.DiscountCampaign.filter({ id: c.id }).then(res => {
+            if (res?.[0]) {
+              base44.entities.DiscountCampaign.update(c.id, {
+                usage_count: (res[0].usage_count || 0) + 1
+              });
+            }
+          }).catch(() => {});
         });
-      } catch (e) { /* ignore usage update failures */ }
+      });
     }
 
     onSubmit(orderData);
