@@ -431,14 +431,14 @@ function InventoryReportsPage() {
       const source = order.order_source || 'other';
       if (!orderSourceSales[source]) orderSourceSales[source] = { orders: 0, revenue: 0, cost: 0 };
       orderSourceSales[source].orders++;
-      orderSourceSales[source].revenue += orderRevenue;
+      orderSourceSales[source].revenue += orderSalesRevenue;
       orderSourceSales[source].cost += orderCost;
 
       // Payment method breakdown
       const payment = order.payment_method || 'unknown';
       if (!paymentMethodSales[payment]) paymentMethodSales[payment] = { orders: 0, revenue: 0, cost: 0 };
       paymentMethodSales[payment].orders++;
-      paymentMethodSales[payment].revenue += orderRevenue;
+      paymentMethodSales[payment].revenue += orderSalesRevenue;
       paymentMethodSales[payment].cost += orderCost;
     });
 
@@ -449,10 +449,10 @@ function InventoryReportsPage() {
       r.margin = r.revenue > 0 ? ((r.profit / r.revenue) * 100) : 0;
     });
 
-    // Final calculations
-    const totalProfit = totalRevenue - totalCost;
-    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
-    const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+    // Final calculations - use totalSalesRevenue (actual order total_amount after discounts)
+    const totalProfit = totalSalesRevenue - totalCost;
+    const profitMargin = totalSalesRevenue > 0 ? (totalProfit / totalSalesRevenue * 100) : 0;
+    const avgOrderValue = totalOrders > 0 ? (totalSalesRevenue / totalOrders) : 0;
 
     let csv = `═══════════════════════════════════════════════════════════════\n`;
     csv += `                    SALES PERFORMANCE REPORT\n`;
@@ -462,7 +462,8 @@ function InventoryReportsPage() {
     csv += `Department: Prodhan.com E-Commerce\n\n`;
     
     csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
-    csv += `Total Revenue:           ৳${totalRevenue.toLocaleString()}\n`;
+    csv += `Total Sales Revenue:     ৳${totalSalesRevenue.toLocaleString()}\n`;
+    csv += `Total Discounts Given:   ৳${totalDiscount.toLocaleString()}\n`;
     csv += `Total Cost (COGS):       ৳${totalCost.toLocaleString()}\n`;
     csv += `Gross Profit:            ৳${totalProfit.toLocaleString()}\n`;
     csv += `Profit Margin:           ${profitMargin.toFixed(2)}%\n`;
@@ -493,7 +494,7 @@ function InventoryReportsPage() {
     csv += `Source,Orders,Revenue,Cost,Profit,% of Revenue\n`;
     Object.entries(orderSourceSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([src, data]) => {
       const profit = data.revenue - data.cost;
-      const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0;
+      const pct = totalSalesRevenue > 0 ? (data.revenue / totalSalesRevenue * 100) : 0;
       csv += `"${src}",${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${pct.toFixed(1)}%\n`;
     });
 
@@ -501,7 +502,7 @@ function InventoryReportsPage() {
     csv += `Payment Method,Orders,Revenue,Cost,Profit,% of Revenue\n`;
     Object.entries(paymentMethodSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([method, data]) => {
       const profit = data.revenue - data.cost;
-      const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0;
+      const pct = totalSalesRevenue > 0 ? (data.revenue / totalSalesRevenue * 100) : 0;
       csv += `"${method}",${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${pct.toFixed(1)}%\n`;
     });
 
