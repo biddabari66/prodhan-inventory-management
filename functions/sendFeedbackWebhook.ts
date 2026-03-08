@@ -9,12 +9,16 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
+    const apiKey = '656fbd615f1540248c9a12f2a58c2c40';
 
-    const response = await fetch('https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview', {
+    // Send as query param since header-based api_key may get stripped/normalized
+    const url = `https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview?api_key=${apiKey}`;
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api_key': '656fbd615f1540248c9a12f2a58c2c40'
+        'api_key': apiKey
       },
       body: JSON.stringify(payload)
     });
