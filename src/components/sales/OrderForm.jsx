@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Users, ShoppingCart, MapPin, CreditCard, CheckCircle, XCircle, Package } from 'lucide-react';
+import { Plus, Users, ShoppingCart, MapPin, CreditCard, CheckCircle, XCircle, Package, Sparkles, Gift, Truck, Tag } from 'lucide-react';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import SearchableCustomerSelect from '../common/SearchableCustomerSelect';
 import { toast } from 'sonner';
+import { useDiscountCampaigns } from './useDiscountCampaigns';
 
 export default function OrderForm({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) {
   const defaultDepartment = 'prodhan_com_e_commerce';
