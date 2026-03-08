@@ -12,6 +12,7 @@ import { Plus, Users, ShoppingCart, MapPin, CreditCard, CheckCircle, XCircle, Pa
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import SearchableCustomerSelect from '../common/SearchableCustomerSelect';
 import { toast } from 'sonner';
+import { base44 } from '@/api/base44Client';
 import { useDiscountCampaigns } from './useDiscountCampaigns';
 
 export default function OrderForm({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) {
