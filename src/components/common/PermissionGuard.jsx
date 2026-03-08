@@ -263,4 +263,56 @@ export const FinancialDataGate = ({ children, fallback = null }) => {
   return <>{children}</>;
 };
 
+/**
+ * Hook to check confidential data permissions (purchase price, cost, profit, salary, finance)
+ * @param {string} confidentialField - e.g. 'can_view_purchase_price', 'can_view_cost_data', 'can_view_profit_data', 'can_view_salary_data', 'can_view_sensitive_finance'
+ * @returns {{ canView: boolean, isLoading: boolean }}
+ */
+export const useConfidentialPermission = (confidentialField) => {
+  const [canView, setCanView] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const user = await User.me();
+        // Super admin always has access
+        if (isSuperAdmin(user)) { setCanView(true); setIsLoading(false); return; }
+        // Check user permissions records for the confidential flag
+        const perms = await UserPermission.filter({ user_id: user.id });
+        const hasAccess = perms.some(p => p[confidentialField] === true);
+        if (!cancelled) setCanView(hasAccess);
+      } catch {
+        if (!cancelled) setCanView(false);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [confidentialField]);
+
+  return { canView, isLoading };
+};
+
+/**
+ * Gate component for confidential data - purchase price, cost data, profit data, salary, etc.
+ * @param {string} field - 'can_view_purchase_price' | 'can_view_cost_data' | 'can_view_profit_data' | 'can_view_salary_data' | 'can_view_sensitive_finance'
+ * @param {ReactNode} children
+ * @param {ReactNode} fallback - optional custom fallback
+ */
+export const ConfidentialDataGate = ({ field, children, fallback = null }) => {
+  const { canView, isLoading } = useConfidentialPermission(field);
+
+  if (isLoading) return null;
+  if (!canView) return fallback || (
+    <span className="inline-flex items-center gap-1 text-xs text-slate-400 font-medium">
+      <Lock className="w-3 h-3" /> Restricted
+    </span>
+  );
+
+  return <>{children}</>;
+};
+
 export default withPermission;
