@@ -10,13 +10,19 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
 
+    // Include api_key in the body since Base44 may not forward custom headers to functions
+    const bodyWithKey = {
+      ...payload,
+      api_key: '656fbd615f1540248c9a12f2a58c2c40'
+    };
+
     const response = await fetch('https://satisfied-insight-spark-ai.base44.app/api/functions/receiveReview', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'api_key': '656fbd615f1540248c9a12f2a58c2c40'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(bodyWithKey)
     });
 
     const text = await response.text();
