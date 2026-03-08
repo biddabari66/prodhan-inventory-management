@@ -509,9 +509,22 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
 
           <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label>Regular Discount (BDT)</Label>
+              <Label>Coupon Code</Label>
+              <Input
+                value={formData.discount_code || ''}
+                onChange={(e) => setFormData({...formData, discount_code: e.target.value.toUpperCase()})}
+                placeholder="e.g., EID2026"
+              />
+              {activeCampaigns.length > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  {activeCampaigns.length} offer(s) running now
+                </p>
+              )}
+            </div>
+            <div>
+              <Label>Manual Discount (BDT)</Label>
               <Input
                 type="text"
                 inputMode="decimal"
@@ -521,7 +534,7 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
               />
             </div>
             <div>
-              <Label>Coupon Discount (BDT)</Label>
+              <Label>Extra Coupon Disc. (BDT)</Label>
               <Input
                 type="text"
                 inputMode="decimal"
@@ -535,9 +548,15 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
               <Input
                 type="text"
                 inputMode="decimal"
-                value={formData.shipping_cost}
+                value={campaignResult.freeDelivery ? 0 : formData.shipping_cost}
                 onChange={(e) => setFormData({...formData, shipping_cost: parseFloat(e.target.value) || 0})}
+                disabled={campaignResult.freeDelivery}
               />
+              {campaignResult.freeDelivery && (
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <Truck className="w-3 h-3" /> Free delivery applied!
+                </p>
+              )}
             </div>
           </div>
 
