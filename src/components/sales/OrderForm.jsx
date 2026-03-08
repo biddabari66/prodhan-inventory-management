@@ -217,12 +217,7 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
       ]
     };
 
-    // Increment campaign usage count (fire and forget)
-    campaignResult.appliedCampaigns.forEach(c => {
-      base44.entities.DiscountCampaign.filter({ id: c.id }).then(res => {
-        if (res?.[0]) base44.entities.DiscountCampaign.update(c.id, { usage_count: (res[0].usage_count || 0) + 1 });
-      }).catch(() => {});
-    });
+    // Tag the order with applied campaign names for tracking
 
     onSubmit(orderData);
   };
