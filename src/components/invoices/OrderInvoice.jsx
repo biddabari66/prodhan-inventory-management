@@ -254,6 +254,16 @@ export default function OrderInvoice({ order }) {
 
           <Separator className="my-6" />
 
+          {/* Campaign Offer Applied */}
+          {campaignTags.length > 0 && (
+            <div className="mb-4 p-3 rounded-lg border border-green-200" style={{ backgroundColor: '#F0FDF4' }}>
+              <p className="text-sm font-semibold text-green-800 mb-1">Offer Applied:</p>
+              {campaignTags.map((name, i) => (
+                <p key={i} className="text-xs text-green-700">• {name}</p>
+              ))}
+            </div>
+          )}
+
           {/* Pricing Breakdown */}
           <div className="flex justify-end">
             <div className="w-full sm:w-96 space-y-3">
@@ -264,7 +274,7 @@ export default function OrderInvoice({ order }) {
 
               {regularDiscount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Regular Discount:</span>
+                  <span className="text-muted-foreground">{campaignTags.length > 0 ? 'Discount (incl. offer):' : 'Regular Discount:'}</span>
                   <span className="font-medium text-red-600">-৳{regularDiscount.toLocaleString()}</span>
                 </div>
               )}
