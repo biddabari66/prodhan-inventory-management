@@ -693,6 +693,7 @@ export default function Layout({ children, currentPageName }) {
       'AutoReportSettings': 'auto_reports',
       'CategorySettings': 'inventory_categories',
       'CustomerManagement': 'customer_management',
+      'DiscountCampaigns': 'sales',
       'EmployeeAttendance': 'attendance',
       'Courses': 'courses',
       'Reports': 'reports',
