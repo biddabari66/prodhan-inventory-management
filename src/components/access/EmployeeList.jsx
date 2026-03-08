@@ -50,10 +50,16 @@ export default function EmployeeList({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
+                <SelectItem value="procurement_officer">Procurement Officer</SelectItem>
+                <SelectItem value="sales_staff">Sales Staff</SelectItem>
+                <SelectItem value="warehouse_staff">Warehouse Staff</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="department_head">Department Head</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="employee">Employee</SelectItem>
               </SelectContent>
             </Select>
           </div>
