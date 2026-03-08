@@ -33,8 +33,9 @@ export default function ThermalReceipt({ order, onPrint }) {
 
   // Calculate totals
   const subtotal = order.order_items?.reduce((sum, item) => sum + (item.subtotal || 0), 0) || 0;
-  const deliveryCharge = order.shipping_cost || 60;
-  const grandTotal = order.total_amount || (subtotal + deliveryCharge);
+  const totalDiscount = (order.discount_amount || 0) + (order.coupon_discount || 0);
+  const deliveryCharge = order.shipping_cost || 0;
+  const grandTotal = order.total_amount || (subtotal - totalDiscount + deliveryCharge);
 
   // Print the receipt
   const handlePrint = () => {
