@@ -716,6 +716,7 @@ export default function Layout({ children, currentPageName }) {
     { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
     { label: t('CRM'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-purple-600', permission: 'customer_management' },
     { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
+    { label: t('Discount Offers'), url: createPageUrl('DiscountCampaigns'), icon: Sparkles, colorClass: 'text-amber-500', permission: 'sales' },
     { label: t('Marketing ROI'), url: createPageUrl('MarketingROI'), icon: TrendingUp, colorClass: 'text-pink-600', permission: 'product_analytics' },
     { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-indigo-600', permission: 'purchase_orders' },
     { label: t('Production House'), url: createPageUrl('ProductionHouse'), icon: Briefcase, colorClass: 'text-purple-600', permission: 'production_house' },
