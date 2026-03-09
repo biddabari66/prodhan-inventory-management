@@ -57,11 +57,26 @@ export default function PurchaseOrderForm({ order, suppliers, inventory, current
 
   const unitOptions = ['pc', 'kg', 'gm', 'litre', 'ml', 'roll', 'sheet', 'bundle', 'meter', 'jar', 'box'];
 
-  const { data: categories = [] } = useQuery({
+  const { data: registeredCategories = [] } = useQuery({
     queryKey: ['product-categories-form'],
     queryFn: () => base44.entities.ProductCategory.filter({ department: 'prodhan_com_e_commerce', is_active: true }),
     staleTime: 10 * 60 * 1000,
   });
+
+  // Also derive categories from inventory to include unregistered ones like "Fashion"
+  const categories = useMemo(() => {
+    const catMap = new Map();
+    registeredCategories.forEach(c => catMap.set(c.name?.toLowerCase(), c.name));
+    // Add from inventory prop
+    if (inventory?.length) {
+      inventory.forEach(item => {
+        if (item.category?.trim() && !catMap.has(item.category.trim().toLowerCase())) {
+          catMap.set(item.category.trim().toLowerCase(), item.category.trim());
+        }
+      });
+    }
+    return [...catMap.values()].sort();
+  }, [registeredCategories, inventory]);
 
   const handleInvoiceUpload = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -206,7 +221,7 @@ export default function PurchaseOrderForm({ order, suppliers, inventory, current
               <Select value={formData.purchase_category || ''} onValueChange={(v) => setFormData({...formData, purchase_category: v})}>
                 <SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger>
                 <SelectContent>
-                  {categories.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
