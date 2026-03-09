@@ -11,6 +11,7 @@ import { Inventory } from '@/entities/Inventory';
 import { Income as IncomeApi } from '@/entities/Income';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { base44 } from '@/api/base44Client';
 
 // Department-specific field configurations
 const DEPARTMENT_CONFIG = {
@@ -394,6 +395,50 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                         status: 'received'
                     });
                     newLogs.push({ status: 'success', message: `💰 Income recorded: ৳${totalIncomeForBatch.toLocaleString()}` });
+                }
+
+                // Auto-sync categories: detect new categories and create ProductCategory records
+                try {
+                  const allCategories = await base44.entities.ProductCategory.filter({ department: selectedDepartment });
+                  const existingCatNames = new Set(allCategories.map(c => c.name?.toLowerCase()));
+                  
+                  // Collect unique categories from imported data
+                  const importedCategories = new Set();
+                  const { mapping: mapForCats } = mappingPreview;
+                  const headerForCat = Object.entries(mapForCats).find(([, v]) => v === 'category');
+                  if (headerForCat) {
+                    const catColIndex = csvHeaders.indexOf(headerForCat[0]);
+                    if (catColIndex >= 0) {
+                      dataRows.forEach(row => {
+                        const catVal = row[catColIndex]?.replace(/"/g, '').trim();
+                        if (catVal) importedCategories.add(catVal);
+                      });
+                    }
+                  }
+                  
+                  let newCatsCreated = 0;
+                  for (const catName of importedCategories) {
+                    if (!existingCatNames.has(catName.toLowerCase())) {
+                      const slug = catName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '_').replace(/-+/g, '_').trim();
+                      await base44.entities.ProductCategory.create({
+                        name: catName,
+                        slug: slug,
+                        department: selectedDepartment,
+                        category_type: 'product_category',
+                        description: `Auto-created from import`,
+                        color: '#8B5CF6',
+                        sort_order: 999,
+                        is_active: true,
+                        product_count: 0
+                      });
+                      newCatsCreated++;
+                    }
+                  }
+                  if (newCatsCreated > 0) {
+                    newLogs.push({ status: 'success', message: `📂 ${newCatsCreated} new categories auto-created` });
+                  }
+                } catch (catError) {
+                  console.warn('Category auto-sync failed:', catError);
                 }
 
                 setImportLog(newLogs);
