@@ -753,6 +753,9 @@ function FinanceDashboardPage() {
           </Card>
         </div>
 
+        {/* Profit & Loss Waterfall */}
+        <ProfitWaterfall financials={financials} />
+
         {/* Detailed Breakdown Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Revenue Card */}
@@ -804,6 +807,12 @@ function FinanceDashboardPage() {
                 <span className="text-sm text-slate-600">Returns & Wastage</span>
                 <span className="font-bold text-orange-600">৳{financials.returnLoss.toLocaleString()}</span>
               </div>
+              {financials.customExpenses > 0 && (
+                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                  <span className="text-sm text-slate-600">Production Expenses</span>
+                  <span className="font-bold text-purple-600">৳{financials.customExpenses.toLocaleString()}</span>
+                </div>
+              )}
               {financials.otherExpenses > 0 && (
                 <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
                   <span className="text-sm text-slate-600">Other Expenses</span>
