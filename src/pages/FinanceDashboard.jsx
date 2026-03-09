@@ -20,6 +20,7 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, PieChart as RechartsPie, Pie, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import ProfitWaterfall from '../components/finance/ProfitWaterfall';
 
 const COLORS = ['#DC2626', '#F59E0B', '#8B5CF6', '#3B82F6', '#10B981', '#6B7280'];
 
@@ -196,10 +197,15 @@ function FinanceDashboardPage() {
       .filter(o => o.payment_status !== 'paid' && !['cancelled', 'returned', 'delivered'].includes(o.order_status))
       .reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
-    // COGS from purchase orders
+    // COGS from purchase orders (subtotal only, excluding custom expenses)
     const costOfGoods = purchaseOrders
       .filter(p => ['received', 'completed'].includes(p.order_status))
-      .reduce((sum, p) => sum + (p.total_amount || 0), 0);
+      .reduce((sum, p) => sum + ((p.subtotal || 0) + (p.tax_amount || 0) + (p.shipping_cost || 0) + (p.courier_expense || 0) - (p.discount_amount || 0)), 0);
+
+    // Custom/Production expenses from POs (stitching, piping, etc.)
+    const customExpenses = purchaseOrders
+      .filter(p => ['received', 'completed'].includes(p.order_status))
+      .reduce((sum, p) => sum + (p.custom_expenses_total || 0), 0);
 
     // Packaging expenses
     const packagingCost = packagingExpenses
@@ -226,7 +232,7 @@ function FinanceDashboardPage() {
     const otherExpenses = generalExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
     // Total expenses
-    const totalExpenses = costOfGoods + packagingCost + returnLoss + otherExpenses;
+    const totalExpenses = costOfGoods + packagingCost + returnLoss + otherExpenses + customExpenses;
 
     // Profit calculations
     const grossProfit = collectedRevenue - totalExpenses;
@@ -268,6 +274,7 @@ function FinanceDashboardPage() {
       costOfGoods,
       packagingCost,
       returnLoss,
+      customExpenses,
       totalExpenses,
       grossProfit,
       profitMargin,
@@ -293,6 +300,7 @@ function FinanceDashboardPage() {
     { name: 'Purchase Cost', value: financials.costOfGoods, fill: '#DC2626' },
     { name: 'Packaging & Courier', value: financials.packagingCost, fill: '#F59E0B' },
     { name: 'Returns/Wastage', value: financials.returnLoss, fill: '#EF4444' },
+    { name: 'Production Expenses', value: financials.customExpenses, fill: '#A855F7' },
     { name: 'Ad Spend', value: financials.totalAdSpend, fill: '#8B5CF6' },
     { name: 'Other Expenses', value: financials.otherExpenses, fill: '#EC4899' },
     { name: 'Salaries', value: financials.totalSalaries, fill: '#6366F1' }
