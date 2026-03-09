@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Edit, Trash2, FolderTree, BookOpen, Package, 
-  Search, Check, X, GripVertical, Tag, Layers
+  Plus, Edit, Trash2, BookOpen, Package, 
+  Search, Check, X, Tag, Layers, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -175,12 +175,60 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('product_category');
   const [departmentFilter, setDepartmentFilter] = useState(isAdmin ? 'all' : userDepartment);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch categories
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['product-categories'],
     queryFn: () => base44.entities.ProductCategory.list('sort_order'),
   });
+
+  // Fetch inventory to detect unregistered categories
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ['inventory-for-category-sync'],
+    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 5000),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Detect missing categories
+  const missingCategories = React.useMemo(() => {
+    const existingNames = new Set(categories.map(c => c.name?.toLowerCase()));
+    const inventoryCats = new Set();
+    inventoryItems.forEach(item => {
+      if (item.category && item.category.trim()) {
+        inventoryCats.add(item.category.trim());
+      }
+    });
+    return [...inventoryCats].filter(cat => !existingNames.has(cat.toLowerCase()));
+  }, [categories, inventoryItems]);
+
+  const handleSyncCategories = async () => {
+    if (missingCategories.length === 0) {
+      toast.info('All categories are already synced!');
+      return;
+    }
+    setIsSyncing(true);
+    let created = 0;
+    for (const catName of missingCategories) {
+      const slug = catName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '_').trim();
+      const count = inventoryItems.filter(i => i.category === catName).length;
+      await base44.entities.ProductCategory.create({
+        name: catName,
+        slug: slug,
+        department: 'prodhan_com_e_commerce',
+        category_type: 'product_category',
+        description: `Auto-synced from inventory (${count} products)`,
+        color: '#8B5CF6',
+        sort_order: 999,
+        is_active: true,
+        product_count: count
+      });
+      created++;
+    }
+    queryClient.invalidateQueries(['product-categories']);
+    toast.success(`${created} new categories synced from inventory!`);
+    setIsSyncing(false);
+  };
 
   // Create mutation
   const createMutation = useMutation({
@@ -265,14 +313,43 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <Button 
-          onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}
-          className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-sm h-10 px-4 rounded-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Category
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button 
+            onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}
+            className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-sm h-10 px-4 rounded-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Category
+          </Button>
+          {missingCategories.length > 0 && (
+            <Button
+              onClick={handleSyncCategories}
+              disabled={isSyncing}
+              variant="outline"
+              className="border-amber-500 text-amber-700 hover:bg-amber-50 h-10 px-4 rounded-lg gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              Sync {missingCategories.length} Missing Categories
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Missing categories alert */}
+      {missingCategories.length > 0 && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">
+              {missingCategories.length} categories found in inventory but not registered
+            </p>
+            <p className="text-xs text-amber-600 mt-1">
+              Categories: <strong>{missingCategories.join(', ')}</strong>
+            </p>
+            <p className="text-xs text-amber-500 mt-0.5">Click "Sync Missing Categories" to auto-register them.</p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="bg-white border-0 shadow-sm rounded-xl">
