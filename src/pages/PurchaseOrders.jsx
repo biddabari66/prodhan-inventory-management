@@ -747,23 +747,6 @@ function PurchaseOrdersPage() {
                         <TableCell className="text-right font-semibold">
                           ৳{order.total_amount?.toLocaleString()}
                         </TableCell>
-                        <TableCell>
-                          {(order.invoice_images?.length > 0 || order.invoice_image_url) ? (
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(order.invoice_images?.[0] || order.invoice_image_url, '_blank')}
-                                className="text-blue-600"
-                              >
-                                <Image className="w-4 h-4 mr-1" />
-                                {order.invoice_images?.length > 1 ? `${order.invoice_images.length} imgs` : 'View'}
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">No invoice</span>
-                          )}
-                        </TableCell>
                         <TableCell>{getStatusBadge(order)}</TableCell>
                         <TableCell className="text-center">
                           <DropdownMenu modal={false}>
