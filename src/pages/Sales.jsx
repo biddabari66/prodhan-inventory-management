@@ -349,11 +349,17 @@ function SalesPage() {
       }
     } else {
       try {
-        await Promise.all(selectedOrderIds.map(id =>
-          Order.update(id, { order_status: action })
-        ));
+        // Process sequentially to avoid race conditions, especially for 'shipped' status
+        for (const id of selectedOrderIds) {
+          await Order.update(id, { order_status: action });
+        }
         queryClient.invalidateQueries(['orders']);
-        toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
+        if (action === 'shipped') {
+          setTimeout(() => queryClient.invalidateQueries(['inventory']), 3000);
+          toast.success(`${selectedOrderIds.length} order(s) shipped! Inventory will be deducted automatically.`);
+        } else {
+          toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
+        }
         setSelectedOrderIds([]);
       } catch (error) {
         toast.error('Failed to update orders: ' + error.message);
