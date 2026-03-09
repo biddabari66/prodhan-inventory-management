@@ -692,11 +692,10 @@ function PurchaseOrdersPage() {
                   <TableRow>
                     <TableHead>PO Number</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead>Supplier</TableHead>
-                    <TableHead>Created By</TableHead>
                     <TableHead>Items</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Invoice</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -704,7 +703,7 @@ function PurchaseOrdersPage() {
                 <TableBody>
                   {filteredOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No purchase orders found</p>
                       </TableCell>
@@ -719,15 +718,18 @@ function PurchaseOrdersPage() {
                           {format(new Date(order.order_date), 'dd MMM yyyy')}
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium">
-                            {supplierMap[order.supplier_id]?.supplier_name || order.supplier_name}
-                          </p>
+                          <div className="space-y-1">
+                            {order.purchase_category && <Badge variant="outline" className="text-xs">{order.purchase_category}</Badge>}
+                            {order.purchase_type && order.purchase_type !== 'product' && (
+                              <Badge className="text-[10px] bg-purple-100 text-purple-700 block w-fit">{order.purchase_type.replace('_', ' ')}</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm">{order.created_by_name || 'N/A'}</span>
-                          </div>
+                          <p className="font-medium text-sm">
+                            {supplierMap[order.supplier_id]?.supplier_name || order.supplier_name}
+                          </p>
+                          <p className="text-xs text-slate-400">{order.created_by_name || ''}</p>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1 max-w-xs">
