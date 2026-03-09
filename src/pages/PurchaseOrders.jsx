@@ -1059,6 +1059,25 @@ function PurchaseOrdersPage() {
                   </Table>
                 </div>
 
+                {/* Custom Expenses */}
+                {viewOrderDialog.custom_expenses?.length > 0 && (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <p className="text-sm font-semibold text-purple-800 mb-2">Production Expenses ({viewOrderDialog.purchase_category})</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {viewOrderDialog.custom_expenses.map((exp, idx) => (
+                        <div key={idx} className="flex justify-between p-2 bg-white rounded">
+                          <span className="text-sm text-slate-600">{exp.field_name}</span>
+                          <span className="text-sm font-semibold">৳{exp.amount?.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-purple-200 flex justify-between">
+                      <span className="text-sm font-semibold text-purple-800">Total Production Cost</span>
+                      <span className="font-bold text-purple-700">৳{viewOrderDialog.custom_expenses_total?.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+
                 {viewOrderDialog.notes && (
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500 mb-1">Notes</p>
