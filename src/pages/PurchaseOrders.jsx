@@ -18,8 +18,9 @@ import {
   FileText, Download, Search, Filter, MoreVertical, CreditCard, Box,
   Upload, Image, ShieldCheck, ShieldX, User
 } from 'lucide-react';
-import SearchableProductSelect from '../components/common/SearchableProductSelect';
 import PackagingExpenseForm from '../components/procurement/PackagingExpenseForm';
+import PurchaseOrderForm from '../components/procurement/PurchaseOrderForm';
+import PurchaseCategoryFilter from '../components/procurement/PurchaseCategoryFilter';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -33,6 +34,7 @@ function PurchaseOrdersPage() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [viewOrderDialog, setViewOrderDialog] = useState(null);
@@ -443,6 +445,10 @@ function PurchaseOrdersPage() {
       });
     }
 
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(o => o.purchase_category === categoryFilter);
+    }
+
     if (startDate) {
       filtered = filtered.filter(o => o.order_date >= startDate);
     }
@@ -452,7 +458,7 @@ function PurchaseOrdersPage() {
     }
 
     return filtered;
-  }, [purchaseOrders, statusFilter, searchQuery, startDate, endDate, supplierMap]);
+  }, [purchaseOrders, statusFilter, searchQuery, startDate, endDate, supplierMap, categoryFilter]);
 
   // Stats
   const stats = useMemo(() => {
@@ -608,6 +614,9 @@ function PurchaseOrdersPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Category Filter */}
+        <PurchaseCategoryFilter selected={categoryFilter} onSelect={setCategoryFilter} />
 
         {/* Filters */}
         <Card className="bg-white border border-slate-200 shadow-sm">
@@ -949,6 +958,7 @@ function PurchaseOrdersPage() {
                 suppliers={suppliers}
                 inventory={inventory}
                 currentUser={currentUser}
+                isAdmin={isAdmin}
                 onSubmit={handleOrderSubmit}
                 onCancel={() => {
                   setIsFormOpen(false);
