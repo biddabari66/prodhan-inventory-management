@@ -5,7 +5,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
  * 
  * Triggered by entity automation when Order is updated.
  * Deducts inventory ONLY when order_status transitions TO 'shipped'.
- * Skips if already deducted (checks for existing movement records).
+ * Skips if already deducted (checks for existing movement records by order_number).
  * Also updates inventory status fields (total_sold, last_sale_date, etc.)
  */
 
@@ -16,42 +16,54 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { event, data, old_data } = payload;
 
+    console.log(`🔔 Automation triggered: type=${event?.type}, entity=${event?.entity_name}, id=${event?.entity_id}`);
+
     // Only handle update events
     if (event?.type !== 'update') {
+      console.log('⏭️ Skipping: not an update event');
       return Response.json({ skipped: true, reason: 'Not an update event' });
     }
 
     const order = data;
     const previousOrder = old_data;
 
+    console.log(`📦 Order ${order?.order_number}: old_status="${previousOrder?.order_status}" → new_status="${order?.order_status}"`);
+
     // Only proceed if status changed TO 'shipped'
     if (order?.order_status !== 'shipped') {
+      console.log(`⏭️ Skipping: status is "${order?.order_status}", not "shipped"`);
       return Response.json({ skipped: true, reason: 'Status is not shipped' });
     }
 
     // Skip if it was already shipped before (no re-deduction)
     if (previousOrder?.order_status === 'shipped') {
+      console.log('⏭️ Skipping: was already shipped');
       return Response.json({ skipped: true, reason: 'Already was shipped' });
     }
 
-    console.log(`📦 Order ${order.order_number} (${event.entity_id}) status changed to SHIPPED. Deducting inventory...`);
+    console.log(`✅ Order ${order.order_number} (${event.entity_id}) transitioning to SHIPPED. Starting inventory deduction...`);
 
     const orderItems = order.order_items || [];
     if (orderItems.length === 0) {
+      console.log('⏭️ Skipping: no order items in this order');
       return Response.json({ skipped: true, reason: 'No order items' });
     }
 
-    // Check if we already deducted for this order (idempotency check)
+    console.log(`📋 Order has ${orderItems.length} line item(s)`);
+
+    // Idempotency check: Look for existing sale movements for this specific order
+    // Use reference_number (order_number) which is more reliable than entity_id
     const existingMovements = await base44.asServiceRole.entities.InventoryMovement.filter({
-      reference_id: event.entity_id,
-      reference_type: 'sale',
-      movement_type: 'out'
+      reference_number: order.order_number,
+      reference_type: 'sale'
     });
 
     if (existingMovements.length > 0) {
-      console.log(`⚠️ Inventory already deducted for order ${order.order_number} (${existingMovements.length} movements found). Skipping.`);
+      console.log(`⚠️ Found ${existingMovements.length} existing sale movements for order ${order.order_number}. Already deducted. Skipping.`);
       return Response.json({ skipped: true, reason: 'Already deducted', existing_movements: existingMovements.length });
     }
+
+    console.log(`🔍 No prior deductions found for ${order.order_number}. Proceeding with inventory deduction...`);
 
     let itemsDeducted = 0;
     let errors = [];
@@ -60,11 +72,12 @@ Deno.serve(async (req) => {
     for (const item of orderItems) {
       if (!item.inventory_id) {
         console.warn(`⚠️ Item "${item.item_name}" has no inventory_id, skipping`);
+        errors.push({ item: item.item_name, error: 'No inventory_id' });
         continue;
       }
 
       try {
-        // Fetch FRESH inventory data (not cached) using service role
+        // Fetch FRESH inventory data using service role
         const inventoryItem = await base44.asServiceRole.entities.Inventory.get(item.inventory_id);
         
         if (!inventoryItem) {
@@ -75,7 +88,8 @@ Deno.serve(async (req) => {
 
         // Check if it's a bundle/combo product
         if (inventoryItem.is_bundle && inventoryItem.bundle_items?.length > 0) {
-          // Deduct component items for bundles
+          console.log(`📦 "${inventoryItem.item_name}" is a bundle with ${inventoryItem.bundle_items.length} components`);
+          
           for (const bundleItem of inventoryItem.bundle_items) {
             try {
               const componentItem = await base44.asServiceRole.entities.Inventory.get(bundleItem.inventory_id);
@@ -85,7 +99,8 @@ Deno.serve(async (req) => {
               }
 
               const deductQty = (bundleItem.quantity || 1) * (item.quantity || 1);
-              const newStock = Math.max(0, (componentItem.current_stock || 0) - deductQty);
+              const oldStock = componentItem.current_stock || 0;
+              const newStock = Math.max(0, oldStock - deductQty);
 
               // Update component inventory
               await base44.asServiceRole.entities.Inventory.update(bundleItem.inventory_id, {
@@ -111,7 +126,7 @@ Deno.serve(async (req) => {
                 balance_after: newStock
               });
 
-              console.log(`  ✅ Bundle component "${componentItem.item_name}": -${deductQty} → ${newStock} remaining`);
+              console.log(`  ✅ Bundle component "${componentItem.item_name}": ${oldStock} - ${deductQty} = ${newStock}`);
               itemsDeducted++;
             } catch (compError) {
               console.error(`  ❌ Error deducting bundle component ${bundleItem.inventory_id}:`, compError.message);
@@ -121,8 +136,10 @@ Deno.serve(async (req) => {
         } else {
           // Regular product deduction
           const deductQty = item.quantity || 1;
-          const currentStock = inventoryItem.current_stock || 0;
-          const newStock = Math.max(0, currentStock - deductQty);
+          const oldStock = inventoryItem.current_stock || 0;
+          const newStock = Math.max(0, oldStock - deductQty);
+
+          console.log(`  🔄 "${inventoryItem.item_name}": ${oldStock} - ${deductQty} = ${newStock}`);
 
           // Handle color variant deduction
           let updatedColorVariants = inventoryItem.color_variants;
@@ -164,7 +181,7 @@ Deno.serve(async (req) => {
             balance_after: newStock
           });
 
-          console.log(`  ✅ "${inventoryItem.item_name}": -${deductQty} → ${newStock} remaining`);
+          console.log(`  ✅ "${inventoryItem.item_name}": deducted ${deductQty}, new stock = ${newStock}`);
           itemsDeducted++;
         }
       } catch (itemError) {
@@ -173,7 +190,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`📊 Inventory deduction complete for ${order.order_number}: ${itemsDeducted} items deducted, ${errors.length} errors`);
+    console.log(`📊 COMPLETE: Order ${order.order_number} | ${itemsDeducted} items deducted | ${errors.length} errors`);
 
     return Response.json({
       success: true,
