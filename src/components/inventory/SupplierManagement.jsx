@@ -22,8 +22,8 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
-import SupplierForm from './SupplierForm';
-import SupplierDetailSheet from './SupplierDetailSheet';
+import SupplierForm from '@/components/inventory/SupplierForm';
+import SupplierDetailSheet from '@/components/inventory/SupplierDetailSheet';
 
 export default function SupplierManagement({ selectedDepartment }) {
   const queryClient = useQueryClient();
