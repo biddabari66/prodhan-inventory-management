@@ -20,22 +20,10 @@ export default function WelcomeCallList() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
-  // 🚀 Fetch ALL orders for welcome calls (all sales orders go here)
+  // Fetch ALL orders for welcome calls (all sales orders go here)
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-welcome-calls-all'],
-    queryFn: async () => {
-      const batchSize = 1000;
-      let allData = [];
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const batch = await base44.entities.Order.list('-order_date', batchSize, offset);
-        allData = [...allData, ...batch];
-        offset += batchSize;
-        hasMore = batch.length === batchSize;
-      }
-      return allData;
-    },
+    queryFn: () => base44.entities.Order.list('-order_date', 10000),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -44,19 +32,7 @@ export default function WelcomeCallList() {
   // Fetch welcome call statuses
   const { data: welcomeStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['welcome-call-statuses'],
-    queryFn: async () => {
-      const batchSize = 1000;
-      let allData = [];
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const batch = await base44.entities.WelcomeCall.list('-created_date', batchSize, offset);
-        allData = [...allData, ...batch];
-        offset += batchSize;
-        hasMore = batch.length === batchSize;
-      }
-      return allData;
-    },
+    queryFn: () => base44.entities.WelcomeCall.list('-created_date', 10000),
     staleTime: 30000
   });
 

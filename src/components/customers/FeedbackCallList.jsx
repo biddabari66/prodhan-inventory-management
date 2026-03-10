@@ -26,27 +26,10 @@ export default function FeedbackCallList() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
-  // 🚀 Fetch ONLY delivered orders for feedback calls
+  // Fetch ONLY delivered orders for feedback calls
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-feedback-calls-all'],
-    queryFn: async () => {
-      const batchSize = 1000;
-      let allData = [];
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const batch = await base44.entities.Order.filter(
-          { order_status: 'delivered' },
-          '-order_date',
-          batchSize,
-          offset
-        );
-        allData = [...allData, ...batch];
-        offset += batchSize;
-        hasMore = batch.length === batchSize;
-      }
-      return allData;
-    },
+    queryFn: () => base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 10000),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -55,19 +38,7 @@ export default function FeedbackCallList() {
   // Fetch feedback call statuses
   const { data: feedbackStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['feedback-call-statuses'],
-    queryFn: async () => {
-      const batchSize = 1000;
-      let allData = [];
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const batch = await base44.entities.FeedbackCall.list('-created_date', batchSize, offset);
-        allData = [...allData, ...batch];
-        offset += batchSize;
-        hasMore = batch.length === batchSize;
-      }
-      return allData;
-    },
+    queryFn: () => base44.entities.FeedbackCall.list('-created_date', 10000),
     staleTime: 30000
   });
 
