@@ -177,13 +177,14 @@ function InventoryReportsPage() {
     try {
       toast.info('Generating report...');
       
-      const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses] = await Promise.all([
+      const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses, adSpends] = await Promise.all([
         base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
         base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
         base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
         base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000)
+        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        base44.entities.AdSpend.list('-spend_date', 1000)
       ]);
 
       // Helper: get BDT date and time from a date string or ISO datetime
@@ -197,12 +198,9 @@ function InventoryReportsPage() {
       };
 
       const isInDateRange = (dateStr, createdDateStr) => {
-        // Use the primary date field (order_date, expense_date, etc.) for date filtering
         const primary = getBDTDateTime(dateStr);
-        // Use created_date for time filtering if primary date has no time component
         const hasTime = dateStr && dateStr.includes('T');
         const timeSource = hasTime ? primary : getBDTDateTime(createdDateStr);
-        
         if (!primary.date) return false;
         if (primary.date < startDate || primary.date > endDate) return false;
         if (primary.date === startDate && timeSource.time < startTime) return false;
@@ -216,6 +214,7 @@ function InventoryReportsPage() {
       const filteredPurchaseOrders = purchaseOrders.filter(p => isInDateRange(p.order_date, p.created_date));
       const filteredPackaging = packagingExpenses.filter(e => isInDateRange(e.expense_date, e.created_date));
       const filteredExpenses = expenses.filter(e => isInDateRange(e.expense_date, e.created_date));
+      const filteredAdSpends = (adSpends || []).filter(a => isInDateRange(a.spend_date, a.created_date));
 
       // Generate CSV report based on type
       let csvContent = '';
@@ -223,7 +222,7 @@ function InventoryReportsPage() {
 
       switch (reportType) {
         case 'sales':
-          csvContent = generateSalesReport(filteredOrders, inventory, startDate, endDate);
+          csvContent = generateSalesReport(filteredOrders, inventory, startDate, endDate, filteredMovements, filteredPackaging, filteredAdSpends);
           fileName = `sales_report_${startDate}_to_${endDate}.csv`;
           break;
         case 'purchase':
