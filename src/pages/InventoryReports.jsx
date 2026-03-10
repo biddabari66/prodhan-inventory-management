@@ -1331,28 +1331,18 @@ function InventoryReportsPage() {
     try {
       toast.info('Building your custom report...');
       
-      // Apply custom date range to the quick report filters before generating
       const dateRange = getDateRange(customReport.dateRange);
-      const prevStart = startDate;
-      const prevEnd = endDate;
       
-      // Temporarily set the date range to match custom report settings
-      setStartDate(dateRange.start);
-      setEndDate(dateRange.end);
-      
-      // Small delay to allow state to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Generate using the custom date range directly
       setReportGenerating(customReport.reportType);
       
-      const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses] = await Promise.all([
+      const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses, adSpends] = await Promise.all([
         base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
         base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
         base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
         base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000)
+        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        base44.entities.AdSpend.list('-spend_date', 1000)
       ]);
 
       const getBDTDateTime = (dateStr) => {
@@ -1360,8 +1350,7 @@ function InventoryReportsPage() {
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return { date: dateStr?.split('T')[0] || '', time: '00:00' };
         const bdtDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
-        const bdtTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
-        return { date: bdtDate, time: bdtTime };
+        return { date: bdtDate };
       };
 
       const isInRange = (dateStr) => {
@@ -1374,6 +1363,7 @@ function InventoryReportsPage() {
       const filteredMovements = movements.filter(m => isInRange(m.movement_date));
       const filteredPurchaseOrders = purchaseOrders.filter(p => isInRange(p.order_date));
       const filteredPackaging = packagingExpenses.filter(e => isInRange(e.expense_date));
+      const filteredAdSpends = (adSpends || []).filter(a => isInRange(a.spend_date));
 
       let csvContent = '';
       let fileName = '';
@@ -1382,7 +1372,7 @@ function InventoryReportsPage() {
 
       switch (customReport.reportType) {
         case 'sales':
-          csvContent = generateSalesReport(filteredOrders, inventory, s, e);
+          csvContent = generateSalesReport(filteredOrders, inventory, s, e, filteredMovements, filteredPackaging, filteredAdSpends);
           fileName = `sales_report_${s}_to_${e}.csv`;
           break;
         case 'purchase':
