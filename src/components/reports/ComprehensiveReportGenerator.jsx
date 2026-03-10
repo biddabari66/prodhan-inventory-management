@@ -113,10 +113,9 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       const returns = filteredMovements.filter(m => m.reference_type === 'return');
       const damages = filteredMovements.filter(m => m.reference_type === 'damage' || m.reference_type === 'expired');
 
-      // Product-level breakdown with accurate pricing
+      // Product-level breakdown with accurate pricing (filteredOrders already only has completed orders)
       const productStats = {};
       filteredOrders.forEach(order => {
-        if (order.order_status === 'returned' || order.order_status === 'cancelled') return;
         
         (order.order_items || []).forEach(item => {
           const inv = inventoryMap[item.inventory_id] || {};
