@@ -449,15 +449,17 @@ function InventoryReportsPage() {
     csv += `Department: Prodhan.com E-Commerce\n\n`;
     
     csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
-    csv += `Total Sales Revenue:     ৳${totalSalesRevenue.toLocaleString()}\n`;
+    csv += `Total Orders in Period:  ${allOrders}\n`;
+    csv += `  ✅ Completed (Revenue): ${completedOrders} (shipped/delivered/out_for_delivery)\n`;
+    csv += `  ⏳ Pending:             ${pendingOrders} (pending/confirmed/processing/packed)\n`;
+    csv += `  ❌ Cancelled:           ${cancelledOrders}\n`;
+    csv += `  ↩️ Returned:            ${returnedOrders}\n`;
+    csv += `\n`;
+    csv += `Revenue (Completed):     ৳${totalSalesRevenue.toLocaleString()}\n`;
     csv += `Total Discounts Given:   ৳${totalDiscount.toLocaleString()}\n`;
     csv += `Total Cost (COGS):       ৳${totalCost.toLocaleString()}\n`;
     csv += `Gross Profit:            ৳${totalProfit.toLocaleString()}\n`;
     csv += `Profit Margin:           ${profitMargin.toFixed(2)}%\n`;
-    csv += `Total Orders:            ${totalOrders}\n`;
-    csv += `Completed Orders:        ${completedOrders}\n`;
-    csv += `Pending Orders:          ${pendingOrders}\n`;
-    csv += `Cancelled Orders:        ${cancelledOrders}\n`;
     csv += `Avg Order Value (AOV):   ৳${avgOrderValue.toFixed(2)}\n`;
     csv += `Total Units Sold:        ${totalUnitsSold}\n\n`;
 
