@@ -178,11 +178,11 @@ function InventoryReportsPage() {
       toast.info('Generating report...');
       
       const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses] = await Promise.all([
-        base44.entities.Order.list('-order_date', 5000),
-        base44.entities.Inventory.list('-updated_date', 2000),
+        base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
         base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.list('-order_date', 2000),
-        base44.entities.PackagingExpense.list('-expense_date', 1000),
+        base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
+        base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
         base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000)
       ]);
 
