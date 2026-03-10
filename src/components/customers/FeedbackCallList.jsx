@@ -26,26 +26,48 @@ export default function FeedbackCallList() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
-  // 🚀 FIXED: Fetch ALL shipped + delivered orders for feedback calls (all-time history)
+  // 🚀 Fetch ONLY delivered orders for feedback calls
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-feedback-calls-all'],
     queryFn: async () => {
-      // Fetch all orders - no pagination limit for call history
-      const orders = await base44.entities.Order.filter(
-        { order_status: { $in: ['shipped', 'delivered'] } },
-        '-order_date',
-        10000
-      );
-      return orders;
+      const batchSize = 1000;
+      let allData = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const batch = await base44.entities.Order.filter(
+          { order_status: 'delivered' },
+          '-order_date',
+          batchSize,
+          offset
+        );
+        allData = [...allData, ...batch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+      }
+      return allData;
     },
-    staleTime: 60000,
-    cacheTime: 10 * 60 * 1000
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch feedback call statuses
   const { data: feedbackStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['feedback-call-statuses'],
-    queryFn: () => base44.entities.FeedbackCall.list('-created_date', 5000),
+    queryFn: async () => {
+      const batchSize = 1000;
+      let allData = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const batch = await base44.entities.FeedbackCall.list('-created_date', batchSize, offset);
+        allData = [...allData, ...batch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+      }
+      return allData;
+    },
     staleTime: 30000
   });
 
@@ -112,17 +134,18 @@ export default function FeedbackCallList() {
     });
   }, [orderCards, searchTerm, statusFilter, dateFrom, dateTo]);
 
-  // Stats
+  // Stats - based on FILTERED cards so it respects date filters
   const stats = useMemo(() => {
-    const result = { total: orderCards.length, pending: 0, happy: 0, unhappy: 0, others: 0 };
-    for (const card of orderCards) {
+    const source = (dateFrom || dateTo) ? filteredCards : orderCards;
+    const result = { total: source.length, pending: 0, happy: 0, unhappy: 0, others: 0 };
+    for (const card of source) {
       if (card.feedback_status === 'pending') result.pending++;
       else if (card.feedback_status === 'happy') result.happy++;
       else if (card.feedback_status === 'unhappy') result.unhappy++;
       else if (card.feedback_status === 'others') result.others++;
     }
     return result;
-  }, [orderCards]);
+  }, [orderCards, filteredCards, dateFrom, dateTo]);
 
   // Send review to external webhook via backend function
   const sendReviewToWebhook = async (order, status, notes) => {
@@ -365,7 +388,7 @@ export default function FeedbackCallList() {
                   <div className="flex items-center justify-between bg-slate-50 rounded-lg p-2">
                     <div className="flex items-center gap-2">
                       <CreditCard className="w-4 h-4 text-green-600" />
-                      <span className="font-bold text-green-700">৳{order.total_amount?.toLocaleString()}</span>
+                      <span className="font-bold text-green-700">৳{(order.total_amount || order.order_items?.reduce((s, i) => s + (i.subtotal || (i.unit_price || 0) * (i.quantity || 1)), 0) || 0).toLocaleString()}</span>
                     </div>
                     <Badge className="bg-green-100 text-green-700 text-xs">Delivered</Badge>
                   </div>
