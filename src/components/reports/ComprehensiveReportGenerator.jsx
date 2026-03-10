@@ -380,11 +380,11 @@ export default function ComprehensiveReportGenerator({ onClose }) {
   <div class="summary-grid">
     <div class="summary-card green">
       <h3>৳${(summary.totalRevenue / 1000).toFixed(1)}K</h3>
-      <p>Total Revenue</p>
+      <p>Revenue (Completed)</p>
     </div>
     <div class="summary-card blue">
-      <h3>${orderCount}</h3>
-      <p>Total Orders</p>
+      <h3>${orderBreakdown.completed} / ${orderBreakdown.total}</h3>
+      <p>Completed / Total Orders</p>
     </div>
     <div class="summary-card ${summary.netProfit >= 0 ? 'green' : 'red'}">
       <h3>৳${(summary.netProfit / 1000).toFixed(1)}K</h3>
@@ -393,6 +393,25 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     <div class="summary-card purple">
       <h3>${summary.roi.toFixed(1)}%</h3>
       <p>ROI</p>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div style="flex:1; background:#F0FDF4; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
+      <div style="font-size:18px; font-weight:bold; color:#16A34A;">${orderBreakdown.completed}</div>
+      <div style="font-size:11px; color:#666;">✅ Completed</div>
+    </div>
+    <div style="flex:1; background:#FFF7ED; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
+      <div style="font-size:18px; font-weight:bold; color:#EA580C;">${orderBreakdown.pending}</div>
+      <div style="font-size:11px; color:#666;">⏳ Pending</div>
+    </div>
+    <div style="flex:1; background:#FEF2F2; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
+      <div style="font-size:18px; font-weight:bold; color:#DC2626;">${orderBreakdown.cancelled}</div>
+      <div style="font-size:11px; color:#666;">❌ Cancelled</div>
+    </div>
+    <div style="flex:1; background:#F5F3FF; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
+      <div style="font-size:18px; font-weight:bold; color:#7C3AED;">${orderBreakdown.returned}</div>
+      <div style="font-size:11px; color:#666;">↩️ Returned</div>
     </div>
   </div>
 
