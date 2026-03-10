@@ -187,35 +187,6 @@ function InventoryReportsPage() {
         base44.entities.AdSpend.list('-spend_date', 1000)
       ]);
 
-      // Helper: get BDT date and time from a date string or ISO datetime
-      const getBDTDateTime = (dateStr) => {
-        if (!dateStr) return { date: '', time: '00:00' };
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return { date: dateStr?.split('T')[0] || '', time: '00:00' };
-        const bdtDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
-        const bdtTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
-        return { date: bdtDate, time: bdtTime };
-      };
-
-      const isInDateRange = (dateStr, createdDateStr) => {
-        const primary = getBDTDateTime(dateStr);
-        const hasTime = dateStr && dateStr.includes('T');
-        const timeSource = hasTime ? primary : getBDTDateTime(createdDateStr);
-        if (!primary.date) return false;
-        if (primary.date < startDate || primary.date > endDate) return false;
-        if (primary.date === startDate && timeSource.time < startTime) return false;
-        if (primary.date === endDate && timeSource.time > endTime) return false;
-        return true;
-      };
-
-      // Filter data by date range AND time (BDT timezone)
-      const filteredOrders = orders.filter(o => isInDateRange(o.order_date, o.created_date));
-      const filteredMovements = movements.filter(m => isInDateRange(m.movement_date, m.created_date));
-      const filteredPurchaseOrders = purchaseOrders.filter(p => isInDateRange(p.order_date, p.created_date));
-      const filteredPackaging = packagingExpenses.filter(e => isInDateRange(e.expense_date, e.created_date));
-      const filteredExpenses = expenses.filter(e => isInDateRange(e.expense_date, e.created_date));
-      const filteredAdSpends = (adSpends || []).filter(a => isInDateRange(a.spend_date, a.created_date));
-
       // Generate CSV report based on type
       let csvContent = '';
       let fileName = '';
