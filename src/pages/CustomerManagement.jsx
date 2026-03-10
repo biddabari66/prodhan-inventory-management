@@ -23,8 +23,6 @@ function CustomerManagementPage() {
   const { hasPermission: canCreate } = usePermission('customer_management', 'can_create');
   const { hasPermission: canEdit } = usePermission('customer_management', 'can_edit');
   const { hasPermission: canDelete } = usePermission('customer_management', 'can_delete');
-  const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -82,46 +80,6 @@ function CustomerManagementPage() {
     }
     return filtered;
   }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
-
-  const filterCustomers = () => {
-    let filtered = [...customers];
-
-    // Search filter
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.customer_name?.toLowerCase().includes(query) ||
-        c.customer_phone?.includes(query) ||
-        c.customer_email?.toLowerCase().includes(query)
-      );
-    }
-
-    // Segmentation filter
-    if (segmentFilter !== 'all') {
-      if (segmentFilter === 'vip') {
-        filtered = filtered.filter(c => c.total_spent >= 50000);
-      } else if (segmentFilter === 'regular') {
-        filtered = filtered.filter(c => c.total_spent >= 10000 && c.total_spent < 50000);
-      } else if (segmentFilter === 'new') {
-        filtered = filtered.filter(c => c.total_orders <= 2);
-      } else if (segmentFilter === 'frequent') {
-        filtered = filtered.filter(c => c.total_orders >= 10);
-      }
-    }
-
-    // Date filter
-    if (customerDateFrom || customerDateTo) {
-      filtered = filtered.filter(c => {
-        const customerDate = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
-        if (!customerDate) return true;
-        const matchesFrom = !customerDateFrom || customerDate >= new Date(customerDateFrom);
-        const matchesTo = !customerDateTo || customerDate <= new Date(customerDateTo + 'T23:59:59');
-        return matchesFrom && matchesTo;
-      });
-    }
-
-    setFilteredCustomers(filtered);
-  };
 
   const handleAddCustomer = async (e) => {
     e.preventDefault();
