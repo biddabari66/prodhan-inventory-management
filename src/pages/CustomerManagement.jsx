@@ -291,6 +291,16 @@ function CustomerManagementPage() {
           </TabsContent>
 
           <TabsContent value="customers">
+        {/* Date filter indicator */}
+        {(customerDateFrom || customerDateTo) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-700 font-medium">
+              Stats filtered by date: {customerDateFrom || '...'} to {customerDateTo || '...'}
+            </span>
+          </div>
+        )}
+
         {/* Stats Grid - Minimalist White */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-white border-0 shadow-sm rounded-xl">
