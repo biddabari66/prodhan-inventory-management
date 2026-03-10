@@ -20,26 +20,43 @@ export default function WelcomeCallList() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
-  // 🚀 FIXED: Fetch ALL confirmed+ orders for welcome calls (all-time history)
+  // 🚀 Fetch ALL orders for welcome calls (all sales orders go here)
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-welcome-calls-all'],
     queryFn: async () => {
-      // Fetch all orders with valid statuses - no pagination limit for call history
-      const orders = await base44.entities.Order.filter(
-        { order_status: { $in: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'] } },
-        '-order_date',
-        10000
-      );
-      return orders;
+      const batchSize = 1000;
+      let allData = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const batch = await base44.entities.Order.list('-order_date', batchSize, offset);
+        allData = [...allData, ...batch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+      }
+      return allData;
     },
-    staleTime: 60000,
-    cacheTime: 10 * 60 * 1000
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch welcome call statuses
   const { data: welcomeStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['welcome-call-statuses'],
-    queryFn: () => base44.entities.WelcomeCall.list('-created_date', 5000),
+    queryFn: async () => {
+      const batchSize = 1000;
+      let allData = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const batch = await base44.entities.WelcomeCall.list('-created_date', batchSize, offset);
+        allData = [...allData, ...batch];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+      }
+      return allData;
+    },
     staleTime: 30000
   });
 
@@ -110,16 +127,17 @@ export default function WelcomeCallList() {
     });
   }, [orderCards, searchTerm, statusFilter, dateFrom, dateTo]);
 
-  // Stats calculation
+  // Stats calculation - based on FILTERED cards so it respects date filters
   const stats = useMemo(() => {
-    const result = { total: orderCards.length, pending: 0, done: 0, notReceived: 0 };
-    for (const card of orderCards) {
+    const source = (dateFrom || dateTo) ? filteredCards : orderCards;
+    const result = { total: source.length, pending: 0, done: 0, notReceived: 0 };
+    for (const card of source) {
       if (card.welcome_status === 'pending') result.pending++;
       else if (card.welcome_status === 'done') result.done++;
       else if (card.welcome_status === 'not_received') result.notReceived++;
     }
     return result;
-  }, [orderCards]);
+  }, [orderCards, filteredCards, dateFrom, dateTo]);
 
   // Update status mutation
   const updateStatusMutation = useMutation({
@@ -305,10 +323,10 @@ export default function WelcomeCallList() {
 
                   {/* Amount & Payment */}
                   <div className="flex items-center justify-between bg-slate-50 rounded-lg p-2">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-green-600" />
-                      <span className="font-bold text-green-700">৳{order.total_amount?.toLocaleString()}</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-green-600" />
+                    <span className="font-bold text-green-700">৳{(order.total_amount || order.order_items?.reduce((s, i) => s + (i.subtotal || (i.unit_price || 0) * (i.quantity || 1)), 0) || 0).toLocaleString()}</span>
+                  </div>
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-xs capitalize">{order.payment_method || 'COD'}</Badge>
                       <Badge className={`text-xs ${order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
