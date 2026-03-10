@@ -337,7 +337,7 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     URL.revokeObjectURL(url);
   };
 
-  const generatePDFReport = async (productStats, summary, orderCount, startDate, endDate) => {
+  const generatePDFReport = async (productStats, summary, orderBreakdown, startDate, endDate) => {
     // Generate HTML for PDF
     const products = Object.values(productStats).sort((a, b) => b.revenue - a.revenue).slice(0, 50);
     
