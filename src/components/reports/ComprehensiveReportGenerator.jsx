@@ -94,9 +94,10 @@ export default function ComprehensiveReportGenerator({ onClose }) {
         return pDate >= startDate && pDate <= endDate;
       });
 
+      // Include both approved and pending_approval packaging expenses
       const filteredPackaging = packagingExpenses.filter(e => {
         const eDate = e.expense_date?.split('T')[0];
-        return eDate >= startDate && eDate <= endDate && e.status === 'approved';
+        return eDate >= startDate && eDate <= endDate && (e.status === 'approved' || e.status === 'pending_approval');
       });
 
       // Filter production waste by date
