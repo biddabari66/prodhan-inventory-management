@@ -229,19 +229,27 @@ export default function ComprehensiveReportGenerator({ onClose }) {
       const netProfit = grossProfit - totalReturns - totalDamages - totalAdSpend - totalPackaging - totalProductionWaste;
       const roi = (totalAdSpend + totalCost) > 0 ? ((netProfit / (totalAdSpend + totalCost)) * 100) : 0;
 
+      const orderBreakdown = {
+        total: allFilteredOrders.length,
+        completed: filteredOrders.length,
+        pending: pendingCount,
+        cancelled: cancelledCount,
+        returned: returnedCount
+      };
+
       // Generate report
       if (reportFormat === 'excel') {
         generateColorfulExcel(
           productStats, 
           { totalRevenue, totalCost, totalReturns, totalDamages, totalAdSpend, totalPackaging, totalProductionWaste, grossProfit, netProfit, roi },
-          filteredOrders.length,
+          orderBreakdown,
           startDate, endDate
         );
       } else {
         await generatePDFReport(
           productStats,
           { totalRevenue, totalCost, totalReturns, totalDamages, totalAdSpend, totalPackaging, totalProductionWaste, grossProfit, netProfit, roi },
-          filteredOrders.length,
+          orderBreakdown,
           startDate, endDate
         );
       }
