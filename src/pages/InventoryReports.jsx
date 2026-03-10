@@ -282,7 +282,7 @@ function InventoryReportsPage() {
   };
 
   // Report generation functions - ADVANCED & COMPREHENSIVE
-  // Revenue = sum of (unit_price * quantity) from order items
+  // Revenue = sum of total_amount from COMPLETED orders (shipped, delivered, out_for_delivery)
   // Profit = Revenue - COGS (COGS = purchase_price * quantity)
   const generateSalesReport = (orders, inventory, startDate, endDate) => {
     const inventoryMap = {};
@@ -301,20 +301,32 @@ function InventoryReportsPage() {
     let completedOrders = 0;
     let cancelledOrders = 0;
     let pendingOrders = 0;
+    let returnedOrders = 0;
     let totalUnitsSold = 0;
 
+    // Separate all orders by status for accurate reporting
+    const allOrders = orders.length;
+    
     orders.forEach(order => {
+      // Count by status category
       if (order.order_status === 'cancelled') {
         cancelledOrders++;
-        return;
+        return; // Skip cancelled orders from revenue calculations
       }
-      if (['pending', 'confirmed', 'processing', 'packed'].includes(order.order_status)) {
-        pendingOrders++;
+      if (order.order_status === 'returned') {
+        returnedOrders++;
+        return; // Skip returned orders from revenue calculations
       }
-      if (['delivered', 'shipped', 'out_for_delivery'].includes(order.order_status)) {
-        completedOrders++;
-      }
+      
+      const isCompleted = ['delivered', 'shipped', 'out_for_delivery'].includes(order.order_status);
+      const isPending = ['pending', 'confirmed', 'processing', 'packed'].includes(order.order_status);
+      
+      if (isPending) pendingOrders++;
+      if (isCompleted) completedOrders++;
 
+      // Only count COMPLETED orders in revenue (shipped/delivered/out_for_delivery)
+      if (!isCompleted) return;
+      
       totalOrders++;
       const orderDate = order.order_date?.split('T')[0] || 'unknown';
 
