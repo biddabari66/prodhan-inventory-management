@@ -142,7 +142,7 @@ function CustomerManagementPage() {
         notes: '',
         tags: []
       });
-      await loadCustomers();
+      refetchCustomers();
     } catch (error) {
       console.error('Error adding customer:', error);
       toast.error('Failed to add customer');
