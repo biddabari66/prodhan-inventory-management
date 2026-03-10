@@ -362,7 +362,14 @@ function SalesPage() {
         }
         queryClient.invalidateQueries(['orders']);
         if (action === 'shipped') {
-          setTimeout(() => queryClient.invalidateQueries(['inventory']), 3000);
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+          }, 3000);
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+          }, 6000);
           toast.success(`${selectedOrderIds.length} order(s) shipped! Inventory will be deducted automatically.`);
         } else {
           toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
