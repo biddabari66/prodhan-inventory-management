@@ -64,11 +64,20 @@ export default function ComprehensiveReportGenerator({ onClose }) {
         base44.entities.ProductionWasteLog.list('-waste_date', 5000)
       ]);
 
-      // Filter by date range (BDT)
-      const filteredOrders = orders.filter(o => {
+      // Filter by date range (BDT) - only completed orders for revenue
+      const allFilteredOrders = orders.filter(o => {
         const orderDate = o.order_date?.split('T')[0];
-        return orderDate >= startDate && orderDate <= endDate && !['cancelled'].includes(o.order_status);
+        return orderDate >= startDate && orderDate <= endDate;
       });
+      
+      // Only count completed orders (shipped/delivered/out_for_delivery) for revenue
+      const filteredOrders = allFilteredOrders.filter(o => 
+        ['shipped', 'delivered', 'out_for_delivery'].includes(o.order_status)
+      );
+      
+      const cancelledCount = allFilteredOrders.filter(o => o.order_status === 'cancelled').length;
+      const pendingCount = allFilteredOrders.filter(o => ['pending', 'confirmed', 'processing', 'packed'].includes(o.order_status)).length;
+      const returnedCount = allFilteredOrders.filter(o => o.order_status === 'returned').length;
 
       const filteredMovements = movements.filter(m => {
         const mDate = m.movement_date?.split('T')[0];
