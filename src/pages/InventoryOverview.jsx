@@ -82,8 +82,21 @@ function InventoryOverviewPage() {
 
     // Subscribe to real-time Order updates for instant Today's Sales refresh
     const unsubscribeOrders = base44.entities.Order.subscribe((event) => {
-      // Refresh today's sales on any order change
       loadTodaySales();
+    });
+
+    // Subscribe to real-time Inventory updates for instant stock refresh
+    // This catches backend automation deductions (shipped orders, etc.)
+    let inventoryRefreshTimeout = null;
+    const unsubscribeInventory = base44.entities.Inventory.subscribe((event) => {
+      // Debounce to avoid hammering on bulk updates
+      if (inventoryRefreshTimeout) clearTimeout(inventoryRefreshTimeout);
+      inventoryRefreshTimeout = setTimeout(() => {
+        console.log('📦 Inventory changed, refreshing stock data...');
+        CacheManager.remove('inventory_list');
+        CacheManager.remove('inventory_movements');
+        loadUserAndInventory();
+      }, 1500);
     });
 
     // Fallback refresh every 60 seconds
@@ -93,6 +106,8 @@ function InventoryOverviewPage() {
 
     return () => {
       unsubscribeOrders();
+      unsubscribeInventory();
+      if (inventoryRefreshTimeout) clearTimeout(inventoryRefreshTimeout);
       clearInterval(interval);
     };
   }, []);
