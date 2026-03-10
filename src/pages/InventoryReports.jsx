@@ -1307,10 +1307,106 @@ function InventoryReportsPage() {
     try {
       toast.info('Building your custom report...');
       
+      // Apply custom date range to the quick report filters before generating
       const dateRange = getDateRange(customReport.dateRange);
+      const prevStart = startDate;
+      const prevEnd = endDate;
       
-      // Use the same logic as quick reports
-      await handleQuickReport(customReport.reportType);
+      // Temporarily set the date range to match custom report settings
+      setStartDate(dateRange.start);
+      setEndDate(dateRange.end);
+      
+      // Small delay to allow state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Generate using the custom date range directly
+      setReportGenerating(customReport.reportType);
+      
+      const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses] = await Promise.all([
+        base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
+        base44.entities.InventoryMovement.list('-movement_date', 10000),
+        base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
+        base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000)
+      ]);
+
+      const getBDTDateTime = (dateStr) => {
+        if (!dateStr) return { date: '', time: '00:00' };
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return { date: dateStr?.split('T')[0] || '', time: '00:00' };
+        const bdtDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
+        const bdtTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+        return { date: bdtDate, time: bdtTime };
+      };
+
+      const isInRange = (dateStr) => {
+        const primary = getBDTDateTime(dateStr);
+        if (!primary.date) return false;
+        return primary.date >= dateRange.start && primary.date <= dateRange.end;
+      };
+
+      const filteredOrders = orders.filter(o => isInRange(o.order_date));
+      const filteredMovements = movements.filter(m => isInRange(m.movement_date));
+      const filteredPurchaseOrders = purchaseOrders.filter(p => isInRange(p.order_date));
+      const filteredPackaging = packagingExpenses.filter(e => isInRange(e.expense_date));
+
+      let csvContent = '';
+      let fileName = '';
+      const s = dateRange.start;
+      const e = dateRange.end;
+
+      switch (customReport.reportType) {
+        case 'sales':
+          csvContent = generateSalesReport(filteredOrders, inventory, s, e);
+          fileName = `sales_report_${s}_to_${e}.csv`;
+          break;
+        case 'purchase':
+          csvContent = generatePurchaseReport(filteredPurchaseOrders, inventory, s, e);
+          fileName = `purchase_report_${s}_to_${e}.csv`;
+          break;
+        case 'packaging':
+          csvContent = generatePackagingReport(filteredPackaging, s, e);
+          fileName = `packaging_report_${s}_to_${e}.csv`;
+          break;
+        case 'waste':
+          csvContent = generateWasteReport(filteredMovements.filter(m => m.reference_type === 'damage' || m.reference_type === 'expired'), inventory, s, e);
+          fileName = `waste_damage_report_${s}_to_${e}.csv`;
+          break;
+        case 'returns':
+          csvContent = generateReturnsReport(filteredMovements.filter(m => m.reference_type === 'return'), inventory, s, e);
+          fileName = `returns_report_${s}_to_${e}.csv`;
+          break;
+        case 'stock':
+          csvContent = generateStockValuationReport(inventory);
+          fileName = `stock_valuation_${toBDTDate()}.csv`;
+          break;
+        case 'low_stock':
+          csvContent = generateLowStockReport(inventory);
+          fileName = `low_stock_alert_${toBDTDate()}.csv`;
+          break;
+        case 'movement':
+          csvContent = generateMovementReport(filteredMovements, inventory, s, e);
+          fileName = `movement_summary_${s}_to_${e}.csv`;
+          break;
+        case 'supplier':
+          csvContent = generateSupplierReport(filteredPurchaseOrders, inventory);
+          fileName = `supplier_report_${s}_to_${e}.csv`;
+          break;
+        default:
+          throw new Error('Unknown report type');
+      }
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('✅ Report downloaded!');
     } catch (error) {
       console.error('Error generating custom report:', error);
       toast.error(`Error: ${error.message || 'Failed to generate report'}`);
