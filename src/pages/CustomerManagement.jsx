@@ -43,47 +43,45 @@ function CustomerManagementPage() {
   const [customerDateFrom, setCustomerDateFrom] = useState('');
   const [customerDateTo, setCustomerDateTo] = useState('');
 
-  // Initial load handled by currentPage effect above
-
-  useEffect(() => {
-    filterCustomers();
-  }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
-
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCustomers, setTotalCustomers] = useState(0);
   const pageSize = 50;
 
-  const loadCustomers = async () => {
-    try {
-      // Load current page for display
-      const offset = (currentPage - 1) * pageSize;
-      const pageData = await base44.entities.Customer.list('-total_spent', pageSize, offset);
-      setCustomers(pageData);
-      
-      // Get total count (load ALL in batches for accurate count)
-      if (totalCustomers === 0) {
-        let count = 0;
-        let batchOffset = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const batch = await base44.entities.Customer.list('-total_spent', 1000, batchOffset);
-          count += batch.length;
-          batchOffset += 1000;
-          hasMore = batch.length === 1000;
-        }
-        setTotalCustomers(count);
-      }
-    } catch (error) {
-      console.error('Error loading customers:', error);
-      toast.error('Failed to load customers');
-    }
-  };
+  // Single query to load current page of customers
+  const { data: customers = [], isLoading: customersLoading, refetch: refetchCustomers } = useQuery({
+    queryKey: ['customers-page', currentPage],
+    queryFn: () => base44.entities.Customer.list('-total_spent', pageSize, (currentPage - 1) * pageSize),
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
 
-  // Reload when page changes
-  useEffect(() => {
-    loadCustomers();
-  }, [currentPage]);
+  const filteredCustomers = useMemo(() => {
+    let filtered = [...customers];
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      filtered = filtered.filter(c =>
+        c.customer_name?.toLowerCase().includes(query) ||
+        c.customer_phone?.includes(query) ||
+        c.customer_email?.toLowerCase().includes(query)
+      );
+    }
+    if (segmentFilter !== 'all') {
+      if (segmentFilter === 'vip') filtered = filtered.filter(c => c.total_spent >= 50000);
+      else if (segmentFilter === 'regular') filtered = filtered.filter(c => c.total_spent >= 10000 && c.total_spent < 50000);
+      else if (segmentFilter === 'new') filtered = filtered.filter(c => c.total_orders <= 2);
+      else if (segmentFilter === 'frequent') filtered = filtered.filter(c => c.total_orders >= 10);
+    }
+    if (customerDateFrom || customerDateTo) {
+      filtered = filtered.filter(c => {
+        const d = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
+        if (!d) return true;
+        if (customerDateFrom && d < new Date(customerDateFrom)) return false;
+        if (customerDateTo && d > new Date(customerDateTo + 'T23:59:59')) return false;
+        return true;
+      });
+    }
+    return filtered;
+  }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
 
   const filterCustomers = () => {
     let filtered = [...customers];
@@ -156,34 +154,16 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  // All-time stats from ALL customers (loaded in batches)
-  const [allCustomersCache, setAllCustomersCache] = useState([]);
-  const [statsLoading, setStatsLoading] = useState(true);
-  
-  useEffect(() => {
-    const loadAllCustomers = async () => {
-      setStatsLoading(true);
-      try {
-        const batchSize = 1000;
-        let allData = [];
-        let offset = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
-          allData = [...allData, ...batch];
-          offset += batchSize;
-          hasMore = batch.length === batchSize;
-        }
-        setAllCustomersCache(allData);
-        setTotalCustomers(allData.length);
-      } catch (error) {
-        console.error('Error loading stats:', error);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-    loadAllCustomers();
-  }, []);
+  // Load ALL customers for stats in a single large request
+  const { data: allCustomersCache = [], isLoading: statsLoading } = useQuery({
+    queryKey: ['customers-all-stats'],
+    queryFn: () => base44.entities.Customer.list('-total_spent', 10000),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const totalCustomers = allCustomersCache.length;
 
   // Stats that respond to date filters
   const stats = useMemo(() => {
@@ -617,7 +597,7 @@ function CustomerManagementPage() {
                   }
                 }
               }
-              await loadCustomers();
+              refetchCustomers();
               toast.success(`Imported ${totalImported} customers`);
             }}
             onClose={() => setIsImportCustomersOpen(false)}
