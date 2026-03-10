@@ -263,24 +263,32 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     }
   };
 
-  const generateColorfulExcel = (productStats, summary, orderCount, startDate, endDate) => {
+  const generateColorfulExcel = (productStats, summary, orderBreakdown, startDate, endDate) => {
     const products = Object.values(productStats).sort((a, b) => b.revenue - a.revenue);
     
-    // Build CSV with styling hints (colors via formatting)
     let csv = '';
     
-    // Header Section - Summary
     csv += '📊 COMPREHENSIVE SALES REPORT\n';
     csv += `Period: ${startDate} to ${endDate}\n`;
     csv += `Generated: ${toBDTDateTime()}\n`;
     csv += '\n';
     
+    // Order Breakdown
+    csv += '═══════════════════════════════════════════════════════════════\n';
+    csv += '📋 ORDER BREAKDOWN\n';
+    csv += '═══════════════════════════════════════════════════════════════\n';
+    csv += `Total Orders in Period,${orderBreakdown.total}\n`;
+    csv += `✅ Completed (Revenue Counted),${orderBreakdown.completed}\n`;
+    csv += `⏳ Pending,${orderBreakdown.pending}\n`;
+    csv += `❌ Cancelled,${orderBreakdown.cancelled}\n`;
+    csv += `↩️ Returned,${orderBreakdown.returned}\n`;
+    csv += '\n';
+    
     // Key Metrics Section
     csv += '═══════════════════════════════════════════════════════════════\n';
-    csv += '💰 KEY FINANCIAL METRICS\n';
+    csv += '💰 KEY FINANCIAL METRICS (From Completed Orders Only)\n';
     csv += '═══════════════════════════════════════════════════════════════\n';
-    csv += `Total Orders,${orderCount}\n`;
-    csv += `Total Revenue,৳${summary.totalRevenue.toLocaleString()}\n`;
+    csv += `Revenue (Completed Orders),৳${summary.totalRevenue.toLocaleString()}\n`;
     csv += `Cost of Goods,৳${summary.totalCost.toLocaleString()}\n`;
     csv += `Gross Profit,৳${summary.grossProfit.toLocaleString()}\n`;
     csv += '\n';
