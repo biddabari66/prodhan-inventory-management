@@ -294,8 +294,15 @@ function SalesPage() {
     onSuccess: (_, { newStatus }) => {
       queryClient.invalidateQueries(['orders']);
       if (newStatus === 'shipped') {
-        // Backend automation will deduct inventory; refresh after a short delay
-        setTimeout(() => queryClient.invalidateQueries(['inventory']), 2000);
+        // Backend automation deducts inventory; refresh after short delays to catch the update
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] });
+          queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+        }, 2000);
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] });
+          queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+        }, 5000);
         toast.success('Order shipped! Inventory will be deducted automatically.');
       } else {
         toast.success('Order status updated!');
