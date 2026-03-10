@@ -103,9 +103,17 @@ export default function WelcomeCallList() {
     });
   }, [orderCards, searchTerm, statusFilter, dateFrom, dateTo]);
 
-  // Stats calculation - based on FILTERED cards so it respects date filters
+  // Stats calculation - date-filtered but ignoring status filter so all statuses show correctly
   const stats = useMemo(() => {
-    const source = (dateFrom || dateTo) ? filteredCards : orderCards;
+    let source = orderCards;
+    if (dateFrom || dateTo) {
+      source = orderCards.filter(order => {
+        const orderDateStr = order.order_date ? order.order_date.slice(0, 10) : '';
+        if (dateFrom && orderDateStr < dateFrom) return false;
+        if (dateTo && orderDateStr > dateTo) return false;
+        return true;
+      });
+    }
     const result = { total: source.length, pending: 0, done: 0, notReceived: 0 };
     for (const card of source) {
       if (card.welcome_status === 'pending') result.pending++;
@@ -113,7 +121,7 @@ export default function WelcomeCallList() {
       else if (card.welcome_status === 'not_received') result.notReceived++;
     }
     return result;
-  }, [orderCards, filteredCards, dateFrom, dateTo]);
+  }, [orderCards, dateFrom, dateTo]);
 
   // Update status mutation
   const updateStatusMutation = useMutation({

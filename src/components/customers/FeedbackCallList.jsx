@@ -105,9 +105,17 @@ export default function FeedbackCallList() {
     });
   }, [orderCards, searchTerm, statusFilter, dateFrom, dateTo]);
 
-  // Stats - based on FILTERED cards so it respects date filters
+  // Stats - date-filtered but ignoring status filter so all statuses show correctly
   const stats = useMemo(() => {
-    const source = (dateFrom || dateTo) ? filteredCards : orderCards;
+    let source = orderCards;
+    if (dateFrom || dateTo) {
+      source = orderCards.filter(order => {
+        const orderDateStr = order.order_date ? order.order_date.slice(0, 10) : '';
+        if (dateFrom && orderDateStr < dateFrom) return false;
+        if (dateTo && orderDateStr > dateTo) return false;
+        return true;
+      });
+    }
     const result = { total: source.length, pending: 0, happy: 0, unhappy: 0, others: 0 };
     for (const card of source) {
       if (card.feedback_status === 'pending') result.pending++;
@@ -116,7 +124,7 @@ export default function FeedbackCallList() {
       else if (card.feedback_status === 'others') result.others++;
     }
     return result;
-  }, [orderCards, filteredCards, dateFrom, dateTo]);
+  }, [orderCards, dateFrom, dateTo]);
 
   // Send review to external webhook via backend function
   const sendReviewToWebhook = async (order, status, notes) => {
