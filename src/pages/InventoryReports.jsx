@@ -294,17 +294,14 @@ function InventoryReportsPage() {
   // Report generation functions - ADVANCED & COMPREHENSIVE
   // Revenue = sum of total_amount from COMPLETED orders (shipped, delivered, out_for_delivery)
   // Profit = Revenue - COGS (COGS = purchase_price * quantity)
-  const generateSalesReport = (orders, inventory, startDate, endDate) => {
+  const generateSalesReport = (orders, inventory, sDate, eDate, movementsData, packagingData, adSpendsData) => {
     const inventoryMap = {};
     inventory.forEach(i => { inventoryMap[i.id] = i; });
 
     const productSales = {};
     const dailySales = {};
     const categorySales = {};
-    const orderSourceSales = {};
-    const paymentMethodSales = {};
     let totalSalesRevenue = 0;
-    let totalItemRevenue = 0;
     let totalDiscount = 0;
     let totalCost = 0;
     let totalOrders = 0;
@@ -314,74 +311,45 @@ function InventoryReportsPage() {
     let returnedOrders = 0;
     let totalUnitsSold = 0;
 
-    // Separate all orders by status for accurate reporting
     const allOrders = orders.length;
     
     orders.forEach(order => {
-      // Count by status category
-      if (order.order_status === 'cancelled') {
-        cancelledOrders++;
-        return; // Skip cancelled orders from revenue calculations
-      }
-      if (order.order_status === 'returned') {
-        returnedOrders++;
-        return; // Skip returned orders from revenue calculations
-      }
+      if (order.order_status === 'cancelled') { cancelledOrders++; return; }
+      if (order.order_status === 'returned') { returnedOrders++; return; }
       
       const isCompleted = ['delivered', 'shipped', 'out_for_delivery'].includes(order.order_status);
       const isPending = ['pending', 'confirmed', 'processing', 'packed'].includes(order.order_status);
       
       if (isPending) pendingOrders++;
       if (isCompleted) completedOrders++;
-
-      // Only count COMPLETED orders in revenue (shipped/delivered/out_for_delivery)
       if (!isCompleted) return;
       
       totalOrders++;
       const orderDate = order.order_date?.split('T')[0] || 'unknown';
 
-      // Use total_amount as actual sales revenue (after all discounts)
       const orderSalesRevenue = order.total_amount || 0;
       const orderDiscount = (order.discount_amount || 0) + (order.coupon_discount || 0);
       totalSalesRevenue += orderSalesRevenue;
       totalDiscount += orderDiscount;
 
-      // Initialize daily tracking
       if (!dailySales[orderDate]) {
-        dailySales[orderDate] = { orders: 0, revenue: 0, cost: 0, units: 0, profit: 0, discount: 0 };
+        dailySales[orderDate] = { orders: 0, revenue: 0, cost: 0, units: 0, profit: 0 };
       }
       dailySales[orderDate].orders++;
       dailySales[orderDate].revenue += orderSalesRevenue;
-      dailySales[orderDate].discount += orderDiscount;
 
-      // Calculate cost from each order item
-      let orderItemRevenue = 0;
       let orderCost = 0;
       let orderUnits = 0;
 
       (order.order_items || []).forEach(item => {
         const prod = inventoryMap[item.inventory_id] || {};
         const qty = item.quantity || 1;
+        let itemRevenue = item.subtotal || (item.unit_price * qty) || (prod.selling_price * qty) || 0;
+        const itemCost = (prod.purchase_price || 0) * qty;
 
-        // Item-level revenue (before order-level discounts)
-        let itemRevenue = 0;
-        if (item.subtotal && item.subtotal > 0) {
-          itemRevenue = item.subtotal;
-        } else if (item.unit_price && item.unit_price > 0) {
-          itemRevenue = item.unit_price * qty;
-        } else if (prod.selling_price && prod.selling_price > 0) {
-          itemRevenue = prod.selling_price * qty;
-        }
-
-        // Cost: purchase_price from inventory * quantity
-        const purchasePrice = prod.purchase_price || 0;
-        const itemCost = purchasePrice * qty;
-
-        orderItemRevenue += itemRevenue;
         orderCost += itemCost;
         orderUnits += qty;
 
-        // Category breakdown
         const cat = prod.category || 'Uncategorized';
         if (!categorySales[cat]) categorySales[cat] = { qty: 0, revenue: 0, cost: 0, products: new Set() };
         categorySales[cat].qty += qty;
@@ -389,24 +357,19 @@ function InventoryReportsPage() {
         categorySales[cat].cost += itemCost;
         categorySales[cat].products.add(item.inventory_id);
 
-        // Product breakdown
         const prodKey = item.inventory_id || item.item_name || 'unknown';
         if (!productSales[prodKey]) {
           productSales[prodKey] = {
             name: item.item_name || prod.item_name || 'Unknown',
             sku: prod.barcode || prod.isbn || '',
             category: cat,
-            qty: 0,
-            revenue: 0,
-            cost: 0,
-            profit: 0,
-            orders: 0,
-            avgPrice: 0,
-            purchasePrice: purchasePrice,
-            sellingPrice: prod.selling_price || 0
+            qty: 0, revenue: 0, cost: 0, profit: 0, orders: 0,
+            avgPrice: 0, purchasePrice: prod.purchase_price || 0,
+            sellingPrice: prod.selling_price || 0,
+            returnQty: 0, returnValue: 0, damageQty: 0, damageValue: 0,
+            packagingCost: 0, adSpend: 0
           };
         }
-
         productSales[prodKey].qty += qty;
         productSales[prodKey].revenue += itemRevenue;
         productSales[prodKey].cost += itemCost;
@@ -414,29 +377,79 @@ function InventoryReportsPage() {
         productSales[prodKey].orders++;
       });
 
-      // Add to totals
-      totalItemRevenue += orderItemRevenue;
       totalCost += orderCost;
       totalUnitsSold += orderUnits;
-
-      // Update daily sales
       dailySales[orderDate].cost += orderCost;
       dailySales[orderDate].units += orderUnits;
       dailySales[orderDate].profit += (orderSalesRevenue - orderCost);
+    });
 
-      // Order source breakdown
-      const source = order.order_source || 'other';
-      if (!orderSourceSales[source]) orderSourceSales[source] = { orders: 0, revenue: 0, cost: 0 };
-      orderSourceSales[source].orders++;
-      orderSourceSales[source].revenue += orderSalesRevenue;
-      orderSourceSales[source].cost += orderCost;
+    // === RETURNS & DAMAGES from InventoryMovement ===
+    const returnMovements = (movementsData || []).filter(m => m.reference_type === 'return');
+    const damageMovements = (movementsData || []).filter(m => m.reference_type === 'damage' || m.reference_type === 'expired');
+    let totalReturnValue = 0;
+    let totalDamageValue = 0;
 
-      // Payment method breakdown
-      const payment = order.payment_method || 'unknown';
-      if (!paymentMethodSales[payment]) paymentMethodSales[payment] = { orders: 0, revenue: 0, cost: 0 };
-      paymentMethodSales[payment].orders++;
-      paymentMethodSales[payment].revenue += orderSalesRevenue;
-      paymentMethodSales[payment].cost += orderCost;
+    returnMovements.forEach(r => {
+      const qty = r.metadata?.original_quantity || Math.abs(r.quantity) || 1;
+      const val = Math.abs(r.total_value || 0);
+      totalReturnValue += val;
+      if (productSales[r.inventory_item_id]) {
+        productSales[r.inventory_item_id].returnQty += qty;
+        productSales[r.inventory_item_id].returnValue += val;
+      }
+    });
+
+    damageMovements.forEach(d => {
+      const qty = d.metadata?.original_quantity || Math.abs(d.quantity) || 1;
+      const val = Math.abs(d.total_value || 0);
+      totalDamageValue += val;
+      if (productSales[d.inventory_item_id]) {
+        productSales[d.inventory_item_id].damageQty += qty;
+        productSales[d.inventory_item_id].damageValue += val;
+      }
+    });
+
+    // === PACKAGING EXPENSES (approved + pending_approval) ===
+    let totalPackagingDirect = 0;
+    let totalPackagingDistributed = 0;
+    let totalPackagingOther = 0;
+    let totalPackagingCourier = 0;
+
+    (packagingData || []).forEach(exp => {
+      totalPackagingCourier += exp.courier_expense || 0;
+      (exp.items || []).forEach(item => {
+        if (item.is_other_expense) {
+          totalPackagingOther += item.amount || 0;
+        } else if (item.is_distributed) {
+          totalPackagingDistributed += item.amount || 0;
+        } else {
+          totalPackagingDirect += item.amount || 0;
+          if (item.inventory_id && productSales[item.inventory_id]) {
+            productSales[item.inventory_id].packagingCost += item.amount || 0;
+          }
+        }
+      });
+    });
+    const totalPackaging = totalPackagingDirect + totalPackagingDistributed + totalPackagingOther + totalPackagingCourier;
+
+    // Distribute packaging proportionally
+    if (totalPackagingDistributed > 0 && totalSalesRevenue > 0) {
+      Object.values(productSales).forEach(p => {
+        const share = p.revenue / totalSalesRevenue;
+        p.packagingCost += totalPackagingDistributed * share;
+      });
+    }
+
+    // === AD SPEND / MARKETING ===
+    let totalAdSpend = 0;
+    (adSpendsData || []).forEach(ad => {
+      totalAdSpend += ad.total_spend_bdt || 0;
+      (ad.products || []).forEach(p => {
+        if (productSales[p.inventory_id]) {
+          productSales[p.inventory_id].adSpend += p.allocated_spend_bdt || 0;
+        }
+      });
     });
 
     // Calculate product averages
@@ -446,69 +459,70 @@ function InventoryReportsPage() {
       r.margin = r.revenue > 0 ? ((r.profit / r.revenue) * 100) : 0;
     });
 
-    // Final calculations - use totalSalesRevenue (actual order total_amount after discounts)
-    const totalProfit = totalSalesRevenue - totalCost;
-    const profitMargin = totalSalesRevenue > 0 ? (totalProfit / totalSalesRevenue * 100) : 0;
+    const grossProfit = totalSalesRevenue - totalCost;
+    const netProfit = grossProfit - totalReturnValue - totalDamageValue - totalPackaging - totalAdSpend;
+    const profitMargin = totalSalesRevenue > 0 ? (grossProfit / totalSalesRevenue * 100) : 0;
+    const netMargin = totalSalesRevenue > 0 ? (netProfit / totalSalesRevenue * 100) : 0;
     const avgOrderValue = totalOrders > 0 ? (totalSalesRevenue / totalOrders) : 0;
 
-    let csv = `═══════════════════════════════════════════════════════════════\n`;
-    csv += `                    SALES PERFORMANCE REPORT\n`;
-    csv += `═══════════════════════════════════════════════════════════════\n`;
-    csv += `Report Period: ${startDate} to ${endDate}\n`;
-    csv += `Generated: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n`;
-    csv += `Department: Prodhan.com E-Commerce\n\n`;
+    let csv = `SALES PERFORMANCE REPORT\n`;
+    csv += `Report Period,${sDate} to ${eDate}\n`;
+    csv += `Generated,${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })} (BDT)\n`;
+    csv += `Department,Prodhan.com E-Commerce\n\n`;
     
-    csv += `───────────────── EXECUTIVE SUMMARY ─────────────────\n`;
-    csv += `Total Orders in Period:  ${allOrders}\n`;
-    csv += `  ✅ Completed (Revenue): ${completedOrders} (shipped/delivered/out_for_delivery)\n`;
-    csv += `  ⏳ Pending:             ${pendingOrders} (pending/confirmed/processing/packed)\n`;
-    csv += `  ❌ Cancelled:           ${cancelledOrders}\n`;
-    csv += `  ↩️ Returned:            ${returnedOrders}\n`;
-    csv += `\n`;
-    csv += `Revenue (Completed):     ৳${totalSalesRevenue.toLocaleString()}\n`;
-    csv += `Total Discounts Given:   ৳${totalDiscount.toLocaleString()}\n`;
-    csv += `Total Cost (COGS):       ৳${totalCost.toLocaleString()}\n`;
-    csv += `Gross Profit:            ৳${totalProfit.toLocaleString()}\n`;
-    csv += `Profit Margin:           ${profitMargin.toFixed(2)}%\n`;
-    csv += `Avg Order Value (AOV):   ৳${avgOrderValue.toFixed(2)}\n`;
-    csv += `Total Units Sold:        ${totalUnitsSold}\n\n`;
+    csv += `ORDER SUMMARY\n`;
+    csv += `Total Orders in Period,${allOrders}\n`;
+    csv += `Completed (Revenue),${completedOrders}\n`;
+    csv += `Pending,${pendingOrders}\n`;
+    csv += `Cancelled,${cancelledOrders}\n`;
+    csv += `Returned,${returnedOrders}\n\n`;
+    
+    csv += `FINANCIAL SUMMARY\n`;
+    csv += `Metric,Amount (BDT)\n`;
+    csv += `Revenue (Completed),${fmtCurrency(totalSalesRevenue)}\n`;
+    csv += `Total Discounts Given,${fmtCurrency(totalDiscount)}\n`;
+    csv += `Cost of Goods (COGS),${fmtCurrency(totalCost)}\n`;
+    csv += `Gross Profit,${fmtCurrency(grossProfit)}\n`;
+    csv += `Gross Margin,${profitMargin.toFixed(2)}%\n`;
+    csv += `Avg Order Value (AOV),${fmtCurrency(avgOrderValue)}\n`;
+    csv += `Total Units Sold,${totalUnitsSold}\n\n`;
 
-    csv += `───────────────── DAILY BREAKDOWN ─────────────────\n`;
+    csv += `DEDUCTIONS & LOSSES\n`;
+    csv += `Category,Amount (BDT)\n`;
+    csv += `Returns Loss,${fmtCurrency(totalReturnValue)}\n`;
+    csv += `Damage/Waste Loss,${fmtCurrency(totalDamageValue)}\n`;
+    csv += `Packaging (Direct),${fmtCurrency(totalPackagingDirect)}\n`;
+    csv += `Packaging (Distributed),${fmtCurrency(totalPackagingDistributed)}\n`;
+    csv += `Packaging (Other/Courier),${fmtCurrency(totalPackagingOther + totalPackagingCourier)}\n`;
+    csv += `Total Packaging,${fmtCurrency(totalPackaging)}\n`;
+    csv += `Marketing/Ad Spend,${fmtCurrency(totalAdSpend)}\n\n`;
+
+    csv += `NET RESULT\n`;
+    csv += `Net Profit,${fmtCurrency(netProfit)}\n`;
+    csv += `Net Margin,${netMargin.toFixed(2)}%\n\n`;
+
+    csv += `DAILY BREAKDOWN\n`;
     csv += `Date,Orders,Revenue,Cost,Profit,Units,AOV\n`;
     Object.entries(dailySales).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, data]) => {
       const aov = data.orders > 0 ? data.revenue / data.orders : 0;
-      csv += `${date},${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${data.profit.toLocaleString()},${data.units},৳${aov.toFixed(0)}\n`;
+      csv += `${date},${data.orders},${fmtCurrency(data.revenue)},${fmtCurrency(data.cost)},${fmtCurrency(data.profit)},${data.units},${fmtCurrency(aov)}\n`;
     });
 
-    csv += `\n───────────────── CATEGORY PERFORMANCE ─────────────────\n`;
+    csv += `\nCATEGORY PERFORMANCE\n`;
     csv += `Category,Products,Qty Sold,Revenue,Cost,Profit,Margin%\n`;
     Object.entries(categorySales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([cat, data]) => {
       const profit = data.revenue - data.cost;
       const margin = data.revenue > 0 ? (profit / data.revenue * 100) : 0;
       const productCount = data.products instanceof Set ? data.products.size : data.products;
-      csv += `"${cat}",${productCount},${data.qty},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${margin.toFixed(1)}%\n`;
+      csv += `"${cat}",${productCount},${data.qty},${fmtCurrency(data.revenue)},${fmtCurrency(data.cost)},${fmtCurrency(profit)},${margin.toFixed(1)}%\n`;
     });
 
-    csv += `\n───────────────── ORDER SOURCE ANALYSIS ─────────────────\n`;
-    csv += `Source,Orders,Revenue,Cost,Profit,% of Revenue\n`;
-    Object.entries(orderSourceSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([src, data]) => {
-      const profit = data.revenue - data.cost;
-      const pct = totalSalesRevenue > 0 ? (data.revenue / totalSalesRevenue * 100) : 0;
-      csv += `"${src}",${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${pct.toFixed(1)}%\n`;
-    });
-
-    csv += `\n───────────────── PAYMENT METHOD BREAKDOWN ─────────────────\n`;
-    csv += `Payment Method,Orders,Revenue,Cost,Profit,% of Revenue\n`;
-    Object.entries(paymentMethodSales).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([method, data]) => {
-      const profit = data.revenue - data.cost;
-      const pct = totalSalesRevenue > 0 ? (data.revenue / totalSalesRevenue * 100) : 0;
-      csv += `"${method}",${data.orders},৳${data.revenue.toLocaleString()},৳${data.cost.toLocaleString()},৳${profit.toLocaleString()},${pct.toFixed(1)}%\n`;
-    });
-
-    csv += `\n───────────────── PRODUCT-WISE SALES (Top 100) ─────────────────\n`;
-    csv += `Rank,Product Name,SKU,Category,Qty Sold,Orders,Revenue,Cost,Profit,Margin%,Avg Sell Price,Purchase Price\n`;
+    csv += `\nPRODUCT-WISE SALES (Top 100)\n`;
+    csv += `Rank,Product Name,SKU,Category,Qty Sold,Orders,Revenue,Cost,Profit,Returns,Return Value,Damages,Damage Value,Packaging,Ad Spend,Net Profit,Margin%\n`;
     rows.slice(0, 100).forEach((r, idx) => {
-      csv += `${idx + 1},"${r.name}","${r.sku}","${r.category}",${r.qty},${r.orders},৳${r.revenue.toFixed(0)},৳${r.cost.toFixed(0)},৳${r.profit.toFixed(0)},${r.margin.toFixed(1)}%,৳${r.avgPrice.toFixed(0)},৳${r.purchasePrice.toFixed(0)}\n`;
+      const netP = r.profit - r.returnValue - r.damageValue - (r.packagingCost || 0) - (r.adSpend || 0);
+      const netM = r.revenue > 0 ? (netP / r.revenue * 100) : 0;
+      csv += `${idx + 1},"${r.name}","${r.sku}","${r.category}",${r.qty},${r.orders},${fmtCurrency(r.revenue)},${fmtCurrency(r.cost)},${fmtCurrency(r.profit)},${r.returnQty},${fmtCurrency(r.returnValue)},${r.damageQty},${fmtCurrency(r.damageValue)},${fmtCurrency(r.packagingCost)},${fmtCurrency(r.adSpend)},${fmtCurrency(netP)},${netM.toFixed(1)}%\n`;
     });
 
     return csv;
