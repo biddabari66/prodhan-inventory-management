@@ -281,6 +281,17 @@ function InventoryReportsPage() {
     }
   };
 
+  // Currency formatter - outputs plain number for CSV, no ৳ symbol in data cells
+  const fmtCurrency = (num) => {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    return Math.round(num).toString();
+  };
+  // For summary text lines (not CSV data rows)
+  const fmtBDT = (num) => {
+    if (num === null || num === undefined || isNaN(num)) return '৳0';
+    return `৳${Math.round(num).toLocaleString('en-IN')}`;
+  };
+
   // Report generation functions - ADVANCED & COMPREHENSIVE
   // Revenue = sum of total_amount from COMPLETED orders (shipped, delivered, out_for_delivery)
   // Profit = Revenue - COGS (COGS = purchase_price * quantity)
