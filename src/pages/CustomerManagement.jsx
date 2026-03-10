@@ -56,15 +56,23 @@ function CustomerManagementPage() {
 
   const loadCustomers = async () => {
     try {
-      // 🚀 PAGINATION: Load only current page for fast performance
+      // Load current page for display
       const offset = (currentPage - 1) * pageSize;
       const pageData = await base44.entities.Customer.list('-total_spent', pageSize, offset);
       setCustomers(pageData);
       
-      // Get total count for pagination (first time only)
+      // Get total count (load ALL in batches for accurate count)
       if (totalCustomers === 0) {
-        const allCount = await base44.entities.Customer.list('-total_spent', 10000);
-        setTotalCustomers(allCount.length);
+        let count = 0;
+        let batchOffset = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const batch = await base44.entities.Customer.list('-total_spent', 1000, batchOffset);
+          count += batch.length;
+          batchOffset += 1000;
+          hasMore = batch.length === 1000;
+        }
+        setTotalCustomers(count);
       }
     } catch (error) {
       console.error('Error loading customers:', error);
@@ -148,28 +156,54 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  // All-time stats from total customers (not just current page)
-  const [allTimeStats, setAllTimeStats] = useState({ total: 0, vip: 0, regular: 0, totalRevenue: 0 });
+  // All-time stats from ALL customers (loaded in batches)
+  const [allCustomersCache, setAllCustomersCache] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(true);
   
   useEffect(() => {
-    const loadAllTimeStats = async () => {
+    const loadAllCustomers = async () => {
+      setStatsLoading(true);
       try {
-        const allCustomers = await base44.entities.Customer.list('-total_spent', 10000);
-        setAllTimeStats({
-          total: allCustomers.length,
-          vip: allCustomers.filter(c => c.total_spent >= 50000).length,
-          regular: allCustomers.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
-          totalRevenue: allCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
-        });
-        setTotalCustomers(allCustomers.length);
+        const batchSize = 1000;
+        let allData = [];
+        let offset = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
+          allData = [...allData, ...batch];
+          offset += batchSize;
+          hasMore = batch.length === batchSize;
+        }
+        setAllCustomersCache(allData);
+        setTotalCustomers(allData.length);
       } catch (error) {
         console.error('Error loading stats:', error);
+      } finally {
+        setStatsLoading(false);
       }
     };
-    loadAllTimeStats();
+    loadAllCustomers();
   }, []);
 
-  const stats = allTimeStats;
+  // Stats that respond to date filters
+  const stats = useMemo(() => {
+    let source = allCustomersCache;
+    if (customerDateFrom || customerDateTo) {
+      source = source.filter(c => {
+        const d = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
+        if (!d) return true;
+        if (customerDateFrom && d < new Date(customerDateFrom)) return false;
+        if (customerDateTo && d > new Date(customerDateTo + 'T23:59:59')) return false;
+        return true;
+      });
+    }
+    return {
+      total: source.length,
+      vip: source.filter(c => c.total_spent >= 50000).length,
+      regular: source.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
+      totalRevenue: source.reduce((sum, c) => sum + (c.total_spent || 0), 0)
+    };
+  }, [allCustomersCache, customerDateFrom, customerDateTo]);
 
   const handleExportCustomers = () => {
     const headers = ['Customer Name', 'Phone', 'Email', 'Type', 'Total Orders', 'Total Spent', 'Customer Since', 'Notes'];
