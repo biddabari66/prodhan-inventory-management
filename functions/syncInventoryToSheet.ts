@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     
     // Clear the sheet
     const clearRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Products!A1:AA10000:clear`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetTabName + '!A1:AA10000')}:clear`,
       {
         method: 'POST',
         headers: {
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
       const batch = allRows.slice(i, i + BATCH_SIZE);
       const startRow = i + 1;
       const endRow = startRow + batch.length - 1;
-      const range = `Products!A${startRow}:AA${endRow}`;
+      const range = `${sheetTabName}!A${startRow}:AA${endRow}`;
 
       const writeRes = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
         requests: [
           {
             repeatCell: {
-              range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
+              range: { sheetId: sheetTabId, startRowIndex: 0, endRowIndex: 1 },
               cell: {
                 userEnteredFormat: {
                   backgroundColor: { red: 0.86, green: 0.15, blue: 0.15 },
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
           },
           {
             autoResizeDimensions: {
-              dimensions: { sheetId: 0, dimension: 'COLUMNS', startIndex: 0, endIndex: 27 }
+              dimensions: { sheetId: sheetTabId, dimension: 'COLUMNS', startIndex: 0, endIndex: 27 }
             }
           }
         ]
