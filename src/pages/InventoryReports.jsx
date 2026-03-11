@@ -187,6 +187,27 @@ function InventoryReportsPage() {
         base44.entities.AdSpend.list('-spend_date', 1000)
       ]);
 
+      // Filter data by selected date/time range
+      const getBDTDateTime = (dateStr) => {
+        if (!dateStr) return { date: '', time: '00:00' };
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return { date: dateStr?.split('T')[0] || '', time: '00:00' };
+        const bdtDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
+        return { date: bdtDate };
+      };
+
+      const isInRange = (dateStr) => {
+        const primary = getBDTDateTime(dateStr);
+        if (!primary.date) return false;
+        return primary.date >= startDate && primary.date <= endDate;
+      };
+
+      const filteredOrders = orders.filter(o => isInRange(o.order_date));
+      const filteredMovements = movements.filter(m => isInRange(m.movement_date));
+      const filteredPurchaseOrders = purchaseOrders.filter(p => isInRange(p.order_date));
+      const filteredPackaging = packagingExpenses.filter(e => isInRange(e.expense_date));
+      const filteredAdSpends = (adSpends || []).filter(a => isInRange(a.spend_date));
+
       // Generate CSV report based on type
       let csvContent = '';
       let fileName = '';
