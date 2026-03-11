@@ -67,6 +67,43 @@ Deno.serve(async (req) => {
       console.log(`📄 Using existing spreadsheet: ${spreadsheetId}`);
     }
 
+    // 2b. Get or create the "Products" sheet tab
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    
+    let sheetTabName = 'Sheet1';
+    let sheetTabId = 0;
+    
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      const sheets = meta.sheets || [];
+      const productsSheet = sheets.find(s => s.properties?.title === 'Products');
+      if (productsSheet) {
+        sheetTabName = 'Products';
+        sheetTabId = productsSheet.properties.sheetId;
+      } else if (sheets.length > 0) {
+        // Rename first sheet to "Products"
+        sheetTabId = sheets[0].properties.sheetId;
+        const oldName = sheets[0].properties.title;
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              updateSheetProperties: {
+                properties: { sheetId: sheetTabId, title: 'Products' },
+                fields: 'title'
+              }
+            }]
+          })
+        });
+        sheetTabName = 'Products';
+        console.log(`📋 Renamed tab "${oldName}" → "Products"`);
+      }
+    }
+
     // 3. Prepare headers and data rows
     const headers = [
       'Product ID',
