@@ -18,12 +18,9 @@ Deno.serve(async (req) => {
 
     console.log(`📦 Fetched ${inventory.length} inventory items`);
 
-    // 2. Check if spreadsheet ID is stored, or create a new one
-    let settings = await base44.asServiceRole.entities.IntegrationSetting.filter({
-      setting_key: 'google_sheets_inventory_id'
-    });
-
-    let spreadsheetId = settings?.[0]?.setting_value;
+    // 2. Get spreadsheet ID from env or payload, or create a new one
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    let spreadsheetId = Deno.env.get('GOOGLE_SHEET_INVENTORY_ID') || body.spreadsheet_id || null;
 
     if (!spreadsheetId) {
       // Create a new spreadsheet
@@ -55,14 +52,10 @@ Deno.serve(async (req) => {
 
       const sheetData = await createRes.json();
       spreadsheetId = sheetData.spreadsheetId;
-      console.log(`✅ Created spreadsheet: ${spreadsheetId}`);
-
-      // Save the spreadsheet ID
-      await base44.asServiceRole.entities.IntegrationSetting.create({
-        setting_key: 'google_sheets_inventory_id',
-        setting_value: spreadsheetId,
-        setting_type: 'google_sheets'
-      });
+      console.log(`✅ Created NEW spreadsheet: ${spreadsheetId}`);
+      console.log(`⚠️ IMPORTANT: Set GOOGLE_SHEET_INVENTORY_ID secret to "${spreadsheetId}" for future runs`);
+    } else {
+      console.log(`📄 Using existing spreadsheet: ${spreadsheetId}`);
     }
 
     // 3. Prepare headers and data rows
