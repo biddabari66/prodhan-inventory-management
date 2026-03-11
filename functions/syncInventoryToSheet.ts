@@ -22,6 +22,15 @@ Deno.serve(async (req) => {
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
     let spreadsheetId = Deno.env.get('GOOGLE_SHEET_INVENTORY_ID') || body.spreadsheet_id || null;
 
+    // Extract ID from full URL if user pasted a URL instead of just the ID
+    if (spreadsheetId && spreadsheetId.includes('docs.google.com')) {
+      const match = spreadsheetId.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) spreadsheetId = match[1];
+    }
+    
+    // Trim any whitespace
+    if (spreadsheetId) spreadsheetId = spreadsheetId.trim();
+
     if (!spreadsheetId) {
       // Create a new spreadsheet
       console.log('📝 Creating new Google Sheet...');
@@ -137,7 +146,7 @@ Deno.serve(async (req) => {
     
     // Clear the sheet
     const clearRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Products!A:AA:clear`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Products!A1:AA10000:clear`,
       {
         method: 'POST',
         headers: {
