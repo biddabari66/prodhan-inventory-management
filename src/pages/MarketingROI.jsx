@@ -818,4 +818,4 @@ function MarketingROIPage() {
   );
 }
 
-export default withPermission(MarketingROIPage, 'product_analytics', 'can_view');
+export default withPermission(MarketingROIPage, 'marketing_roi', 'can_view');
