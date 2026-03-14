@@ -44,6 +44,7 @@ export default function SearchableProductSelect({
 
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -51,7 +52,7 @@ export default function SearchableProductSelect({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const handleSelect = (itemId) => {
     onValueChange(itemId);
