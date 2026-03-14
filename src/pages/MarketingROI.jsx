@@ -85,7 +85,10 @@ function MarketingROIPage() {
 
   const { data: budgets = [] } = useQuery({
     queryKey: ['marketing-budgets'],
-    queryFn: () => base44.entities.Budget.filter({ category: 'marketing' }),
+    queryFn: async () => {
+      const all = await base44.entities.Budget.list('-period', 200);
+      return all.filter(b => b.category === 'marketing');
+    },
     staleTime: 5 * 60 * 1000
   });
 
