@@ -94,10 +94,22 @@ function MarketingROIPage() {
 
   // Mutations
   const createAdSpendMutation = useMutation({
-    mutationFn: (data) => base44.entities.AdSpend.create({
-      ...data,
-      total_spend_bdt: data.total_spend_usd * data.usd_to_bdt_rate
-    }),
+    mutationFn: (data) => {
+      if (!data.campaign_name) throw new Error('Campaign name is required');
+      if (!data.total_spend_usd || data.total_spend_usd <= 0) throw new Error('Amount must be > 0');
+      return base44.entities.AdSpend.create({
+        ad_type: data.ad_type || 'single_product',
+        period_type: data.period_type || 'daily',
+        spend_date: data.spend_date,
+        total_spend_usd: data.total_spend_usd,
+        usd_to_bdt_rate: data.usd_to_bdt_rate,
+        total_spend_bdt: data.total_spend_usd * data.usd_to_bdt_rate,
+        platform: data.platform,
+        campaign_name: data.campaign_name,
+        notes: data.notes || '',
+        products: data.products && data.products.length > 0 ? data.products : []
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['ad-spends']);
       toast.success('Campaign ad spend recorded');
@@ -113,6 +125,9 @@ function MarketingROIPage() {
         products: [],
         notes: ''
       });
+    },
+    onError: (error) => {
+      toast.error('Failed: ' + (error.message || 'Unknown error'));
     }
   });
 
