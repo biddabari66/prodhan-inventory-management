@@ -132,19 +132,31 @@ function MarketingROIPage() {
   });
 
   const createBudgetMutation = useMutation({
-    mutationFn: (data) => base44.entities.Budget.create({
-      ...data,
-      start_date: data.period + '-01',
-      end_date: format(endOfMonth(new Date(data.period + '-01')), 'yyyy-MM-dd'),
-      spent_amount: 0,
-      remaining_amount: data.allocated_amount,
-      utilization_percentage: 0,
-      status: 'active'
-    }),
+    mutationFn: (data) => {
+      if (!data.allocated_amount || data.allocated_amount <= 0) throw new Error('Budget amount must be > 0');
+      const periodDate = new Date(data.period + '-01');
+      return base44.entities.Budget.create({
+        period_type: 'monthly',
+        period: data.period,
+        department: data.department || 'prodhan_com_e_commerce',
+        category: 'marketing',
+        allocated_amount: data.allocated_amount,
+        start_date: data.period + '-01',
+        end_date: format(endOfMonth(periodDate), 'yyyy-MM-dd'),
+        spent_amount: 0,
+        remaining_amount: data.allocated_amount,
+        utilization_percentage: 0,
+        status: 'active',
+        notes: data.notes || ''
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['marketing-budgets']);
       toast.success('Marketing budget created');
       setIsAddBudgetOpen(false);
+    },
+    onError: (error) => {
+      toast.error('Failed: ' + (error.message || 'Unknown error'));
     }
   });
 
