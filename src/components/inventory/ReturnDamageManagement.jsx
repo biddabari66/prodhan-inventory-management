@@ -244,6 +244,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         
         // Find matching order for extra details
         const orderNum = m.reference_number || metadata.order_number || '';
+        const matchedOrder = allOrders.find(o => o.order_number === orderNum) || {};
+        const shippingAddr = matchedOrder.shipping_address || metadata.shipping_address || {};
 
         const totalQty = metadata.is_partial
           ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
