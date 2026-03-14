@@ -257,7 +257,7 @@ export default function CampaignManager({ onCampaignCreated }) {
                       selectedProducts.includes(product.id) ? 'bg-pink-50' : ''
                     }`}
                   >
-                    <Checkbox checked={selectedProducts.includes(product.id)} />
+                    <input type="checkbox" readOnly checked={selectedProducts.includes(product.id)} className="w-4 h-4 rounded border-slate-300 text-pink-600 focus:ring-pink-500" />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{product.item_name}</p>
                       <p className="text-xs text-slate-500">{product.category} • ৳{product.selling_price}</p>
