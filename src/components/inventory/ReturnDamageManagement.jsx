@@ -90,6 +90,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     gcTime: 30 * 60 * 1000,
   });
 
+  // Fetch orders for enriching export data
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['orders-for-export'],
+    queryFn: () => Order.list('-order_date', 5000),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
