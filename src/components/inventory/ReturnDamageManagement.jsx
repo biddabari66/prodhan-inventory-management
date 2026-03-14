@@ -199,7 +199,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     return filtered;
   }, [movements, inventoryMap, departmentFilter, searchQuery, dateFilter]);
   
-  // Export to Excel function
+  // Export to Excel function - Comprehensive with all order details & notes
   const handleExportExcel = (dataType) => {
     const dataToExport = dataType === 'returns' ? returnsData : damagesData;
     
@@ -207,68 +207,181 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       toast.error('No data to export');
       return;
     }
-    
-    const headers = dataType === 'returns' 
-      ? ['Date', 'Product', 'Type', 'Quantity', 'Order #', 'Customer/Supplier', 'Phone', 'Reason', 'Action', 'Impact']
-      : ['Date', 'Product', 'Quantity', 'Reason', 'Condition', 'Action', 'Reported By', 'Loss Value'];
-    
-    const rows = dataToExport.map(m => {
-      const metadata = m.metadata || {};
-      const itemName = getItemName(m.inventory_item_id);
-      
-      if (dataType === 'returns') {
-        return [
-          format(new Date(m.movement_date), 'yyyy-MM-dd'),
-          itemName,
-          metadata.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return',
-          metadata.is_partial ? `${(metadata.good_qty || 0) + (metadata.damaged_qty || 0)} (Good: ${metadata.good_qty || 0}, Damaged: ${metadata.damaged_qty || 0})` : (metadata.original_quantity || Math.abs(m.quantity) || 1),
-          m.reference_number || '-',
-          metadata.return_type === 'purchase_return' ? (metadata.supplier_name || '-') : (metadata.customer_name || '-'),
-          metadata.customer_phone || '-',
-          metadata.reason || '-',
-          metadata.action || '-',
-          Math.abs(m.total_value || 0)
-        ];
-      } else {
-        return [
-          format(new Date(m.movement_date), 'yyyy-MM-dd'),
-          itemName,
-          metadata.original_quantity || Math.abs(m.quantity) || 1,
-          metadata.reason || m.reference_type,
-          metadata.condition || 'damaged',
-          metadata.action || 'write_off',
-          m.performed_by || '-',
-          Math.abs(m.total_value || 0)
-        ];
-      }
-    });
-    
+
     const escapeCSV = (val) => {
       if (val === null || val === undefined) return '';
-      const str = String(val);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      const str = String(val).replace(/\r?\n/g, ' '); // flatten newlines
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\t')) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
     };
+
+    let headers, rows;
+
+    if (dataType === 'returns') {
+      headers = [
+        'SL', 'Return Date', 'Product Name', 'SKU/Barcode', 'Category',
+        'Return Type', 'Total Qty', 'Good Qty', 'Damaged Qty',
+        'Order Number', 'Order Date', 'Order Status', 'Order Total (৳)',
+        'Customer Name', 'Customer Phone', 'Shipping Address',
+        'Courier Service', 'Tracking Number',
+        'Return Reason', 'Action Taken', 'Condition',
+        'Purchase Price (৳)', 'Selling Price (৳)', 'Financial Impact (৳)', 'Restocking Fee (৳)',
+        'Detailed Notes', 'Recorded By', 'Record Date'
+      ];
+
+      rows = dataToExport.map((m, idx) => {
+        const metadata = m.metadata || {};
+        const item = inventoryMap[m.inventory_item_id] || {};
+        
+        // Find matching order for extra details
+        const orderNum = m.reference_number || metadata.order_number || '';
+
+        const totalQty = metadata.is_partial
+          ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
+          : (metadata.original_quantity || Math.abs(m.quantity) || 1);
+        const goodQty = metadata.is_partial ? (metadata.good_qty || 0) : (metadata.action === 'restock' ? totalQty : 0);
+        const damagedQty = metadata.is_partial ? (metadata.damaged_qty || 0) : (metadata.action === 'write_off' ? totalQty : 0);
+
+        const actionMap = {
+          restock: 'Restocked to Inventory',
+          return_to_supplier: 'Returned to Supplier',
+          write_off: 'Written Off (Loss)'
+        };
+
+        const reasonMap = {
+          defective: 'Defective Product',
+          wrong_item: 'Wrong Item Delivered',
+          quality_issue: 'Quality Issue',
+          late_delivery: 'Late Delivery',
+          customer_changed_mind: 'Customer Changed Mind',
+          size_color_issue: 'Size/Color Issue',
+          not_as_described: 'Not As Described',
+          other: 'Other'
+        };
+
+        const addressObj = metadata.shipping_address || {};
+        const address = [addressObj.address_line, addressObj.city, addressObj.district].filter(Boolean).join(', ');
+
+        return [
+          idx + 1,
+          format(new Date(m.movement_date), 'yyyy-MM-dd'),
+          item.item_name || 'Unknown',
+          item.barcode || item.isbn || '-',
+          item.category || '-',
+          metadata.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return',
+          totalQty,
+          goodQty,
+          damagedQty,
+          orderNum || '-',
+          metadata.order_date ? format(new Date(metadata.order_date), 'yyyy-MM-dd') : '-',
+          metadata.order_status || '-',
+          metadata.order_total || '-',
+          metadata.return_type === 'purchase_return' ? (metadata.supplier_name || '-') : (metadata.customer_name || '-'),
+          metadata.customer_phone || '-',
+          address || '-',
+          metadata.courier_service || '-',
+          metadata.tracking_number || '-',
+          reasonMap[metadata.reason] || metadata.reason?.replace(/_/g, ' ') || '-',
+          actionMap[metadata.action] || metadata.action?.replace(/_/g, ' ') || '-',
+          metadata.condition || '-',
+          item.purchase_price || 0,
+          item.selling_price || 0,
+          Math.abs(m.total_value || 0),
+          metadata.restocking_fee || 0,
+          m.notes || '-',
+          m.performed_by || '-',
+          m.created_date ? format(new Date(m.created_date), 'yyyy-MM-dd HH:mm') : '-'
+        ];
+      });
+    } else {
+      headers = [
+        'SL', 'Date', 'Product Name', 'SKU/Barcode', 'Category',
+        'Quantity', 'Reason', 'Condition', 'Action Taken',
+        'Purchase Price (৳)', 'Selling Price (৳)', 'Loss Value (৳)',
+        'Detailed Notes', 'Reported By', 'Record Date'
+      ];
+
+      rows = dataToExport.map((m, idx) => {
+        const metadata = m.metadata || {};
+        const item = inventoryMap[m.inventory_item_id] || {};
+
+        const reasonMap = {
+          received_damaged: 'Received Damaged from Supplier',
+          warehouse_damage: 'Damaged in Warehouse',
+          transit_damage: 'Damaged in Transit',
+          water_damage: 'Water Damage',
+          fire_damage: 'Fire/Heat Damage',
+          expired: 'Expired Product',
+          manufacturing_defect: 'Manufacturing Defect',
+          handling_damage: 'Mishandling Damage',
+          theft: 'Theft/Missing',
+          other: 'Other'
+        };
+        const actionMap = {
+          restock: 'Restocked',
+          return_to_supplier: 'Returned to Supplier',
+          write_off: 'Written Off (Loss)'
+        };
+
+        return [
+          idx + 1,
+          format(new Date(m.movement_date), 'yyyy-MM-dd'),
+          item.item_name || 'Unknown',
+          item.barcode || item.isbn || '-',
+          item.category || '-',
+          metadata.original_quantity || Math.abs(m.quantity) || 1,
+          reasonMap[metadata.reason] || metadata.reason?.replace(/_/g, ' ') || m.reference_type,
+          metadata.condition || 'damaged',
+          actionMap[metadata.action] || metadata.action?.replace(/_/g, ' ') || 'Write-off',
+          item.purchase_price || 0,
+          item.selling_price || 0,
+          Math.abs(m.total_value || 0),
+          m.notes || '-',
+          m.performed_by || '-',
+          m.created_date ? format(new Date(m.created_date), 'yyyy-MM-dd HH:mm') : '-'
+        ];
+      });
+    }
+
+    // Summary row
+    const totalImpact = dataToExport.reduce((sum, m) => sum + Math.abs(m.total_value || 0), 0);
+    const totalQty = dataToExport.reduce((sum, m) => {
+      const meta = m.metadata || {};
+      return sum + (meta.original_quantity || Math.abs(m.quantity) || 1);
+    }, 0);
     
+    const summaryLabel = dataType === 'returns' ? 'TOTAL RETURNS' : 'TOTAL DAMAGES';
+    const emptyColsBefore = dataType === 'returns' ? 5 : 4;
+    const summaryRow = new Array(headers.length).fill('');
+    summaryRow[0] = '';
+    summaryRow[1] = summaryLabel;
+    summaryRow[emptyColsBefore + 1] = totalQty;
+    summaryRow[headers.indexOf('Financial Impact (৳)') !== -1 ? headers.indexOf('Financial Impact (৳)') : headers.indexOf('Loss Value (৳)')] = totalImpact;
+
     const csvContent = [
+      `${dataType === 'returns' ? 'Returns' : 'Damages'} Report — Generated ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
+      `Total Records: ${dataToExport.length} | Total ${dataType === 'returns' ? 'Impact' : 'Loss'}: ৳${totalImpact.toLocaleString()} | Total Qty: ${totalQty}`,
+      '',
       headers.map(escapeCSV).join(','),
-      ...rows.map(row => row.map(escapeCSV).join(','))
+      ...rows.map(row => row.map(escapeCSV).join(',')),
+      '',
+      summaryRow.map(escapeCSV).join(',')
     ].join('\n');
-    
+
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${dataType}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `${dataType}_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    toast.success(`Exported ${dataToExport.length} ${dataType} records`);
+
+    toast.success(`Exported ${dataToExport.length} ${dataType} records with full details`);
   };
 
   // Record return/damage mutation - PROPERLY SEPARATES RETURNS FROM DAMAGES
