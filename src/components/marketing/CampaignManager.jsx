@@ -48,20 +48,35 @@ export default function CampaignManager({ onCampaignCreated }) {
 
   const createCampaignMutation = useMutation({
     mutationFn: (data) => {
+      if (!data.campaign_name) throw new Error('Campaign name is required');
+      if (!data.total_spend_usd || data.total_spend_usd <= 0) throw new Error('Spend amount must be greater than 0');
+      
       const totalSpendBDT = data.total_spend_usd * data.usd_to_bdt_rate;
-      const perProductSpend = selectedProducts.length > 0 ? totalSpendBDT / selectedProducts.length : totalSpendBDT;
+      const perProductSpend = selectedProducts.length > 0 ? totalSpendBDT / selectedProducts.length : 0;
+      
+      // Ensure ad_type is valid for the entity
+      const adType = selectedProducts.length > 1 ? 'combo_ad' : 'single_product';
+      
+      const productsList = selectedProducts.map(id => {
+        const inv = inventory.find(i => i.id === id);
+        return {
+          inventory_id: id,
+          product_name: inv?.item_name || 'Unknown',
+          allocated_spend_bdt: perProductSpend
+        };
+      });
       
       return base44.entities.AdSpend.create({
-        ...data,
+        ad_type: data.ad_type === 'multiple_products' ? 'multiple_products' : adType,
+        period_type: data.period_type || 'daily',
+        spend_date: data.spend_date,
+        total_spend_usd: data.total_spend_usd,
+        usd_to_bdt_rate: data.usd_to_bdt_rate,
         total_spend_bdt: totalSpendBDT,
-        products: selectedProducts.map(id => {
-          const inv = inventory.find(i => i.id === id);
-          return {
-            inventory_id: id,
-            product_name: inv?.item_name || 'Unknown',
-            allocated_spend_bdt: perProductSpend
-          };
-        })
+        platform: data.platform,
+        campaign_name: data.campaign_name,
+        notes: data.notes || '',
+        products: productsList
       });
     },
     onSuccess: () => {
@@ -70,6 +85,9 @@ export default function CampaignManager({ onCampaignCreated }) {
       setIsOpen(false);
       resetForm();
       onCampaignCreated?.();
+    },
+    onError: (error) => {
+      toast.error('Failed to create campaign: ' + (error.message || 'Unknown error'));
     }
   });
 
