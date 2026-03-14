@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Search, Package, X, Check } from 'lucide-react';
 
@@ -17,6 +16,11 @@ export default function SearchableProductSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef(null);
+  const isOpenRef = useRef(false);
+  const inputRef = useRef(null);
+
+  // Keep ref in sync to avoid stale closures
+  isOpenRef.current = isOpen;
 
   const selectedItem = useMemo(() => {
     return inventory.find(item => item.id === value);
@@ -24,15 +28,12 @@ export default function SearchableProductSelect({
 
   const filteredItems = useMemo(() => {
     if (!inventory || inventory.length === 0) return [];
-    // Show fewer items initially for faster rendering
     if (!searchQuery) return inventory.slice(0, 30);
     const query = searchQuery.toLowerCase();
-    // Fast path: exact SKU or ISBN match first
     const exactMatch = inventory.find(item => 
       item.isbn === query || item.barcode === query
     );
     if (exactMatch) return [exactMatch];
-    // Regular search - limit to 50 for speed
     return inventory.filter(item => 
       item.item_name?.toLowerCase().includes(query) ||
       item.english_item_name?.toLowerCase().includes(query) ||
@@ -50,88 +51,101 @@ export default function SearchableProductSelect({
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Use setTimeout to avoid immediate trigger
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isOpen]);
 
-  const handleSelect = (itemId) => {
+  const openDropdown = useCallback(() => {
+    if (!disabled && !isOpenRef.current) {
+      setIsOpen(true);
+    }
+  }, [disabled]);
+
+  const handleSelect = useCallback((itemId) => {
     onValueChange(itemId);
     setIsOpen(false);
     setSearchQuery('');
-  };
+  }, [onValueChange]);
 
-  const handleClear = (e) => {
+  const handleClear = useCallback((e) => {
     e.stopPropagation();
+    e.preventDefault();
     if (allowClear && onClear) {
       onClear();
     } else {
       onValueChange('');
     }
     setSearchQuery('');
-  };
+  }, [allowClear, onClear, onValueChange]);
 
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Selected Value Display / Search Input */}
-      <div 
-        className="relative cursor-pointer"
-        onClick={() => { if (!disabled && !isOpen) setIsOpen(true); }}
-      >
-        {selectedItem && !isOpen ? (
-          <div className={`flex items-center justify-between p-2.5 border rounded-lg transition-colors ${
+      {selectedItem && !isOpen ? (
+        <div 
+          className={`flex items-center justify-between p-2.5 border rounded-lg transition-colors ${
             disabled ? 'bg-slate-50 cursor-not-allowed' : 'bg-white hover:border-violet-400 cursor-pointer'
-          }`}>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Package className="w-4 h-4 text-violet-600 flex-shrink-0" />
-              <div className="truncate">
-                <span className="font-medium text-sm">{selectedItem.item_name}</span>
-                {showStock && <span className="text-xs text-slate-500 ml-2">(Stock: {selectedItem.current_stock})</span>}
-              </div>
+          }`}
+          onClick={openDropdown}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Package className="w-4 h-4 text-violet-600 flex-shrink-0" />
+            <div className="truncate">
+              <span className="font-medium text-sm">{selectedItem.item_name}</span>
+              {showStock && <span className="text-xs text-slate-500 ml-2">(Stock: {selectedItem.current_stock})</span>}
             </div>
-            {!disabled && (
-              <button 
-                onClick={handleClear}
-                className="p-1 hover:bg-slate-100 rounded-full"
-              >
-                <X className="w-4 h-4 text-slate-400" />
-              </button>
-            )}
           </div>
-        ) : (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => !disabled && setIsOpen(true)}
-              placeholder={placeholder}
-              className="pl-9 pr-4"
-              disabled={disabled}
-            />
-          </div>
-        )}
-      </div>
+          {!disabled && (
+            <button 
+              type="button"
+              onClick={handleClear}
+              className="p-1 hover:bg-slate-100 rounded-full"
+            >
+              <X className="w-4 h-4 text-slate-400" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={openDropdown}
+            placeholder={placeholder}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-4 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            disabled={disabled}
+          />
+        </div>
+      )}
 
       {/* Dropdown */}
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-          {/* Search Input (when dropdown is open) */}
           {selectedItem && (
             <div className="sticky top-0 bg-white p-2 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="pl-9 text-sm"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-4 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   autoFocus
                 />
               </div>
             </div>
           )}
 
-          {/* Items List */}
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-slate-500 text-sm">
               <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
