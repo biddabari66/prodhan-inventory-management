@@ -270,8 +270,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           other: 'Other'
         };
 
-        const addressObj = metadata.shipping_address || {};
-        const address = [addressObj.address_line, addressObj.city, addressObj.district].filter(Boolean).join(', ');
+        const address = [shippingAddr.address_line, shippingAddr.city, shippingAddr.district].filter(Boolean).join(', ');
 
         return [
           idx + 1,
