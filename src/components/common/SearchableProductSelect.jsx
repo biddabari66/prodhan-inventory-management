@@ -75,7 +75,7 @@ export default function SearchableProductSelect({
       {/* Selected Value Display / Search Input */}
       <div 
         className="relative cursor-pointer"
-        onClick={() => !disabled && setIsOpen(true)}
+        onClick={() => { if (!disabled && !isOpen) setIsOpen(true); }}
       >
         {selectedItem && !isOpen ? (
           <div className={`flex items-center justify-between p-2.5 border rounded-lg transition-colors ${
