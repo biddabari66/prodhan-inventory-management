@@ -242,22 +242,28 @@ function ProductionHousePage() {
   // Transfer to inventory mutation
   const transferToInventoryMutation = useMutation({
     mutationFn: async ({ batch, transferData }) => {
-      const { itemName, inventoryId, quantity, unit, productType, notes, transferredById, transferredByName } = transferData;
+      const { itemName, inventoryId, quantity, unit, productType, notes, transferredById, transferredByName, _jarCount, _packagingLabel, _gramsPerUnit } = transferData;
 
       // Find the batch item
       const batchItem = batch.items.find(i => i.inventory_id === inventoryId || i.item_name === itemName);
       if (!batchItem) throw new Error('Item not found in batch');
 
-      const newRemaining = (batchItem.quantity_remaining || 0) - quantity;
-      if (newRemaining < 0) throw new Error('Cannot transfer more than remaining quantity');
+      // quantity = raw material deducted (in raw unit like kg)
+      const rawDeduction = quantity;
+      const newRemaining = (batchItem.quantity_remaining || 0) - rawDeduction;
+      if (newRemaining < -0.001) throw new Error('Cannot transfer more than remaining quantity');
+      const clampedRemaining = Math.max(0, parseFloat(newRemaining.toFixed(4)));
+
+      // For inventory stock: if jar-based transfer, add jar count; otherwise add raw quantity
+      const inventoryStockAdd = _jarCount ? _jarCount : rawDeduction;
 
       // Update batch items
       const updatedItems = batch.items.map(item => {
         if (item.inventory_id === inventoryId || item.item_name === itemName) {
           return {
             ...item,
-            quantity_remaining: newRemaining,
-            quantity_transferred: (item.quantity_transferred || 0) + quantity
+            quantity_remaining: clampedRemaining,
+            quantity_transferred: parseFloat(((item.quantity_transferred || 0) + rawDeduction).toFixed(4))
           };
         }
         return item;
@@ -268,9 +274,12 @@ function ProductionHousePage() {
         date: new Date().toISOString(),
         item_name: itemName,
         inventory_id: inventoryId,
-        quantity,
+        quantity: rawDeduction,
         unit,
         product_type: productType,
+        jar_count: _jarCount || null,
+        packaging_label: _packagingLabel || null,
+        grams_per_unit: _gramsPerUnit || null,
         transferred_by_id: transferredById,
         transferred_by_name: transferredByName,
         notes
@@ -283,41 +292,55 @@ function ProductionHousePage() {
       // Update batch
       await base44.entities.ProductionBatch.update(batch.id, {
         items: updatedItems,
-        total_remaining_quantity: totalRemaining,
-        total_transferred_quantity: totalTransferred,
+        total_remaining_quantity: parseFloat(totalRemaining.toFixed(4)),
+        total_transferred_quantity: parseFloat(totalTransferred.toFixed(4)),
         transfer_history: transferHistory,
-        status: totalRemaining === 0 ? 'completed' : 'in_progress'
+        status: totalRemaining <= 0.001 ? 'completed' : 'in_progress'
       });
 
-      // Update main inventory
+      // Update main inventory — add jar count (units) not raw kg
       if (inventoryId) {
         const invItem = inventory.find(i => i.id === inventoryId);
         if (invItem) {
-          const newStock = (invItem.current_stock || 0) + quantity;
+          const newStock = (invItem.current_stock || 0) + inventoryStockAdd;
           await base44.entities.Inventory.update(inventoryId, {
             current_stock: newStock,
             last_purchase_date: new Date().toISOString().split('T')[0]
           });
 
-          // Create inventory movement
+          // Create inventory movement — record both raw & finished info
+          const movementNote = _jarCount
+            ? `Production: ${_jarCount} × ${_packagingLabel} (${rawDeduction.toFixed(3)} ${unit} raw used). ${notes}`
+            : `Production transfer: ${productType || itemName}. ${notes}`;
+
           await base44.entities.InventoryMovement.create({
             inventory_item_id: inventoryId,
             movement_type: 'in',
-            quantity: quantity,
+            quantity: inventoryStockAdd,
             reference_type: 'production',
             reference_id: batch.id,
             reference_number: batch.batch_number,
             unit_cost: batchItem.unit_price,
-            total_value: quantity * batchItem.unit_price,
+            total_value: rawDeduction * (batchItem.unit_price || 0),
             performed_by: transferredById,
-            notes: `Production transfer: ${productType || itemName}. ${notes}`,
+            notes: movementNote,
             movement_date: new Date().toISOString().split('T')[0],
-            balance_after: newStock
+            balance_after: newStock,
+            metadata: _jarCount ? {
+              jar_count: _jarCount,
+              packaging_label: _packagingLabel,
+              grams_per_unit: _gramsPerUnit,
+              raw_material_used_kg: rawDeduction
+            } : undefined
           });
         }
       }
 
       // Create audit log
+      const auditDesc = _jarCount
+        ? `Transferred ${_jarCount} × ${_packagingLabel} of ${itemName} (${rawDeduction.toFixed(3)} ${unit} raw) to main inventory`
+        : `Transferred ${rawDeduction} ${unit} of ${itemName} to main inventory (${productType || 'N/A'})`;
+
       await base44.entities.AuditLog.create({
         user_id: transferredById,
         user_name: transferredByName,
@@ -325,8 +348,8 @@ function ProductionHousePage() {
         entity_type: 'ProductionBatch',
         entity_id: batch.id,
         module: 'production',
-        description: `Transferred ${quantity} ${unit} of ${itemName} to main inventory (${productType || 'N/A'})`,
-        new_values: { quantity, unit, product_type: productType },
+        description: auditDesc,
+        new_values: { quantity: rawDeduction, unit, product_type: productType, jar_count: _jarCount },
         timestamp: new Date().toISOString()
       });
 
