@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Component } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,84 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
-// Main Sales Page
+// ─── Error Boundary ──────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('SalesPage ErrorBoundary caught:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+          <Card className="max-w-md w-full shadow-lg rounded-2xl border-0">
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-7 h-7 text-[#D32F2F]" />
+              </div>
+              <h2 className="text-xl font-semibold text-slate-900">Something went wrong</h2>
+              <p className="text-sm text-slate-500">
+                {this.state.error?.message || 'An unexpected error occurred in Sales.'}
+              </p>
+              <Button
+                onClick={() => this.setState({ hasError: false, error: null })}
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl px-6"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Bulk Upload Dialog — isolated so a crash never kills the parent ──────────
+function BulkUploadDialog({ open, onOpenChange, inventory, customers, onComplete }) {
+  const [key, setKey] = useState(0); // remount on re-open to reset internal state
+
+  const handleOpenChange = (val) => {
+    if (val) setKey(k => k + 1); // fresh mount every time dialog opens
+    onOpenChange(val);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2">
+          <DialogTitle className="text-2xl flex items-center gap-2">
+            <Upload className="w-6 h-6 text-blue-600" />
+            Bulk Order Import (CSV)
+          </DialogTitle>
+        </DialogHeader>
+        <div className="px-6 pb-6 overflow-y-auto max-h-[80vh]">
+          <ErrorBoundary key={`bulk-eb-${key}`}>
+            <BulkOrderCSVUpload
+              key={key}
+              inventory={inventory}
+              customers={customers}
+              onComplete={() => {
+                onComplete();
+                onOpenChange(false);
+              }}
+            />
+          </ErrorBoundary>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Sales Page ──────────────────────────────────────────────────────────
 function SalesPage() {
   const queryClient = useQueryClient();
   const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
@@ -1538,7 +1615,6 @@ function SalesPage() {
                                     const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
 
                                     // ✅ FIX: Normalize invoice number to PD***** format for ALL order sources
-                                    // (manual orders, WooCommerce, landing page all get consistent PD format)
                                     const rawNumber = order.order_number || '';
                                     const invoiceNumber = rawNumber.startsWith('PD')
                                       ? rawNumber
@@ -1546,13 +1622,10 @@ function SalesPage() {
                                         ? `PD${rawNumber.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
                                         : `PD${Date.now().toString().slice(-6)}`;
 
-                                    // If order_number in DB is not PD format, update it now so
-                                    // all future lookups (status check, invoice etc.) use PD format
                                     if (rawNumber !== invoiceNumber) {
                                       await Order.update(order.id, { order_number: invoiceNumber });
                                     }
 
-                                    // Prepare payload as per Steadfast documentation
                                     const courierPayload = {
                                       invoice: invoiceNumber,
                                       recipient_name: order.customer_name,
@@ -1562,10 +1635,9 @@ function SalesPage() {
                                       note: order.customer_notes || '',
                                       item_description: itemDescription,
                                       total_lot: totalLot,
-                                      delivery_type: 0 // 0 = home delivery
+                                      delivery_type: 0
                                     };
 
-                                    // Send to webhook
                                     const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
                                       method: 'POST',
                                       headers: {
@@ -1579,13 +1651,10 @@ function SalesPage() {
                                     if (response.ok) {
                                       const result = await response.json();
 
-                                      // Handle response - can be array or object
                                       const consignmentData = Array.isArray(result) ? result[0] : result;
                                       const consignment = consignmentData?.consignment || consignmentData;
 
-                                      // Check if successful (status 200 or consignment exists)
                                       if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
-                                        // Update order with courier info
                                         await Order.update(order.id, {
                                           courier_placed: true,
                                           courier_placed_date: new Date().toISOString(),
@@ -1625,7 +1694,6 @@ function SalesPage() {
                                   onClick={async () => {
                                     const loadingToast = toast.loading('🔄 Updating status...');
                                     try {
-                                      // Normalize to PD format
                                       const rawNum = order.order_number || '';
                                       const pdOrderNumber = rawNum.startsWith('PD')
                                         ? rawNum
@@ -1633,7 +1701,6 @@ function SalesPage() {
                                           ? `PD${rawNum.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
                                           : `PD${order.id?.slice(-6) || '000000'}`;
 
-                                      // Send webhook to status update endpoint
                                       const webhookResponse = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -1813,28 +1880,17 @@ function SalesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Bulk Upload Dialog */}
-        <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-          <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0">
-            <DialogHeader className="px-6 pt-6 pb-2">
-              <DialogTitle className="text-2xl flex items-center gap-2">
-                <Upload className="w-6 h-6 text-blue-600" />
-                Bulk Order Import (CSV)
-              </DialogTitle>
-            </DialogHeader>
-            <div className="px-6 pb-6 overflow-y-auto max-h-[80vh]">
-              <BulkOrderCSVUpload
-                inventory={inventory}
-                customers={customers}
-                onComplete={() => {
-                  queryClient.invalidateQueries(['orders-sales-recent']);
-                  queryClient.invalidateQueries(['orders-sales-all']);
-                  setIsBulkUploadOpen(false);
-                }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* ── Bulk Upload Dialog (isolated + error-bounded) ── */}
+        <BulkUploadDialog
+          open={isBulkUploadOpen}
+          onOpenChange={setIsBulkUploadOpen}
+          inventory={inventory}
+          customers={customers}
+          onComplete={() => {
+            queryClient.invalidateQueries(['orders-sales-recent']);
+            queryClient.invalidateQueries(['orders-sales-all']);
+          }}
+        />
 
       </div>
     </div>
