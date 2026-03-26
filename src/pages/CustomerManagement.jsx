@@ -112,45 +112,16 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  // Load total customer count by paginating through all records
-  const { data: totalCustomerCount = 0, isLoading: statsCountLoading } = useQuery({
-    queryKey: ['customers-total-count'],
-    queryFn: async () => {
-      let total = 0;
-      const batchSize = 500;
-      let hasMore = true;
-      while (hasMore) {
-        const batch = await base44.entities.Customer.list('id', batchSize, total);
-        total += batch.length;
-        if (batch.length < batchSize) hasMore = false;
-      }
-      return total;
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  // Load a sample of customers for stats calculations (VIP, revenue, etc.)
+  // Load ALL customers for stats in a single large request
   const { data: allCustomersCache = [], isLoading: statsLoading } = useQuery({
     queryKey: ['customers-all-stats'],
-    queryFn: async () => {
-      const allItems = [];
-      const batchSize = 500;
-      let hasMore = true;
-      while (hasMore) {
-        const batch = await base44.entities.Customer.list('-total_spent', batchSize, allItems.length);
-        allItems.push(...batch);
-        if (batch.length < batchSize) hasMore = false;
-      }
-      return allItems;
-    },
+    queryFn: () => base44.entities.Customer.list('-total_spent', 10000),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  const totalCustomers = totalCustomerCount;
+  const totalCustomers = allCustomersCache.length;
 
   // Stats that respond to date filters
   const stats = useMemo(() => {

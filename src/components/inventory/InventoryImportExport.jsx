@@ -23,12 +23,12 @@ const DEPARTMENT_CONFIG = {
         borderColor: 'border-blue-200',
         defaultCategory: 'books',
         templateHeaders: [
-            'Book Name', 'English Name', 'Category', 'Subject', 'Current Stock', 'Minimum Stock',
+            'Book Name', 'Category', 'Subject', 'Current Stock', 'Minimum Stock',
             'Purchase Price', 'Selling Price', 'Total Sell', 'Profits', 
             'Author Name', 'Publisher', 'Edition', 'Total Page', 'ISBN', 'Report Date'
         ],
         sampleRow: [
-            'Advanced Physics', 'Advanced Physics', 'BCS Preparation', 'bcs', '150', '20',
+            'Advanced Physics', 'BCS Preparation', 'bcs', '150', '20',
             '350', '550', '150', '30000',
             'Dr. Rahman', 'Biddabari Publication', '3rd', '450', '978-984-123-456-7', new Date().toISOString().slice(0, 10)
         ],
@@ -67,10 +67,10 @@ const DEPARTMENT_CONFIG = {
         borderColor: 'border-purple-200',
         defaultCategory: 'e-commerce',
         templateHeaders: [
-            'Product Name', 'English Name', 'SKU', 'Category', 'Current Stock', 'Selling Price', 'Purchase Price', 'Description'
+            'Product Name', 'SKU', 'Category', 'Current Stock', 'Selling Price', 'Purchase Price', 'Description'
         ],
         sampleRow: [
-            'Wireless Mouse', 'Wireless Mouse', 'SKU-001', 'Electronics & Gadgets', '50', '1200', '800', 'High-quality wireless mouse with ergonomic design'
+            'Wireless Mouse', 'SKU-001', 'Electronics & Gadgets', '50', '1200', '800', 'High-quality wireless mouse with ergonomic design'
         ],
         // Simplified mapping for Prodhan.com (dynamic import - essential fields only)
         fieldMapping: {
@@ -488,7 +488,6 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
             if (department === 'boibari') {
                 return [
                     item.item_name,
-                    item.english_item_name || '',
                     item.category,
                     item.subject,
                     item.current_stock,
@@ -507,7 +506,6 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
             } else {
                 return [
                     item.item_name,
-                    item.english_item_name || '',
                     item.barcode || '',
                     item.category,
                     item.current_stock,

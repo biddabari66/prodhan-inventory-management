@@ -44,13 +44,6 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 
-// Helper function to prevent "Invalid time value" crashes
-const getSafeDate = (dateInput) => {
-  if (!dateInput) return null;
-  const date = new Date(dateInput);
-  return isNaN(date.getTime()) ? null : date;
-};
-
 // Main Sales Page
 function SalesPage() {
   const queryClient = useQueryClient();
@@ -461,16 +454,13 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
   const [displayLimit, setDisplayLimit] = useState(50);
 
-  // 🚀 Pre-compute date strings for ALL orders ONCE (FIXED: Added safety check)
+  // 🚀 Pre-compute date strings for ALL orders ONCE
   const ordersWithDateStr = useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    return orders.map(o => {
-      const dateObj = getSafeDate(o.order_date || o.created_date);
-      return {
-        ...o,
-        _dateStr: dateObj ? dateObj.toISOString().slice(0, 10) : '1970-01-01' // Default to old date if invalid
-      };
-    });
+    return orders.map(o => ({
+      ...o,
+      _dateStr: new Date(o.order_date || o.created_date).toISOString().slice(0, 10)
+    }));
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
@@ -525,7 +515,7 @@ function SalesPage() {
     setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
   }, [filteredOrders.length]);
 
-  // Fast Excel Export Function (FIXED: Added safety check)
+  // Fast Excel Export Function
   const handleExportExcel = useCallback(() => {
     const ordersToExport = exportOptions.onlyFiltered ? filteredOrders : orders;
 
@@ -559,12 +549,9 @@ function SalesPage() {
         headers.push('Notes', 'Created Date');
 
         const rows = ordersToExport.map(order => {
-          const safeOrderDate = getSafeDate(order.order_date);
-          const safeCreatedDate = getSafeDate(order.created_date);
-
           const row = [
             order.order_number || '',
-            safeOrderDate ? format(safeOrderDate, 'yyyy-MM-dd') : '',
+            order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
             order.order_status || '',
             order.payment_status || ''
           ];
@@ -607,7 +594,7 @@ function SalesPage() {
 
           row.push(
             order.customer_notes || '',
-            safeCreatedDate ? format(safeCreatedDate, 'yyyy-MM-dd HH:mm') : ''
+            order.created_date ? format(new Date(order.created_date), 'yyyy-MM-dd HH:mm') : ''
           );
 
           return row;
@@ -655,7 +642,7 @@ function SalesPage() {
     return map;
   }, [inventory]);
 
-  // 🚀 LIGHTNING FAST: Stats with optimized calculations using BDT timezone (FIXED: Added safety check)
+  // 🚀 LIGHTNING FAST: Stats with optimized calculations using BDT timezone
   const stats = useMemo(() => {
     const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
     const statsOrders = hasDateFilter ? filteredOrders : ordersWithDateStr;
@@ -677,12 +664,10 @@ function SalesPage() {
     let todayOrdersCount = 0, todayPending = 0, todayConfirmed = 0, todayShipped = 0, todayReturns = 0, todayProductQty = 0;
 
     for (const o of ordersWithDateStr) {
-      const rawDate = o.order_date || o.created_date;
-      // SAFETY CHECK: Ensure date is valid before formatting
-      const dateObj = getSafeDate(rawDate);
-      if (!dateObj) continue;
+      const orderDate = o.order_date || o.created_date;
+      if (!orderDate) continue;
 
-      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(dateObj);
+      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(orderDate));
       if (orderDateBDT !== todayStr) continue;
 
       todayOrdersCount++;
@@ -1265,10 +1250,7 @@ function SalesPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {(() => {
-                            const d = getSafeDate(order.order_date);
-                            return d ? format(d, 'dd MMM yyyy') : '-';
-                          })()}
+                          {format(new Date(order.order_date), 'dd MMM yyyy')}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
