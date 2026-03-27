@@ -457,10 +457,14 @@ function SalesPage() {
   // 🚀 Pre-compute date strings for ALL orders ONCE
   const ordersWithDateStr = useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    return orders.map(o => ({
-      ...o,
-      _dateStr: new Date(o.order_date || o.created_date).toISOString().slice(0, 10)
-    }));
+    return orders.map(o => {
+      const d = new Date(o.order_date || o.created_date);
+      const isValid = !isNaN(d.getTime());
+      return {
+        ...o,
+        _dateStr: isValid ? d.toISOString().slice(0, 10) : '1970-01-01'
+      };
+    });
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
