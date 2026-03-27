@@ -149,7 +149,7 @@ export default function OrderInvoice({ order }) {
                 <strong>Invoice #:</strong> <span className="text-red-600 font-bold">{order.order_number?.startsWith('PD') ? order.order_number : `PD${(order.order_number || order.id || '').replace(/\D/g, '').slice(-6).padStart(6, '0')}`}</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                <strong>Date:</strong> {format(new Date(order.order_date), 'dd MMM yyyy, hh:mm a')}
+                <strong>Date:</strong> {(() => { const d = new Date(order.order_date || order.created_date); return isNaN(d.getTime()) ? 'N/A' : format(d, 'dd MMM yyyy, hh:mm a'); })()}
               </p>
             </div>
           </div>
@@ -369,7 +369,7 @@ export default function OrderInvoice({ order }) {
                   <p><strong>Tracking Code:</strong> {order.tracking_code}</p>
                   {order.estimated_delivery_date && (
                     <p>
-                      <strong>Estimated Delivery:</strong> {format(new Date(order.estimated_delivery_date), 'dd MMM yyyy')}
+                      <strong>Estimated Delivery:</strong> {(() => { const d = new Date(order.estimated_delivery_date); return isNaN(d.getTime()) ? 'N/A' : format(d, 'dd MMM yyyy'); })()}
                     </p>
                   )}
                 </div>

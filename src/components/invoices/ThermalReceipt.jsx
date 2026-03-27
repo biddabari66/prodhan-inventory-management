@@ -181,7 +181,7 @@ export default function ThermalReceipt({ order, onPrint }) {
         <div class="info-section">
           <div class="info-line"><strong>Customer:</strong> ${order.customer_name || 'N/A'}</div>
           <div class="info-line"><strong>Mobile:</strong> ${order.customer_phone || 'N/A'}</div>
-          <div class="info-line"><strong>Date:</strong> ${format(new Date(order.order_date || order.created_date), 'dd-MM-yyyy')}</div>
+          <div class="info-line"><strong>Date:</strong> ${(() => { const d = new Date(order.order_date || order.created_date); return isNaN(d.getTime()) ? 'N/A' : format(d, 'dd-MM-yyyy'); })()}</div>
         </div>
 
         <div class="section-title">Order Details</div>
@@ -273,7 +273,7 @@ export default function ThermalReceipt({ order, onPrint }) {
         <div className="space-y-1 text-[10px] font-semibold mb-2">
           <div><span className="font-bold">Customer:</span> {order.customer_name || 'N/A'}</div>
           <div><span className="font-bold">Mobile:</span> {order.customer_phone || 'N/A'}</div>
-          <div><span className="font-bold">Date:</span> {format(new Date(order.order_date || order.created_date), 'dd-MM-yyyy')}</div>
+          <div><span className="font-bold">Date:</span> {(() => { const d = new Date(order.order_date || order.created_date); return isNaN(d.getTime()) ? 'N/A' : format(d, 'dd-MM-yyyy'); })()}</div>
         </div>
 
         {/* Order Details */}
