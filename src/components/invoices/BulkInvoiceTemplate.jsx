@@ -76,7 +76,7 @@ export function generateBulkInvoiceHTML(orders) {
           <div class="invoice-meta">
             <div class="invoice-badge" style="background: ${branding.primaryColor};">INVOICE</div>
             <p class="invoice-number"><strong>Invoice #:</strong> <span style="color: ${branding.primaryColor}; font-weight: 700;">${orderNumber}</span></p>
-            <p><strong>Date:</strong> ${order.order_date ? format(new Date(order.order_date), 'dd MMM yyyy, hh:mm a') : 'N/A'}</p>
+            <p><strong>Date:</strong> ${(() => { try { const d = new Date(order.order_date || order.created_date); return isNaN(d.getTime()) ? 'N/A' : format(d, 'dd MMM yyyy, hh:mm a'); } catch(e) { return 'N/A'; } })()}</p>
           </div>
         </div>
 

@@ -124,8 +124,12 @@ function InventoryOverviewPage() {
       const salesMap = {};
       
       for (const order of recentOrders) {
+        const rawDate = order.order_date || order.created_date;
+        if (!rawDate) continue;
+        const parsedDate = new Date(rawDate);
+        if (isNaN(parsedDate.getTime())) continue;
         const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' })
-          .format(new Date(order.order_date || order.created_date));
+          .format(parsedDate);
         
         if (orderDateBDT !== todayBDT || !validStatuses.includes(order.order_status)) continue;
         
