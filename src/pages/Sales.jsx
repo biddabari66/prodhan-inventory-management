@@ -671,7 +671,10 @@ function SalesPage() {
       const orderDate = o.order_date || o.created_date;
       if (!orderDate) continue;
 
-      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(orderDate));
+      const parsedDate = new Date(orderDate);
+      if (isNaN(parsedDate.getTime())) continue;
+
+      const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(parsedDate);
       if (orderDateBDT !== todayStr) continue;
 
       todayOrdersCount++;
@@ -1254,7 +1257,7 @@ function SalesPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {format(new Date(order.order_date), 'dd MMM yyyy')}
+                          {(() => { const d = new Date(order.order_date || order.created_date); return isNaN(d.getTime()) ? '-' : format(d, 'dd MMM yyyy'); })()}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
