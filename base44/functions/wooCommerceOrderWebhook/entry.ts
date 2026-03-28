@@ -30,18 +30,9 @@ Deno.serve(async (req) => {
       phone = '0' + phone;
     }
     
-    const email = String(
-      data.email || data.customer_email || data.billing_email || data.contact_email || ''
-    ).trim();
-    
-    const addressLine = String(
-      data.address || data.billing_address || data.shipping_address || data.delivery_address || data.address_line || ''
-    ).trim();
-    
-    const city = String(
-      data.city || data.delivery_city || data.billing_city || data.shipping_city || 'Dhaka'
-    ).trim();
-    
+    const email = String(data.email || data.customer_email || data.billing_email || data.contact_email || '').trim();
+    const addressLine = String(data.address || data.billing_address || data.shipping_address || data.delivery_address || data.address_line || '').trim();
+    const city = String(data.city || data.delivery_city || data.billing_city || data.shipping_city || 'Dhaka').trim();
     const district = String(data.district || data.region || data.state || '').trim();
     const postalCode = String(data.postal_code || data.zip || data.zip_code || '').trim();
     
@@ -56,16 +47,12 @@ Deno.serve(async (req) => {
     
     // ============= FIND OR CREATE CUSTOMER =============
     let customer;
-
-    // ✅ FIX 1: Safely parse Customer.filter() response (may return string or object)
-    const existingRaw = await base44.asServiceRole.entities.Customer.filter({ 
-      customer_phone: phone 
-    });
+    const existingRaw = await base44.asServiceRole.entities.Customer.filter({ customer_phone: phone });
     let existing = [];
     if (Array.isArray(existingRaw)) {
       existing = existingRaw;
     } else if (typeof existingRaw === 'string') {
-      try { const p = JSON.parse(existingRaw); existing = Array.isArray(p) ? p : p?.items || p?.data || p?.results || []; } catch { existing = []; }
+      try { const p = JSON.parse(existingRaw); existing = Array.isArray(p) ? p : p?.items || p?.data || []; } catch { existing = []; }
     } else if (existingRaw && typeof existingRaw === 'object') {
       existing = existingRaw?.items || existingRaw?.data || existingRaw?.results || [];
     }
@@ -87,40 +74,22 @@ Deno.serve(async (req) => {
       console.log('✨ Created customer:', customer.customer_name);
     }
     
-    // ============= LOAD INVENTORY =============
-    // ✅ FIX 2: .list() returns a STRING — parse it, then extract the array
-    const inventoryRaw = await base44.asServiceRole.entities.Inventory.list();
-    console.log('📊 Inventory raw type:', typeof inventoryRaw, '| Is array:', Array.isArray(inventoryRaw));
-
-    let inventoryParsed = inventoryRaw;
-    if (typeof inventoryRaw === 'string') {
-      try {
-        inventoryParsed = JSON.parse(inventoryRaw);
-        console.log('📊 Inventory parsed from string successfully');
-      } catch(e) {
-        console.error('❌ Failed to parse inventory string:', e.message);
-        inventoryParsed = [];
-      }
-    }
-
-    const inventory = Array.isArray(inventoryParsed)
-      ? inventoryParsed
-      : inventoryParsed?.items   ||
-        inventoryParsed?.data    ||
-        inventoryParsed?.results ||
-        inventoryParsed?.records ||
-        Object.values(inventoryParsed || {}).find(v => Array.isArray(v)) ||
-        [];
-
-    console.log('📊 Inventory items loaded:', inventory.length);
-    if (inventory.length > 0) {
-      console.log('🔍 Sample inventory keys:', Object.keys(inventory[0]));
-      console.log('🔍 Sample inventory item:', JSON.stringify(inventory[0]));
-    }
-
     // ============= MATCH PRODUCTS TO INVENTORY =============
+    // ✅ KEY FIX: Search per-product instead of loading all 60,000+ items
     const orderItems = [];
     const notFound = [];
+
+    // Helper to safely extract array from any SDK response
+    const extractArray = (raw) => {
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') {
+        try { const p = JSON.parse(raw); return Array.isArray(p) ? p : p?.items || p?.data || p?.results || []; } catch { return []; }
+      }
+      if (raw && typeof raw === 'object') {
+        return raw?.items || raw?.data || raw?.results || raw?.records || [];
+      }
+      return [];
+    };
     
     for (const prod of products) {
       const sku = String(prod.sku || prod.product_sku || prod.barcode || prod.item_code || '').trim();
@@ -132,27 +101,51 @@ Deno.serve(async (req) => {
 
       console.log(`🔎 Matching — SKU: "${sku}" | Name: "${name}"`);
 
-      // ✅ FIX 3: Check i.sku AND i.barcode AND i.item_code, String() both sides to avoid type mismatch
-      const invItem = inventory.find(i => {
-        const invBarcode  = String(i.barcode   || '').trim();
-        const invSku      = String(i.sku       || '').trim();
-        const invItemCode = String(i.item_code || i.product_code || '').trim();
-        const searchSku   = String(sku  || '').trim();
-        const searchName  = name.toLowerCase();
+      let invItem = null;
 
-        const skuMatch = searchSku && (
-          invBarcode  === searchSku ||
-          invSku      === searchSku ||
-          invItemCode === searchSku
+      // ✅ Search by SKU first (barcode field)
+      if (sku) {
+        const byBarcode = extractArray(
+          await base44.asServiceRole.entities.Inventory.filter({ barcode: sku })
         );
-        const nameMatch = searchName && (
-          i.item_name?.toLowerCase().includes(searchName) ||
-          i.name?.toLowerCase().includes(searchName) ||
-          i.product_name?.toLowerCase().includes(searchName)
-        );
+        if (byBarcode.length > 0) {
+          invItem = byBarcode[0];
+          console.log(`✅ Matched by barcode: ${invItem.item_name}`);
+        }
 
-        return skuMatch || nameMatch;
-      });
+        // Try sku field if barcode didn't match
+        if (!invItem) {
+          const bySku = extractArray(
+            await base44.asServiceRole.entities.Inventory.filter({ sku: sku })
+          );
+          if (bySku.length > 0) {
+            invItem = bySku[0];
+            console.log(`✅ Matched by sku: ${invItem.item_name}`);
+          }
+        }
+
+        // Try item_code field
+        if (!invItem) {
+          const byItemCode = extractArray(
+            await base44.asServiceRole.entities.Inventory.filter({ item_code: sku })
+          );
+          if (byItemCode.length > 0) {
+            invItem = byItemCode[0];
+            console.log(`✅ Matched by item_code: ${invItem.item_name}`);
+          }
+        }
+      }
+
+      // ✅ Fallback: search by name
+      if (!invItem && name) {
+        const byName = extractArray(
+          await base44.asServiceRole.entities.Inventory.filter({ item_name: name })
+        );
+        if (byName.length > 0) {
+          invItem = byName[0];
+          console.log(`✅ Matched by name: ${invItem.item_name}`);
+        }
+      }
       
       if (invItem) {
         orderItems.push({
@@ -163,7 +156,6 @@ Deno.serve(async (req) => {
           subtotal: totalPrice || (qty * (price || invItem.selling_price)),
           weight: weight || invItem.weight_kg || 0
         });
-        console.log(`✅ Matched: "${sku || name}" → ${invItem.item_name}`);
       } else {
         notFound.push({ sku, name });
         console.warn(`⚠️ Not found: SKU="${sku}" Name="${name}"`);
@@ -174,10 +166,7 @@ Deno.serve(async (req) => {
       throw new Error(`No products matched in inventory. Missing: ${JSON.stringify(notFound)}`);
     }
     
-    const subtotal = parseFloat(
-      data.subtotal || data.sub_total || data.items_total ||
-      orderItems.reduce((sum, item) => sum + item.subtotal, 0)
-    );
+    const subtotal = parseFloat(data.subtotal || data.sub_total || data.items_total || orderItems.reduce((sum, item) => sum + item.subtotal, 0));
     const deliveryCharge = parseFloat(data.delivery_charge || data.shipping_cost || data.shipping_charge || data.delivery_cost || 0);
     const discount = parseFloat(data.discount || data.discount_amount || data.coupon_discount || 0);
     const total = parseFloat(data.grand_total || data.total || data.total_amount || data.order_total || (subtotal + deliveryCharge - discount));
@@ -191,7 +180,6 @@ Deno.serve(async (req) => {
     const orderNote = String(data.order_note || data.note || data.customer_note || data.notes || 'WooCommerce order').trim();
     const wpOrderId = String(data.wp_order_id || data.order_id || data.wc_order_id || `WP-${timestamp}`).trim();
     const shippingMethod = String(data.shipping_method || data.delivery_method || 'home_delivery').trim();
-    const deliveryStatus = String(data.delivery_status || data.order_status || 'pending').trim();
     
     const newOrder = await base44.asServiceRole.entities.Order.create({
       order_number: orderNumber,
