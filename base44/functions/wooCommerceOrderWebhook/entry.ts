@@ -112,12 +112,9 @@ Deno.serve(async (req) => {
     
     // ============= FIND OR CREATE CUSTOMER =============
     let customer;
-    const existingRaw = await base44.asServiceRole.entities.Customer.filter({ 
+    const existing = await base44.asServiceRole.entities.Customer.filter({ 
       customer_phone: phone 
     });
-    const existing = Array.isArray(existingRaw)
-      ? existingRaw
-      : existingRaw?.items || existingRaw?.data || existingRaw?.results || [];
     
     if (existing?.length > 0) {
       customer = existing[0];
@@ -137,33 +134,15 @@ Deno.serve(async (req) => {
     }
     
     // ============= LOAD INVENTORY =============
-    const inventoryRaw = await base44.asServiceRole.entities.Inventory.list();
-    console.log('📊 Inventory raw type:', typeof inventoryRaw, '| Is array:', Array.isArray(inventoryRaw));
-
-    // .list() may return object instead of array — extract safely
-    const inventory = Array.isArray(inventoryRaw)
-      ? inventoryRaw
-      : inventoryRaw?.items    ||
-        inventoryRaw?.data     ||
-        inventoryRaw?.results  ||
-        inventoryRaw?.records  ||
-        Object.values(inventoryRaw || {}).find(v => Array.isArray(v)) ||
-        [];
-
+    const inventory = await base44.asServiceRole.entities.Inventory.list();
     console.log('📊 Inventory items loaded:', inventory.length);
-
-    // Log first item to inspect field names
-    if (inventory.length > 0) {
-      console.log('🔍 Sample inventory item keys:', Object.keys(inventory[0]));
-      console.log('🔍 Sample inventory item:', JSON.stringify(inventory[0]));
-    }
     
     // ============= MATCH PRODUCTS TO INVENTORY (SKU is critical!) =============
     const orderItems = [];
     const notFound = [];
     
     for (const prod of products) {
-      // SKU - try all possible field names
+      // SKU is critical - try these fields but prioritize exact match
       const sku = String(
         prod.sku || 
         prod.product_sku || 
@@ -212,21 +191,12 @@ Deno.serve(async (req) => {
         prod.item_weight ||
         0
       );
-
-      console.log(`🔎 Matching product — SKU: "${sku}" | Name: "${name}"`);
       
-      // ✅ FIXED: Check both i.barcode AND i.sku, with String() conversion to avoid type mismatch
-      const invItem = inventory.find(i => {
-        const invBarcode = String(i.barcode || '').trim();
-        const invSku    = String(i.sku     || '').trim();
-        const searchSku = String(sku       || '').trim();
-        const searchName = name.toLowerCase();
-
-        return (
-          (searchSku && (invBarcode === searchSku || invSku === searchSku)) ||
-          (searchName && i.item_name?.toLowerCase().includes(searchName))
-        );
-      });
+      // Find in inventory by SKU (critical!) or name fallback
+      const invItem = inventory.find(i => 
+        (sku && i.barcode === sku) || 
+        (name && i.item_name?.toLowerCase().includes(name.toLowerCase()))
+      );
       
       if (invItem) {
         orderItems.push({
@@ -324,7 +294,7 @@ Deno.serve(async (req) => {
       'pending'
     ).trim();
     
-    // ============= CREATE ORDER =============
+    // ============= CREATE ORDER WITH PROPERLY STRUCTURED SHIPPING ADDRESS =============
     const newOrder = await base44.asServiceRole.entities.Order.create({
       // Basic info
       order_number: orderNumber,
@@ -333,7 +303,7 @@ Deno.serve(async (req) => {
       customer_phone: phone,
       customer_email: email,
       
-      // Shipping address as OBJECT
+      // Shipping address as OBJECT (critical fix!)
       shipping_address: {
         address_line: addressLine || 'No address provided',
         city: city,
