@@ -454,7 +454,9 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
   const [displayLimit, setDisplayLimit] = useState(50);
 
-  // 🚀 Pre-compute date strings for ALL orders ONCE
+  // 🚀 Pre-compute date strings for ALL orders ONCE (BDT timezone)
+  const bdtFormatter = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }), []);
+
   const ordersWithDateStr = useMemo(() => {
     if (!orders || orders.length === 0) return [];
     return orders.map(o => {
@@ -462,10 +464,10 @@ function SalesPage() {
       const isValid = !isNaN(d.getTime());
       return {
         ...o,
-        _dateStr: isValid ? d.toISOString().slice(0, 10) : '1970-01-01'
+        _dateStr: isValid ? bdtFormatter.format(d) : '1970-01-01'
       };
     });
-  }, [orders]);
+  }, [orders, bdtFormatter]);
 
   const filteredOrders = useMemo(() => {
     if (!ordersWithDateStr || ordersWithDateStr.length === 0) return [];

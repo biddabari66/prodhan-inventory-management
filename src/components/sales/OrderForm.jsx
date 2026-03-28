@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Users, ShoppingCart, MapPin, CreditCard, CheckCircle, XCircle, Package, Sparkles, Gift, Truck, Tag } from 'lucide-react';
+import { Plus, Users, ShoppingCart, MapPin, CreditCard, CheckCircle, XCircle, Package, Sparkles, Gift, Truck, Tag, Calendar } from 'lucide-react';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import SearchableCustomerSelect from '../common/SearchableCustomerSelect';
 import { toast } from 'sonner';
@@ -204,7 +204,7 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
     const orderData = {
       ...formData,
       order_number: order?.order_number || generateShortOrderNumber(),
-      order_date: order?.order_date || new Date().toISOString(),
+      order_date: formData.order_date || new Date().toISOString(),
       subtotal: calculations.subtotal,
       discount_amount: (formData.discount_amount || 0) + calculations.campaignDiscount,
       shipping_cost: calculations.shippingCost,
@@ -451,7 +451,32 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Order Date *</Label>
+              <Input
+                type="datetime-local"
+                value={formData.order_date ? (() => {
+                  const d = new Date(formData.order_date);
+                  if (isNaN(d.getTime())) return '';
+                  // Convert to BDT for display
+                  const bdtStr = d.toLocaleString('sv-SE', { timeZone: 'Asia/Dhaka' });
+                  return bdtStr.replace(' ', 'T').slice(0, 16);
+                })() : (() => {
+                  const bdtStr = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Dhaka' });
+                  return bdtStr.replace(' ', 'T').slice(0, 16);
+                })()}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // User picked BDT time — convert to ISO
+                    const localDate = new Date(e.target.value);
+                    // The input gives a local browser time; since browser is in BDT, this is correct
+                    setFormData({...formData, order_date: localDate.toISOString()});
+                  }
+                }}
+                className="h-9"
+              />
+            </div>
             <div>
               <Label>Payment Method *</Label>
               <Select
