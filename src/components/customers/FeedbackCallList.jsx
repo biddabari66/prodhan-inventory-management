@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { 
   Phone, Search, Smile, Frown, HelpCircle, Clock,
-  Users, Calendar, MapPin, Package, ShoppingBag, CreditCard, Truck, RefreshCw, Loader2
+  Users, Calendar, MapPin, Package, ShoppingBag, CreditCard, Truck, RefreshCw, Loader2, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { sendFeedbackWebhook } from '@/functions/sendFeedbackWebhook';
@@ -26,10 +26,24 @@ export default function FeedbackCallList() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
-  // Fetch ONLY delivered orders for feedback calls
+  // Fetch ALL orders 3+ days old (shipped, out_for_delivery, delivered)
+  // Human agents will manually confirm delivery status
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-feedback-calls-all'],
-    queryFn: () => base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 10000),
+    queryFn: async () => {
+      const [delivered, shipped, outForDelivery] = await Promise.all([
+        base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 5000),
+        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 5000),
+        base44.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 5000),
+      ]);
+      const allOrd = [...delivered, ...shipped, ...outForDelivery];
+      // Filter to orders 3+ days old
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      return allOrd.filter(o => {
+        const d = new Date(o.order_date || o.created_date);
+        return !isNaN(d.getTime()) && d < threeDaysAgo;
+      });
+    },
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -58,11 +72,10 @@ export default function FeedbackCallList() {
     return map;
   }, [feedbackStatuses]);
 
-  // 🚀 OPTIMIZED: Convert shipped + delivered orders to feedback cards
+  // Convert orders to feedback cards with delivery status indicators
   const orderCards = useMemo(() => {
     if (!allOrders.length) return [];
     
-    // All orders already filtered by query
     return allOrders.map(order => {
         const existingStatus = statusMap.get(order.order_number);
         return {
@@ -71,7 +84,10 @@ export default function FeedbackCallList() {
           feedback_call_id: existingStatus?.id,
           call_date: existingStatus?.call_date,
           called_by: existingStatus?.called_by,
-          feedback_notes: existingStatus?.feedback_notes
+          feedback_notes: existingStatus?.feedback_notes,
+          delivery_confirmed: existingStatus?.delivery_confirmed || order.order_status === 'delivered',
+          is_delivered: order.order_status === 'delivered',
+          is_awaiting_delivery: ['shipped', 'out_for_delivery'].includes(order.order_status)
         };
       });
   }, [allOrders, statusMap]);
@@ -116,12 +132,13 @@ export default function FeedbackCallList() {
         return true;
       });
     }
-    const result = { total: source.length, pending: 0, happy: 0, unhappy: 0, others: 0 };
+    const result = { total: source.length, pending: 0, happy: 0, unhappy: 0, others: 0, awaitingDelivery: 0 };
     for (const card of source) {
       if (card.feedback_status === 'pending') result.pending++;
       else if (card.feedback_status === 'happy') result.happy++;
       else if (card.feedback_status === 'unhappy') result.unhappy++;
       else if (card.feedback_status === 'others') result.others++;
+      if (card.is_awaiting_delivery) result.awaitingDelivery++;
     }
     return result;
   }, [orderCards, dateFrom, dateTo]);
@@ -214,10 +231,10 @@ export default function FeedbackCallList() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500 uppercase">Delivered Orders</p>
+            <p className="text-xs text-slate-500 uppercase">Total (3+ Days)</p>
             <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
           </CardContent>
         </Card>
@@ -243,6 +260,12 @@ export default function FeedbackCallList() {
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 uppercase">Others</p>
             <p className="text-2xl font-bold text-purple-600">{stats.others}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Awaiting Delivery</p>
+            <p className="text-2xl font-bold text-cyan-600">{stats.awaitingDelivery || 0}</p>
           </CardContent>
         </Card>
       </div>
@@ -369,8 +392,31 @@ export default function FeedbackCallList() {
                       <CreditCard className="w-4 h-4 text-green-600" />
                       <span className="font-bold text-green-700">৳{(order.total_amount || order.order_items?.reduce((s, i) => s + (i.subtotal || (i.unit_price || 0) * (i.quantity || 1)), 0) || 0).toLocaleString()}</span>
                     </div>
-                    <Badge className="bg-green-100 text-green-700 text-xs">Delivered</Badge>
+                    {order.is_delivered ? (
+                      <Badge className="bg-green-100 text-green-700 text-xs gap-1">
+                        <CheckCircle2 className="w-3 h-3" />Delivered
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-amber-100 text-amber-700 text-xs gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {order.order_status === 'out_for_delivery' ? 'Out for Delivery' : 'Shipped'}
+                      </Badge>
+                    )}
                   </div>
+                  {order.is_awaiting_delivery && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                      <p className="text-xs text-amber-800 font-medium">⚠️ Delivery not confirmed yet — 3+ days old. Please verify manually.</p>
+                      {order.courier_tracking_code && (
+                        <p className="text-xs text-amber-600 mt-1">Tracking: {order.courier_tracking_code}</p>
+                      )}
+                    </div>
+                  )}
+                  {order.courier_status && (
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-3.5 h-3.5 text-blue-500" />
+                      <span className="text-xs text-blue-700 font-medium">Courier: {order.courier_status}</span>
+                    </div>
+                  )}
 
                   {/* Address */}
                   {order.shipping_address && (
@@ -447,8 +493,8 @@ export default function FeedbackCallList() {
           {filteredCards.length === 0 && !isLoading && (
             <div className="col-span-full text-center py-16 bg-white rounded-2xl shadow-sm">
               <Users className="w-16 h-16 mx-auto text-slate-200 mb-4" />
-              <p className="text-slate-500 text-lg">No delivered orders found</p>
-              <p className="text-slate-400 text-sm mt-1">Feedback calls are for shipped/delivered orders only</p>
+              <p className="text-slate-500 text-lg">No orders found for feedback</p>
+              <p className="text-slate-400 text-sm mt-1">Orders older than 3 days (shipped/delivered) will appear here automatically</p>
             </div>
           )}
         </div>
