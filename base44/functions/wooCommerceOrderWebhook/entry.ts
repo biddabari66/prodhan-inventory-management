@@ -134,8 +134,19 @@ Deno.serve(async (req) => {
     }
     
     // ============= LOAD INVENTORY =============
-    const inventory = await base44.asServiceRole.entities.Inventory.list();
-    console.log('📊 Inventory items loaded:', inventory.length);
+const inventoryRaw = await base44.asServiceRole.entities.Inventory.list();
+
+// .list() returns an object, not an array — extract the array
+const inventory = Array.isArray(inventoryRaw)
+  ? inventoryRaw
+  : inventoryRaw?.items    ||
+    inventoryRaw?.data     ||
+    inventoryRaw?.results  ||
+    inventoryRaw?.records  ||
+    Object.values(inventoryRaw || {}).find(v => Array.isArray(v)) ||
+    [];
+
+console.log('📊 Inventory items loaded:', inventory.length);
     
     // ============= MATCH PRODUCTS TO INVENTORY (SKU is critical!) =============
     const orderItems = [];
