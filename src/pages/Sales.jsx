@@ -346,12 +346,22 @@ function SalesPage() {
         return;
       }
 
+      const loadingToast = toast.loading(`Deleting ${selectedOrderIds.length} order(s)...`);
       try {
-        await Promise.all(selectedOrderIds.map(id => Order.delete(id)));
-        queryClient.invalidateQueries(['orders']);
-        toast.success(`${selectedOrderIds.length} order(s) deleted successfully`);
+        const results = await Promise.allSettled(selectedOrderIds.map(id => Order.delete(id)));
+        const succeeded = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        toast.dismiss(loadingToast);
+        queryClient.invalidateQueries(['orders-sales-recent']);
+        queryClient.invalidateQueries(['orders-sales-all']);
+        if (failed > 0) {
+          toast.success(`${succeeded} order(s) deleted. ${failed} were already removed.`);
+        } else {
+          toast.success(`${succeeded} order(s) deleted successfully`);
+        }
         setSelectedOrderIds([]);
       } catch (error) {
+        toast.dismiss(loadingToast);
         toast.error('Failed to delete orders: ' + error.message);
       }
     } else {
