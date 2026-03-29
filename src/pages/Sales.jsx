@@ -1271,6 +1271,11 @@ function SalesPage() {
                             <div>
                               <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{order.customer_name}</p>
                               <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                              {order.shipping_address && (
+                                <p className="text-xs text-slate-400 mt-0.5 max-w-[200px] truncate" title={[order.shipping_address.address_line, order.shipping_address.city, order.shipping_address.district].filter(Boolean).join(', ')}>
+                                  📍 {[order.shipping_address.address_line, order.shipping_address.city, order.shipping_address.district].filter(Boolean).join(', ') || 'No address'}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </TableCell>
