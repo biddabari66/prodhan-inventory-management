@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Phone, Search, CheckCircle, XCircle, Clock, 
-  Users, Calendar, MapPin, Package, ShoppingBag, CreditCard, Truck, RefreshCw, Loader2
+  Users, Calendar, MapPin, Package, ShoppingBag, CreditCard, Truck, RefreshCw, Loader2, MoreHorizontal
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -114,11 +114,12 @@ export default function WelcomeCallList() {
         return true;
       });
     }
-    const result = { total: source.length, pending: 0, done: 0, notReceived: 0 };
+    const result = { total: source.length, pending: 0, done: 0, notReceived: 0, others: 0 };
     for (const card of source) {
       if (card.welcome_status === 'pending') result.pending++;
       else if (card.welcome_status === 'done') result.done++;
       else if (card.welcome_status === 'not_received') result.notReceived++;
+      else if (card.welcome_status === 'others') result.others++;
     }
     return result;
   }, [orderCards, dateFrom, dateTo]);
@@ -152,7 +153,8 @@ export default function WelcomeCallList() {
     const config = {
       pending: { label: 'Pending', class: 'bg-yellow-100 text-yellow-800', icon: Clock },
       done: { label: 'Done', class: 'bg-green-100 text-green-800', icon: CheckCircle },
-      not_received: { label: 'Not Received', class: 'bg-red-100 text-red-800', icon: XCircle }
+      not_received: { label: 'Not Received', class: 'bg-red-100 text-red-800', icon: XCircle },
+      others: { label: 'Others', class: 'bg-purple-100 text-purple-800', icon: MoreHorizontal }
     };
     const { label, class: cls, icon: Icon } = config[status] || config.pending;
     return <Badge className={`${cls} gap-1`}><Icon className="w-3 h-3" />{label}</Badge>;
@@ -163,7 +165,7 @@ export default function WelcomeCallList() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 uppercase">Total Orders</p>
@@ -186,6 +188,12 @@ export default function WelcomeCallList() {
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 uppercase">Not Received</p>
             <p className="text-2xl font-bold text-red-600">{stats.notReceived}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 uppercase">Others</p>
+            <p className="text-2xl font-bold text-purple-600">{stats.others}</p>
           </CardContent>
         </Card>
       </div>
@@ -212,6 +220,7 @@ export default function WelcomeCallList() {
               <option value="pending">Pending</option>
               <option value="done">Done</option>
               <option value="not_received">Not Received</option>
+              <option value="others">Others</option>
             </select>
             <Button variant="outline" onClick={() => refetch()} className="h-11 gap-2">
               <RefreshCw className="w-4 h-4" />
@@ -349,25 +358,34 @@ export default function WelcomeCallList() {
                 {/* Action Buttons */}
                 <div className="p-3 border-t border-slate-100 bg-slate-50/50">
                   {order.welcome_status === 'pending' ? (
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        className="flex-1 bg-green-600 hover:bg-green-700 h-10" 
-                        onClick={() => updateStatusMutation.mutate({ order, status: 'done' })}
-                        disabled={updateStatusMutation.isPending}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />Done
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1 border-red-300 text-red-600 hover:bg-red-50 h-10" 
-                        onClick={() => updateStatusMutation.mutate({ order, status: 'not_received' })}
-                        disabled={updateStatusMutation.isPending}
-                      >
-                        <XCircle className="w-4 h-4 mr-1" />Not Received
-                      </Button>
-                    </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-green-600 hover:bg-green-700 h-10" 
+                          onClick={() => updateStatusMutation.mutate({ order, status: 'done' })}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />Done
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-purple-300 text-purple-600 hover:bg-purple-50 h-10" 
+                          onClick={() => updateStatusMutation.mutate({ order, status: 'others' })}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <MoreHorizontal className="w-4 h-4 mr-1" />Others
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-red-300 text-red-600 hover:bg-red-50 h-10" 
+                          onClick={() => updateStatusMutation.mutate({ order, status: 'not_received' })}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />Not Received
+                        </Button>
+                      </div>
                   ) : (
                     <Button 
                       size="sm" 
