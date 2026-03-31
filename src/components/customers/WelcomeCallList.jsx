@@ -23,19 +23,41 @@ export default function WelcomeCallList() {
   const [othersDialog, setOthersDialog] = useState({ open: false, order: null, notes: '' });
   const pageSize = 50;
 
-  // Fetch ALL orders for welcome calls (all sales orders go here)
+  // Fetch ALL orders for welcome calls by paginating through all records
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-welcome-calls-all'],
-    queryFn: () => base44.entities.Order.list('-order_date', 10000),
+    queryFn: async () => {
+      const batchSize = 5000;
+      let all = [];
+      let offset = 0;
+      while (true) {
+        const batch = await base44.entities.Order.list('-order_date', batchSize, offset);
+        all = all.concat(batch);
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+      return all;
+    },
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  // Fetch welcome call statuses
+  // Fetch welcome call statuses by paginating through all records
   const { data: welcomeStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['welcome-call-statuses'],
-    queryFn: () => base44.entities.WelcomeCall.list('-created_date', 10000),
+    queryFn: async () => {
+      const batchSize = 5000;
+      let all = [];
+      let offset = 0;
+      while (true) {
+        const batch = await base44.entities.WelcomeCall.list('-created_date', batchSize, offset);
+        all = all.concat(batch);
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+      return all;
+    },
     staleTime: 30000
   });
 
