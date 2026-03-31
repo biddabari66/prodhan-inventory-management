@@ -112,10 +112,21 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  // Load ALL customers for stats in a single large request
+  // Load ALL customers for stats by paginating through all records
   const { data: allCustomersCache = [], isLoading: statsLoading } = useQuery({
     queryKey: ['customers-all-stats'],
-    queryFn: () => base44.entities.Customer.list('-total_spent', 10000),
+    queryFn: async () => {
+      const batchSize = 5000;
+      let allRecords = [];
+      let offset = 0;
+      while (true) {
+        const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
+        allRecords = allRecords.concat(batch);
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+      return allRecords;
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
