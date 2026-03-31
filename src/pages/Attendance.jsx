@@ -26,6 +26,7 @@ import { Attendance as AttendanceEntity } from '@/entities/Attendance';
 import { AttendanceSetting } from '@/entities/AttendanceSetting';
 import { User } from '@/entities/User';
 import { markAttendance } from '@/functions/markAttendance';
+import { base44 } from '@/api/base44Client';
 import { useDebounce, useThrottle, CacheManager, usePerformanceMonitor } from '../components/common/PerformanceOptimizer';
 import { useOptimisticActions } from '../components/common/OptimisticActions';
 

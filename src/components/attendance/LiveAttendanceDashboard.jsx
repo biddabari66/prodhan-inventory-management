@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ZoomClass } from '@/entities/ZoomClass';
 import { StudentAttendance } from '@/entities/StudentAttendance';
 import { User } from '@/entities/User';

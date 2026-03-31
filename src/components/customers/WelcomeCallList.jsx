@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
   Phone, Search, CheckCircle, XCircle, Clock, 
   Users, Calendar, MapPin, Package, ShoppingBag, CreditCard, Truck, RefreshCw, Loader2, MoreHorizontal
@@ -18,6 +20,7 @@ export default function WelcomeCallList() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [othersDialog, setOthersDialog] = useState({ open: false, order: null, notes: '' });
   const pageSize = 50;
 
   // Fetch ALL orders for welcome calls (all sales orders go here)
@@ -126,7 +129,7 @@ export default function WelcomeCallList() {
 
   // Update status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ order, status }) => {
+    mutationFn: async ({ order, status, notes }) => {
       const data = {
         order_number: order.order_number,
         customer_name: order.customer_name,
@@ -137,6 +140,7 @@ export default function WelcomeCallList() {
         called_by: currentUser?.full_name || 'Unknown'
       };
       
+      if (notes) data.notes = notes;
       if (order.welcome_call_id) {
         return base44.entities.WelcomeCall.update(order.welcome_call_id, data);
       } else {
@@ -351,6 +355,7 @@ export default function WelcomeCallList() {
                   {order.welcome_status !== 'pending' && order.called_by && (
                     <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded">
                       Called by {order.called_by} • {order.call_date ? new Date(order.call_date).toLocaleString('en-GB') : ''}
+                      {order.notes && <p className="mt-1 text-slate-600 font-medium">Note: {order.notes}</p>}
                     </div>
                   )}
                 </div>
@@ -371,7 +376,7 @@ export default function WelcomeCallList() {
                           size="sm" 
                           variant="outline" 
                           className="flex-1 border-purple-300 text-purple-600 hover:bg-purple-50 h-10" 
-                          onClick={() => updateStatusMutation.mutate({ order, status: 'others' })}
+                          onClick={() => setOthersDialog({ open: true, order, notes: '' })}
                           disabled={updateStatusMutation.isPending}
                         >
                           <MoreHorizontal className="w-4 h-4 mr-1" />Others
@@ -411,6 +416,47 @@ export default function WelcomeCallList() {
           )}
         </div>
       )}
+
+      {/* Others Notes Dialog */}
+      <Dialog open={othersDialog.open} onOpenChange={(open) => { if (!open) setOthersDialog({ open: false, order: null, notes: '' }); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Notes — Others</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {othersDialog.order && (
+              <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+                <p className="font-semibold text-slate-800">{othersDialog.order.customer_name}</p>
+                <p>{othersDialog.order.order_number} • {othersDialog.order.customer_phone}</p>
+              </div>
+            )}
+            <Textarea
+              placeholder="Write your notes or comments here..."
+              value={othersDialog.notes}
+              onChange={(e) => setOthersDialog(prev => ({ ...prev, notes: e.target.value }))}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOthersDialog({ open: false, order: null, notes: '' })}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              disabled={updateStatusMutation.isPending}
+              onClick={() => {
+                updateStatusMutation.mutate(
+                  { order: othersDialog.order, status: 'others', notes: othersDialog.notes },
+                  { onSuccess: () => setOthersDialog({ open: false, order: null, notes: '' }) }
+                );
+              }}
+            >
+              {updateStatusMutation.isPending ? 'Saving...' : 'Save & Mark as Others'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination for filtered results */}
       {!isLoading && filteredCards.length > pageSize && (

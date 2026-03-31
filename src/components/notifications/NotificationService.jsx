@@ -475,16 +475,16 @@ export const NotificationService = {
     
     // Send email directly to customer (not using in-app notification system)
     try {
-      const base44 = { integrations: { Core: { SendEmail: async (params) => {
-        // This would be replaced with actual base44 client call
-        return { success: true };
-      }}}};
+      const emailBody = `<h2>Order #${orderId} Update</h2><p>Dear ${customerName},</p><p>${message}</p>${trackingNumber ? `<p>Tracking: ${trackingNumber}</p>` : ''}<p>Thank you for shopping with Prodhan.com!</p>`;
       
-      await base44.integrations.Core.SendEmail({
-        from_name: 'Prodhan.com E-commerce',
+      await generateAndSendEmail({
         to: customerEmail,
-        subject: `📦 Order #${orderId} - ${newStatus.toUpperCase()}`,
-        body: generateOrderStatusEmail({ orderId, customerName, newStatus, message, trackingNumber })
+        emailType: 'order_status',
+        context: {
+          title: `Order #${orderId} - ${newStatus.toUpperCase()}`,
+          body: emailBody,
+          recipientName: customerName
+        }
       });
       
       console.log(`✅ Order status email sent to ${customerEmail}`);
