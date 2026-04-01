@@ -485,14 +485,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       }
 
       // Standard single-action return/damage
+      // CRITICAL: Damage type NEVER restocks — always write-off
+      const effectiveAction = (data.type === 'damage') ? 'write_off' : (data.action || 'restock');
       let quantityChange = 0;
-      if (data.action === 'restock') {
+      if (effectiveAction === 'restock') {
         quantityChange = data.quantity;
-      } else if (data.action === 'write_off') {
-        quantityChange = 0;
-      } else if (data.action === 'return_to_supplier') {
-        quantityChange = 0;
       }
+      // write_off and return_to_supplier both = 0 stock change
 
       const newStock = item.current_stock + quantityChange;
 
@@ -503,7 +502,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       await base44.entities.InventoryMovement.create({
         inventory_item_id: data.inventory_item_id,
         movement_type: quantityChange > 0 ? 'in' : 'adjustment',
-        quantity: data.quantity, // Store original quantity
+        quantity: quantityChange > 0 ? data.quantity : data.quantity, // Store original quantity
         reference_type: data.type === 'return' ? 'return' : 'damage',
         reference_number: data.order_number || `${data.type.toUpperCase()}-${Date.now()}`,
         unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
@@ -516,8 +515,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           type: data.type,
           return_type: data.return_type,
           reason: data.reason,
-          condition: data.condition || 'good',
-          action: data.action || data.condition_breakdown?.good?.action || 'restock',
+          condition: data.type === 'damage' ? 'damaged' : (data.condition || 'good'),
+          action: effectiveAction,
           customer_name: data.customer_name || '',
           customer_phone: data.customer_phone || '',
           supplier_name: data.supplier_name || '',
@@ -525,7 +524,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           restocking_fee: data.restocking_fee,
           financial_impact: data.financial_impact,
           original_quantity: data.quantity
-          }
+        }
       });
 
       return { item, newStock };
@@ -703,10 +702,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         try {
           for (const item of data.items) {
             // Determine action from condition breakdown
-            const goodAction = item.condition_breakdown?.good?.action || 'restock';
             const goodQty = item.condition_breakdown?.good?.quantity || 0;
             const damagedQty = item.condition_breakdown?.damaged?.quantity || 0;
-            const usePartialReturn = goodQty > 0 && damagedQty > 0;
+            
+            // CRITICAL: Damage reports ALWAYS write-off, never restock
+            const isDamage = data.type === 'damage';
+            const goodAction = isDamage ? 'write_off' : (item.condition_breakdown?.good?.action || 'restock');
+            const usePartialReturn = !isDamage && goodQty > 0 && damagedQty > 0;
             
             await recordIncidentMutation.mutateAsync({
               inventory_item_id: item.inventory_item_id,
@@ -714,21 +716,25 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               type: data.type,
               return_type: item.return_type,
               reason: data.reason,
-              action: goodAction,
-              condition: goodQty > 0 ? 'good' : 'damaged',
+              action: isDamage ? 'write_off' : goodAction,
+              condition: isDamage ? 'damaged' : (goodQty > 0 ? 'good' : 'damaged'),
               order_number: data.order_number,
               customer_name: data.customer_name,
               customer_phone: data.customer_phone,
               supplier_name: data.supplier_name,
               order_date: data.order_date,
-              condition_breakdown: item.condition_breakdown,
+              condition_breakdown: isDamage ? {
+                good: { quantity: 0, action: 'write_off' },
+                fair: { quantity: 0, action: 'write_off' },
+                damaged: { quantity: item.quantity, action: 'write_off' }
+              } : item.condition_breakdown,
               financial_impact: item.financial_impact,
               restocking_fee: item.restocking_fee,
               notes: data.notes,
               incident_date: data.incident_date,
               use_partial_return: usePartialReturn,
-              good_condition_qty: goodQty,
-              damaged_qty: damagedQty
+              good_condition_qty: isDamage ? 0 : goodQty,
+              damaged_qty: isDamage ? item.quantity : damagedQty
             });
           }
           toast.success(`${data.items.length} product(s) processed successfully!`);

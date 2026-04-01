@@ -18,8 +18,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     return_type: 'sales_return',
     quantity: 1,
     condition_breakdown: {
-      good: { quantity: 0, action: 'restock' },
-      fair: { quantity: 0, action: 'return_to_supplier' },
+      good: { quantity: 0, action: type === 'damage' ? 'write_off' : 'restock' },
+      fair: { quantity: 0, action: type === 'damage' ? 'write_off' : 'return_to_supplier' },
       damaged: { quantity: 0, action: 'write_off' }
     },
     reason: '',
@@ -89,7 +89,19 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
   // Auto-sync condition breakdown with total quantity
   useEffect(() => {
-    if (formData.return_type === 'sales_return') {
+    if (type === 'damage') {
+      // For damage reports, ALL quantity goes to damaged/write-off — NEVER restock
+      if (formData.quantity > 0) {
+        setFormData(prev => ({
+          ...prev,
+          condition_breakdown: {
+            good: { quantity: 0, action: 'write_off' },
+            fair: { quantity: 0, action: 'write_off' },
+            damaged: { quantity: formData.quantity, action: 'write_off' }
+          }
+        }));
+      }
+    } else if (formData.return_type === 'sales_return') {
       const total = formData.condition_breakdown.good.quantity + 
                    formData.condition_breakdown.fair.quantity + 
                    formData.condition_breakdown.damaged.quantity;
@@ -105,7 +117,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         }));
       }
     }
-  }, [formData.quantity, formData.return_type]);
+  }, [formData.quantity, formData.return_type, type]);
 
   // Auto-calculate financial impact with condition breakdown
   useEffect(() => {
@@ -196,13 +208,20 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
       return;
     }
 
+    // For damage type, force write-off on all conditions
+    const finalBreakdown = type === 'damage' ? {
+      good: { quantity: 0, action: 'write_off' },
+      fair: { quantity: 0, action: 'write_off' },
+      damaged: { quantity: formData.quantity, action: 'write_off' }
+    } : {...formData.condition_breakdown};
+
     const newItem = {
       id: Date.now().toString(),
       inventory_item_id: formData.inventory_item_id,
       product_name: product.item_name,
       quantity: formData.quantity,
       return_type: formData.return_type,
-      condition_breakdown: {...formData.condition_breakdown},
+      condition_breakdown: finalBreakdown,
       financial_impact: formData.financial_impact,
       restocking_fee: formData.restocking_fee,
       unit_price: product.selling_price || 0
@@ -459,7 +478,11 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
               setFormData(prev => ({
                 ...prev,
                 quantity: qty,
-                condition_breakdown: {
+                condition_breakdown: type === 'damage' ? {
+                  good: { quantity: 0, action: 'write_off' },
+                  fair: { quantity: 0, action: 'write_off' },
+                  damaged: { quantity: qty, action: 'write_off' }
+                } : {
                   good: { quantity: qty, action: 'restock' },
                   fair: { quantity: 0, action: 'return_to_supplier' },
                   damaged: { quantity: 0, action: 'write_off' }
@@ -720,23 +743,31 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         {(formData.return_type !== 'sales_return' || type !== 'return') && (
           <div>
             <Label className="flex items-center gap-2">Action</Label>
-            <Select value={formData.condition_breakdown.good.action} onValueChange={(value) => setFormData({
-              ...formData,
-              condition_breakdown: {
-                good: { ...formData.condition_breakdown.good, action: value },
-                fair: { ...formData.condition_breakdown.fair, action: value },
-                damaged: { ...formData.condition_breakdown.damaged, action: value }
-              }
-            })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="restock">Restock (Add back to inventory)</SelectItem>
-                <SelectItem value="return_to_supplier">Return to Supplier</SelectItem>
-                <SelectItem value="write_off">Write-off (Total Loss)</SelectItem>
-              </SelectContent>
-            </Select>
+            {type === 'damage' ? (
+              // Damage reports are ALWAYS write-off — no restock option
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <XCircle className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-semibold text-red-700">Write-off (Deducted from inventory — cannot be restocked)</span>
+              </div>
+            ) : (
+              <Select value={formData.condition_breakdown.good.action} onValueChange={(value) => setFormData({
+                ...formData,
+                condition_breakdown: {
+                  good: { ...formData.condition_breakdown.good, action: value },
+                  fair: { ...formData.condition_breakdown.fair, action: value },
+                  damaged: { ...formData.condition_breakdown.damaged, action: value }
+                }
+              })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="restock">Restock (Add back to inventory)</SelectItem>
+                  <SelectItem value="return_to_supplier">Return to Supplier</SelectItem>
+                  <SelectItem value="write_off">Write-off (Total Loss)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         )}
 
