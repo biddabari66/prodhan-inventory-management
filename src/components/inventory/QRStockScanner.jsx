@@ -73,6 +73,8 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated 
     }
   }, []);
 
+  const lastScanRef = useRef(0);
+
   const scanFrame = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
@@ -83,14 +85,24 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated 
       return;
     }
 
+    // Throttle scanning to ~10fps for performance on mobile
+    const now = Date.now();
+    if (now - lastScanRef.current < 100) {
+      animFrameRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+    lastScanRef.current = now;
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(video, 0, 0);
 
     // Use jsQR for universal cross-browser QR scanning
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const qrResult = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+    const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert',
+    });
     if (qrResult && qrResult.data) {
       handleCodeDetected(qrResult.data);
       return;

@@ -70,10 +70,11 @@ export default function QRStickerSheet({ inventory }) {
     });
 
     // Build print HTML — generate real QR data URLs (async)
+    // Use 300px for high-quality print output with proper quiet zone
     toast.loading('Generating QR codes...', { id: 'qr-gen' });
     const qrImages = await Promise.all(labels.map(async (item) => ({
       ...item,
-      qrDataUrl: await generateQRDataURL(getQRValue(item), 160)
+      qrDataUrl: await generateQRDataURL(getQRValue(item), 300)
     })));
     toast.dismiss('qr-gen');
 
@@ -95,7 +96,7 @@ export default function QRStickerSheet({ inventory }) {
         display: flex; align-items: center; gap: 2mm; padding: 1.5mm;
         overflow: hidden; page-break-inside: avoid;
       }
-      .label img { width: ${isThermal ? '18mm' : Math.min(config.labelH - 4, 24) + 'mm'}; height: ${isThermal ? '18mm' : Math.min(config.labelH - 4, 24) + 'mm'}; image-rendering: pixelated; }
+      .label img { width: ${isThermal ? '22mm' : Math.min(config.labelH - 3, 26) + 'mm'}; height: ${isThermal ? '22mm' : Math.min(config.labelH - 3, 26) + 'mm'}; image-rendering: pixelated; }
       .label-info { flex: 1; min-width: 0; overflow: hidden; }
       .label-name { font-weight: 700; font-size: ${config.labelH > 40 ? '9pt' : '7pt'}; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
       .label-sku { font-size: 6pt; color: #666; font-family: monospace; margin-top: 0.5mm; }
