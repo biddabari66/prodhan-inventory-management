@@ -47,24 +47,15 @@ export async function generateQRDataURL(value, size = 300) {
   });
 }
 
-// The base URL for QR codes — when scanned externally, opens the app's product lookup page
-const APP_BASE_URL = window.location.origin;
-
-// Get the raw identifier for an inventory item (barcode > isbn > id)
-export function getItemCode(item) {
+// Determine what to encode in QR for an inventory item
+// Priority: barcode > isbn > id
+export function getQRValue(item) {
   if (!item) return '';
   return item.barcode || item.isbn || item.id || '';
 }
 
-// Build a full URL for QR encoding so external scanners (Google Lens, iPhone Camera) open the app
-export function getQRValue(item) {
-  const code = getItemCode(item);
-  if (!code) return '';
-  return `${APP_BASE_URL}/QRInventory?code=${encodeURIComponent(code)}`;
-}
-
 // Extract the raw product code from a scanned QR value
-// Handles both: full URLs (from our QR stickers) and raw codes (typed/barcode scanner)
+// Handles both: full URLs (if someone encodes a URL) and raw codes (typed/barcode scanner)
 export function extractCodeFromScan(scannedValue) {
   if (!scannedValue) return '';
   try {
