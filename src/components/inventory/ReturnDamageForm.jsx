@@ -72,7 +72,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     }
   };
 
-  // Select an order and auto-fill customer details
+  // Select an order and auto-fill customer details + products
   const handleSelectOrder = (order) => {
     setMatchedOrder(order);
     setFormData(prev => ({
@@ -84,7 +84,44 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     }));
     setOrderSearchQuery(order.order_number || '');
     setOrderSearchResults([]);
-    toast.success(`Order ${order.order_number} loaded - customer details auto-filled`);
+
+    // Auto-populate products from the order
+    if (order.order_items && order.order_items.length > 0) {
+      const autoItems = [];
+      for (const oi of order.order_items) {
+        // Match order item to inventory by inventory_id or item_name
+        const invItem = inventory.find(i => 
+          i.id === oi.inventory_id || 
+          i.item_name === oi.item_name
+        );
+        if (invItem) {
+          const qty = oi.quantity || 1;
+          autoItems.push({
+            id: `${Date.now()}-${invItem.id}`,
+            inventory_item_id: invItem.id,
+            product_name: invItem.item_name,
+            quantity: qty,
+            return_type: formData.return_type,
+            condition_breakdown: {
+              good: { quantity: qty, action: 'restock' },
+              fair: { quantity: 0, action: 'return_to_supplier' },
+              damaged: { quantity: 0, action: 'write_off' }
+            },
+            financial_impact: (invItem.selling_price || 0) * qty,
+            restocking_fee: 0,
+            unit_price: invItem.selling_price || 0
+          });
+        }
+      }
+      if (autoItems.length > 0) {
+        setProductItems(autoItems);
+        toast.success(`Order ${order.order_number} loaded — ${autoItems.length} product(s) auto-added`);
+      } else {
+        toast.success(`Order ${order.order_number} loaded — customer details auto-filled`);
+      }
+    } else {
+      toast.success(`Order ${order.order_number} loaded — customer details auto-filled`);
+    }
   };
 
   // Auto-sync condition breakdown with total quantity
@@ -397,16 +434,30 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
                 </div>
                 {matchedOrder.order_items && matchedOrder.order_items.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-green-200">
-                    <p className="text-xs text-slate-500 mb-1">Order Items:</p>
+                    <p className="text-xs text-slate-500 mb-1">Order Items (auto-added to return list):</p>
                     <div className="flex flex-wrap gap-1">
-                      {matchedOrder.order_items.map((item, idx) => (
+                      {matchedOrder.order_items.map((oi, idx) => (
                         <Badge key={idx} variant="secondary" className="text-xs">
-                          {item.product_name || 'Product'} x{item.quantity}
+                          {oi.item_name || oi.product_name || 'Product'} ×{oi.quantity}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMatchedOrder(null);
+                    setOrderSearchQuery('');
+                    setProductItems([]);
+                    setFormData(prev => ({ ...prev, order_number: '', customer_name: '', customer_phone: '', order_date: '' }));
+                  }}
+                  className="mt-2 text-red-600 hover:bg-red-50 text-xs"
+                >
+                  <XCircle className="w-3 h-3 mr-1" /> Clear Order
+                </Button>
               </div>
             )}
           </CardContent>
