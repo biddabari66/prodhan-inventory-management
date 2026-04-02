@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { Inventory } from '@/entities/Inventory';
-import { Order } from '@/entities/Order'; 
+import { base44 } from '@/api/base44Client'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -54,8 +52,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   // Fetch data with optimized queries
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
-    queryFn: () => Inventory.list('-updated_date', 1000),
-    staleTime: 2 * 60 * 1000, // 2 minutes cache
+    queryFn: () => base44.entities.Inventory.list('-updated_date', 1000),
+    staleTime: 2 * 60 * 1000,
   });
 
   // Load ALL returns/damages for complete history with pagination
@@ -93,7 +91,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   // Fetch orders for enriching export data
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-for-export'],
-    queryFn: () => Order.list('-order_date', 5000),
+    queryFn: () => base44.entities.Order.list('-order_date', 5000),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -392,169 +390,54 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     toast.success(`Exported ${dataToExport.length} ${dataType} records with full details`);
   };
 
-  // Record return/damage mutation - PROPERLY SEPARATES RETURNS FROM DAMAGES
-  const recordIncidentMutation = useMutation({
-    mutationFn: async (data) => {
-      const item = inventory.find(i => i.id === data.inventory_item_id);
-      if (!item) throw new Error('Product not found');
-      
-      // Determine if this should go to Returns tab or Damages tab
-      const isDamageRecord = data.type === 'damage' || 
-                            (data.condition_breakdown?.damaged?.quantity > 0 && 
-                             data.condition_breakdown?.good?.quantity === 0 && 
-                             data.condition_breakdown?.fair?.quantity === 0);
+  // SIMPLIFIED: Create a single movement record with correct reference_type
+  const createMovementRecord = async ({
+    inventoryItem, inventoryItemId, qty, referenceType, action,
+    orderNumber, returnType, reason, condition, customerName,
+    customerPhone, supplierName, orderDate, financialImpact,
+    restockingFee, notes, incidentDate, originalQuantity,
+    isPartial, goodQty, damagedQty
+  }) => {
+    const isRestock = action === 'restock';
+    const stockChange = isRestock ? qty : 0;
+    const newStock = inventoryItem.current_stock + stockChange;
 
-      // Handle partial returns
-      if (data.use_partial_return && data.type === 'return') {
-        const goodQty = parseInt(data.good_condition_qty) || 0;
-        const damagedQty = parseInt(data.damaged_qty) || 0;
+    await base44.entities.Inventory.update(inventoryItemId, { current_stock: newStock });
 
-        let newStock = item.current_stock;
-
-        // Process good condition items (restock)
-        if (goodQty > 0) {
-          newStock += goodQty;
-          await base44.entities.InventoryMovement.create({
-            inventory_item_id: data.inventory_item_id,
-            movement_type: 'in',
-            quantity: goodQty,
-            reference_type: 'return',
-            reference_number: data.order_number || `RETURN-${Date.now()}-GOOD`,
-            unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
-            total_value: -Math.abs((data.financial_impact / data.quantity) * goodQty),
-            performed_by: currentUser?.id || 'system',
-            notes: data.notes || '',
-            movement_date: data.incident_date,
-            balance_after: newStock,
-            metadata: {
-              type: data.type,
-              return_type: data.return_type,
-              reason: data.reason,
-              condition: 'good',
-              action: 'restock',
-              customer_name: data.customer_name,
-              customer_phone: data.customer_phone,
-              supplier_name: data.supplier_name,
-              order_date: data.order_date,
-              restocking_fee: data.restocking_fee,
-              financial_impact: (data.financial_impact / data.quantity) * goodQty,
-              is_partial: true,
-              good_qty: goodQty,
-              damaged_qty: damagedQty
-            }
-          });
-        }
-
-        // Process damaged items (write-off) - Goes to DAMAGE tab
-        if (damagedQty > 0) {
-          await base44.entities.InventoryMovement.create({
-            inventory_item_id: data.inventory_item_id,
-            movement_type: 'adjustment',
-            quantity: damagedQty,
-            reference_type: 'damage', // This ensures it shows in Damages tab
-            reference_number: data.order_number || `RETURN-${Date.now()}-DAMAGED`,
-            unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
-            total_value: -Math.abs((data.financial_impact / data.quantity) * damagedQty),
-            performed_by: currentUser?.id || 'system',
-            notes: data.notes || '',
-            movement_date: data.incident_date,
-            balance_after: newStock,
-            metadata: {
-              type: 'damage',
-              return_type: data.return_type,
-              reason: data.reason,
-              condition: 'damaged',
-              action: 'write_off',
-              customer_name: data.customer_name,
-              customer_phone: data.customer_phone,
-              supplier_name: data.supplier_name,
-              order_date: data.order_date,
-              financial_impact: (data.financial_impact / data.quantity) * damagedQty,
-              is_partial: true,
-              good_qty: goodQty,
-              damaged_qty: damagedQty
-            }
-          });
-        }
-
-        await Inventory.update(data.inventory_item_id, {
-          current_stock: newStock
-        });
-
-        return { item, newStock };
+    await base44.entities.InventoryMovement.create({
+      inventory_item_id: inventoryItemId,
+      movement_type: isRestock ? 'in' : 'adjustment',
+      quantity: qty,
+      reference_type: referenceType, // 'return' or 'damage' — directly controls which tab
+      reference_number: orderNumber || `${referenceType.toUpperCase()}-${Date.now()}`,
+      unit_cost: returnType === 'purchase_return' ? inventoryItem.purchase_price : inventoryItem.selling_price,
+      total_value: -Math.abs(financialImpact),
+      performed_by: currentUser?.id || 'system',
+      notes: notes || '',
+      movement_date: incidentDate,
+      balance_after: newStock,
+      metadata: {
+        type: referenceType,
+        return_type: returnType,
+        reason,
+        condition: condition || (referenceType === 'damage' ? 'damaged' : 'good'),
+        action,
+        customer_name: customerName || '',
+        customer_phone: customerPhone || '',
+        supplier_name: supplierName || '',
+        order_date: orderDate || '',
+        order_number: orderNumber || '',
+        restocking_fee: restockingFee,
+        financial_impact: financialImpact,
+        original_quantity: originalQuantity || qty,
+        is_partial: isPartial || false,
+        good_qty: goodQty,
+        damaged_qty: damagedQty
       }
+    });
 
-      // Standard single-action return/damage
-      // Detect all-damaged returns or write-off actions and treat as damage
-      const goodQtyCheck = data.condition_breakdown?.good?.quantity || 0;
-      const fairQtyCheck = data.condition_breakdown?.fair?.quantity || 0;
-      const damagedQtyCheck = data.condition_breakdown?.damaged?.quantity || 0;
-      const actionCheck = data.action || data.condition_breakdown?.good?.action || 'restock';
-      
-      // BULLETPROOF damage detection:
-      // 1. Explicit damage type
-      // 2. All qty in damaged column with zero good/fair
-      // 3. Explicit write_off action passed
-      const isExplicitDamage = data.type === 'damage';
-      const isAllDamagedReturn = !isExplicitDamage && goodQtyCheck === 0 && fairQtyCheck === 0 && damagedQtyCheck > 0;
-      const isWriteOffAction = !isExplicitDamage && actionCheck === 'write_off';
-      const effectiveType = (isExplicitDamage || isAllDamagedReturn || isWriteOffAction) ? 'damage' : data.type;
-      const effectiveAction = (effectiveType === 'damage') ? 'write_off' : (data.action || 'restock');
-      let quantityChange = 0;
-      if (effectiveAction === 'restock') {
-        quantityChange = data.quantity;
-      }
-      // write_off and return_to_supplier both = 0 stock change
-
-      const newStock = item.current_stock + quantityChange;
-
-      await Inventory.update(data.inventory_item_id, {
-        current_stock: newStock
-      });
-
-      await base44.entities.InventoryMovement.create({
-        inventory_item_id: data.inventory_item_id,
-        movement_type: quantityChange > 0 ? 'in' : 'adjustment',
-        quantity: data.quantity,
-        reference_type: effectiveType === 'damage' ? 'damage' : 'return',
-        reference_number: data.order_number || `${effectiveType.toUpperCase()}-${Date.now()}`,
-        unit_cost: data.return_type === 'purchase_return' ? item.purchase_price : item.selling_price,
-        total_value: -Math.abs(data.financial_impact),
-        performed_by: currentUser?.id || 'system',
-        notes: data.notes || '',
-        movement_date: data.incident_date,
-        balance_after: newStock,
-        metadata: {
-          type: effectiveType,
-          return_type: data.return_type,
-          reason: data.reason,
-          condition: effectiveType === 'damage' ? 'damaged' : (data.condition || 'good'),
-          action: effectiveAction,
-          customer_name: data.customer_name || '',
-          customer_phone: data.customer_phone || '',
-          supplier_name: data.supplier_name || '',
-          order_date: data.order_date || '',
-          order_number: data.order_number || '',
-          restocking_fee: data.restocking_fee,
-          financial_impact: data.financial_impact,
-          original_quantity: data.quantity
-        }
-      });
-
-      return { item, newStock };
-    },
-    onSuccess: (result, data) => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['movements']);
-      queryClient.invalidateQueries(['movements-returns-all']);
-      toast.success(`${data.type === 'return' ? 'Return' : 'Damage'} recorded successfully!`);
-      setIsFormOpen(false);
-      setEditingMovement(null);
-    },
-    onError: (error) => {
-      toast.error(`Failed to record incident: ${error.message}`);
-    },
-  });
+    return newStock;
+  };
 
   // Update movement mutation
   const updateMovementMutation = useMutation({
@@ -577,7 +460,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const newStock = item.current_stock + quantityDifference;
 
       // Update inventory
-      await Inventory.update(data.inventory_item_id, {
+      await base44.entities.Inventory.update(data.inventory_item_id, {
         current_stock: newStock
       });
 
@@ -632,7 +515,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const quantityToReverse = movement.quantity || 0;
       const newStock = item.current_stock - quantityToReverse;
 
-      await Inventory.update(movement.inventory_item_id, {
+      await base44.entities.Inventory.update(movement.inventory_item_id, {
         current_stock: Math.max(0, newStock)
       });
 
@@ -713,72 +596,141 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const handleSubmit = async (data) => {
     if (editingMovement) {
       updateMovementMutation.mutate({ movementId: editingMovement.id, data });
-    } else {
-      // Handle multiple products
-      if (data.items && data.items.length > 0) {
-        try {
-          for (const item of data.items) {
-            const goodQty = item.condition_breakdown?.good?.quantity || 0;
-            const fairQty = item.condition_breakdown?.fair?.quantity || 0;
-            const damagedQty = item.condition_breakdown?.damaged?.quantity || 0;
-            const goodAction = item.condition_breakdown?.good?.action || 'restock';
-            const fairAction = item.condition_breakdown?.fair?.action || 'return_to_supplier';
-            
-            // CRITICAL: Determine effective type — damage vs return
-            // Rule 1: Explicit damage type from form → always damage
-            // Rule 2: ALL quantity is in damaged column → damage
-            // Rule 3: ALL actions are write_off across all conditions → damage
-            // Rule 4: Only good/fair with restock/return_to_supplier → return
-            const isDamageType = data.type === 'damage';
-            const isAllDamaged = !isDamageType && goodQty === 0 && fairQty === 0 && damagedQty > 0;
-            const allActionsAreWriteOff = !isDamageType && 
-              ((goodQty > 0 && goodAction === 'write_off') || goodQty === 0) &&
-              ((fairQty > 0 && fairAction === 'write_off') || fairQty === 0) &&
-              (goodQty > 0 || fairQty > 0 || damagedQty > 0);
-            const effectiveType = (isDamageType || isAllDamaged) ? 'damage' : data.type;
-            const shouldWriteOff = effectiveType === 'damage';
-            
-            // Partial return: has BOTH good (restock) and damaged quantities in a return
-            const usePartialReturn = !shouldWriteOff && goodQty > 0 && damagedQty > 0;
-            
-            await recordIncidentMutation.mutateAsync({
-              inventory_item_id: item.inventory_item_id,
-              quantity: item.quantity,
-              type: effectiveType,
-              return_type: item.return_type || data.return_type,
-              reason: data.reason,
-              action: shouldWriteOff ? 'write_off' : (goodAction === 'write_off' ? 'write_off' : goodAction),
-              condition: shouldWriteOff ? 'damaged' : (goodQty > 0 ? 'good' : 'damaged'),
-              order_number: data.order_number,
-              customer_name: data.customer_name,
-              customer_phone: data.customer_phone,
-              supplier_name: data.supplier_name,
-              order_date: data.order_date,
-              condition_breakdown: shouldWriteOff ? {
-                good: { quantity: 0, action: 'write_off' },
-                fair: { quantity: 0, action: 'write_off' },
-                damaged: { quantity: item.quantity, action: 'write_off' }
-              } : item.condition_breakdown,
-              financial_impact: item.financial_impact,
-              restocking_fee: item.restocking_fee,
-              notes: data.notes,
-              incident_date: data.incident_date,
-              use_partial_return: usePartialReturn,
-              good_condition_qty: shouldWriteOff ? 0 : goodQty,
-              damaged_qty: shouldWriteOff ? item.quantity : damagedQty
-            });
-          }
-          // Ensure queries refresh with new data
-          await queryClient.invalidateQueries(['movements-returns-all']);
-          await queryClient.invalidateQueries(['inventory']);
-          toast.success(`${data.items.length} product(s) processed successfully!`);
-          setIsFormOpen(false);
-        } catch (error) {
-          toast.error('Failed to process all products: ' + error.message);
+      return;
+    }
+
+    // Process items from the form
+    const items = data.items && data.items.length > 0 ? data.items : [];
+    if (items.length === 0) return;
+
+    try {
+      for (const formItem of items) {
+        const invItem = inventory.find(i => i.id === formItem.inventory_item_id);
+        if (!invItem) { toast.error(`Product not found: ${formItem.product_name}`); continue; }
+
+        const goodQty = formItem.condition_breakdown?.good?.quantity || 0;
+        const fairQty = formItem.condition_breakdown?.fair?.quantity || 0;
+        const damagedQty = formItem.condition_breakdown?.damaged?.quantity || 0;
+        const goodAction = formItem.condition_breakdown?.good?.action || 'restock';
+
+        // SIMPLE RULE: If type=damage OR (good=0, fair=0, damaged>0) → DAMAGE tab
+        const isDamage = data.type === 'damage' || (goodQty === 0 && fairQty === 0 && damagedQty > 0);
+
+        if (isDamage) {
+          // ALL goes to damage tab as write-off
+          await createMovementRecord({
+            inventoryItem: invItem,
+            inventoryItemId: formItem.inventory_item_id,
+            qty: formItem.quantity,
+            referenceType: 'damage',
+            action: 'write_off',
+            orderNumber: data.order_number,
+            returnType: formItem.return_type || data.return_type,
+            reason: data.reason,
+            condition: 'damaged',
+            customerName: data.customer_name,
+            customerPhone: data.customer_phone,
+            supplierName: data.supplier_name,
+            orderDate: data.order_date,
+            financialImpact: formItem.financial_impact,
+            restockingFee: formItem.restocking_fee,
+            notes: data.notes,
+            incidentDate: data.incident_date,
+            originalQuantity: formItem.quantity,
+            goodQty: 0,
+            damagedQty: formItem.quantity
+          });
+        } else if (goodQty > 0 && damagedQty > 0) {
+          // PARTIAL: Good part → Returns tab (restock), Damaged part → Damage tab
+          const perUnitImpact = formItem.financial_impact / formItem.quantity;
+
+          // Good portion → return + restock
+          await createMovementRecord({
+            inventoryItem: invItem,
+            inventoryItemId: formItem.inventory_item_id,
+            qty: goodQty,
+            referenceType: 'return',
+            action: goodAction,
+            orderNumber: data.order_number,
+            returnType: formItem.return_type || data.return_type,
+            reason: data.reason,
+            condition: 'good',
+            customerName: data.customer_name,
+            customerPhone: data.customer_phone,
+            supplierName: data.supplier_name,
+            orderDate: data.order_date,
+            financialImpact: perUnitImpact * goodQty,
+            restockingFee: formItem.restocking_fee,
+            notes: data.notes,
+            incidentDate: data.incident_date,
+            originalQuantity: formItem.quantity,
+            isPartial: true,
+            goodQty,
+            damagedQty
+          });
+
+          // Refresh invItem stock after first update
+          const updatedInv = await base44.entities.Inventory.filter({}, '-updated_date', 1);
+          const refreshedItem = updatedInv.find(i => i.id === formItem.inventory_item_id) || invItem;
+
+          // Damaged portion → damage tab
+          await createMovementRecord({
+            inventoryItem: refreshedItem,
+            inventoryItemId: formItem.inventory_item_id,
+            qty: damagedQty,
+            referenceType: 'damage',
+            action: 'write_off',
+            orderNumber: data.order_number,
+            returnType: formItem.return_type || data.return_type,
+            reason: data.reason,
+            condition: 'damaged',
+            customerName: data.customer_name,
+            customerPhone: data.customer_phone,
+            supplierName: data.supplier_name,
+            orderDate: data.order_date,
+            financialImpact: perUnitImpact * damagedQty,
+            restockingFee: 0,
+            notes: data.notes,
+            incidentDate: data.incident_date,
+            originalQuantity: formItem.quantity,
+            isPartial: true,
+            goodQty,
+            damagedQty
+          });
+        } else {
+          // SIMPLE RETURN: All good/fair → Returns tab
+          await createMovementRecord({
+            inventoryItem: invItem,
+            inventoryItemId: formItem.inventory_item_id,
+            qty: formItem.quantity,
+            referenceType: 'return',
+            action: goodAction,
+            orderNumber: data.order_number,
+            returnType: formItem.return_type || data.return_type,
+            reason: data.reason,
+            condition: goodQty > 0 ? 'good' : 'fair',
+            customerName: data.customer_name,
+            customerPhone: data.customer_phone,
+            supplierName: data.supplier_name,
+            orderDate: data.order_date,
+            financialImpact: formItem.financial_impact,
+            restockingFee: formItem.restocking_fee,
+            notes: data.notes,
+            incidentDate: data.incident_date,
+            originalQuantity: formItem.quantity,
+            goodQty,
+            damagedQty
+          });
         }
-      } else {
-        recordIncidentMutation.mutate(data);
       }
+
+      await queryClient.invalidateQueries(['movements-returns-all']);
+      await queryClient.invalidateQueries(['inventory']);
+      await queryClient.invalidateQueries(['movements']);
+      toast.success(`${items.length} product(s) processed successfully!`);
+      setIsFormOpen(false);
+    } catch (error) {
+      toast.error('Failed: ' + error.message);
     }
   };
 
