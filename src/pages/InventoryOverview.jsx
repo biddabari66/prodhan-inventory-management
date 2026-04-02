@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Plus, AlertTriangle, BookOpen, Package, Trash2, RefreshCw, Filter, X, Loader2, Search, ScanLine } from 'lucide-react';
-import QRCodeScanner from '../components/inventory/QRCodeScanner';
+import QRCodeScanner from '../components/inventory/QRCodeScanner.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';

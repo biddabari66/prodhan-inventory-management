@@ -6,7 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScanLine, Printer, Package, QrCode, Loader2 } from 'lucide-react';
 import QRStickerSheet from '../components/inventory/QRStickerSheet';
-import QRStockScanner from '../components/inventory/QRStockScanner';
+import QRStockScanner from '../components/inventory/QRStockScanner.jsx';
+
 
 export default function QRInventory() {
   const [activeTab, setActiveTab] = useState('scan');
