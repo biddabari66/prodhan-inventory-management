@@ -27,6 +27,7 @@ import {
   Users,
   Clock,
   DollarSign,
+  QrCode,
   TrendingUp,
   CreditCard,
   Package,
@@ -718,6 +719,7 @@ export default function Layout({ children, currentPageName }) {
 
     const baseModules = [
     { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-red-600', permission: 'inventory_overview' },
+    { label: t('QR Scan'), url: createPageUrl('QRInventory'), icon: QrCode, colorClass: 'text-rose-600', permission: 'inventory_overview' },
     { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
     { label: t('CRM'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-purple-600', permission: 'customer_management' },
     { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
