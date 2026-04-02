@@ -55,7 +55,7 @@ export default function QRStickerSheet({ inventory }) {
     [inventory, selectedIds]
   );
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (selectedItems.length === 0) {
       toast.error('Select at least one product');
       return;
@@ -69,11 +69,13 @@ export default function QRStickerSheet({ inventory }) {
       }
     });
 
-    // Build print HTML
-    const qrImages = labels.map(item => ({
+    // Build print HTML — generate real QR data URLs (async)
+    toast.loading('Generating QR codes...', { id: 'qr-gen' });
+    const qrImages = await Promise.all(labels.map(async (item) => ({
       ...item,
-      qrDataUrl: generateQRDataURL(getQRValue(item), 160)
-    }));
+      qrDataUrl: await generateQRDataURL(getQRValue(item), 160)
+    })));
+    toast.dismiss('qr-gen');
 
     const isThermal = labelSize.startsWith('thermal');
     const pageLabels = isThermal ? 1 : config.cols * config.rows;
