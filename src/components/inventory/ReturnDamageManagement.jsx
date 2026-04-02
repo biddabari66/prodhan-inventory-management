@@ -485,12 +485,14 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       }
 
       // Standard single-action return/damage
-      // Detect all-damaged returns and treat as damage
-      const isAllDamagedReturn = data.type === 'return' && 
-        (data.condition_breakdown?.good?.quantity || 0) === 0 && 
-        (data.condition_breakdown?.fair?.quantity || 0) === 0 && 
-        (data.condition_breakdown?.damaged?.quantity || 0) > 0;
-      const effectiveType = (data.type === 'damage' || isAllDamagedReturn) ? 'damage' : data.type;
+      // Detect all-damaged returns or write-off actions and treat as damage
+      const goodQtyCheck = data.condition_breakdown?.good?.quantity || 0;
+      const fairQtyCheck = data.condition_breakdown?.fair?.quantity || 0;
+      const damagedQtyCheck = data.condition_breakdown?.damaged?.quantity || 0;
+      const actionCheck = data.action || data.condition_breakdown?.good?.action || 'restock';
+      const isAllDamagedReturn = data.type === 'return' && goodQtyCheck === 0 && fairQtyCheck === 0 && damagedQtyCheck > 0;
+      const isWriteOffAction = data.type === 'return' && actionCheck === 'write_off';
+      const effectiveType = (data.type === 'damage' || isAllDamagedReturn || isWriteOffAction) ? 'damage' : data.type;
       const effectiveAction = (effectiveType === 'damage') ? 'write_off' : (data.action || 'restock');
       let quantityChange = 0;
       if (effectiveAction === 'restock') {
@@ -710,16 +712,21 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             const goodQty = item.condition_breakdown?.good?.quantity || 0;
             const fairQty = item.condition_breakdown?.fair?.quantity || 0;
             const damagedQty = item.condition_breakdown?.damaged?.quantity || 0;
+            const goodAction = item.condition_breakdown?.good?.action || 'restock';
+            const damagedAction = item.condition_breakdown?.damaged?.action || 'write_off';
             
-            // CRITICAL: Determine if this is a damage (write-off) or return (restock)
+            // CRITICAL: Determine effective type
+            // 1. Explicit damage type from form
+            // 2. ALL items in damaged column → damage record
+            // 3. ALL items have write_off action → damage record
             const isDamageType = data.type === 'damage';
-            // Even in a "return" form, if ALL items are damaged with 0 good — treat as damage record
             const isAllDamaged = !isDamageType && goodQty === 0 && fairQty === 0 && damagedQty > 0;
-            const effectiveType = (isDamageType || isAllDamaged) ? 'damage' : data.type;
+            const isAllWriteOff = !isDamageType && goodAction === 'write_off' && goodQty > 0 && damagedQty === 0;
+            const effectiveType = (isDamageType || isAllDamaged || isAllWriteOff) ? 'damage' : data.type;
+            const shouldWriteOff = effectiveType === 'damage';
             
-            const goodAction = (isDamageType || isAllDamaged) ? 'write_off' : (item.condition_breakdown?.good?.action || 'restock');
-            // Partial return: has BOTH good and damaged quantities in a return
-            const usePartialReturn = !isDamageType && !isAllDamaged && goodQty > 0 && damagedQty > 0;
+            // Partial return: has BOTH good (restock) and damaged quantities in a return
+            const usePartialReturn = !shouldWriteOff && goodQty > 0 && damagedQty > 0;
             
             await recordIncidentMutation.mutateAsync({
               inventory_item_id: item.inventory_item_id,
@@ -727,14 +734,14 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               type: effectiveType,
               return_type: item.return_type,
               reason: data.reason,
-              action: (isDamageType || isAllDamaged) ? 'write_off' : goodAction,
-              condition: (isDamageType || isAllDamaged) ? 'damaged' : (goodQty > 0 ? 'good' : 'damaged'),
+              action: shouldWriteOff ? 'write_off' : (goodAction === 'write_off' ? 'write_off' : goodAction),
+              condition: shouldWriteOff ? 'damaged' : (goodQty > 0 ? 'good' : 'damaged'),
               order_number: data.order_number,
               customer_name: data.customer_name,
               customer_phone: data.customer_phone,
               supplier_name: data.supplier_name,
               order_date: data.order_date,
-              condition_breakdown: (isDamageType || isAllDamaged) ? {
+              condition_breakdown: shouldWriteOff ? {
                 good: { quantity: 0, action: 'write_off' },
                 fair: { quantity: 0, action: 'write_off' },
                 damaged: { quantity: item.quantity, action: 'write_off' }
@@ -744,8 +751,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               notes: data.notes,
               incident_date: data.incident_date,
               use_partial_return: usePartialReturn,
-              good_condition_qty: (isDamageType || isAllDamaged) ? 0 : goodQty,
-              damaged_qty: (isDamageType || isAllDamaged) ? item.quantity : damagedQty
+              good_condition_qty: shouldWriteOff ? 0 : goodQty,
+              damaged_qty: shouldWriteOff ? item.quantity : damagedQty
             });
           }
           toast.success(`${data.items.length} product(s) processed successfully!`);

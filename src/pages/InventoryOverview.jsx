@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, AlertTriangle, BookOpen, Package, Trash2, RefreshCw, Filter, X, Loader2, Search } from 'lucide-react';
+import { Plus, AlertTriangle, BookOpen, Package, Trash2, RefreshCw, Filter, X, Loader2, Search, ScanLine } from 'lucide-react';
+import QRCodeScanner from '../components/inventory/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';
@@ -43,6 +44,7 @@ function InventoryOverviewPage() {
 
   const [selectedDepartment, setSelectedDepartment] = useState('prodhan_com_e_commerce');
   const [displayLimit, setDisplayLimit] = useState(50); // 🚀 Pagination for smooth scrolling
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // CRITICAL: Permission-based access control
   const { hasPermission: canCreate } = usePermission('inventory_overview', 'can_create');
@@ -372,13 +374,21 @@ function InventoryOverviewPage() {
             <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Inventory Overview</h1>
             <p className="text-sm text-[#6B7280] mt-0.5">Manage all your products and stock</p>
           </div>
-          {canCreate && (
+          <div className="flex gap-3">
             <Button
-              className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
-              onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
-              <Plus className="w-5 h-5 mr-2" /> Add New Item
+              variant="outline"
+              className="border-slate-300 h-11 px-4 rounded-xl font-semibold gap-2"
+              onClick={() => setIsScannerOpen(true)}>
+              <ScanLine className="w-5 h-5 text-red-600" /> Scan QR/Barcode
             </Button>
-          )}
+            {canCreate && (
+              <Button
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
+                onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
+                <Plus className="w-5 h-5 mr-2" /> Add New Item
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Premium Stats Cards */}
@@ -677,6 +687,17 @@ function InventoryOverviewPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* QR/Barcode Scanner */}
+      <QRCodeScanner
+        inventory={inventory}
+        open={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onProductFound={(product) => {
+          setIsScannerOpen(false);
+          handleEdit(product);
+        }}
+      />
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
