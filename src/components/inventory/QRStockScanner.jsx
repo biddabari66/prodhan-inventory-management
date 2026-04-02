@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { QRCodeCanvas, getQRValue } from './QRCodeGenerator';
+import jsQR from 'jsqr';
 
 export default function QRStockScanner({ inventory, currentUser, onStockUpdated }) {
   const [mode, setMode] = useState('manual'); // 'camera' | 'manual'
@@ -84,22 +85,18 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated 
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
 
-    if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
-      detector.detect(canvas).then(barcodes => {
-        if (barcodes.length > 0) {
-          handleCodeDetected(barcodes[0].rawValue);
-          return;
-        }
-        if (scanning) animFrameRef.current = requestAnimationFrame(scanFrame);
-      }).catch(() => {
-        if (scanning) animFrameRef.current = requestAnimationFrame(scanFrame);
-      });
-    } else {
-      if (scanning) animFrameRef.current = requestAnimationFrame(scanFrame);
+    // Use jsQR for universal cross-browser QR scanning
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const qrResult = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+    if (qrResult && qrResult.data) {
+      handleCodeDetected(qrResult.data);
+      return;
     }
+
+    if (scanning) animFrameRef.current = requestAnimationFrame(scanFrame);
   }, [scanning]);
 
   useEffect(() => {
@@ -267,13 +264,7 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated 
           <div className="absolute bottom-3 left-0 right-0 text-center">
             <Badge className="bg-black/60 text-white border-0">Point at barcode or QR code</Badge>
           </div>
-          {!('BarcodeDetector' in window) && (
-            <div className="absolute top-3 left-0 right-0 text-center">
-              <Badge className="bg-amber-500/90 text-white border-0 text-xs">
-                Camera scanning not supported in this browser — use Manual mode
-              </Badge>
-            </div>
-          )}
+
         </div>
       )}
 

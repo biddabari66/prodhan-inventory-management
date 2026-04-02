@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Camera, X, Package, Search, ScanLine, Keyboard, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import jsQR from 'jsqr';
 
 export default function QRCodeScanner({ inventory, onProductFound, onClose, open }) {
   const [mode, setMode] = useState('camera'); // 'camera' | 'manual'
@@ -64,7 +65,7 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  // Use BarcodeDetector API (available in Chrome/Edge) or fallback
+  // Scan each video frame using jsQR for universal QR detection
   const scanFrame = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !scanning) return;
 
@@ -81,23 +82,15 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Use BarcodeDetector if available
-    if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
-      detector.detect(canvas).then(barcodes => {
-        if (barcodes.length > 0) {
-          const code = barcodes[0].rawValue;
-          handleCodeDetected(code);
-          return;
-        }
-        animFrameRef.current = requestAnimationFrame(scanFrame);
-      }).catch(() => {
-        animFrameRef.current = requestAnimationFrame(scanFrame);
-      });
-    } else {
-      // No BarcodeDetector — show message to use manual entry
-      animFrameRef.current = requestAnimationFrame(scanFrame);
+    // Use jsQR for universal cross-browser QR scanning
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const qrResult = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+    if (qrResult && qrResult.data) {
+      handleCodeDetected(qrResult.data);
+      return;
     }
+
+    animFrameRef.current = requestAnimationFrame(scanFrame);
   }, [scanning]);
 
   const handleCodeDetected = useCallback((code) => {
@@ -225,13 +218,7 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
                 </div>
               )}
 
-              {!('BarcodeDetector' in window) && !cameraError && (
-                <div className="absolute top-3 left-0 right-0 text-center">
-                  <Badge className="bg-amber-500/90 text-white border-0 text-xs">
-                    Browser barcode detection not supported — use manual entry
-                  </Badge>
-                </div>
-              )}
+
             </div>
           )}
 
