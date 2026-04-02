@@ -1,0 +1,270 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "Unique order identifier"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer entity"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone number"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer email"
+    },
+    "order_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "string"
+          },
+          "item_name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "subtotal": {
+            "type": "number"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "selected_color": {
+            "type": "string"
+          },
+          "is_combo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "description": "Array of ordered items"
+    },
+    "subtotal": {
+      "type": "number",
+      "description": "Order subtotal before discounts and shipping"
+    },
+    "discount_amount": {
+      "type": "number",
+      "description": "Regular discount amount"
+    },
+    "coupon_discount": {
+      "type": "number",
+      "description": "Coupon discount amount"
+    },
+    "discount_code": {
+      "type": "string",
+      "description": "Applied discount code"
+    },
+    "shipping_cost": {
+      "type": "number",
+      "description": "Shipping/delivery charge"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Final total amount"
+    },
+    "paid_amount": {
+      "type": "number",
+      "description": "Amount paid so far"
+    },
+    "shipping_address": {
+      "type": "object",
+      "properties": {
+        "address_line": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "district": {
+          "type": "string"
+        },
+        "postal_code": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        }
+      },
+      "description": "Shipping address details"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "cod",
+        "bkash",
+        "nagad",
+        "rocket",
+        "bank_transfer",
+        "card"
+      ],
+      "description": "Payment method"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "partial",
+        "paid",
+        "refunded"
+      ],
+      "description": "Payment status"
+    },
+    "order_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "on_hold",
+        "call_not_received",
+        "follow_up",
+        "callback_requested",
+        "confirmed",
+        "processing",
+        "packed",
+        "shipped",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "returned"
+      ],
+      "description": "Order fulfillment status"
+    },
+    "order_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Order creation date"
+    },
+    "delivery_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expected/actual delivery date"
+    },
+    "order_source": {
+      "type": "string",
+      "enum": [
+        "website",
+        "phone",
+        "whatsapp",
+        "facebook",
+        "walk_in",
+        "mobile_app"
+      ],
+      "description": "Order source channel"
+    },
+    "department": {
+      "type": "string",
+      "enum": [
+        "biddabari_publication",
+        "it",
+        "boibari",
+        "admission",
+        "service",
+        "marketing",
+        "prodhan_com_e_commerce",
+        "sales",
+        "r_and_d"
+      ],
+      "description": "Department handling order"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal order notes"
+    },
+    "customer_notes": {
+      "type": "string",
+      "description": "Customer special requests"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Order tags for categorization"
+    },
+    "courier_service": {
+      "type": "string",
+      "enum": [
+        "steadfast",
+        "pathao",
+        "redx",
+        "sundarban",
+        "sa_paribahan",
+        "self_delivery"
+      ],
+      "description": "Courier service used"
+    },
+    "tracking_number": {
+      "type": "string",
+      "description": "Courier tracking number"
+    },
+    "courier_status": {
+      "type": "string",
+      "description": "Status from courier API"
+    },
+    "courier_placed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether order has been sent to courier"
+    },
+    "courier_placed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When order was sent to courier"
+    },
+    "courier_tracking_code": {
+      "type": "string",
+      "description": "Tracking code from courier webhook response"
+    },
+    "courier_consignment_id": {
+      "type": "string",
+      "description": "Consignment ID from courier webhook response"
+    },
+    "adprofit_synced": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether order has been synced to Adprofit"
+    },
+    "adprofit_sync_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When order was synced to Adprofit"
+    },
+    "adprofit_synced_items": {
+      "type": "number",
+      "description": "Number of items successfully synced"
+    },
+    "adprofit_failed_items": {
+      "type": "number",
+      "description": "Number of items that failed to sync"
+    }
+  },
+  "required": [
+    "order_number",
+    "customer_name",
+    "customer_phone",
+    "order_items",
+    "total_amount",
+    "order_status",
+    "payment_status",
+    "department"
+  ]
+}

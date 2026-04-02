@@ -666,7 +666,7 @@ function SalesPage() {
     let pendingOrders = 0, confirmedOrders = 0, shippedOrders = 0, totalReturns = 0, totalProductQuantity = 0;
 
     for (const o of statsOrders) {
-      if (o.order_status === 'pending') pendingOrders++;
+      if (['pending', 'on_hold', 'call_not_received', 'follow_up', 'callback_requested'].includes(o.order_status)) pendingOrders++;
       else if (['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)) confirmedOrders++;
       if (['shipped', 'out_for_delivery'].includes(o.order_status)) shippedOrders++;
       if (o.order_status === 'returned') totalReturns++;
@@ -690,7 +690,7 @@ function SalesPage() {
       if (orderDateBDT !== todayStr) continue;
 
       todayOrdersCount++;
-      if (o.order_status === 'pending') todayPending++;
+      if (['pending', 'on_hold', 'call_not_received', 'follow_up', 'callback_requested'].includes(o.order_status)) todayPending++;
       else if (['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(o.order_status)) todayConfirmed++;
       if (['shipped', 'out_for_delivery'].includes(o.order_status)) todayShipped++;
       if (o.order_status === 'returned') todayReturns++;
@@ -713,6 +713,10 @@ function SalesPage() {
   const getStatusBadge = (status) => {
     const config = {
       pending: { label: 'Pending', class: 'bg-slate-100 text-slate-700 border border-slate-200' },
+      on_hold: { label: 'On Hold', class: 'bg-yellow-50 text-yellow-700 border border-yellow-300' },
+      call_not_received: { label: 'Call Not Received', class: 'bg-amber-50 text-amber-700 border border-amber-300' },
+      follow_up: { label: 'Follow Up', class: 'bg-indigo-50 text-indigo-700 border border-indigo-300' },
+      callback_requested: { label: 'Callback Requested', class: 'bg-pink-50 text-pink-700 border border-pink-300' },
       confirmed: { label: 'Confirmed', class: 'bg-white text-[#D32F2F] border-2 border-[#D32F2F]' },
       processing: { label: 'Processing', class: 'bg-blue-50 text-blue-700 border border-blue-200' },
       packed: { label: 'Packed', class: 'bg-purple-50 text-purple-700 border border-purple-200' },
@@ -858,16 +862,20 @@ function SalesPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="packed">Packed</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="returned">Returned</SelectItem>
+                       <SelectItem value="all">All Status</SelectItem>
+                       <SelectItem value="pending">Pending</SelectItem>
+                       <SelectItem value="on_hold">On Hold</SelectItem>
+                       <SelectItem value="call_not_received">Call Not Received</SelectItem>
+                       <SelectItem value="follow_up">Follow Up</SelectItem>
+                       <SelectItem value="callback_requested">Callback Requested</SelectItem>
+                       <SelectItem value="confirmed">Confirmed</SelectItem>
+                       <SelectItem value="processing">Processing</SelectItem>
+                       <SelectItem value="packed">Packed</SelectItem>
+                       <SelectItem value="shipped">Shipped</SelectItem>
+                       <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                       <SelectItem value="delivered">Delivered</SelectItem>
+                       <SelectItem value="cancelled">Cancelled</SelectItem>
+                       <SelectItem value="returned">Returned</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1394,13 +1402,48 @@ function SalesPage() {
                                 <ChevronDown className="w-3 h-3" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="center" sideOffset={4}>
-                              {order.order_status === 'pending' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                  <CheckCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                  Confirm Order
-                                </DropdownMenuItem>
+                            <DropdownMenuContent align="center" sideOffset={4} className="min-w-[200px]">
+                              {/* Pre-confirmation statuses */}
+                              {['pending', 'on_hold', 'call_not_received', 'follow_up', 'callback_requested'].includes(order.order_status) && (
+                                <>
+                                  {order.order_status !== 'on_hold' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'on_hold')}>
+                                      <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                                      Put On Hold
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'call_not_received' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'call_not_received')}>
+                                      <Phone className="w-4 h-4 mr-2 text-amber-600" />
+                                      Call Not Received
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'follow_up' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'follow_up')}>
+                                      <RefreshCw className="w-4 h-4 mr-2 text-indigo-600" />
+                                      Needs Follow Up
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'callback_requested' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'callback_requested')}>
+                                      <Phone className="w-4 h-4 mr-2 text-pink-600" />
+                                      Callback Requested
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'pending' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'pending')}>
+                                      <AlertCircle className="w-4 h-4 mr-2 text-slate-600" />
+                                      Back to Pending
+                                    </DropdownMenuItem>
+                                  )}
+                                  <div className="border-t border-slate-100 my-1" />
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                    ✅ Confirm Order
+                                  </DropdownMenuItem>
+                                </>
                               )}
+                              {/* Post-confirmation statuses — same as before */}
                               {order.order_status === 'confirmed' && (
                                 <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
                                   <Package className="w-4 h-4 mr-2 text-indigo-600" />
