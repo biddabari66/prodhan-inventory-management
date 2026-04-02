@@ -10,10 +10,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-import { QRCodeCanvas, getQRValue } from './QRCodeGenerator';
+import { QRCodeCanvas, getQRValue, extractCodeFromScan } from './QRCodeGenerator';
 import jsQR from 'jsqr';
 
-export default function QRStockScanner({ inventory, currentUser, onStockUpdated }) {
+export default function QRStockScanner({ inventory, currentUser, onStockUpdated, autoLookupCode, onAutoLookupHandled }) {
   const [mode, setMode] = useState('manual');
   const [scanAction, setScanAction] = useState('lookup');
   const [manualCode, setManualCode] = useState('');
@@ -55,8 +55,9 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated 
     }
   }, []);
 
-  const handleCodeDetected = useCallback((code) => {
+  const handleCodeDetected = useCallback((rawValue) => {
     stopCamera();
+    const code = extractCodeFromScan(rawValue);
     const product = findProduct(code);
     if (product) {
       setMatchedProduct(product);
@@ -117,6 +118,21 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated 
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
+
+  // Auto-lookup when opened from external QR scan
+  useEffect(() => {
+    if (autoLookupCode && inventory?.length > 0) {
+      const product = findProduct(autoLookupCode);
+      if (product) {
+        setMatchedProduct(product);
+        setManualCode(autoLookupCode);
+        toast.success(`Found: ${product.item_name}`);
+      } else {
+        toast.error(`No product found for code: ${autoLookupCode}`);
+      }
+      if (onAutoLookupHandled) onAutoLookupHandled();
+    }
+  }, [autoLookupCode, inventory, findProduct, onAutoLookupHandled]);
 
   const handleManualSearch = () => {
     if (!manualCode.trim()) return;

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Camera, Package, Search, ScanLine, Keyboard, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import jsQR from 'jsqr';
+import { extractCodeFromScan } from './QRCodeGenerator';
 
 export default function QRCodeScanner({ inventory, onProductFound, onClose, open }) {
   const [mode, setMode] = useState('camera');
@@ -46,8 +47,9 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  const handleCodeDetected = useCallback((code) => {
+  const handleCodeDetected = useCallback((rawValue) => {
     stopCamera();
+    const code = extractCodeFromScan(rawValue);
     const product = findProduct(code);
     if (product) {
       setMatchedProduct(product);

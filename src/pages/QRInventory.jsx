@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,10 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { ScanLine, Printer, Package, QrCode, Loader2 } from 'lucide-react';
 import QRStickerSheet from '../components/inventory/QRStickerSheet';
 import QRStockScanner from '../components/inventory/QRStockScanner.jsx';
+import { extractCodeFromScan } from '../components/inventory/QRCodeGenerator';
 
 
 export default function QRInventory() {
   const [activeTab, setActiveTab] = useState('scan');
+  const [autoLookupCode, setAutoLookupCode] = useState(null);
+
+  // Check URL for ?code= parameter (from external QR scan)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rawCode = params.get('code');
+    if (rawCode) {
+      setAutoLookupCode(extractCodeFromScan(rawCode));
+      setActiveTab('scan');
+    }
+  }, []);
 
   const { data: inventory = [], isLoading, refetch } = useQuery({
     queryKey: ['inventory-for-qr'],
@@ -84,6 +96,8 @@ export default function QRInventory() {
                 inventory={inventory}
                 currentUser={currentUser}
                 onStockUpdated={refetch}
+                autoLookupCode={autoLookupCode}
+                onAutoLookupHandled={() => setAutoLookupCode(null)}
               />
             </CardContent>
           </Card>
