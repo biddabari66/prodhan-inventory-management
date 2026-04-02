@@ -490,9 +490,15 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const fairQtyCheck = data.condition_breakdown?.fair?.quantity || 0;
       const damagedQtyCheck = data.condition_breakdown?.damaged?.quantity || 0;
       const actionCheck = data.action || data.condition_breakdown?.good?.action || 'restock';
-      const isAllDamagedReturn = data.type === 'return' && goodQtyCheck === 0 && fairQtyCheck === 0 && damagedQtyCheck > 0;
-      const isWriteOffAction = data.type === 'return' && actionCheck === 'write_off';
-      const effectiveType = (data.type === 'damage' || isAllDamagedReturn || isWriteOffAction) ? 'damage' : data.type;
+      
+      // BULLETPROOF damage detection:
+      // 1. Explicit damage type
+      // 2. All qty in damaged column with zero good/fair
+      // 3. Explicit write_off action passed
+      const isExplicitDamage = data.type === 'damage';
+      const isAllDamagedReturn = !isExplicitDamage && goodQtyCheck === 0 && fairQtyCheck === 0 && damagedQtyCheck > 0;
+      const isWriteOffAction = !isExplicitDamage && actionCheck === 'write_off';
+      const effectiveType = (isExplicitDamage || isAllDamagedReturn || isWriteOffAction) ? 'damage' : data.type;
       const effectiveAction = (effectiveType === 'damage') ? 'write_off' : (data.action || 'restock');
       let quantityChange = 0;
       if (effectiveAction === 'restock') {
@@ -540,6 +546,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     onSuccess: (result, data) => {
       queryClient.invalidateQueries(['inventory']);
       queryClient.invalidateQueries(['movements']);
+      queryClient.invalidateQueries(['movements-returns-all']);
       toast.success(`${data.type === 'return' ? 'Return' : 'Damage'} recorded successfully!`);
       setIsFormOpen(false);
       setEditingMovement(null);
@@ -602,6 +609,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     onSuccess: () => {
       queryClient.invalidateQueries(['inventory']);
       queryClient.invalidateQueries(['movements']);
+      queryClient.invalidateQueries(['movements-returns-all']);
       toast.success('Record updated successfully!');
       setIsFormOpen(false);
       setEditingMovement(null);
@@ -636,6 +644,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     onSuccess: () => {
       queryClient.invalidateQueries(['inventory']);
       queryClient.invalidateQueries(['movements']);
+      queryClient.invalidateQueries(['movements-returns-all']);
       toast.success('Record deleted successfully!');
       setDeleteConfirmOpen(false);
       setMovementToDelete(null);
@@ -713,16 +722,20 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
             const fairQty = item.condition_breakdown?.fair?.quantity || 0;
             const damagedQty = item.condition_breakdown?.damaged?.quantity || 0;
             const goodAction = item.condition_breakdown?.good?.action || 'restock';
-            const damagedAction = item.condition_breakdown?.damaged?.action || 'write_off';
+            const fairAction = item.condition_breakdown?.fair?.action || 'return_to_supplier';
             
-            // CRITICAL: Determine effective type
-            // 1. Explicit damage type from form
-            // 2. ALL items in damaged column → damage record
-            // 3. ALL items have write_off action → damage record
+            // CRITICAL: Determine effective type — damage vs return
+            // Rule 1: Explicit damage type from form → always damage
+            // Rule 2: ALL quantity is in damaged column → damage
+            // Rule 3: ALL actions are write_off across all conditions → damage
+            // Rule 4: Only good/fair with restock/return_to_supplier → return
             const isDamageType = data.type === 'damage';
             const isAllDamaged = !isDamageType && goodQty === 0 && fairQty === 0 && damagedQty > 0;
-            const isAllWriteOff = !isDamageType && goodAction === 'write_off' && goodQty > 0 && damagedQty === 0;
-            const effectiveType = (isDamageType || isAllDamaged || isAllWriteOff) ? 'damage' : data.type;
+            const allActionsAreWriteOff = !isDamageType && 
+              ((goodQty > 0 && goodAction === 'write_off') || goodQty === 0) &&
+              ((fairQty > 0 && fairAction === 'write_off') || fairQty === 0) &&
+              (goodQty > 0 || fairQty > 0 || damagedQty > 0);
+            const effectiveType = (isDamageType || isAllDamaged) ? 'damage' : data.type;
             const shouldWriteOff = effectiveType === 'damage';
             
             // Partial return: has BOTH good (restock) and damaged quantities in a return
@@ -732,7 +745,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               inventory_item_id: item.inventory_item_id,
               quantity: item.quantity,
               type: effectiveType,
-              return_type: item.return_type,
+              return_type: item.return_type || data.return_type,
               reason: data.reason,
               action: shouldWriteOff ? 'write_off' : (goodAction === 'write_off' ? 'write_off' : goodAction),
               condition: shouldWriteOff ? 'damaged' : (goodQty > 0 ? 'good' : 'damaged'),
@@ -755,6 +768,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               damaged_qty: shouldWriteOff ? item.quantity : damagedQty
             });
           }
+          // Ensure queries refresh with new data
+          await queryClient.invalidateQueries(['movements-returns-all']);
+          await queryClient.invalidateQueries(['inventory']);
           toast.success(`${data.items.length} product(s) processed successfully!`);
           setIsFormOpen(false);
         } catch (error) {
@@ -1034,6 +1050,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                     <TableHead className="whitespace-nowrap">Phone</TableHead>
                     <TableHead className="min-w-[150px]">Reason</TableHead>
                     <TableHead>Action</TableHead>
+                    <TableHead className="min-w-[180px]">Notes</TableHead>
                     <TableHead className="text-right whitespace-nowrap">Impact</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -1041,7 +1058,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 <TableBody>
                   {returnsData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                         <RotateCcw className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No returns recorded</p>
                       </TableCell>
@@ -1104,6 +1121,15 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                             </div>
                           </TableCell>
                           <TableCell>{getActionBadge(metadata.action)}</TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            <div className="max-w-[200px]">
+                              {movement.notes ? (
+                                <p className="line-clamp-2" title={movement.notes}>{movement.notes}</p>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right text-red-600 font-semibold whitespace-nowrap">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
                           </TableCell>
@@ -1185,6 +1211,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                     <TableHead>Condition</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead>Reported By</TableHead>
+                    <TableHead className="min-w-[180px]">Notes</TableHead>
                     <TableHead className="text-right">Loss Value</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -1192,7 +1219,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 <TableBody>
                   {damagesData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         <AlertOctagon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No damages recorded</p>
                       </TableCell>
@@ -1222,6 +1249,15 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           <TableCell>{getActionBadge(metadata.action || 'write_off')}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {movement.performed_by}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            <div className="max-w-[200px]">
+                              {movement.notes ? (
+                                <p className="line-clamp-2" title={movement.notes}>{movement.notes}</p>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right text-red-600 font-semibold">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
