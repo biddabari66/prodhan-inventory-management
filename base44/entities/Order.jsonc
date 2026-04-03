@@ -115,7 +115,8 @@
         "nagad",
         "rocket",
         "bank_transfer",
-        "card"
+        "card",
+        "cash_on_delivery"
       ],
       "description": "Payment method"
     },
@@ -255,6 +256,11 @@
     "adprofit_failed_items": {
       "type": "number",
       "description": "Number of items that failed to sync"
+    },
+    "sales_day_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The business day this order is counted towards. Set when daily sales are finalized."
     }
   },
   "required": [

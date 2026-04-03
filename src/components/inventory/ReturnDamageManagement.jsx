@@ -405,14 +405,19 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
     await base44.entities.Inventory.update(inventoryItemId, { current_stock: newStock });
 
+    // For write-offs (damages), ensure financial impact uses purchase_price if not provided
+    const effectiveFinancialImpact = (referenceType === 'damage' && action === 'write_off' && (!financialImpact || financialImpact === 0))
+      ? (inventoryItem.purchase_price || 0) * qty
+      : financialImpact;
+
     await base44.entities.InventoryMovement.create({
       inventory_item_id: inventoryItemId,
       movement_type: isRestock ? 'in' : 'adjustment',
       quantity: qty,
-      reference_type: referenceType, // 'return' or 'damage' — directly controls which tab
+      reference_type: referenceType,
       reference_number: orderNumber || `${referenceType.toUpperCase()}-${Date.now()}`,
       unit_cost: returnType === 'purchase_return' ? inventoryItem.purchase_price : inventoryItem.selling_price,
-      total_value: -Math.abs(financialImpact),
+      total_value: -Math.abs(effectiveFinancialImpact),
       performed_by: currentUser?.id || 'system',
       notes: notes || '',
       movement_date: incidentDate,
@@ -739,13 +744,22 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     const returnCount = returnsData.length;
     const damageCount = damagesData.length;
     const returnValue = Math.abs(returnsData.reduce((sum, m) => sum + (m.total_value || 0), 0));
-    const damageValue = Math.abs(damagesData.reduce((sum, m) => sum + (m.total_value || 0), 0));
+    
+    // For damages: use total_value, but fall back to purchase_price * qty if total_value is 0
+    const damageValue = damagesData.reduce((sum, m) => {
+      const absValue = Math.abs(m.total_value || 0);
+      if (absValue > 0) return sum + absValue;
+      // Fallback: compute from inventory purchase_price
+      const item = inventoryMap[m.inventory_item_id];
+      const qty = m.metadata?.original_quantity || Math.abs(m.quantity) || 1;
+      return sum + ((item?.purchase_price || 0) * qty);
+    }, 0);
+    
     const totalLoss = returnValue + damageValue;
     
     // Calculate total loss quantity (write-offs only)
     const lossQuantity = [...returnsData, ...damagesData].reduce((sum, m) => {
       const metadata = m.metadata || {};
-      // Count write-offs as losses
       if (metadata.action === 'write_off' || metadata.condition === 'damaged') {
         return sum + (metadata.damaged_qty || metadata.original_quantity || Math.abs(m.quantity) || 0);
       }

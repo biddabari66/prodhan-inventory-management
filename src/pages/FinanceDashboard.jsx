@@ -212,21 +212,35 @@ function FinanceDashboardPage() {
       .filter(e => e.status === 'approved')
       .reduce((sum, e) => sum + (e.total_amount || 0) + (e.courier_expense || 0), 0);
 
-    // Returns/Damage loss - calculate using actual selling price from inventory
+    // Returns/Damage loss - separate tracking for accuracy
     const inventoryPriceMap = {};
+    const inventoryCostMap = {};
     inventoryData.forEach(inv => {
       inventoryPriceMap[inv.id] = inv.selling_price || 0;
+      inventoryCostMap[inv.id] = inv.purchase_price || 0;
     });
-    
-    const returnLoss = returns.reduce((sum, r) => {
-      // Use total_value if present, otherwise calculate from quantity * selling price
-      if (r.total_value && r.total_value !== 0) {
-        return sum + Math.abs(r.total_value);
-      }
+
+    // Split returns into actual returns vs damage write-offs
+    const returnMovements = returns.filter(r => r.reference_type === 'return');
+    const damageMovements = returns.filter(r => r.reference_type === 'damage' || r.reference_type === 'expired');
+
+    // Return loss uses selling price (customer refund value)
+    const actualReturnLoss = returnMovements.reduce((sum, r) => {
+      if (r.total_value && r.total_value !== 0) return sum + Math.abs(r.total_value);
       const price = inventoryPriceMap[r.inventory_item_id] || 0;
       const qty = Math.abs(r.quantity || (r.metadata?.original_quantity || 1));
       return sum + (qty * price);
     }, 0);
+
+    // Damage loss uses purchase price (actual cost lost through write-offs)
+    const damageLoss = damageMovements.reduce((sum, r) => {
+      if (r.total_value && r.total_value !== 0) return sum + Math.abs(r.total_value);
+      const costPrice = inventoryCostMap[r.inventory_item_id] || 0;
+      const qty = Math.abs(r.quantity || (r.metadata?.original_quantity || 1));
+      return sum + (qty * costPrice);
+    }, 0);
+
+    const returnLoss = actualReturnLoss + damageLoss;
 
     // General expenses (from Expense entity - not purchase orders)
     const otherExpenses = generalExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -274,6 +288,8 @@ function FinanceDashboardPage() {
       costOfGoods,
       packagingCost,
       returnLoss,
+      actualReturnLoss,
+      damageLoss,
       customExpenses,
       totalExpenses,
       grossProfit,
@@ -299,7 +315,8 @@ function FinanceDashboardPage() {
   const expenseBreakdown = [
     { name: 'Purchase Cost', value: financials.costOfGoods, fill: '#DC2626' },
     { name: 'Packaging & Courier', value: financials.packagingCost, fill: '#F59E0B' },
-    { name: 'Returns/Wastage', value: financials.returnLoss, fill: '#EF4444' },
+    { name: 'Returns Loss', value: financials.actualReturnLoss, fill: '#F97316' },
+    { name: 'Damage/Waste Loss', value: financials.damageLoss, fill: '#EF4444' },
     { name: 'Production Expenses', value: financials.customExpenses, fill: '#A855F7' },
     { name: 'Ad Spend', value: financials.totalAdSpend, fill: '#8B5CF6' },
     { name: 'Other Expenses', value: financials.otherExpenses, fill: '#EC4899' },
@@ -339,7 +356,8 @@ function FinanceDashboardPage() {
       ['Cost of Goods (Purchases)', financials.costOfGoods],
       ['Packaging & Courier', financials.packagingCost],
       ['Production Expenses', financials.customExpenses],
-      ['Returns & Wastage', financials.returnLoss],
+      ['Returns Loss (Refunds)', financials.actualReturnLoss],
+      ['Damage/Waste Loss (Write-off)', financials.damageLoss],
       ['Other Dept Expenses', financials.otherExpenses],
       ['Total Direct Expenses', financials.totalExpenses],
       [''],
@@ -812,8 +830,12 @@ function FinanceDashboardPage() {
                 <span className="font-bold text-amber-600">৳{financials.packagingCost.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Returns & Wastage</span>
-                <span className="font-bold text-orange-600">৳{financials.returnLoss.toLocaleString()}</span>
+                <span className="text-sm text-slate-600">Returns (Refunds)</span>
+                <span className="font-bold text-orange-600">৳{financials.actualReturnLoss.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                <span className="text-sm text-slate-600">Damage/Waste (Write-off)</span>
+                <span className="font-bold text-red-600">৳{financials.damageLoss.toLocaleString()}</span>
               </div>
               {financials.customExpenses > 0 && (
                 <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">

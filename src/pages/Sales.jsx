@@ -43,6 +43,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
+import DailySalesFinalizer from '../components/sales/DailySalesFinalizer';
 
 // Main Sales Page
 function SalesPage() {
@@ -939,6 +940,15 @@ function SalesPage() {
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
+            )}
+            {isAdmin && (
+              <DailySalesFinalizer
+                isAdmin={isAdmin}
+                onComplete={() => {
+                  queryClient.invalidateQueries(['orders-sales-recent']);
+                  queryClient.invalidateQueries(['orders-sales-all']);
+                }}
+              />
             )}
             {canCreate && (
               <>
