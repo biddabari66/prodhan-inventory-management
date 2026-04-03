@@ -30,6 +30,8 @@ import { base44 } from '@/api/base44Client';
 import { useDebounce, useThrottle, CacheManager, usePerformanceMonitor } from '../components/common/PerformanceOptimizer';
 import { useOptimisticActions } from '../components/common/OptimisticActions';
 
+import MobileCheckInOut from '../components/attendance/MobileCheckInOut';
+
 // Lazy load heavy components for faster initial load
 const AttendanceAnalytics = React.lazy(() => import('../components/attendance/AttendanceAnalytics'));
 const ManualAttendanceForm = React.lazy(() => import('../components/attendance/ManualAttendanceForm'));
@@ -659,7 +661,7 @@ export default function AttendancePage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-8 space-y-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
       
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -719,7 +721,7 @@ export default function AttendancePage() {
       )}
 
       <Tabs defaultValue="checkinout" className="space-y-6">
-        <TabsList className={`grid w-full ${isAdmin() ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-3'} h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm`}>
+        <TabsList className={`flex w-full ${isAdmin() ? '' : ''} h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto gap-1`}>
           <TabsTrigger value="checkinout" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Check In/Out</TabsTrigger>
           <TabsTrigger value="analytics" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Analytics</TabsTrigger>
           <TabsTrigger value="manual" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Manual Entry</TabsTrigger>
@@ -727,102 +729,85 @@ export default function AttendancePage() {
           {isAdmin() && <TabsTrigger value="settings" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">⚙️ Settings</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="checkinout" className="space-y-6">
-          {/* Digital Clock */}
-          <DigitalClock />
+        <TabsContent value="checkinout" className="space-y-4 sm:space-y-6">
+          {/* Mobile-optimized Check In/Out */}
+          <div className="lg:hidden">
+            <MobileCheckInOut currentUser={currentUser} todayAttendance={todayAttendance} onRefresh={() => { CacheManager.clearAll(); loadAllAttendanceData(); }} />
+          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Attendance Actions - Premium Design */}
-            <Card className="bg-white border border-slate-200 shadow-md">
-              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 pb-5">
-                <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-white" />
+          {/* Desktop Check In/Out */}
+          <div className="hidden lg:block space-y-6">
+            <DigitalClock />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Attendance Actions */}
+              <Card className="bg-white border border-slate-200 shadow-md">
+                <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 pb-5">
+                  <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-white" />
+                    </div>
+                    Today's Attendance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-sm font-semibold text-slate-700">Current Status:</span>
+                    <Badge className={`${attendanceStatus.color} px-4 py-2 text-sm font-bold`}>
+                      {attendanceStatus.status}
+                    </Badge>
                   </div>
-                  Today's Attendance
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-sm font-semibold text-slate-700">Current Status:</span>
-                  <Badge className={`${attendanceStatus.color} px-4 py-2 text-sm font-bold`}>
-                    {attendanceStatus.status}
-                  </Badge>
-                </div>
 
-                {todayAttendance && (
-                  <div className="space-y-2 text-sm">
-                    {todayAttendance.check_in_time && (
-                      <div className="flex justify-between">
-                        <span>Check-in:</span>
-                        <span className="font-mono">{todayAttendance.check_in_time}</span>
-                      </div>
-                    )}
-                    {todayAttendance.check_out_time && (
-                      <div className="flex justify-between">
-                        <span>Check-out:</span>
-                        <span className="font-mono">{todayAttendance.check_out_time}</span>
-                      </div>
-                    )}
-                    {todayAttendance.working_hours != null && ( // EXPERT FIX: Check for null, not just truthiness
-                      <div className="flex justify-between">
-                        <span>Working Hours:</span>
-                        <span className="font-mono">{todayAttendance.working_hours.toFixed(1)}h</span>
-                      </div>
-                    )}
+                  {todayAttendance && (
+                    <div className="space-y-2 text-sm">
+                      {todayAttendance.check_in_time && (
+                        <div className="flex justify-between"><span>Check-in:</span><span className="font-mono">{todayAttendance.check_in_time}</span></div>
+                      )}
+                      {todayAttendance.check_out_time && (
+                        <div className="flex justify-between"><span>Check-out:</span><span className="font-mono">{todayAttendance.check_out_time}</span></div>
+                      )}
+                      {todayAttendance.working_hours != null && (
+                        <div className="flex justify-between"><span>Working Hours:</span><span className="font-mono">{todayAttendance.working_hours.toFixed(1)}h</span></div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() => submitAttendance('check_in')}
+                      disabled={isSubmitting || !!todayAttendance?.check_in_time}
+                      className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50"
+                    >
+                      {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
+                      Check In Now
+                    </Button>
+                    <Button
+                      onClick={() => submitAttendance('check_out')}
+                      disabled={isSubmitting || !todayAttendance?.check_in_time || !!todayAttendance?.check_out_time}
+                      className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-[#D32F2F] w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50"
+                    >
+                      {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <XCircle className="w-5 h-5 mr-2" />}
+                      Check Out
+                    </Button>
                   </div>
-                )}
 
-                <div className="space-y-4">
-                  <Button
-                    onClick={() => submitAttendance('check_in')}
-                    disabled={isSubmitting || !!todayAttendance?.check_in_time}
-                    className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 mr-2" />
-                    )}
-                    Check In Now
-                  </Button>
+                  {locationPermissionStatus !== 'granted' && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">Location permission required. Please enable GPS.</AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
 
-                  <Button
-                    onClick={() => submitAttendance('check_out')}
-                    disabled={isSubmitting || !todayAttendance?.check_in_time || !!todayAttendance?.check_out_time}
-                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-[#D32F2F] w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    ) : (
-                      <XCircle className="w-5 h-5 mr-2" />
-                    )}
-                    Check Out
-                  </Button>
-                </div>
-
-                {locationPermissionStatus !== 'granted' && (
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      Location permission is required for attendance. Please enable location access in your browser.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Location Status */}
-            <LocationStatus
-              currentLocation={currentLocation}
-              isLocationLoading={isLocationLoading || isSubmitting} // Use isSubmitting for loading state during attendance actions, but also allow its own refresh
-              onRefreshLocation={getCurrentLocationAdvanced}
-              officeLocation={attendanceSettings ? {
-                latitude: attendanceSettings.office_latitude,
-                longitude: attendanceSettings.office_longitude
-              } : null}
-              allowedRadius={attendanceSettings?.radius_meters}
-            />
+              {/* Location Status */}
+              <LocationStatus
+                currentLocation={currentLocation}
+                isLocationLoading={isLocationLoading || isSubmitting}
+                onRefreshLocation={getCurrentLocationAdvanced}
+                officeLocation={attendanceSettings ? { latitude: attendanceSettings.office_latitude, longitude: attendanceSettings.office_longitude } : null}
+                allowedRadius={attendanceSettings?.radius_meters}
+              />
+            </div>
           </div>
         </TabsContent>
 

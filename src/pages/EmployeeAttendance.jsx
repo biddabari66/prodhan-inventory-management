@@ -87,9 +87,10 @@ function EmployeeAttendancePage() {
       const [year, month] = selectedMonth.split('-');
       const start = format(startOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
       const end = format(endOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
-      const records = await Attendance.list('-date', 5000);
-      return records.filter(r => r.date >= start && r.date <= end);
-    }
+      const records = await Attendance.filter({ date: { $gte: start, $lte: end } }, '-date', 5000);
+      return records;
+    },
+    staleTime: 2 * 60 * 1000
   });
 
   // Location tracking
@@ -226,7 +227,7 @@ function EmployeeAttendancePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
       <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
         <span>HR</span><span>/</span><span className="text-slate-900 font-medium">Attendance</span>
       </div>
@@ -246,71 +247,68 @@ function EmployeeAttendancePage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-2'} h-11`}>
-          <TabsTrigger value="checkin" className="gap-1.5 text-sm"><LogIn className="w-4 h-4" /> Check In/Out</TabsTrigger>
-          <TabsTrigger value="history" className="gap-1.5 text-sm"><History className="w-4 h-4" /> My History</TabsTrigger>
+        <TabsList className={`flex w-full overflow-x-auto h-11 gap-1`}>
+          <TabsTrigger value="checkin" className="gap-1.5 text-sm flex-shrink-0"><LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Check In/</span>Out</TabsTrigger>
+          <TabsTrigger value="history" className="gap-1.5 text-sm flex-shrink-0"><History className="w-4 h-4" /> <span className="hidden sm:inline">My </span>History</TabsTrigger>
           {isAdmin && <TabsTrigger value="admin" className="gap-1.5 text-sm"><Users className="w-4 h-4" /> All Staff</TabsTrigger>}
           {isAdmin && <TabsTrigger value="location" className="gap-1.5 text-sm"><MapPin className="w-4 h-4" /> Location</TabsTrigger>}
           {isAdmin && <TabsTrigger value="settings" className="gap-1.5 text-sm"><Settings className="w-4 h-4" /> Shifts</TabsTrigger>}
         </TabsList>
 
         {/* CHECK IN/OUT */}
-        <TabsContent value="checkin" className="space-y-5 mt-4">
-          <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
-            <CardContent className="pt-8 pb-6"><DigitalClock /></CardContent>
+        <TabsContent value="checkin" className="space-y-4 sm:space-y-5 mt-4">
+          <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-2xl">
+            <CardContent className="pt-6 sm:pt-8 pb-4 sm:pb-6"><DigitalClock /></CardContent>
           </Card>
 
           {/* Location info */}
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl text-sm">
-            <div className={`w-2.5 h-2.5 rounded-full ${currentLocation ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
-            <MapPin className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-600">{currentLocation ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}` : 'Getting location...'}</span>
-            <span className="mx-2 text-slate-300">|</span>
-            <Wifi className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-600">{ipAddress || '...'}</span>
-            {locationAccuracy && <Badge variant="outline" className="ml-auto text-xs">{Math.round(locationAccuracy)}m accuracy</Badge>}
+          <div className="flex items-center gap-2.5 p-3 bg-slate-50 rounded-xl text-sm flex-wrap">
+            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${currentLocation ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+            <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <span className="text-slate-600 text-xs sm:text-sm">{currentLocation ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}` : 'Getting location...'}</span>
+            {locationAccuracy && <Badge variant="outline" className="text-[10px] sm:text-xs ml-auto">{Math.round(locationAccuracy)}m</Badge>}
           </div>
 
-          {/* Today's status */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="p-5">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-green-800">Check In</span>
-                  {todayAttendance?.check_in_time ? <Badge className="bg-emerald-600 text-white text-xs">Done</Badge> : <Badge variant="outline" className="text-amber-600 text-xs">Pending</Badge>}
+          {/* Today's status - Mobile optimized */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <Card className="border-green-200 bg-green-50/50 rounded-xl">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex justify-between items-center mb-2 sm:mb-3">
+                  <span className="text-xs sm:text-sm font-medium text-green-800">Check In</span>
+                  {todayAttendance?.check_in_time ? <Badge className="bg-emerald-600 text-white text-[10px] sm:text-xs">Done</Badge> : <Badge variant="outline" className="text-amber-600 text-[10px] sm:text-xs">Pending</Badge>}
                 </div>
                 {todayAttendance?.check_in_time ? (
-                  <p className="text-3xl font-bold text-green-700">{todayAttendance.check_in_time}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-green-700 font-mono">{todayAttendance.check_in_time}</p>
                 ) : (
-                  <Button onClick={handleCheckIn} disabled={isCheckingIn || !currentLocation} className="w-full bg-emerald-600 hover:bg-emerald-700 h-12">
+                  <Button onClick={handleCheckIn} disabled={isCheckingIn || !currentLocation} className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 sm:h-12 text-sm sm:text-base rounded-xl">
                     {isCheckingIn ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogIn className="w-4 h-4 mr-2" />} Check In
                   </Button>
                 )}
               </CardContent>
             </Card>
-            <Card className="border-red-200 bg-red-50/50">
-              <CardContent className="p-5">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-red-800">Check Out</span>
-                  {todayAttendance?.check_out_time ? <Badge className="bg-red-600 text-white text-xs">Done</Badge> : <Badge variant="outline" className="text-amber-600 text-xs">Pending</Badge>}
+            <Card className="border-red-200 bg-red-50/50 rounded-xl">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex justify-between items-center mb-2 sm:mb-3">
+                  <span className="text-xs sm:text-sm font-medium text-red-800">Check Out</span>
+                  {todayAttendance?.check_out_time ? <Badge className="bg-red-600 text-white text-[10px] sm:text-xs">Done</Badge> : <Badge variant="outline" className="text-amber-600 text-[10px] sm:text-xs">Pending</Badge>}
                 </div>
                 {todayAttendance?.check_out_time ? (
-                  <p className="text-3xl font-bold text-red-700">{todayAttendance.check_out_time}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-red-700 font-mono">{todayAttendance.check_out_time}</p>
                 ) : (
-                  <Button onClick={handleCheckOut} disabled={isCheckingOut || !todayAttendance?.check_in_time} variant="destructive" className="w-full h-12">
+                  <Button onClick={handleCheckOut} disabled={isCheckingOut || !todayAttendance?.check_in_time} variant="destructive" className="w-full h-12 sm:h-12 text-sm sm:text-base rounded-xl">
                     {isCheckingOut ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogOut className="w-4 h-4 mr-2" />} Check Out
                   </Button>
                 )}
               </CardContent>
             </Card>
-            <Card className="border-blue-200 bg-blue-50/50">
-              <CardContent className="p-5">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-blue-800">Working Hours</span>
+            <Card className="border-blue-200 bg-blue-50/50 rounded-xl">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex justify-between items-center mb-2 sm:mb-3">
+                  <span className="text-xs sm:text-sm font-medium text-blue-800">Working Hours</span>
                   <Timer className="w-4 h-4 text-blue-500" />
                 </div>
-                <p className="text-3xl font-bold text-blue-700">{todayAttendance?.working_hours != null ? `${Number(todayAttendance.working_hours).toFixed(1)}h` : '--'}</p>
-                {todayAttendance?.status && <Badge className={`mt-2 ${STATUS_CONFIG[todayAttendance.status]?.color}`}>{STATUS_CONFIG[todayAttendance.status]?.label}</Badge>}
+                <p className="text-2xl sm:text-3xl font-bold text-blue-700 font-mono">{todayAttendance?.working_hours != null ? `${Number(todayAttendance.working_hours).toFixed(1)}h` : '--'}</p>
+                {todayAttendance?.status && <Badge className={`mt-2 text-[10px] sm:text-xs ${STATUS_CONFIG[todayAttendance.status]?.color}`}>{STATUS_CONFIG[todayAttendance.status]?.label}</Badge>}
               </CardContent>
             </Card>
           </div>
@@ -376,27 +374,27 @@ function EmployeeAttendancePage() {
         {isAdmin && (
           <TabsContent value="admin" className="space-y-5 mt-4">
             {/* Controls */}
-            <div className="flex flex-col lg:flex-row gap-3">
-              <div className="relative flex-1">
+            <div className="flex flex-col gap-3">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input placeholder="Search employee..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-10" />
+                <Input placeholder="Search employee..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-11 rounded-xl" />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <div className="flex items-center border rounded-lg overflow-hidden">
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none" onClick={() => changeMonth(-1)}><ChevronLeft className="w-4 h-4" /></Button>
-                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40 h-10 border-0 rounded-none text-sm text-center" />
+                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36 sm:w-40 h-10 border-0 rounded-none text-xs sm:text-sm text-center" />
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none" onClick={() => changeMonth(1)}><ChevronRight className="w-4 h-4" /></Button>
                 </div>
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger className="w-[180px] h-10"><SelectValue placeholder="All Employees" /></SelectTrigger>
+                  <SelectTrigger className="w-[140px] sm:w-[180px] h-10 text-xs sm:text-sm"><SelectValue placeholder="All" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Employees</SelectItem>
                     {allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" className="h-10" onClick={handleExport}><Download className="w-4 h-4 mr-1" /> Export</Button>
-                <Button size="sm" className="h-10 bg-red-600 hover:bg-red-700" onClick={() => setManualEntry({ employee_id: '', date: format(new Date(), 'yyyy-MM-dd'), check_in_time: '09:00', check_out_time: '18:00', status: 'present', working_hours: 9, notes: '' })}>
-                  <Plus className="w-4 h-4 mr-1" /> Manual Entry
+                <Button variant="outline" size="sm" className="h-10 text-xs" onClick={handleExport}><Download className="w-4 h-4 mr-1" /> Export</Button>
+                <Button size="sm" className="h-10 bg-red-600 hover:bg-red-700 text-xs" onClick={() => setManualEntry({ employee_id: '', date: format(new Date(), 'yyyy-MM-dd'), check_in_time: '09:00', check_out_time: '18:00', status: 'present', working_hours: 9, notes: '' })}>
+                  <Plus className="w-4 h-4 mr-1" /> Manual
                 </Button>
               </div>
             </div>

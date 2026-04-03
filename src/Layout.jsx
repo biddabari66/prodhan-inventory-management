@@ -1800,7 +1800,7 @@ export default function Layout({ children, currentPageName }) {
             </header>
 
             {/* Main Content - OPTIMIZED padding */}
-            <main className="p-4 main-content flex-1 overflow-y-auto lg:p-6">
+            <main className="p-2 sm:p-4 main-content flex-1 overflow-y-auto lg:p-6">
               <ErrorBoundary>
                 <Suspense fallback={
                 <div className="text-center p-20 text-muted-foreground">

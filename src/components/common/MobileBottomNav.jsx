@@ -4,7 +4,7 @@ import { createPageUrl } from '@/utils';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
-  Package, 
+  Clock, 
   MoreHorizontal,
   Users,
   RotateCcw,
@@ -19,6 +19,8 @@ import {
   FileText,
   PackageX,
   Link2,
+  Package,
+  Calculator,
   X
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -30,9 +32,9 @@ import { Badge } from '@/components/ui/badge';
  */
 
 const MAIN_NAV_ITEMS = [
-  { label: 'Inventory', icon: LayoutDashboard, url: createPageUrl('InventoryOverview'), color: 'text-orange-600', bgColor: 'bg-orange-50' },
+  { label: 'Inventory', icon: LayoutDashboard, url: createPageUrl('InventoryOverview'), color: 'text-red-600', bgColor: 'bg-red-50' },
   { label: 'Sales', icon: ShoppingCart, url: createPageUrl('Sales'), color: 'text-green-600', bgColor: 'bg-green-50' },
-  { label: 'Customers', icon: Users, url: createPageUrl('CustomerManagement'), color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  { label: 'Attendance', icon: Clock, url: createPageUrl('Attendance'), color: 'text-blue-600', bgColor: 'bg-blue-50' },
   { label: 'Analytics', icon: BarChart3, url: createPageUrl('ProductAnalytics'), color: 'text-pink-600', bgColor: 'bg-pink-50' }
 ];
 
@@ -54,11 +56,20 @@ const MORE_MENU_ITEMS = [
     ]
   },
   {
+    category: 'HR & People',
+    items: [
+      { label: 'Employees', icon: Users, url: createPageUrl('Employees'), color: 'text-indigo-600' },
+      { label: 'All Attendance', icon: Clock, url: createPageUrl('EmployeeAttendance'), color: 'text-blue-600' },
+      { label: 'Payroll', icon: Calculator, url: createPageUrl('Payroll'), color: 'text-green-600' },
+      { label: 'Customers', icon: Users, url: createPageUrl('CustomerManagement'), color: 'text-purple-600' }
+    ]
+  },
+  {
     category: 'Insights & Reports',
     items: [
       { label: 'AI Insights', icon: Sparkles, url: createPageUrl('InventoryAIInsights'), color: 'text-violet-600' },
       { label: 'Reports', icon: FileText, url: createPageUrl('InventoryReports'), color: 'text-slate-600' },
-      { label: 'Financial Reports', icon: DollarSign, url: createPageUrl('FinancialReports'), color: 'text-green-600' },
+      { label: 'Finance', icon: DollarSign, url: createPageUrl('FinanceDashboard'), color: 'text-green-600' },
       { label: 'Auto Reports', icon: Mail, url: createPageUrl('AutoReportSettings'), color: 'text-blue-600' }
     ]
   },

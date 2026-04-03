@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     try {
@@ -6,121 +6,114 @@ Deno.serve(async (req) => {
         const user = await base44.auth.me();
         
         if (!user) {
-            return Response.json({ 
-                success: false, 
-                error: 'Authentication required',
-                code: 'UNAUTHORIZED'
-            });
+            return Response.json({ success: false, error: 'Authentication required', code: 'UNAUTHORIZED' });
         }
 
-        const { action, latitude, longitude, accuracy } = await req.json();
+        const body = await req.json();
+        const { action, latitude, longitude, accuracy } = body;
+
+        // ===== ANTI-CHEAT: Validate required fields =====
+        if (!action || !latitude || !longitude || accuracy === undefined) {
+            return Response.json({ success: false, error: 'Missing required location data.', code: 'INVALID_DATA' });
+        }
+
+        // ===== ANTI-CHEAT: Reject obviously fake coordinates =====
+        if (latitude === 0 && longitude === 0) {
+            return Response.json({ success: false, error: 'Invalid GPS coordinates detected.', code: 'FAKE_LOCATION' });
+        }
+        if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+            return Response.json({ success: false, error: 'GPS coordinates out of valid range.', code: 'INVALID_COORDINATES' });
+        }
+
+        // ===== ANTI-CHEAT: Reject mock locations (accuracy check) =====
+        if (accuracy < 1) {
+            return Response.json({ success: false, error: 'Mock location detected. Disable location spoofing apps.', code: 'MOCK_LOCATION' });
+        }
 
         // Get attendance settings
         const settingsList = await base44.entities.AttendanceSetting.list();
         if (!settingsList || settingsList.length === 0) {
-            return Response.json({
-                success: false,
-                error: 'Attendance system not configured. Please contact administrator.',
-                code: 'SYSTEM_NOT_CONFIGURED'
-            });
+            return Response.json({ success: false, error: 'Attendance system not configured. Contact administrator.', code: 'SYSTEM_NOT_CONFIGURED' });
         }
-
         const settings = settingsList[0];
 
-        // Validate GPS accuracy
-        if (accuracy > settings.max_gps_accuracy_meters) {
+        // ===== ANTI-CHEAT: GPS accuracy gate =====
+        const maxAccuracy = settings.max_gps_accuracy_meters || 150;
+        if (accuracy > maxAccuracy) {
             return Response.json({
                 success: false,
-                error: `GPS accuracy too poor (${Math.round(accuracy)}m). Please try again with better signal.`,
+                error: `GPS accuracy too poor (${Math.round(accuracy)}m). Max allowed: ${maxAccuracy}m. Move to an open area.`,
                 code: 'GPS_ACCURACY_ERROR'
             });
         }
 
-        // Calculate distance from office
-        const distance = calculateDistance(
-            latitude, longitude, 
-            settings.office_latitude, settings.office_longitude
-        );
-
+        // ===== ANTI-CHEAT: Distance from office =====
+        const distance = calculateDistance(latitude, longitude, settings.office_latitude, settings.office_longitude);
         if (distance > settings.radius_meters) {
             return Response.json({
                 success: false,
-                error: `You are ${Math.round(distance)}m away from office. Must be within ${settings.radius_meters}m to ${action.replace('_', ' ')}.`,
+                error: `You are ${Math.round(distance)}m away from office. Must be within ${settings.radius_meters}m.`,
                 code: 'LOCATION_OUT_OF_RANGE'
             });
         }
 
-        // Get current time in Bangladesh timezone
-        const bangladeshTime = new Intl.DateTimeFormat('en-CA', {
-            timeZone: 'Asia/Dhaka',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        }).format(new Date());
+        // ===== Get Bangladesh time (server-side, tamper-proof) =====
+        const now = new Date();
+        const bdDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+        const bdTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
+        const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+        const userAgent = req.headers.get('user-agent') || 'unknown';
 
-        const bangladeshDateTime = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Asia/Dhaka',
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        }).format(new Date());
-
-        // Check for existing attendance record
-        const existingRecords = await base44.entities.Attendance.filter({
-            employee_id: user.id,
-            date: bangladeshTime
-        });
-
+        // Check existing attendance
+        const existingRecords = await base44.entities.Attendance.filter({ employee_id: user.id, date: bdDate });
         let attendanceRecord = existingRecords.length > 0 ? existingRecords[0] : null;
 
         if (action === 'check_in') {
             if (attendanceRecord && attendanceRecord.check_in_time) {
-                return Response.json({
-                    success: false,
-                    error: 'Already checked in today',
-                    code: 'ALREADY_CHECKED_IN'
-                });
+                return Response.json({ success: false, error: 'Already checked in today.', code: 'ALREADY_CHECKED_IN' });
             }
 
-            // Get user's shift assignment to determine proper start time
-            const shiftAssignments = await base44.asServiceRole.entities.EmployeeShiftAssignment.filter({
-                assignee_id: user.id,
-                assignee_type: 'employee',
-                is_active: true
-            });
-
-            let shiftStartTime = settings.working_hours_start; // Default fallback
-            let graceMinutes = settings.late_threshold_minutes; // Default grace period
-
-            if (shiftAssignments.length > 0) {
-                // Get shift details
-                const shifts = await base44.asServiceRole.entities.Shift.filter({
-                    id: shiftAssignments[0].shift_id,
-                    is_active: true
-                });
-                
-                if (shifts.length > 0) {
-                    shiftStartTime = shifts[0].start_time;
-                    graceMinutes = shifts[0].grace_minutes || settings.late_threshold_minutes;
+            // ===== ANTI-CHEAT: Prevent rapid re-creation (within 60s) =====
+            if (attendanceRecord && attendanceRecord.created_date) {
+                const createdAt = new Date(attendanceRecord.created_date);
+                if ((now.getTime() - createdAt.getTime()) < 60000) {
+                    return Response.json({ success: false, error: 'Please wait before trying again.', code: 'RATE_LIMITED' });
                 }
             }
 
-            // FIXED: Calculate late status with proper grace period logic
-            const status = calculateAttendanceStatus(bangladeshDateTime, shiftStartTime, graceMinutes);
+            // Get shift info for late calculation
+            let shiftStartTime = settings.working_hours_start || '09:00';
+            let graceMinutes = settings.late_threshold_minutes || 15;
+
+            try {
+                const shiftAssignments = await base44.asServiceRole.entities.EmployeeShiftAssignment.filter({
+                    assignee_id: user.id, assignee_type: 'employee', is_active: true
+                });
+                if (shiftAssignments.length > 0) {
+                    const shifts = await base44.asServiceRole.entities.Shift.filter({ id: shiftAssignments[0].shift_id, is_active: true });
+                    if (shifts.length > 0) {
+                        shiftStartTime = shifts[0].start_time || shiftStartTime;
+                        graceMinutes = shifts[0].grace_minutes || graceMinutes;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load shift info, using defaults:', e.message);
+            }
+
+            const status = calculateAttendanceStatus(bdTime, shiftStartTime, graceMinutes);
 
             const recordData = {
                 employee_id: user.id,
                 employee_name: user.display_name || user.full_name,
-                date: bangladeshTime,
-                check_in_time: bangladeshDateTime,
-                status: status,
+                date: bdDate,
+                check_in_time: bdTime,
+                status,
                 check_in_latitude: latitude,
                 check_in_longitude: longitude,
-                location_accuracy: accuracy,
-                distance_from_office: distance,
-                check_in_ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-                device_info: req.headers.get('user-agent') || 'unknown'
+                location_accuracy: Math.round(accuracy),
+                distance_from_office: Math.round(distance),
+                check_in_ip_address: clientIP,
+                device_info: userAgent
             };
 
             if (attendanceRecord) {
@@ -129,136 +122,76 @@ Deno.serve(async (req) => {
                 attendanceRecord = await base44.entities.Attendance.create(recordData);
             }
 
-            // Send notification for late check-in
-            if (status === 'late') {
-                await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: `Send a gentle reminder notification to ${user.full_name} that they checked in late at ${bangladeshDateTime} and should try to arrive on time for better attendance records.`
-                });
-            }
-
             return Response.json({
                 success: true,
-                message: `✅ Check-in successful! Status: ${status.toUpperCase()}`,
-                data: {
-                    ...attendanceRecord,
-                    bangladesh_time: `${bangladeshTime} ${bangladeshDateTime}`,
-                    distance_from_office: Math.round(distance),
-                    location_accuracy: Math.round(accuracy)
-                }
+                message: `Check-in successful! Status: ${status.toUpperCase()}`,
+                data: { ...attendanceRecord, bangladesh_time: `${bdDate} ${bdTime}`, distance_from_office: Math.round(distance), location_accuracy: Math.round(accuracy) }
             });
 
         } else if (action === 'check_out') {
             if (!attendanceRecord || !attendanceRecord.check_in_time) {
-                return Response.json({
-                    success: false,
-                    error: 'No check-in record found for today',
-                    code: 'NO_CHECK_IN_RECORD'
-                });
+                return Response.json({ success: false, error: 'No check-in record found for today.', code: 'NO_CHECK_IN_RECORD' });
             }
-
             if (attendanceRecord.check_out_time) {
-                return Response.json({
-                    success: false,
-                    error: 'Already checked out today',
-                    code: 'ALREADY_CHECKED_OUT'
-                });
+                return Response.json({ success: false, error: 'Already checked out today.', code: 'ALREADY_CHECKED_OUT' });
             }
 
-            // Calculate working hours
-            const workingHours = calculateWorkingHours(attendanceRecord.check_in_time, bangladeshDateTime);
+            const workingHours = calculateWorkingHours(attendanceRecord.check_in_time, bdTime);
+
+            // ===== ANTI-CHEAT: Minimum working time check (at least 1 minute) =====
+            if (workingHours < 0.02) {
+                return Response.json({ success: false, error: 'Cannot check out within 1 minute of check-in.', code: 'TOO_EARLY_CHECKOUT' });
+            }
 
             const updateData = {
-                check_out_time: bangladeshDateTime,
+                check_out_time: bdTime,
                 check_out_latitude: latitude,
                 check_out_longitude: longitude,
-                working_hours: workingHours
+                check_out_ip_address: clientIP,
+                working_hours: Math.round(workingHours * 100) / 100
             };
 
             attendanceRecord = await base44.entities.Attendance.update(attendanceRecord.id, updateData);
 
             return Response.json({
                 success: true,
-                message: `✅ Check-out successful! Worked ${workingHours.toFixed(1)} hours today.`,
-                data: {
-                    ...attendanceRecord,
-                    bangladesh_time: `${bangladeshTime} ${bangladeshDateTime}`,
-                    distance_from_office: Math.round(distance),
-                    location_accuracy: Math.round(accuracy)
-                }
+                message: `Check-out successful! Worked ${workingHours.toFixed(1)} hours.`,
+                data: { ...attendanceRecord, bangladesh_time: `${bdDate} ${bdTime}`, distance_from_office: Math.round(distance), location_accuracy: Math.round(accuracy) }
             });
         }
 
+        return Response.json({ success: false, error: 'Invalid action.', code: 'INVALID_ACTION' });
+
     } catch (error) {
-        console.error('Attendance marking error:', error);
-        return Response.json({
-            success: false,
-            error: 'An error occurred while processing attendance. Please try again.',
-            code: 'SYSTEM_ERROR'
-        });
+        console.error('Attendance error:', error);
+        return Response.json({ success: false, error: 'System error. Please try again.', code: 'SYSTEM_ERROR' }, { status: 500 });
     }
 });
 
-// FIXED: Proper late status calculation with grace period
 function calculateAttendanceStatus(currentTime, shiftStartTime, graceMinutes) {
     try {
-        // Parse times (format: "HH:mm:ss")
-        const [currentHour, currentMinute, currentSecond] = currentTime.split(':').map(Number);
-        const [shiftHour, shiftMinute] = shiftStartTime.split(':').map(Number);
-        
-        // Convert to total minutes for easy comparison
-        const currentTotalMinutes = (currentHour * 60) + currentMinute + (currentSecond / 60);
-        const shiftTotalMinutes = (shiftHour * 60) + shiftMinute;
-        const graceEndMinutes = shiftTotalMinutes + graceMinutes;
-        
-        console.log(`Attendance Status Check:`, {
-            currentTime,
-            shiftStartTime,
-            graceMinutes,
-            currentTotalMinutes: currentTotalMinutes.toFixed(1),
-            shiftTotalMinutes,
-            graceEndMinutes,
-            isWithinGrace: currentTotalMinutes <= graceEndMinutes
-        });
-        
-        // Within grace period = present, after grace period = late
-        if (currentTotalMinutes <= graceEndMinutes) {
-            return 'present';
-        } else {
-            return 'late';
-        }
-    } catch (error) {
-        console.error('Error calculating attendance status:', error);
-        return 'present'; // Default to present if calculation fails
+        const [ch, cm] = currentTime.split(':').map(Number);
+        const [sh, sm] = shiftStartTime.split(':').map(Number);
+        const currentMin = ch * 60 + cm;
+        const shiftMin = sh * 60 + sm + graceMinutes;
+        return currentMin <= shiftMin ? 'present' : 'late';
+    } catch (e) {
+        return 'present';
     }
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
+    const R = 6371e3;
+    const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180, dl = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function calculateWorkingHours(checkInTime, checkOutTime) {
+function calculateWorkingHours(checkIn, checkOut) {
     try {
-        const [inHour, inMinute, inSecond] = checkInTime.split(':').map(Number);
-        const [outHour, outMinute, outSecond] = checkOutTime.split(':').map(Number);
-        
-        const inTotalMinutes = (inHour * 60) + inMinute + (inSecond / 60);
-        const outTotalMinutes = (outHour * 60) + outMinute + (outSecond / 60);
-        
-        const workingMinutes = outTotalMinutes - inTotalMinutes;
-        return Math.max(0, workingMinutes / 60); // Convert to hours, ensure non-negative
-    } catch (error) {
-        console.error('Error calculating working hours:', error);
-        return 0;
-    }
+        const [ih, im, is] = checkIn.split(':').map(Number);
+        const [oh, om, os] = checkOut.split(':').map(Number);
+        return Math.max(0, ((oh * 60 + om + (os || 0) / 60) - (ih * 60 + im + (is || 0) / 60)) / 60);
+    } catch (e) { return 0; }
 }
