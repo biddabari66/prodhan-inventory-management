@@ -290,14 +290,14 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validate Order ID is required
+    // Validate Order ID is required for sales returns only
     if (type === 'return' && formData.return_type === 'sales_return' && !formData.order_number) {
       toast.error('Order ID is required for sales returns');
       return;
     }
 
     if (productItems.length === 0) {
-      toast.error('Please add at least one product to return/damage');
+      toast.error('Please add at least one product');
       return;
     }
 
@@ -309,7 +309,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
     onSubmit({
       items: productItems,
       type,
-      return_type: formData.return_type,
+      return_type: type === 'damage' ? 'damage' : formData.return_type,
       reason: formData.reason,
       order_number: formData.order_number,
       customer_name: formData.customer_name,
@@ -323,6 +323,17 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Quick Damage Mode Banner */}
+      {type === 'damage' && (
+        <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border-2 border-red-300">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <span className="font-bold text-red-800">Damage / Defective Product Entry</span>
+          </div>
+          <p className="text-xs text-red-600">Select product → enter quantity → choose reason → submit. Stock will be deducted automatically.</p>
+        </div>
+      )}
+
       {type === 'return' && (
         <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
           <Label className="text-sm font-semibold mb-3 block">Return Type *</Label>
@@ -499,9 +510,10 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
         </Card>
       )}
 
+      {/* Product Selection - Simplified for Damage mode */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Select Product *</Label>
+          <Label className="font-semibold">Select Product *</Label>
           <SearchableProductSelect
             inventory={inventory}
             value={formData.inventory_item_id}
@@ -593,8 +605,8 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
           </div>
         )}
 
-        <div>
-          <Label>Reason *</Label>
+        <div className={type === 'damage' ? 'md:col-span-2' : ''}>
+          <Label className="font-semibold">Reason *</Label>
           <Select value={formData.reason} onValueChange={(value) => setFormData({...formData, reason: value})}>
             <SelectTrigger>
               <SelectValue placeholder="Select reason..." />

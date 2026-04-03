@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
       order: {
         id: event.entity_id,
         order_number: data.order_number || null,
+        wc_order_id: data.order_number || null, // WooCommerce order ID (e.g. WC123456)
         // Raw status codes
         order_status: data.order_status || null,
         previous_status: old_data?.order_status || null,
