@@ -648,6 +648,8 @@ export default function Layout({ children, currentPageName }) {
     }
   }, [location.pathname]);
 
+
+
   const refreshUserData = async () => {
     console.log('🔄 Refreshing user data (called from child component)...');
     await loadCurrentUser();
@@ -1545,14 +1547,16 @@ export default function Layout({ children, currentPageName }) {
           {isSidebarOpen && (
             <div
               className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }}
+              onTouchEnd={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }}
               style={{ backdropFilter: 'blur(2px)' }}
             />
           )}
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
           <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out w-[85vw] max-w-[320px] lg:w-[260px] lg:max-w-[260px]
-            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+            onClick={(e) => e.stopPropagation()}>
             
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
@@ -1572,7 +1576,8 @@ export default function Layout({ children, currentPageName }) {
                 }
               </Link>
               <Button
-                onClick={() => setIsSidebarOpen(false)}
+                onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsSidebarOpen(false); }}
                 variant="ghost"
                 size="sm"
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-10 w-10 p-0 touch-manipulation rounded-lg">
@@ -1665,7 +1670,7 @@ export default function Layout({ children, currentPageName }) {
             <header className="header h-14 sm:h-16 px-3 sm:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
               <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
                 <Button
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
                   variant="ghost"
                   size="icon"
                   className="text-muted-foreground hover:text-foreground transition-colors h-10 w-10 touch-manipulation lg:hidden">
