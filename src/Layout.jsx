@@ -1376,7 +1376,6 @@ export default function Layout({ children, currentPageName }) {
             }
 
             /* PERFORMANCE: Optimize scrolling */
-            .sidebar,
             .main-content {
               contain: layout style paint;
             }
@@ -1391,7 +1390,7 @@ export default function Layout({ children, currentPageName }) {
             }
 
             /* Instant visual feedback */
-            button:active, a:active {
+            button:active:not([data-sidebar-close]), a:active {
               transform: scale(0.97) !important;
               transition-duration: 0.03s !important;
             }
@@ -1404,7 +1403,7 @@ export default function Layout({ children, currentPageName }) {
             }
 
             /* GPU acceleration for smoother animations */
-            .sidebar, main, [class*="Dialog"], [class*="Sheet"] {
+            main, [class*="Dialog"], [class*="Sheet"] {
               transform: translateZ(0);
               will-change: transform;
             }
@@ -1503,8 +1502,8 @@ export default function Layout({ children, currentPageName }) {
               transition: all 0.05s ease-out !important;
             }
 
-            /* Instant feedback on click */
-            button:active, a:active, .nav-item:active {
+            /* Instant feedback on click - exclude sidebar close button */
+            button:active:not([data-sidebar-close]), a:active, .nav-item:active {
               transform: scale(0.97) !important;
               transition: transform 0.02s !important;
             }
@@ -1516,7 +1515,7 @@ export default function Layout({ children, currentPageName }) {
             }
 
             /* GPU acceleration for instant rendering */
-            main, .sidebar, [class*="Dialog"], [class*="Content"] {
+            main, [class*="Dialog"], [class*="Content"] {
               transform: translateZ(0);
               backface-visibility: hidden;
             }
@@ -1575,14 +1574,13 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                 }
               </Link>
-              <Button
-                onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }}
-                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsSidebarOpen(false); }}
-                variant="ghost"
-                size="sm"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-10 w-10 p-0 touch-manipulation rounded-lg">
+              <button
+                data-sidebar-close
+                onClick={() => setIsSidebarOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-10 w-10 p-0 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ WebkitTapHighlightColor: 'transparent' }}>
                 <X className="w-5 h-5" />
-              </Button>
+              </button>
             </div>
 
             {/* Navigation Content */}
