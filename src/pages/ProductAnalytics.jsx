@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Inventory } from '@/entities/Inventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,8 +38,8 @@ function ProductAnalyticsDashboard() {
   const [isExporting, setIsExporting] = useState(false);
 
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
-    queryKey: ['inventory'],
-    queryFn: () => Inventory.list(),
+    queryKey: ['inventory-analytics'],
+    queryFn: () => base44.entities.Inventory.list('-updated_date', 2000),
     staleTime: 3 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -509,4 +508,4 @@ function ProductAnalyticsDashboard() {
   );
 }
 
-export default withPermission(ProductAnalyticsDashboard, 'inventory', 'can_view');
+export default withPermission(ProductAnalyticsDashboard, 'product_analytics', 'can_view');

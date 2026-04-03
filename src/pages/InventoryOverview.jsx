@@ -14,6 +14,7 @@ import BookMetadataManager from '../components/inventory/BookMetadataManager';
 import GeneralProductForm from '../components/inventory/GeneralProductForm';
 import DepartmentFilter from '../components/inventory/DepartmentFilter';
 import SmartInventorySearch from '../components/inventory/SmartInventorySearch';
+import LowStockPanel from '../components/inventory/LowStockPanel';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { usePerformanceMonitor, CacheManager } from '../components/common/PerformanceOptimizer';
@@ -481,33 +482,8 @@ function InventoryOverviewPage() {
         {/* Import/Export Section */}
         <InventoryImportExport inventory={filteredInventory} onImportComplete={loadUserAndInventory} />
 
-        {/* Low Stock Alert Banner */}
-        {lowStockItems.length > 0 &&
-        <Card className="bg-white border border-red-200 shadow-sm rounded-xl">
-            <CardHeader className="pb-3 border-b border-red-100">
-              <CardTitle className="text-[#111827] flex items-center gap-3 text-base font-semibold">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-                Low Stock Alerts — {lowStockItems.length} Items Require Attention
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {lowStockItems.slice(0, 10).map((item) =>
-              <Badge key={item.id} variant="outline" className="bg-white text-red-700 border-red-300">
-                    {item.item_name}
-                  </Badge>
-              )}
-                {lowStockItems.length > 10 &&
-              <Badge variant="outline" className="bg-red-200 text-red-900 border-red-400">
-                    +{lowStockItems.length - 10} more
-                  </Badge>
-              }
-              </div>
-            </CardContent>
-          </Card>
-        }
+        {/* Low Stock Alert Panel */}
+        <LowStockPanel lowStockItems={lowStockItems} todaySalesData={todaySalesData} />
 
         {/* Main Inventory Table */}
         <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
