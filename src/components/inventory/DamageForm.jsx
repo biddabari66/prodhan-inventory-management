@@ -68,7 +68,33 @@ export default function DamageForm({ inventory, onSubmit, onCancel, initialData 
     }));
     setOrderSearchQuery(order.order_number || '');
     setOrderSearchResults([]);
-    toast.success(`Order ${order.order_number} linked`);
+
+    // Auto-populate products from order
+    if (order.order_items?.length > 0) {
+      const autoItems = [];
+      for (const oi of order.order_items) {
+        const invItem = inventory.find(i => i.id === oi.inventory_id || i.item_name === oi.item_name);
+        if (invItem) {
+          const qty = oi.quantity || 1;
+          autoItems.push({
+            id: `${Date.now()}-${invItem.id}`,
+            inventory_item_id: invItem.id,
+            product_name: invItem.item_name,
+            quantity: qty,
+            financial_impact: (invItem.purchase_price || 0) * qty,
+            unit_price: invItem.purchase_price || 0
+          });
+        }
+      }
+      if (autoItems.length > 0) {
+        setProductItems(autoItems);
+        toast.success(`Order ${order.order_number} linked — ${autoItems.length} product(s) auto-added to damage list`);
+      } else {
+        toast.success(`Order ${order.order_number} linked — add products manually`);
+      }
+    } else {
+      toast.success(`Order ${order.order_number} linked`);
+    }
   };
 
   // Auto-calculate financial impact based on purchase price
