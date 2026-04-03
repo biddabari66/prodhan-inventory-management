@@ -617,7 +617,7 @@ export default function Layout({ children, currentPageName }) {
     }
   }, [isAuthPage, loadCurrentUser, setIsLoading, setCurrentUser]);
 
-  // Mobile-first sidebar behavior
+  // Mobile-first sidebar behavior — ALWAYS closed on mobile
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -630,6 +630,16 @@ export default function Layout({ children, currentPageName }) {
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isSidebarOpen && window.innerWidth < 1024) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isSidebarOpen]);
 
   // Close mobile sidebar when navigating
   useEffect(() => {
@@ -1202,25 +1212,10 @@ export default function Layout({ children, currentPageName }) {
               }
             }
 
-            /* MOBILE TOUCH TARGETS */
+            /* MOBILE TOUCH TARGETS - Minimal overrides to avoid breaking layouts */
             @media (max-width: 1024px) {
-              button, .btn, a[role="button"], input[type="button"], 
-              [role="button"], [tabindex="0"] {
-                min-height: 48px;
-                min-width: 48px;
-                touch-action: manipulation;
-              }
-
               input, select, textarea {
-                min-height: 48px;
-                font-size: 16px !important;
-                padding: 12px 16px;
-              }
-
-              .dropdown-trigger,
-              .select-trigger {
-                min-height: 52px;
-                font-size: 16px;
+                font-size: 16px !important; /* Prevent iOS zoom */
               }
             }
 
@@ -1273,16 +1268,10 @@ export default function Layout({ children, currentPageName }) {
 
             /* MOBILE LAYOUT OPTIMIZATIONS */
             @media (max-width: 768px) {
-              .grid { gap: 12px; }
-              .space-y-6 > * + * { margin-top: 16px; }
-              .space-y-4 > * + * { margin-top: 12px; }
-              .p-6 { padding: 16px; }
-              .p-8 { padding: 20px; }
-              
               .container, .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl {
                 max-width: 100vw;
-                padding-left: 16px;
-                padding-right: 16px;
+                padding-left: 12px;
+                padding-right: 12px;
               }
             }
 
@@ -1327,9 +1316,11 @@ export default function Layout({ children, currentPageName }) {
             }
 
             /* PREVENT HORIZONTAL OVERFLOW */
-            * {
-              max-width: 100%;
+            html, body, #root {
               box-sizing: border-box;
+            }
+            *, *::before, *::after {
+              box-sizing: inherit;
             }
 
             html, body {
@@ -1550,21 +1541,21 @@ export default function Layout({ children, currentPageName }) {
             }
           `}</style>
 
-          {/* Mobile Overlay */}
-          {isSidebarOpen &&
-          <div
-            className="fixed inset-0 bg-black/60 z-40 lg:hidden animate-in fade-in duration-300"
-            onClick={() => setIsSidebarOpen(false)}
-            style={{ backdropFilter: 'blur(4px)' }} />
-
-          }
+          {/* Mobile Overlay — tapping closes sidebar */}
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+              style={{ backdropFilter: 'blur(2px)' }}
+            />
+          )}
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
-          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-out
-            ${isSidebarOpen ? 'w-[260px] translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[260px]'}`}>
+          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out w-[260px]
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
             
             {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
                 <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
                             <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
@@ -1580,24 +1571,12 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                 }
               </Link>
-              {isSidebarOpen &&
               <Button
                 onClick={() => setIsSidebarOpen(false)}
                 variant="ghost"
                 size="sm"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-8 w-8 p-0 touch-manipulation rounded-lg">
-
-                  <X className="w-4 h-4" />
-                </Button>
-              }
-              {/* Desktop collapse toggle */}
-              <Button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                variant="ghost"
-                size="sm"
-                className="hidden lg:flex text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 h-7 w-7 p-0 touch-manipulation rounded-lg">
-
-                {isSidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-10 w-10 p-0 touch-manipulation rounded-lg">
+                <X className="w-5 h-5" />
               </Button>
             </div>
 
@@ -1680,20 +1659,17 @@ export default function Layout({ children, currentPageName }) {
           </aside>
 
           {/* Main Content Area */}
-          <div className={`flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950
-            ${isSidebarOpen ? 'lg:ml-[260px] ml-0' : 'ml-0 lg:ml-[260px]'}
-          `}>
+          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950 lg:ml-[260px]">
             
             {/* Professional Header */}
-            <header className="header h-16 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
+            <header className="header h-14 sm:h-16 px-3 sm:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
               <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
                 <Button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
-
-                  {isSidebarOpen && window.innerWidth < 1024 ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  className="text-muted-foreground hover:text-foreground transition-colors h-10 w-10 touch-manipulation lg:hidden">
+                  <Menu className="w-5 h-5" />
                 </Button>
                 
                 {/* Mobile-optimized search */}
@@ -1706,12 +1682,12 @@ export default function Layout({ children, currentPageName }) {
               </div>
 
               {/* Header Actions */}
-              <div className="flex items-center gap-2 lg:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3">
                 <Button
                   onClick={toggleTheme}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors relative h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
+                  className="text-muted-foreground hover:text-foreground transition-colors relative h-9 w-9 sm:h-10 sm:w-10 touch-manipulation">
 
                   <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                   <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -1719,7 +1695,7 @@ export default function Layout({ children, currentPageName }) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-12 w-12 lg:h-10 lg:w-10 touch-manipulation">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9 sm:h-10 sm:w-10 touch-manipulation hidden sm:flex">
                       <Globe className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1744,8 +1720,8 @@ export default function Layout({ children, currentPageName }) {
                 {/* Mobile-Optimized User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-12 w-12 lg:h-10 lg:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-10 w-10 lg:h-8 lg:w-8 border-2 border-red-500/30">
+                    <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-red-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
                         <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm lg:text-xs">
                           {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
@@ -1800,7 +1776,7 @@ export default function Layout({ children, currentPageName }) {
             </header>
 
             {/* Main Content - OPTIMIZED padding */}
-            <main className="p-2 sm:p-4 main-content flex-1 overflow-y-auto lg:p-6">
+            <main className="px-3 py-3 sm:p-4 main-content flex-1 overflow-y-auto lg:p-6">
               <ErrorBoundary>
                 <Suspense fallback={
                 <div className="text-center p-20 text-muted-foreground">

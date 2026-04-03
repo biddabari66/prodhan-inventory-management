@@ -360,7 +360,7 @@ function InventoryOverviewPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="pt-3 pb-3 pl-1 w-full space-y-6">
+      <div className="pt-2 pb-3 px-1 w-full space-y-4 sm:space-y-6">
         
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -370,58 +370,58 @@ function InventoryOverviewPage() {
         </div>
 
         {/* Premium Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Inventory Overview</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">Manage all your products and stock</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Inventory Overview</h1>
+            <p className="text-xs sm:text-sm text-[#6B7280] mt-0.5">Manage all products and stock</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               variant="outline"
-              className="border-slate-300 h-11 px-4 rounded-xl font-semibold gap-2"
+              className="border-slate-300 h-10 sm:h-11 px-3 sm:px-4 rounded-xl font-semibold gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
               onClick={() => setIsScannerOpen(true)}>
-              <ScanLine className="w-5 h-5 text-red-600" /> Scan QR/Barcode
+              <ScanLine className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" /> <span className="hidden sm:inline">Scan</span> QR
             </Button>
             {canCreate && (
               <Button
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-4 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl text-xs sm:text-sm flex-1 sm:flex-none"
                 onClick={() => {setEditingItem(null);setIsFormOpen(true);}}>
-                <Plus className="w-5 h-5 mr-2" /> Add New Item
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> Add Item
               </Button>
             )}
           </div>
         </div>
 
         {/* Premium Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <Card className="bg-white border-0 shadow-sm rounded-xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-[#D32F2F]" />
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center gap-3 mb-2 sm:mb-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[#D32F2F]" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[#111827]">{departmentStats.total}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Products</p>
+              <p className="text-2xl sm:text-3xl font-bold text-[#111827]">{departmentStats.total}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Products</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-0 shadow-sm rounded-xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-[#D32F2F]" />
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center gap-3 mb-2 sm:mb-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-[#D32F2F]" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[#111827]">{departmentStats.low_stock}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Low Stock Alerts</p>
+              <p className="text-2xl sm:text-3xl font-bold text-[#111827]">{departmentStats.low_stock}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Low Stock</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Search & Category Filter Section */}
         <Card className="bg-white border-0 shadow-sm rounded-xl">
-          <CardContent className="p-5 space-y-4">
+          <CardContent className="p-3 sm:p-5 space-y-3 sm:space-y-4">
             <SmartInventorySearch
               value={searchTerm}
               onChange={setSearchTerm}
@@ -646,7 +646,7 @@ function InventoryOverviewPage() {
       </div>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="w-full max-w-[100vw] sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-y-auto p-0 rounded-none sm:rounded-xl m-0 sm:m-auto">
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center gap-3">
               {editingItem ? 'Edit' : 'Add New'} Product
