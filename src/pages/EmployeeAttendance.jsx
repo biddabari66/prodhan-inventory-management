@@ -231,18 +231,18 @@ function EmployeeAttendancePage() {
       <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
         <span>HR</span><span>/</span><span className="text-slate-900 font-medium">Attendance</span>
       </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-            <Clock className="w-6 h-6 text-white" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg flex-shrink-0">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Attendance Management</h1>
-            <p className="text-sm text-slate-500">Track & manage employee attendance</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Attendance</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Track & manage employee attendance</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { refetchToday(); refetchMonth(); }}>
-          <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+        <Button variant="outline" size="sm" onClick={() => { refetchToday(); refetchMonth(); }} className="h-9 flex-shrink-0">
+          <RefreshCw className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
 

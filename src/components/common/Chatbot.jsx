@@ -628,12 +628,14 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
     };
   }, [currentUser]);
 
-  // Fetch user context
+  // Fetch user context with REAL-TIME SALES DATA
   const fetchUserContext = useCallback(async () => {
     if (!currentUser) return;
 
     try {
-      const [tasks, expenses, attendance, leads] = await Promise.all([
+      const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+
+      const [tasks, expenses, attendance, leads, recentOrders, inventory, lowStockItems] = await Promise.all([
         base44.entities.Task.filter({ 
           assigned_to: { $contains: currentUser.id },
           status: { $in: ['pending', 'in_progress'] }
@@ -648,16 +650,50 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
         
         base44.entities.Attendance.filter({
           employee_id: currentUser.id,
-          date: new Date().toISOString().split('T')[0]
+          date: todayBDT
         }).catch(() => []),
         
-        currentUser.job_role === 'admin' || currentUser.job_role === 'manager'
+        (currentUser.job_role === 'admin' || currentUser.job_role === 'manager')
           ? base44.entities.Lead.filter({ 
               assigned_to: currentUser.id,
               lead_status: { $in: ['new', 'contacted'] }
             }).catch(() => [])
-          : []
+          : [],
+
+        base44.entities.Order.list('-order_date', 200).catch(() => []),
+        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500).catch(() => []),
+        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }).catch(() => [])
       ]);
+
+      // Calculate today's sales stats
+      const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+      const todayOrders = recentOrders.filter(o => {
+        const rawDate = o.order_date || o.created_date;
+        if (!rawDate) return false;
+        const d = new Date(rawDate);
+        if (isNaN(d.getTime())) return false;
+        const orderDateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
+        return orderDateBDT === todayBDT;
+      });
+
+      const todayConfirmed = todayOrders.filter(o => validStatuses.includes(o.order_status));
+      const todayRevenue = todayConfirmed.reduce((s, o) => s + (o.total_amount || 0), 0);
+      const todayProductQty = todayConfirmed.reduce((s, o) => s + (o.order_items || []).reduce((q, i) => q + (i.quantity || 0), 0), 0);
+      const todayPending = todayOrders.filter(o => o.order_status === 'pending').length;
+      const todayCancelled = todayOrders.filter(o => o.order_status === 'cancelled').length;
+
+      // Inventory stats
+      const lowStock = lowStockItems.filter(i => i.current_stock < i.minimum_stock);
+      const outOfStock = lowStockItems.filter(i => (i.current_stock || 0) === 0);
+      const totalProducts = inventory.length;
+
+      // Recent 7 days revenue
+      const last7Revenue = recentOrders
+        .filter(o => {
+          const d = new Date(o.order_date || o.created_date);
+          return !isNaN(d.getTime()) && (Date.now() - d.getTime()) < 7 * 24 * 60 * 60 * 1000 && validStatuses.includes(o.order_status);
+        })
+        .reduce((s, o) => s + (o.total_amount || 0), 0);
 
       const upcomingTasks = tasks
         .filter(t => t.deadline && new Date(t.deadline) > new Date())
@@ -675,6 +711,18 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
         pendingExpenses: expenses.length,
         todayAttendance: attendance.length > 0 ? attendance[0] : null,
         activeLeads: leads.length,
+        // Sales & inventory real-time data
+        todayOrdersTotal: todayOrders.length,
+        todayConfirmedOrders: todayConfirmed.length,
+        todayRevenue,
+        todayProductQty,
+        todayPending,
+        todayCancelled,
+        last7Revenue,
+        totalProducts,
+        lowStockCount: lowStock.length,
+        outOfStockCount: outOfStock.length,
+        topLowStock: lowStock.slice(0, 5).map(i => i.item_name),
         lastUpdated: new Date().toISOString()
       };
 
@@ -955,6 +1003,21 @@ ${userContext ? `
 - Pending Approvals: ${userContext.pendingExpenses}
 - Today's Attendance: ${userContext.todayAttendance ? 'Checked in at ' + userContext.todayAttendance.check_in_time : 'Not checked in'}
 - Active Leads: ${userContext.activeLeads}
+
+**Today's Sales Data (Real-time):**
+- Total orders today: ${userContext.todayOrdersTotal || 0}
+- Confirmed orders: ${userContext.todayConfirmedOrders || 0}
+- Today's revenue: ৳${(userContext.todayRevenue || 0).toLocaleString()}
+- Products sold today: ${userContext.todayProductQty || 0} units
+- Pending orders: ${userContext.todayPending || 0}
+- Cancelled today: ${userContext.todayCancelled || 0}
+- Last 7 days revenue: ৳${(userContext.last7Revenue || 0).toLocaleString()}
+
+**Inventory Status:**
+- Total products: ${userContext.totalProducts || 0}
+- Low stock items: ${userContext.lowStockCount || 0}
+- Out of stock: ${userContext.outOfStockCount || 0}
+${(userContext.topLowStock || []).length > 0 ? `- Low stock products: ${userContext.topLowStock.join(', ')}` : ''}
 ${userContext.upcomingTasks.length > 0 ? `\nUpcoming Deadlines:\n${userContext.upcomingTasks.map(t => `- ${t.title}: ${new Date(t.deadline).toLocaleDateString()}`).join('\n')}` : ''}
 ` : 'Gathering evidence...'}
 ${learningContext}
@@ -1111,9 +1174,12 @@ Investigate now! 🔍`;
             setIsOpen(true);
             if (messages.length === 0) {
               fetchUserContext();
+            } else {
+              // Refresh context when reopening
+              fetchUserContext();
             }
           }}
-          className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-2xl rounded-full w-16 h-16 p-0 transform transition-all duration-300 hover:scale-110"
+          className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-2xl rounded-full w-14 h-14 lg:w-16 lg:h-16 p-0 transform transition-all duration-300 hover:scale-110"
           title={`${text.header} - ${text.subtitle}`}
         >
           <span className="text-3xl">{DETECTIVE_ICON}</span>
@@ -1127,10 +1193,10 @@ Investigate now! 🔍`;
 
       {/* Chat window */}
       {isOpen && (
-        <Card className={`fixed right-6 z-50 shadow-2xl border-2 border-amber-200 transition-all duration-300 ${
+        <Card className={`fixed z-50 shadow-2xl border-2 border-amber-200 dark:border-amber-800 transition-all duration-300 ${
           isMinimized 
-            ? 'bottom-6 w-80 h-16' 
-            : 'bottom-6 w-[420px] max-w-[95vw] h-[600px] max-h-[85vh]'
+            ? 'bottom-20 lg:bottom-6 right-4 lg:right-6 w-72 lg:w-80 h-16' 
+            : 'bottom-0 right-0 w-full h-[100dvh] sm:bottom-20 lg:sm:bottom-6 sm:right-4 lg:sm:right-6 sm:w-[400px] sm:max-w-[95vw] sm:h-[550px] sm:max-h-[80vh] sm:rounded-xl'
         }`}>
           <CardHeader className="flex flex-row items-center justify-between p-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-t-xl">
             <div className="flex items-center gap-3">
@@ -1211,23 +1277,24 @@ Investigate now! 🔍`;
             <CardContent className="p-0 flex flex-col h-[calc(100%-80px)]">
               {/* Context banner */}
               {userContext && (
-                <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b">
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className={`w-3 h-3 ${userContext.tasks > 0 ? 'text-blue-600' : 'text-gray-400'}`} />
-                      <span className="font-medium">{userContext.tasks} {currentLanguage === 'en' ? 'tasks' : 'কাজ'}</span>
+                <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-border">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="font-medium text-foreground">৳{(userContext.todayRevenue || 0).toLocaleString()}</span>
+                      <span className="text-muted-foreground">today</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className={`w-3 h-3 ${userContext.pendingExpenses > 0 ? 'text-orange-600' : 'text-gray-400'}`} />
-                      <span className="font-medium">{userContext.pendingExpenses} {currentLanguage === 'en' ? 'pending' : 'অপেক্ষমাণ'}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      <span className="font-medium text-foreground">{userContext.todayConfirmedOrders || 0} orders</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className={`w-3 h-3 ${userContext.overdueTasks > 0 ? 'text-red-600' : 'text-green-600'}`} />
-                      <span className="font-medium">
-                        {userContext.overdueTasks === 0 
-                          ? (currentLanguage === 'en' ? 'All good!' : 'সব ঠিক!') 
-                          : `${userContext.overdueTasks} ${currentLanguage === 'en' ? 'overdue' : 'মেয়াদোত্তীর্ণ'}`}
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1.5 h-1.5 rounded-full ${(userContext.lowStockCount || 0) > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                      <span className="font-medium text-foreground">{userContext.lowStockCount || 0} low stock</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1.5 h-1.5 rounded-full ${(userContext.todayPending || 0) > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                      <span className="font-medium text-foreground">{userContext.todayPending || 0} pending</span>
                     </div>
                   </div>
                 </div>
@@ -1279,8 +1346,8 @@ Investigate now! 🔍`;
                                 : msg.isError
                                 ? 'bg-red-50 text-red-800 border border-red-200'
                                 : msg.isRetry
-                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                : 'bg-gray-100 text-gray-800'
+                                ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                                : 'bg-muted text-foreground'
                             }`}
                           >
                             {msg.isProactive && (
@@ -1383,7 +1450,7 @@ Investigate now! 🔍`;
               </ScrollArea>
 
               {/* Input */}
-              <div className="p-4 border-t bg-white">
+              <div className="p-4 border-t border-border bg-card">
                 <div className="flex gap-2">
                   <Input
                     value={inputMessage}

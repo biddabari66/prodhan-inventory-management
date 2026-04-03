@@ -360,21 +360,21 @@ function InventoryOverviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="min-h-screen bg-background">
       <div className="pt-2 pb-3 px-1 w-full space-y-4 sm:space-y-6">
         
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Dashboard</span>
           <span>/</span>
-          <span className="text-slate-900 font-medium">Inventory Overview</span>
+          <span className="text-foreground font-medium">Inventory Overview</span>
         </div>
 
-        {/* Premium Header */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Inventory Overview</h1>
-            <p className="text-xs sm:text-sm text-[#6B7280] mt-0.5">Manage all products and stock</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Inventory Overview</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Manage all products and stock</p>
           </div>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
@@ -393,35 +393,35 @@ function InventoryOverviewPage() {
           </div>
         </div>
 
-        {/* Premium Stats Cards */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <Card className="bg-card border-0 shadow-sm rounded-xl">
             <CardContent className="p-3 sm:p-5">
               <div className="flex items-center gap-3 mb-2 sm:mb-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[#D32F2F]" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 dark:bg-red-950/50 flex items-center justify-center">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 </div>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold text-[#111827]">{departmentStats.total}</p>
-              <p className="text-[10px] sm:text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Products</p>
+              <p className="text-2xl sm:text-3xl font-bold text-foreground">{departmentStats.total}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mt-1">Total Products</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-sm rounded-xl">
+          <Card className="bg-card border-0 shadow-sm rounded-xl">
             <CardContent className="p-3 sm:p-5">
               <div className="flex items-center gap-3 mb-2 sm:mb-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-[#D32F2F]" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 dark:bg-red-950/50 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 </div>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold text-[#111827]">{departmentStats.low_stock}</p>
-              <p className="text-[10px] sm:text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Low Stock</p>
+              <p className="text-2xl sm:text-3xl font-bold text-foreground">{departmentStats.low_stock}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mt-1">Low Stock</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Search & Category Filter Section */}
-        <Card className="bg-white border-0 shadow-sm rounded-xl">
+        <Card className="bg-card border-0 shadow-sm rounded-xl">
           <CardContent className="p-3 sm:p-5 space-y-3 sm:space-y-4">
             <SmartInventorySearch
               value={searchTerm}
@@ -525,7 +525,7 @@ function InventoryOverviewPage() {
         </div>
 
         {/* Desktop Inventory Table */}
-        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden hidden md:block">
+        <Card className="bg-card border-0 shadow-sm rounded-xl overflow-hidden hidden md:block">
           <CardHeader className="border-b border-slate-100 px-6 py-4">
             <CardTitle className="flex items-center gap-3">
               <span className="text-lg font-semibold text-[#111827]">All Inventory Items</span>

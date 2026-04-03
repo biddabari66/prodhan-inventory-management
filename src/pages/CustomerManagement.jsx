@@ -175,41 +175,40 @@ function CustomerManagementPage() {
   // Legacy import removed - using DynamicCSVImport component instead
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Dashboard</span>
           <span>/</span>
-          <span className="text-slate-900 font-medium">Customer Management</span>
+          <span className="text-foreground font-medium">Customer Management</span>
         </div>
 
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-              <Users className="w-6 h-6 text-[#D32F2F]" />
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 dark:bg-red-950/50 flex items-center justify-center flex-shrink-0">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
             </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Customer Management</h1>
-              <p className="text-sm text-[#6B7280] mt-0.5">Manage customers, track spending, and analyze behavior</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-semibold text-foreground tracking-tight">Customer Management</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 hidden sm:block">Manage customers, track spending, and analyze behavior</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportCustomers} className="h-10 bg-white border-slate-200 rounded-lg">
-              <Download className="w-4 h-4 mr-2" />Export
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={handleExportCustomers} className="h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg text-xs sm:text-sm">
+              <Download className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Export</span>
             </Button>
-            <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)} className="h-10 bg-white border-slate-200 rounded-lg">
-              <Upload className="w-4 h-4 mr-2" />Import
+            <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)} className="h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg text-xs sm:text-sm">
+              <Upload className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Import</span>
             </Button>
             {canCreate && (
               <Button 
                 onClick={() => setIsAddCustomerOpen(true)}
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 h-10 rounded-xl"
+                className="bg-red-600 hover:bg-red-700 text-white shadow-sm h-9 sm:h-10 px-3 sm:px-4 rounded-xl text-xs sm:text-sm flex-1 sm:flex-none"
               >
-                <Plus className="w-5 h-5 mr-2" />
-                Add Customer
+                <Plus className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Add Customer</span><span className="sm:hidden">Add</span>
               </Button>
             )}
           </div>

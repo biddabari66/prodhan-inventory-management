@@ -5,24 +5,24 @@ import { withPermission } from '../components/common/PermissionGuard';
 
 function InventoryMovementsPage() {
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-8 space-y-6">
-        
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Inventory</span>
           <span>/</span>
-          <span className="text-slate-900 font-medium">Stock Movements</span>
+          <span className="text-foreground font-medium">Stock Movements</span>
         </div>
 
-        {/* Premium Header Section */}
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-            <RotateCcw className="w-6 h-6 text-[#D32F2F]" />
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 dark:bg-red-950/50 flex items-center justify-center flex-shrink-0">
+            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Stock Movements</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">সকল ইনভেন্টরি আইটেমের সম্পূর্ণ লেনদেন ইতিহাস ও মুভমেন্ট ট্র্যাকিং</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Stock Movements</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">সম্পূর্ণ লেনদেন ইতিহাস ও মুভমেন্ট ট্র্যাকিং</p>
           </div>
         </div>
 
