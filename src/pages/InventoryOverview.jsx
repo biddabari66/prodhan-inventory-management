@@ -21,6 +21,7 @@ import { usePerformanceMonitor, CacheManager } from '../components/common/Perfor
 import { withPermission, usePermission, PermissionGate, useConfidentialPermission } from '../components/common/PermissionGuard';
 import { usePurchasePriceResolver } from '../components/sales/useDiscountCampaigns';
 import { Lock } from 'lucide-react';
+import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
 
 function InventoryForm({ item, onSubmit, onCancel, selectedDepartment }) {
   // Always use General Product Form for Prodhan.com
@@ -485,13 +486,51 @@ function InventoryOverviewPage() {
         {/* Low Stock Alert Panel */}
         <LowStockPanel lowStockItems={lowStockItems} todaySalesData={todaySalesData} />
 
-        {/* Main Inventory Table */}
-        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
+        {/* Mobile Inventory Cards */}
+        <div className="md:hidden space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">Inventory</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredInventory.length}</Badge>
+            </div>
+          </div>
+          {filteredInventory.length === 0 ? (
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+              <CardContent className="py-12 text-center">
+                <Package className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm text-slate-500">No items found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            displayedInventory.map((item) => (
+              <MobileInventoryCard
+                key={item.id}
+                item={item}
+                todaySales={todaySalesData[item.id] || 0}
+                canEdit={canEdit}
+                canDelete={canDelete}
+                canViewPurchasePrice={canViewPurchasePrice}
+                getPurchasePrice={getPurchasePrice}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+              />
+            ))
+          )}
+          {displayedInventory.length < filteredInventory.length && (
+            <Button variant="outline" onClick={() => setDisplayLimit(prev => prev + 50)} className="w-full gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Load More ({filteredInventory.length - displayedInventory.length} remaining)
+            </Button>
+          )}
+        </div>
+
+        {/* Desktop Inventory Table */}
+        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden hidden md:block">
           <CardHeader className="border-b border-slate-100 px-6 py-4">
             <CardTitle className="flex items-center gap-3">
               <span className="text-lg font-semibold text-[#111827]">All Inventory Items</span>
               <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
-                {filteredInventory.length}
+              {filteredInventory.length}
               </Badge>
               {displayedInventory.length < filteredInventory.length && (
                 <span className="text-sm text-slate-400">showing {displayedInventory.length}</span>

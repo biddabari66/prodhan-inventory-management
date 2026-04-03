@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Plus, Search, TrendingUp, Package, Phone, Mail, MapPin, DollarSign, Calendar, Tag, Eye, Edit, Trash2, PhoneCall, MessageSquare, Download, Upload, Truck, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
+import MobileCustomerCard from '../components/customers/MobileCustomerCard';
 import WelcomeCallList from '../components/customers/WelcomeCallList';
 import FeedbackCallList from '../components/customers/FeedbackCallList';
 import DynamicCSVImport from '../components/customers/DynamicCSVImport';
@@ -175,7 +176,7 @@ function CustomerManagementPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -359,8 +360,37 @@ function CustomerManagementPage() {
           </CardContent>
         </Card>
 
-        {/* Customers Table */}
-        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
+        {/* Mobile Customer Cards */}
+        <div className="md:hidden space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900">Customers</span>
+            <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredCustomers.length}</Badge>
+          </div>
+          {filteredCustomers.length === 0 ? (
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+              <CardContent className="py-12 text-center">
+                <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm text-slate-500">No customers found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredCustomers.map((customer) => (
+              <MobileCustomerCard key={customer.id} customer={customer} onView={handleViewDetails} />
+            ))
+          )}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">
+              {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalCustomers)} of {totalCustomers}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="h-7 text-xs">Prev</Button>
+              <Button variant="outline" size="sm" disabled={currentPage >= Math.ceil(totalCustomers / pageSize)} onClick={() => setCurrentPage(p => p + 1)} className="h-7 text-xs">Next</Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Customers Table */}
+        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden hidden md:block">
           <CardHeader className="border-b border-slate-100 px-6 py-4">
             <CardTitle className="flex items-center gap-3">
               <span className="text-lg font-semibold text-[#111827]">All Customers</span>

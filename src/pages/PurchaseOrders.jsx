@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import MobilePOCard from '../components/procurement/MobilePOCard';
 
 // Main Purchase Orders Page
 function PurchaseOrdersPage() {
@@ -512,7 +513,7 @@ function PurchaseOrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <span>Inventory</span>
@@ -678,8 +679,38 @@ function PurchaseOrdersPage() {
           </TabsList>
 
           <TabsContent value="purchase_orders">
-            {/* Orders Table */}
-            <Card className="bg-white border border-slate-200 shadow-sm">
+            {/* Mobile PO Cards */}
+            <div className="md:hidden space-y-3">
+              {filteredOrders.length === 0 ? (
+                <Card className="bg-white border-0 shadow-sm rounded-xl">
+                  <CardContent className="py-12 text-center">
+                    <Package className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm text-slate-500">No purchase orders found</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredOrders.map((order) => (
+                  <MobilePOCard
+                    key={order.id}
+                    order={order}
+                    getStatusBadge={getStatusBadge}
+                    onView={setViewOrderDialog}
+                    onEdit={handleEdit}
+                    onApprove={(o) => setApprovalDialog({ order: o, action: 'approve' })}
+                    onReject={(o) => setApprovalDialog({ order: o, action: 'reject' })}
+                    onReceive={handleReceive}
+                    onDelete={(o) => setDeleteDialog({ type: 'po', item: o })}
+                    canEdit={canEdit}
+                    canApprove={canApprove}
+                    isAdmin={isAdmin}
+                    supplierName={supplierMap[order.supplier_id]?.supplier_name || order.supplier_name}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Desktop Orders Table */}
+            <Card className="bg-white border border-slate-200 shadow-sm hidden md:block">
               <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                 <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
               </CardHeader>
@@ -688,7 +719,7 @@ function PurchaseOrdersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>PO Number</TableHead>
+                     <TableHead>PO Number</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Supplier</TableHead>

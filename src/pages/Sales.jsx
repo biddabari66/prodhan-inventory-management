@@ -44,6 +44,7 @@ import { withPermission } from '../components/common/PermissionGuard';
 import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 import DailySalesFinalizer from '../components/sales/DailySalesFinalizer';
+import MobileOrderCard from '../components/sales/MobileOrderCard';
 
 // Main Sales Page
 function SalesPage() {
@@ -757,7 +758,7 @@ function SalesPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="w-full px-6 py-6 space-y-6">
+      <div className="w-full px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -1185,8 +1186,52 @@ function SalesPage() {
           </Card>
         )}
 
-        {/* Premium Orders Table */}
-        <Card className="bg-white border-0 shadow-sm rounded-2xl overflow-hidden">
+        {/* Mobile Order Cards */}
+        <div className="md:hidden space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">Orders</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredOrders.length}</Badge>
+            </div>
+            {filteredOrders.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={toggleSelectAll} className="text-xs text-red-600 h-7">
+                {selectedOrderIds.length === filteredOrders.length ? 'Deselect' : 'Select All'}
+              </Button>
+            )}
+          </div>
+          {displayedOrders.length === 0 ? (
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+              <CardContent className="py-12 text-center">
+                <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm text-slate-500">No orders found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            displayedOrders.map((order) => (
+              <MobileOrderCard
+                key={order.id}
+                order={order}
+                isSelected={selectedOrderIds.includes(order.id)}
+                onToggleSelect={() => toggleOrderSelection(order.id)}
+                onViewInvoice={handleViewInvoice}
+                onEdit={handleEditOrder}
+                onStatusChange={handleQuickStatusChange}
+                onPaymentChange={handlePaymentStatusChange}
+                canEdit={canEdit}
+                inventoryMap={inventoryMap}
+              />
+            ))
+          )}
+          {displayedOrders.length < filteredOrders.length && (
+            <Button variant="outline" onClick={loadMoreOrders} className="w-full gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Load More ({filteredOrders.length - displayedOrders.length} remaining)
+            </Button>
+          )}
+        </div>
+
+        {/* Desktop Orders Table */}
+        <Card className="bg-white border-0 shadow-sm rounded-2xl overflow-hidden hidden md:block">
           <CardHeader className="border-b border-slate-100 bg-white px-6 py-4">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
