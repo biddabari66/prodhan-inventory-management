@@ -17,7 +17,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import ReturnDamageForm from './ReturnDamageForm';
+import ReturnForm from './ReturnForm';
+import DamageForm from './DamageForm';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1304,16 +1305,27 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               )}
             </DialogTitle>
           </DialogHeader>
-          <ReturnDamageForm
-            inventory={departmentFilteredInventory}
-            onSubmit={handleSubmit}
-            onCancel={() => {
-              setIsFormOpen(false);
-              setEditingMovement(null);
-            }}
-            type={formType}
-            initialData={editingMovement}
-          />
+          {formType === 'return' ? (
+            <ReturnForm
+              inventory={departmentFilteredInventory}
+              onSubmit={handleSubmit}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingMovement(null);
+              }}
+              initialData={editingMovement}
+            />
+          ) : (
+            <DamageForm
+              inventory={departmentFilteredInventory}
+              onSubmit={handleSubmit}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingMovement(null);
+              }}
+              initialData={editingMovement}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
