@@ -768,25 +768,26 @@ function SalesPage() {
         </div>
 
         {/* Premium Header with Glassmorphism Search */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+          <div className="hidden sm:block">
             <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sales Management</h1>
             <p className="text-sm text-slate-500 mt-0.5">Track and manage all your sales orders</p>
           </div>
-          <div className="flex items-center gap-3 w-full lg:w-auto">
-            {/* Glassmorphism Search Bar */}
+          {/* Mobile: Search + action row */}
+          <div className="w-full space-y-2 lg:space-y-0 lg:w-auto">
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <div className="relative flex-1 lg:w-96">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
-                placeholder="Search orders... ⌘K"
+                placeholder="Search orders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                className="pl-11 h-10 sm:h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
               />
             </div>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-2 h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50">
+                <Button variant="outline" className="gap-1 h-10 sm:h-11 px-2.5 sm:px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50">
                   <Filter className="w-4 h-4 text-slate-600" />
                   <span className="hidden sm:inline text-slate-700">Filters</span>
                   {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
@@ -936,12 +937,27 @@ function SalesPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsExportDialogOpen(true)}
-                className="h-11 px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50"
+                className="h-10 sm:h-11 px-2.5 sm:px-4 bg-white border-slate-200 shadow-sm rounded-xl hover:bg-slate-50"
               >
-                <Download className="w-4 h-4 mr-2" />
-                Export
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
             )}
+            {canCreate && (
+              <Button
+                onClick={() => {
+                  setEditingOrder(null);
+                  setIsOrderFormOpen(true);
+                }}
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-3 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl"
+              >
+                <Plus className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Create Sale</span>
+              </Button>
+            )}
+          </div>
+          {/* Second row on mobile: finalize + bulk */}
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             {isAdmin && (
               <DailySalesFinalizer
                 isAdmin={isAdmin}
@@ -952,27 +968,16 @@ function SalesPage() {
               />
             )}
             {canCreate && (
-              <>
-                <Button
-                  onClick={() => setIsBulkUploadOpen(true)}
-                  variant="outline"
-                  className="h-11 px-4 bg-white border-blue-500 text-blue-700 hover:bg-blue-50 shadow-sm rounded-xl"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Bulk CSV
-                </Button>
-                <Button
-                  onClick={() => {
-                    setEditingOrder(null);
-                    setIsOrderFormOpen(true);
-                  }}
-                  className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-6 h-11 font-semibold rounded-xl transition-all hover:shadow-red-500/40 hover:scale-[1.02]"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Create Sale
-                </Button>
-              </>
+              <Button
+                onClick={() => setIsBulkUploadOpen(true)}
+                variant="outline"
+                className="h-9 px-3 bg-white border-blue-500 text-blue-700 hover:bg-blue-50 shadow-sm rounded-lg text-xs"
+              >
+                <Upload className="w-3.5 h-3.5 mr-1" />
+                Bulk CSV
+              </Button>
             )}
+          </div>
           </div>
         </div>
 
@@ -985,10 +990,10 @@ function SalesPage() {
             </span>
           </div>
         )}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
           {/* Total Orders */}
           <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-5">
+            <CardContent className="p-3 sm:p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
                   <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
@@ -1083,13 +1088,13 @@ function SalesPage() {
           </Card>
         </div>
 
-        {/* Premium Bulk Actions Bar */}
+        {/* Bulk Actions Bar */}
         {selectedOrderIds.length > 0 && (
           <Card className="bg-white border-0 shadow-lg rounded-2xl">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-[#D32F2F] text-white rounded-full px-4 py-1">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-[#D32F2F] text-white rounded-full px-3 py-0.5 text-xs">
                     {selectedOrderIds.length} selected
                   </Badge>
                   <Button
@@ -1217,6 +1222,7 @@ function SalesPage() {
                 onEdit={handleEditOrder}
                 onStatusChange={handleQuickStatusChange}
                 onPaymentChange={handlePaymentStatusChange}
+                onCancelOrder={(o) => handleQuickStatusChange(o, 'cancelled')}
                 canEdit={canEdit}
                 inventoryMap={inventoryMap}
               />
