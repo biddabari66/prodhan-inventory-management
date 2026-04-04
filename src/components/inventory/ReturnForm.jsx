@@ -34,7 +34,6 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
   });
 
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [isManualFinancialImpact, setIsManualFinancialImpact] = useState(false);
   const [productItems, setProductItems] = useState([]);
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [isSearchingOrder, setIsSearchingOrder] = useState(false);
@@ -97,6 +96,19 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
       }
       if (autoItems.length > 0) {
         setProductItems(autoItems);
+        // Also select the first product in the form for convenience
+        const firstItem = autoItems[0];
+        const invItem = inventory.find(i => i.id === firstItem.inventory_item_id);
+        if (invItem) {
+          setSelectedProduct(invItem);
+          setFormData(prev => ({
+            ...prev,
+            inventory_item_id: firstItem.inventory_item_id,
+            quantity: firstItem.quantity,
+            condition_breakdown: firstItem.condition_breakdown,
+            financial_impact: firstItem.financial_impact,
+          }));
+        }
         toast.success(`Order ${order.order_number} loaded — ${autoItems.length} product(s) auto-added`);
       } else {
         toast.success(`Order ${order.order_number} loaded — customer details auto-filled`);
@@ -122,23 +134,7 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
     }
   }, [formData.quantity, formData.return_type]);
 
-  // Auto-calculate financial impact
-  useEffect(() => {
-    if (selectedProduct && !isManualFinancialImpact) {
-      let calculatedImpact = 0;
-      if (formData.return_type === 'sales_return') {
-        const { good, fair } = formData.condition_breakdown;
-        const goodValue = good.action === 'restock' ? good.quantity * selectedProduct.selling_price :
-                          good.action === 'return_to_supplier' ? good.quantity * selectedProduct.purchase_price * 0.8 : 0;
-        const fairValue = fair.action === 'restock' ? fair.quantity * selectedProduct.selling_price * 0.7 :
-                          fair.action === 'return_to_supplier' ? fair.quantity * selectedProduct.purchase_price * 0.5 : 0;
-        calculatedImpact = goodValue + fairValue - (formData.restocking_fee || 0);
-      } else {
-        calculatedImpact = selectedProduct.purchase_price * formData.quantity - (formData.restocking_fee || 0);
-      }
-      setFormData(prev => ({ ...prev, financial_impact: calculatedImpact }));
-    }
-  }, [selectedProduct, formData.condition_breakdown, formData.quantity, formData.return_type, formData.restocking_fee, isManualFinancialImpact]);
+  // No auto-calculation — financial impact is always manually entered by user
 
   // Load initial data for editing
   useEffect(() => {
@@ -166,13 +162,10 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
   const handleProductChange = (value) => {
     const item = inventory.find(i => i.id === value);
     setSelectedProduct(item);
-    const priceToUse = formData.return_type === 'purchase_return' ? item?.purchase_price : item?.selling_price;
     setFormData(prev => ({
       ...prev,
-      inventory_item_id: value,
-      financial_impact: item ? priceToUse * parseInt(prev.quantity) : 0
+      inventory_item_id: value
     }));
-    setIsManualFinancialImpact(false);
   };
 
   const handleAddProduct = () => {
@@ -512,15 +505,12 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
 
         <div className="relative">
           <Label className="flex items-center justify-between">
-            <span>Financial Impact (৳)</span>
-            {isManualFinancialImpact && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setIsManualFinancialImpact(false)} className="h-6 text-xs gap-1 text-blue-600">
-                <Calculator className="w-3 h-3" /> Auto-Calculate
-              </Button>
-            )}
+            <span>Financial Impact (৳) *</span>
+            <span className="text-xs text-muted-foreground">Enter manually</span>
           </Label>
           <Input type="number" step="0.01" value={formData.financial_impact}
-            onChange={(e) => { setFormData(prev => ({ ...prev, financial_impact: e.target.value })); setIsManualFinancialImpact(true); }} />
+            onChange={(e) => setFormData(prev => ({ ...prev, financial_impact: parseFloat(e.target.value) || 0 }))
+            } placeholder="Enter financial impact amount" />
         </div>
 
         {(formData.condition_breakdown.good.action === 'restock' || formData.condition_breakdown.fair.action === 'restock') && (

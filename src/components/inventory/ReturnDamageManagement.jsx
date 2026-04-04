@@ -227,80 +227,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
     if (dataType === 'returns') {
       headers = [
-        'SL', 'Return Date', 'Product Name', 'SKU/Barcode', 'Category',
-        'Return Type', 'Total Qty', 'Good Qty', 'Damaged Qty',
-        'Order Number', 'Order Date', 'Order Status', 'Order Total (৳)',
-        'Customer Name', 'Customer Phone', 'Shipping Address',
-        'Courier Service', 'Tracking Number',
-        'Return Reason', 'Action Taken', 'Condition',
-        'Purchase Price (৳)', 'Selling Price (৳)', 'Financial Impact (৳)', 'Restocking Fee (৳)',
-        'Detailed Notes', 'Recorded By', 'Record Date'
+        'Date', 'Invoice', 'Recipient Name', 'Recipient Phone',
+        'Recipient Address', 'Products Name', 'COD Amount',
+        'Shipping Charge', 'Reason', 'Notes'
       ];
-
-      rows = dataToExport.map((m, idx) => {
-        const metadata = m.metadata || {};
-        const item = inventoryMap[m.inventory_item_id] || {};
-        
-        // Find matching order for extra details
-        const orderNum = m.reference_number || metadata.order_number || '';
-        const matchedOrder = allOrders.find(o => o.order_number === orderNum) || {};
-        const shippingAddr = matchedOrder.shipping_address || metadata.shipping_address || {};
-
-        const totalQty = metadata.is_partial
-          ? (metadata.good_qty || 0) + (metadata.damaged_qty || 0)
-          : (metadata.original_quantity || Math.abs(m.quantity) || 1);
-        const goodQty = metadata.is_partial ? (metadata.good_qty || 0) : (metadata.action === 'restock' ? totalQty : 0);
-        const damagedQty = metadata.is_partial ? (metadata.damaged_qty || 0) : (metadata.action === 'write_off' ? totalQty : 0);
-
-        const actionMap = {
-          restock: 'Restocked to Inventory',
-          return_to_supplier: 'Returned to Supplier',
-          write_off: 'Written Off (Loss)'
-        };
-
-        const reasonMap = {
-          defective: 'Defective Product',
-          wrong_item: 'Wrong Item Delivered',
-          quality_issue: 'Quality Issue',
-          late_delivery: 'Late Delivery',
-          customer_changed_mind: 'Customer Changed Mind',
-          size_color_issue: 'Size/Color Issue',
-          not_as_described: 'Not As Described',
-          other: 'Other'
-        };
-
-        const address = [shippingAddr.address_line, shippingAddr.city, shippingAddr.district].filter(Boolean).join(', ');
-
-        return [
-          idx + 1,
-          format(new Date(m.movement_date), 'yyyy-MM-dd'),
-          item.item_name || 'Unknown',
-          item.barcode || item.isbn || '-',
-          item.category || '-',
-          metadata.return_type === 'purchase_return' ? 'Purchase Return' : 'Sales Return',
-          totalQty,
-          goodQty,
-          damagedQty,
-          orderNum || '-',
-          metadata.order_date || matchedOrder.order_date ? format(new Date(metadata.order_date || matchedOrder.order_date), 'yyyy-MM-dd') : '-',
-          matchedOrder.order_status || metadata.order_status || '-',
-          matchedOrder.total_amount || metadata.order_total || '-',
-          metadata.return_type === 'purchase_return' ? (metadata.supplier_name || '-') : (metadata.customer_name || '-'),
-          metadata.customer_phone || '-',
-          address || '-',
-          matchedOrder.courier_service || metadata.courier_service || '-',
-          matchedOrder.tracking_number || metadata.tracking_number || '-',
-          reasonMap[metadata.reason] || metadata.reason?.replace(/_/g, ' ') || '-',
-          actionMap[metadata.action] || metadata.action?.replace(/_/g, ' ') || '-',
-          metadata.condition || '-',
-          item.purchase_price || 0,
-          item.selling_price || 0,
-          Math.abs(m.total_value || 0),
-          metadata.restocking_fee || 0,
-          m.notes || '-',
-          m.performed_by || '-',
-          m.created_date ? format(new Date(m.created_date), 'yyyy-MM-dd HH:mm') : '-'
-        ];
       });
     } else {
       headers = [
@@ -358,24 +288,38 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const meta = m.metadata || {};
       return sum + (meta.original_quantity || Math.abs(m.quantity) || 1);
     }, 0);
-    
-    const summaryLabel = dataType === 'returns' ? 'TOTAL RETURNS' : 'TOTAL DAMAGES';
-    const emptyColsBefore = dataType === 'returns' ? 5 : 4;
-    const summaryRow = new Array(headers.length).fill('');
-    summaryRow[0] = '';
-    summaryRow[1] = summaryLabel;
-    summaryRow[emptyColsBefore + 1] = totalQty;
-    summaryRow[headers.indexOf('Financial Impact (৳)') !== -1 ? headers.indexOf('Financial Impact (৳)') : headers.indexOf('Loss Value (৳)')] = totalImpact;
 
-    const csvContent = [
-      `${dataType === 'returns' ? 'Returns' : 'Damages'} Report — Generated ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
-      `Total Records: ${dataToExport.length} | Total ${dataType === 'returns' ? 'Impact' : 'Loss'}: ৳${totalImpact.toLocaleString()} | Total Qty: ${totalQty}`,
-      '',
-      headers.map(escapeCSV).join(','),
-      ...rows.map(row => row.map(escapeCSV).join(',')),
-      '',
-      summaryRow.map(escapeCSV).join(',')
-    ].join('\n');
+    // Build date range from data
+    const dates = dataToExport.map(m => new Date(m.movement_date)).sort((a, b) => a - b);
+    const fromDate = dates.length > 0 ? format(dates[0], 'dd-MM-yy') : '-';
+    const toDate = dates.length > 0 ? format(dates[dates.length - 1], 'dd-MM-yy') : '-';
+
+    let csvContent;
+    if (dataType === 'returns') {
+      csvContent = [
+        'PRODHAN.COM',
+        `Sales Return From ${fromDate} to ${toDate}`,
+        `Generated ${format(new Date(), 'dd-MM-yyyy')}`,
+        '',
+        headers.map(escapeCSV).join(','),
+        ...rows.map(row => row.map(escapeCSV).join(',')),
+      ].join('\n');
+    } else {
+      const summaryLabel = 'TOTAL DAMAGES';
+      const summaryRow = new Array(headers.length).fill('');
+      summaryRow[1] = summaryLabel;
+      const lossIdx = headers.indexOf('Loss Value (\u09f3)');
+      if (lossIdx !== -1) summaryRow[lossIdx] = totalImpact;
+      csvContent = [
+        `Damages Report \u2014 Generated ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
+        `Total Records: ${dataToExport.length} | Total Loss: \u09f3${totalImpact.toLocaleString()} | Total Qty: ${totalQty}`,
+        '',
+        headers.map(escapeCSV).join(','),
+        ...rows.map(row => row.map(escapeCSV).join(',')),
+        '',
+        summaryRow.map(escapeCSV).join(',')
+      ].join('\n');
+    }
 
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -601,7 +545,18 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
   const handleSubmit = async (data) => {
     if (editingMovement) {
-      updateMovementMutation.mutate({ movementId: editingMovement.id, data });
+      // When editing, extract the first item's details and merge with top-level data
+      const firstItem = data.items?.[0];
+      const updateData = {
+        ...data,
+        inventory_item_id: firstItem?.inventory_item_id || editingMovement.inventory_item_id,
+        quantity: firstItem?.quantity || editingMovement.quantity,
+        action: firstItem?.condition_breakdown?.good?.action || 'restock',
+        condition: firstItem?.condition_breakdown?.good?.quantity > 0 ? 'good' : 'fair',
+        financial_impact: firstItem?.financial_impact ?? editingMovement.financial_impact,
+        restocking_fee: firstItem?.restocking_fee ?? 0,
+      };
+      updateMovementMutation.mutate({ movementId: editingMovement.id, data: updateData });
       return;
     }
 
