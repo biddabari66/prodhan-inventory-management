@@ -1425,19 +1425,19 @@ function InventoryReportsPage() {
     <button
       onClick={() => handleQuickReport(type)}
       disabled={!!reportGenerating}
-      className={`group h-32 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`group h-24 sm:h-32 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       {reportGenerating === type ? (
         <div className="flex flex-col items-center justify-center h-full">
-          <RefreshCw className={`w-8 h-8 animate-spin ${color}`} />
-          <p className="text-xs text-slate-500 mt-2">Generating...</p>
+          <RefreshCw className={`w-6 h-6 sm:w-8 sm:h-8 animate-spin ${color}`} />
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-1 sm:mt-2">Generating...</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center h-full p-4">
-          <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
-            <Icon className={`w-6 h-6 ${color}`} />
+        <div className="flex flex-col items-center justify-center h-full p-2 sm:p-4">
+          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform`}>
+            <Icon className={`w-4 h-4 sm:w-6 sm:h-6 ${color}`} />
           </div>
-          <p className="font-semibold text-slate-800 text-sm text-center">{title}</p>
+          <p className="font-semibold text-slate-800 text-[11px] sm:text-sm text-center leading-tight">{title}</p>
         </div>
       )}
     </button>
@@ -1445,7 +1445,7 @@ function InventoryReportsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 py-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <span>Inventory</span>
@@ -1454,35 +1454,35 @@ function InventoryReportsPage() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-            <FileText className="w-7 h-7 text-white" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg flex-shrink-0">
+            <FileText className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Report Center</h1>
-            <p className="text-slate-500 text-sm">Generate & download comprehensive reports</p>
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900">Report Center</h1>
+            <p className="text-slate-500 text-xs sm:text-sm">Generate & download reports</p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-xl grid-cols-3 h-12 p-1 bg-slate-100 rounded-xl">
-            <TabsTrigger value="quick" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
-              Quick Reports
+          <TabsList className="grid w-full max-w-xl grid-cols-3 h-10 sm:h-12 p-1 bg-slate-100 rounded-xl">
+            <TabsTrigger value="quick" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium text-xs sm:text-sm px-1 sm:px-3">
+              Quick
             </TabsTrigger>
-            <TabsTrigger value="comprehensive" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
-              📊 Comprehensive
+            <TabsTrigger value="comprehensive" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium text-xs sm:text-sm px-1 sm:px-3">
+              <span className="hidden sm:inline">📊 </span>Full
             </TabsTrigger>
-            <TabsTrigger value="custom" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
-              Report Builder
+            <TabsTrigger value="custom" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium text-xs sm:text-sm px-1 sm:px-3">
+              Builder
             </TabsTrigger>
           </TabsList>
 
           {/* Quick Reports Tab */}
-          <TabsContent value="quick" className="space-y-6 mt-6">
+          <TabsContent value="quick" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
             {/* Filters */}
             <Card className="bg-white border-0 shadow-sm rounded-xl">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <CardContent className="p-3 sm:p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
                   <div>
                     <Label className="text-xs text-slate-600 font-medium">Start Date</Label>
                     <Input 
@@ -1581,7 +1581,7 @@ function InventoryReportsPage() {
             </Card>
 
             {/* Report Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
               {reportTypes.map((report) => (
                 <ReportCard
                   key={report.id}
@@ -1601,35 +1601,35 @@ function InventoryReportsPage() {
           </TabsContent>
 
           {/* Custom Report Builder Tab */}
-          <TabsContent value="custom" className="space-y-6 mt-6">
+          <TabsContent value="custom" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
             <Card className="bg-white border-0 shadow-sm rounded-xl">
-              <CardHeader className="border-b border-slate-100">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-red-600" />
+              <CardHeader className="border-b border-slate-100 px-3 sm:px-6 py-3 sm:py-4">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                   Custom Report Builder
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-3 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Report Type Selection */}
                 <div>
-                  <Label className="text-sm font-semibold mb-3 block">Report Type</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Label className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3 block">Report Type</Label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                     {reportTypes.map((report) => (
                       <button
                         key={report.id}
                         onClick={() => setCustomReport({...customReport, reportType: report.id, groupBy: groupByOptions[report.id]?.[0]?.id || 'product'})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
+                        className={`p-2 sm:p-4 rounded-xl border-2 transition-all ${
                           customReport.reportType === report.id 
                             ? 'border-red-500 bg-red-50' 
                             : 'border-slate-200 hover:border-slate-300'
                         }`}
                       >
-                        <div className={`w-10 h-10 rounded-lg ${report.bgColor} flex items-center justify-center mb-2 mx-auto`}>
-                          <report.icon className={`w-5 h-5 ${report.color}`} />
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${report.bgColor} flex items-center justify-center mb-1 sm:mb-2 mx-auto`}>
+                          <report.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${report.color}`} />
                         </div>
-                        <p className="text-sm font-medium text-center">{report.label}</p>
+                        <p className="text-[10px] sm:text-sm font-medium text-center leading-tight">{report.label}</p>
                         {customReport.reportType === report.id && (
-                          <Check className="w-4 h-4 text-red-600 mx-auto mt-1" />
+                          <Check className="w-3 h-3 sm:w-4 sm:h-4 text-red-600 mx-auto mt-0.5 sm:mt-1" />
                         )}
                       </button>
                     ))}
@@ -1637,7 +1637,7 @@ function InventoryReportsPage() {
                 </div>
 
                 {/* Date Range */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-sm font-semibold mb-3 block">Date Range</Label>
                     <Select 
@@ -1695,7 +1695,7 @@ function InventoryReportsPage() {
                 </div>
 
                 {/* Sort Options */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-sm font-semibold mb-3 block">Sort By</Label>
                     <Select 
@@ -1732,8 +1732,8 @@ function InventoryReportsPage() {
 
                 {/* Output Format */}
                 <div>
-                  <Label className="text-sm font-semibold mb-3 block">Output Format</Label>
-                  <div className="flex gap-4">
+                  <Label className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3 block">Output Format</Label>
+                  <div className="flex gap-2 sm:gap-4">
                     <button
                       onClick={() => setCustomReport({...customReport, format: 'pdf'})}
                       className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${
@@ -1763,7 +1763,7 @@ function InventoryReportsPage() {
                 <Button 
                   onClick={handleCustomReport}
                   disabled={reportGenerating === 'custom'}
-                  className="w-full h-14 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-semibold text-lg shadow-lg"
+                  className="w-full h-11 sm:h-14 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-semibold text-sm sm:text-lg shadow-lg"
                 >
                   {reportGenerating === 'custom' ? (
                     <>
