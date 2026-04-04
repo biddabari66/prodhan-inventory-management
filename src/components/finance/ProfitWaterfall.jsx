@@ -36,32 +36,32 @@ export default function ProfitWaterfall({ financials }) {
 
   return (
     <Card className="border-0 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-red-600" />
+      <CardHeader className="pb-2 px-3 sm:px-6">
+        <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
           Profit & Loss Waterfall
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-1.5">
+      <CardContent className="px-2 sm:px-6">
+        <div className="space-y-1 sm:space-y-1.5">
           {rows.map((row, idx) => (
-            <div key={idx} className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+            <div key={idx} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg transition-all ${
               row.type === 'subtotal' ? 'bg-slate-100 border border-slate-200' :
               row.type === 'total' ? (row.value >= 0 ? 'bg-green-100 border-2 border-green-300' : 'bg-red-100 border-2 border-red-300') :
               row.type === 'revenue' ? 'bg-green-50' : 'bg-white border border-slate-100'
             }`}>
-              <div className="flex items-center gap-2">
-                {row.type === 'expense' && <ArrowDown className="w-3 h-3 text-red-400" />}
-                {row.type === 'revenue' && <ArrowRight className="w-3 h-3 text-green-500" />}
-                <span className={`text-sm ${
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                {row.type === 'expense' && <ArrowDown className="w-3 h-3 text-red-400 flex-shrink-0" />}
+                {row.type === 'revenue' && <ArrowRight className="w-3 h-3 text-green-500 flex-shrink-0" />}
+                <span className={`text-xs sm:text-sm truncate ${
                   row.type === 'subtotal' || row.type === 'total' ? 'font-bold' : 'font-medium'
                 } ${row.type === 'total' ? (row.value >= 0 ? 'text-green-800' : 'text-red-800') : 'text-slate-700'}`}>
                   {row.label}
                 </span>
               </div>
-              <span className={`text-sm font-bold ${
+              <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ml-2 ${
                 row.value >= 0 ? 'text-green-700' : 'text-red-600'
-              } ${row.type === 'total' ? 'text-lg' : ''}`}>
+              } ${row.type === 'total' ? 'sm:text-lg' : ''}`}>
                 {row.value < 0 ? '-' : ''}৳{Math.abs(row.value).toLocaleString()}
               </span>
             </div>

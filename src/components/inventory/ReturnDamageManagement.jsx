@@ -764,202 +764,175 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   };
 
   return (
-    <div className="space-y-6">
-      {/* Professional Action Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Action Header */}
+      <div className="flex flex-col gap-3 pb-2 sm:pb-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-base sm:text-xl font-semibold text-slate-900">
             Transaction Records
-            {movementsLoading && <span className="text-sm font-normal text-slate-400 ml-2 animate-pulse">(Loading...)</span>}
+            {movementsLoading && <span className="text-xs sm:text-sm font-normal text-slate-400 ml-2 animate-pulse">(Loading...)</span>}
           </h2>
-          <p className="text-sm text-slate-500">
-            Detailed tracking and management • {returnsData.length + damagesData.length} records
+          <p className="text-xs sm:text-sm text-slate-500">
+            {returnsData.length + damagesData.length} records
             {!allLoaded && !movementsLoading && (
-              <span className="text-blue-500 ml-2 animate-pulse">Loading older records...</span>
+              <span className="text-blue-500 ml-1 animate-pulse">• Loading older...</span>
             )}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Button 
             onClick={() => handleOpenForm('return')} 
-            className="bg-blue-600 hover:bg-blue-700 shadow-sm"
+            className="bg-blue-600 hover:bg-blue-700 shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4 flex-1 sm:flex-none"
           >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Record Return
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+            <span className="hidden sm:inline">Record</span> Return
           </Button>
           <Button 
             onClick={() => handleOpenForm('damage')} 
-            className="bg-red-600 hover:bg-red-700 shadow-sm"
+            className="bg-red-600 hover:bg-red-700 shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4 flex-1 sm:flex-none"
           >
-            <AlertOctagon className="w-4 h-4 mr-2" />
-            Record Damage / Defective
+            <AlertOctagon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+            <span className="hidden sm:inline">Record</span> Damage
           </Button>
         </div>
       </div>
 
-      {/* Professional Statistics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                <RotateCcw className="w-5 h-5 text-red-600" />
+      {/* Statistics Grid — mobile-optimized */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+        <Card className="border border-slate-200">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-100 flex items-center justify-center">
+                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
             </div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Total Returns</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">{stats.returnCount}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wide font-medium">Returns</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-0.5">{stats.returnCount}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-red-600" />
+        <Card className="border border-slate-200">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-100 flex items-center justify-center">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
             </div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Return Value</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">৳{stats.returnValue.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wide font-medium">Return Value</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-0.5">৳{stats.returnValue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                <AlertOctagon className="w-5 h-5 text-red-600" />
+        <Card className="border border-slate-200">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-100 flex items-center justify-center">
+                <AlertOctagon className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
             </div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Total Damages</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">{stats.damageCount}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wide font-medium">Damages</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-0.5">{stats.damageCount}</p>
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-red-600" />
+        <Card className="border border-slate-200">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-100 flex items-center justify-center">
+                <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
             </div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Damage Loss</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">৳{stats.damageValue.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wide font-medium">Damage Loss</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-0.5">৳{stats.damageValue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50 hover:shadow-lg transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-white" />
+        <Card className="col-span-2 sm:col-span-1 border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-orange-500 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
             </div>
-            <p className="text-xs text-orange-700 uppercase tracking-wide font-semibold">Total Loss</p>
-            <p className="text-2xl font-bold text-orange-600 mt-1">৳{stats.totalLoss.toLocaleString()}</p>
-            <p className="text-xs text-orange-600 mt-1">{stats.lossQuantity} units written off</p>
+            <p className="text-[10px] sm:text-xs text-orange-700 uppercase tracking-wide font-semibold">Total Loss</p>
+            <p className="text-lg sm:text-2xl font-bold text-orange-600 mt-0.5">৳{stats.totalLoss.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-xs text-orange-600 mt-0.5">{stats.lossQuantity} units written off</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filter Bar */}
+      {/* Search and Filter Bar — mobile-optimized */}
       <Card className="border border-slate-200 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3">
+            {/* Search — full width on mobile */}
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
-                placeholder="Search by product, order #, customer, reason..."
+                placeholder="Search product, order #, customer..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10"
+                className="pl-10 h-10 text-sm"
               />
               {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0">
                   <X className="w-3 h-3" />
                 </Button>
               )}
             </div>
             
-            {/* Date Filters */}
-            <div className="flex gap-2 items-center">
-              <Input
-                type="date"
-                value={dateFilter.from}
+            {/* Filters row — wraps on mobile */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <Input type="date" value={dateFilter.from}
                 onChange={(e) => setDateFilter({...dateFilter, from: e.target.value})}
-                className="h-10 w-36"
-                placeholder="From"
-              />
-              <span className="text-slate-400">to</span>
-              <Input
-                type="date"
-                value={dateFilter.to}
+                className="h-9 w-[calc(50%-16px)] sm:w-36 text-sm" />
+              <span className="text-slate-400 text-xs">to</span>
+              <Input type="date" value={dateFilter.to}
                 onChange={(e) => setDateFilter({...dateFilter, to: e.target.value})}
-                className="h-10 w-36"
-                placeholder="To"
-              />
+                className="h-9 w-[calc(50%-16px)] sm:w-36 text-sm" />
+              
+              <Select value={productFilter} onValueChange={setProductFilter}>
+                <SelectTrigger className="w-full sm:w-48 h-9 text-sm">
+                  <SelectValue placeholder="Filter by Product" />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  <SelectItem value="all">All Products</SelectItem>
+                  {departmentFilteredInventory.slice(0, 100).map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.item_name?.substring(0, 30)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            
-            {/* Product Filter */}
-            <Select value={productFilter} onValueChange={setProductFilter}>
-              <SelectTrigger className="w-48 h-10">
-                <SelectValue placeholder="Filter by Product" />
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                <SelectItem value="all">All Products</SelectItem>
-                {departmentFilteredInventory.slice(0, 100).map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.item_name?.substring(0, 30)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Clear Filters */}
-            {(searchQuery || dateFilter.from || dateFilter.to || productFilter !== 'all') && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchQuery('');
-                  setDateFilter({ from: '', to: '' });
-                  setReasonFilter('all');
-                  setProductFilter('all');
-                  setReturnsPage(1);
-                  setDamagesPage(1);
-                }}
-                className="h-10"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Clear
-              </Button>
-            )}
-            
-            {/* Export Buttons */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleExportExcel(activeTab)}
-                className="h-10 bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export Excel
+
+            {/* Action row */}
+            <div className="flex gap-2 items-center justify-between">
+              {(searchQuery || dateFilter.from || dateFilter.to || productFilter !== 'all') && (
+                <Button variant="outline" size="sm" onClick={() => {
+                  setSearchQuery(''); setDateFilter({ from: '', to: '' });
+                  setReasonFilter('all'); setProductFilter('all');
+                  setReturnsPage(1); setDamagesPage(1);
+                }} className="h-8 text-xs">
+                  <X className="w-3 h-3 mr-1" /> Clear
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => handleExportExcel(activeTab)}
+                className="h-8 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100 ml-auto">
+                <Download className="w-3.5 h-3.5 mr-1" /> Export
               </Button>
             </div>
           </div>
           
           {/* Active Filters Summary */}
           {(searchQuery || dateFilter.from || dateFilter.to || productFilter !== 'all') && (
-            <div className="mt-3 pt-3 border-t flex items-center gap-2 text-sm text-slate-600">
-              <Filter className="w-4 h-4" />
-              <span>Showing {activeTab === 'returns' ? returnsData.length : damagesData.length} filtered results</span>
+            <div className="mt-2 pt-2 border-t flex items-center gap-2 text-xs text-slate-600">
+              <Filter className="w-3.5 h-3.5" />
+              <span>{activeTab === 'returns' ? returnsData.length : damagesData.length} filtered</span>
               {productFilter !== 'all' && (
-                <Badge variant="outline" className="ml-2">
-                  Product: {departmentFilteredInventory.find(i => i.id === productFilter)?.item_name?.substring(0, 20) || 'Selected'}
+                <Badge variant="outline" className="text-[10px]">
+                  {departmentFilteredInventory.find(i => i.id === productFilter)?.item_name?.substring(0, 15) || 'Product'}
                 </Badge>
               )}
             </div>

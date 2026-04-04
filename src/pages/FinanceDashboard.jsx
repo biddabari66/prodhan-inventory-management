@@ -444,23 +444,22 @@ function FinanceDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-4 lg:p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-2 py-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-              <DollarSign className="w-7 h-7 text-white" />
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg flex-shrink-0">
+              <DollarSign className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Finance Dashboard</h1>
-              <p className="text-slate-500 text-sm">Complete financial overview for Prodhan.com</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-slate-900">Finance Dashboard</h1>
+              <p className="text-slate-500 text-xs sm:text-sm">Financial overview for Prodhan.com</p>
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Period Selector */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-40 bg-white">
+              <SelectTrigger className="w-32 sm:w-40 bg-white h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -474,44 +473,34 @@ function FinanceDashboardPage() {
             </Select>
             
             {selectedPeriod === 'custom' && (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  value={customDateRange.from}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Input type="date" value={customDateRange.from}
                   onChange={(e) => setCustomDateRange({...customDateRange, from: e.target.value})}
-                  className="w-36 bg-white"
-                />
-                <span className="text-slate-400">to</span>
-                <Input
-                  type="date"
-                  value={customDateRange.to}
+                  className="w-[130px] sm:w-36 bg-white h-9 text-sm" />
+                <span className="text-slate-400 text-xs">to</span>
+                <Input type="date" value={customDateRange.to}
                   onChange={(e) => setCustomDateRange({...customDateRange, to: e.target.value})}
-                  className="w-36 bg-white"
-                />
+                  className="w-[130px] sm:w-36 bg-white h-9 text-sm" />
               </div>
             )}
 
-            {/* Export Dropdown */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="bg-white">
-                  <Download className="w-4 h-4 mr-2" />
+                <Button variant="outline" size="sm" className="bg-white h-9 text-sm">
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
                   Export
-                  <ChevronDown className="w-4 h-4 ml-2" />
+                  <ChevronDown className="w-3.5 h-3.5 ml-1" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-2" align="end">
-                <Button variant="ghost" className="w-full justify-start" onClick={handleExportSummary}>
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Summary Report
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={handleExportSummary}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" /> Summary
                 </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={handleExportOrders}>
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Orders List
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={handleExportOrders}>
+                  <ShoppingCart className="w-4 h-4 mr-2" /> Orders
                 </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={handleExportPurchases}>
-                  <Package className="w-4 h-4 mr-2" />
-                  Purchases List
+                <Button variant="ghost" className="w-full justify-start text-sm" onClick={handleExportPurchases}>
+                  <Package className="w-4 h-4 mr-2" /> Purchases
                 </Button>
               </PopoverContent>
             </Popover>
@@ -532,181 +521,173 @@ function FinanceDashboardPage() {
           )}
         </div>
 
-        {/* Key Metrics - 7 main cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Key Metrics */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {/* Total Orders */}
           <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl bg-blue-500 flex items-center justify-center">
-                  <ShoppingCart className="w-5 h-5 text-white" />
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-blue-500 flex items-center justify-center">
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <span className="text-xs text-blue-700 font-medium">Avg: ৳{financials.avgOrderValue.toFixed(0)}</span>
+                <span className="text-[10px] sm:text-xs text-blue-700 font-medium">Avg: ৳{financials.avgOrderValue.toFixed(0)}</span>
               </div>
-              <p className="text-2xl lg:text-3xl font-bold text-slate-900">{financials.totalOrders}</p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">Total Orders</p>
-              <div className="mt-2 text-xs text-blue-700">
-                Delivered: {financials.deliveredOrders} | Pending: {financials.pendingOrders}
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">{financials.totalOrders}</p>
+              <p className="text-[10px] sm:text-xs text-slate-600 mt-0.5 font-medium">Total Orders</p>
+              <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-blue-700">
+                Del: {financials.deliveredOrders} | Pend: {financials.pendingOrders}
               </div>
             </CardContent>
           </Card>
           
           {/* Ad Spend */}
           <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-orange-50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl bg-amber-500 flex items-center justify-center">
-                  <Target className="w-5 h-5 text-white" />
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-500 flex items-center justify-center">
+                  <Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
               </div>
-              <p className="text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalAdSpend.toLocaleString()}</p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">Ad Spend</p>
-              <div className="mt-2 text-xs text-amber-700">
-                Marketing Investment
-              </div>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalAdSpend.toLocaleString()}</p>
+              <p className="text-[10px] sm:text-xs text-slate-600 mt-0.5 font-medium">Ad Spend</p>
             </CardContent>
           </Card>
 
           {/* ROI */}
           <Card className={`border-2 shadow-sm ${financials.roi >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${financials.roi >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
-                  <TrendingUp className="w-5 h-5 text-white" />
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center ${financials.roi >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <Badge className={financials.roi >= 0 ? 'bg-green-600' : 'bg-red-600'}>
+                <Badge className={`text-[10px] sm:text-xs ${financials.roi >= 0 ? 'bg-green-600' : 'bg-red-600'}`}>
                   {financials.roi.toFixed(1)}%
                 </Badge>
               </div>
-              <p className={`text-2xl lg:text-3xl font-bold ${financials.roi >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                ROI
-              </p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">
+              <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${financials.roi >= 0 ? 'text-green-700' : 'text-red-700'}`}>ROI</p>
+              <p className="text-[10px] sm:text-xs text-slate-600 mt-0.5 font-medium">
                 {financials.roi >= 20 ? 'Excellent' : financials.roi >= 10 ? 'Good' : financials.roi >= 0 ? 'Low' : 'Negative'}
               </p>
             </CardContent>
           </Card>
         
-          <div className="lg:col-start-1 lg:col-span-4 grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Total Revenue */}
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl bg-green-500 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
+          {/* Revenue, Expenses, Net Profit */}
+          <div className="col-span-2 lg:col-start-1 lg:col-span-4 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-green-500 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <ArrowUpRight className="w-5 h-5 text-green-600" />
-              </div>
-              <p className="text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalRevenue.toLocaleString()}</p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">Total Revenue</p>
-              <div className="mt-2 text-xs text-green-700">
-                Collected: ৳{financials.collectedRevenue.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total Expenses */}
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-rose-50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl bg-red-500 flex items-center justify-center">
-                  <TrendingDown className="w-5 h-5 text-white" />
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalRevenue.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-slate-600 mt-0.5 font-medium">Total Revenue</p>
+                <div className="mt-1 text-[10px] sm:text-xs text-green-700 truncate">
+                  Collected: ৳{financials.collectedRevenue.toLocaleString()}
                 </div>
-                <ArrowDownRight className="w-5 h-5 text-red-600" />
-              </div>
-              <p className="text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalExpenses.toLocaleString()}</p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">Total Expenses</p>
-              <div className="mt-2 text-xs text-red-700">
-                Purchases: ৳{financials.costOfGoods.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Net Profit/Loss (after salaries) */}
-          <Card className={`border-2 shadow-sm ${financials.netProfit >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${financials.netProfit >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
-                  <Target className="w-5 h-5 text-white" />
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-rose-50">
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-red-500 flex items-center justify-center">
+                    <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 </div>
-                <Badge className={financials.netProfit >= 0 ? 'bg-green-600' : 'bg-red-600'}>
-                  {financials.profitMargin.toFixed(1)}%
-                </Badge>
-              </div>
-              <p className={`text-2xl lg:text-3xl font-bold ${financials.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                ৳{Math.abs(financials.netProfit).toLocaleString()}
-              </p>
-              <p className="text-xs text-slate-600 mt-1 font-medium">
-                {financials.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
-              </p>
-              {financials.totalSalaries > 0 && (
-                <p className="text-xs text-slate-500 mt-1">After ৳{financials.totalSalaries.toLocaleString()} salaries</p>
-              )}
-            </CardContent>
-          </Card>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">৳{financials.totalExpenses.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-slate-600 mt-0.5 font-medium">Total Expenses</p>
+                <div className="mt-1 text-[10px] sm:text-xs text-red-700 truncate">
+                  Purchases: ৳{financials.costOfGoods.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
 
+            <Card className={`col-span-2 sm:col-span-1 border-2 shadow-sm ${financials.netProfit >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center ${financials.netProfit >= 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                    <Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <Badge className={`text-[10px] sm:text-xs ${financials.netProfit >= 0 ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {financials.profitMargin.toFixed(1)}%
+                  </Badge>
+                </div>
+                <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${financials.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  ৳{Math.abs(financials.netProfit).toLocaleString()}
+                </p>
+                <p className="text-[10px] sm:text-xs text-slate-600 mt-0.5 font-medium">
+                  {financials.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
+                </p>
+                {financials.totalSalaries > 0 && (
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">After ৳{financials.totalSalaries.toLocaleString()} salaries</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
 
         {/* Secondary Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <Card className="border border-slate-200 shadow-sm">
-          <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-slate-900">{financials.deliveredOrders}</p>
-            <p className="text-xs text-slate-500">Delivered</p>
+          <CardContent className="p-2.5 sm:p-4 text-center">
+            <p className="text-base sm:text-lg font-bold text-slate-900">{financials.deliveredOrders}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Delivered</p>
           </CardContent>
         </Card>
         <Card className="border border-slate-200 shadow-sm">
-          <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-amber-600">{financials.pendingOrders}</p>
-            <p className="text-xs text-slate-500">Pending</p>
+          <CardContent className="p-2.5 sm:p-4 text-center">
+            <p className="text-base sm:text-lg font-bold text-amber-600">{financials.pendingOrders}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Pending</p>
           </CardContent>
         </Card>
         <Card className="border border-slate-200 shadow-sm">
-          <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-red-600">{financials.cancelledOrders}</p>
-            <p className="text-xs text-slate-500">Cancelled</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-help" title={`${returns.length} return/damage records from Inventory Returns page`}>
-          <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-purple-600">{returns.length}</p>
-            <p className="text-xs text-slate-500">Returns/Damages</p>
-            <p className="text-xs text-red-600 font-semibold mt-1">Loss: ৳{financials.returnLoss.toLocaleString()}</p>
+          <CardContent className="p-2.5 sm:p-4 text-center">
+            <p className="text-base sm:text-lg font-bold text-red-600">{financials.cancelledOrders}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Cancelled</p>
           </CardContent>
         </Card>
         <Card className="border border-slate-200 shadow-sm">
-          <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-slate-900">৳{financials.shippingRevenue.toLocaleString()}</p>
-            <p className="text-xs text-slate-500">Shipping Rev</p>
+          <CardContent className="p-2.5 sm:p-4 text-center">
+            <p className="text-base sm:text-lg font-bold text-purple-600">{returns.length}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Returns</p>
+            <p className="text-[10px] text-red-600 font-semibold mt-0.5">৳{financials.returnLoss.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card className="border border-slate-200 shadow-sm">
-          <CardContent className="p-4 text-center">
-            <p className="text-lg font-bold text-orange-600">৳{financials.totalDiscount.toLocaleString()}</p>
-            <p className="text-xs text-slate-500">Discounts Given</p>
+          <CardContent className="p-2.5 sm:p-4 text-center">
+            <p className="text-base sm:text-lg font-bold text-slate-900">৳{financials.shippingRevenue.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Shipping</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-2.5 sm:p-4 text-center">
+            <p className="text-base sm:text-lg font-bold text-orange-600">৳{financials.totalDiscount.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500">Discounts</p>
           </CardContent>
         </Card>
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Sales Trend Chart */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-red-600" />
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 Sales Trend
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-64">
+            <CardContent className="px-1 sm:px-6">
+              <div className="h-48 sm:h-64">
                 {dailySalesTrend.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={dailySalesTrend}>
+                    <LineChart data={dailySalesTrend} margin={{ left: 0, right: 8, top: 5, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
-                      <YAxis tickFormatter={(v) => `৳${(v/1000).toFixed(0)}K`} tick={{ fontSize: 10 }} />
+                      <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={(v) => v.slice(5)} />
+                      <YAxis tickFormatter={(v) => `৳${(v/1000).toFixed(0)}K`} tick={{ fontSize: 9 }} width={45} />
                       <Tooltip 
                         formatter={(value, name) => [
                           name === 'revenue' ? `৳${value.toLocaleString()}` : value,
@@ -714,11 +695,11 @@ function FinanceDashboardPage() {
                         ]}
                         labelFormatter={(label) => `Date: ${label}`}
                       />
-                      <Line type="monotone" dataKey="revenue" stroke="#DC2626" strokeWidth={2} dot={{ fill: '#DC2626' }} />
+                      <Line type="monotone" dataKey="revenue" stroke="#DC2626" strokeWidth={2} dot={{ fill: '#DC2626', r: 2 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400">
+                  <div className="h-full flex items-center justify-center text-slate-400 text-sm">
                     No data for selected period
                   </div>
                 )}
@@ -728,14 +709,14 @@ function FinanceDashboardPage() {
 
           {/* Expense Breakdown Chart */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-red-600" />
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+                <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 Expense Breakdown
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-64">
+            <CardContent className="px-2 sm:px-6">
+              <div className="h-48 sm:h-64">
                 {expenseBreakdown.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsPie>
@@ -743,12 +724,11 @@ function FinanceDashboardPage() {
                         data={expenseBreakdown}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
+                        innerRadius={35}
+                        outerRadius={60}
                         paddingAngle={3}
                         dataKey="value"
-                        label={({ name, value }) => `${name}: ৳${(value/1000).toFixed(0)}K`}
-                        labelLine={false}
+                        label={false}
                       >
                         {expenseBreakdown.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -758,20 +738,20 @@ function FinanceDashboardPage() {
                     </RechartsPie>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400">
+                  <div className="h-full flex items-center justify-center text-slate-400 text-sm">
                     No expenses for selected period
                   </div>
                 )}
               </div>
-              {/* Expense Legend */}
-              <div className="mt-4 space-y-2">
+              {/* Expense Legend — compact on mobile */}
+              <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
                 {expenseBreakdown.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }}></div>
-                      <span className="text-sm text-slate-700">{item.name}</span>
+                  <div key={index} className="flex justify-between items-center p-1.5 sm:p-2 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.fill }}></div>
+                      <span className="text-xs sm:text-sm text-slate-700 truncate">{item.name}</span>
                     </div>
-                    <span className="text-sm font-semibold text-slate-900">৳{item.value.toLocaleString()}</span>
+                    <span className="text-xs sm:text-sm font-semibold text-slate-900 flex-shrink-0 ml-2">৳{item.value.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -783,111 +763,112 @@ function FinanceDashboardPage() {
         <ProfitWaterfall financials={financials} />
 
         {/* Detailed Breakdown Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+
           {/* Revenue Card */}
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-green-600" />
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 Revenue Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Total Revenue</span>
-                <span className="font-bold text-green-700">৳{financials.totalRevenue.toLocaleString()}</span>
+            <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6">
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Total Revenue</span>
+                <span className="font-bold text-xs sm:text-sm text-green-700">৳{financials.totalRevenue.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Collected</span>
-                <span className="font-bold text-green-600">৳{financials.collectedRevenue.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Collected</span>
+                <span className="font-bold text-xs sm:text-sm text-green-600">৳{financials.collectedRevenue.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Pending (COD)</span>
-                <span className="font-bold text-amber-600">৳{financials.pendingRevenue.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Pending (COD)</span>
+                <span className="font-bold text-xs sm:text-sm text-amber-600">৳{financials.pendingRevenue.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Shipping Revenue</span>
-                <span className="font-bold text-blue-600">৳{financials.shippingRevenue.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Shipping Revenue</span>
+                <span className="font-bold text-xs sm:text-sm text-blue-600">৳{financials.shippingRevenue.toLocaleString()}</span>
               </div>
             </CardContent>
           </Card>
 
           {/* Expenses Card */}
           <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-red-600" />
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 Expense Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Purchase Orders</span>
-                <span className="font-bold text-red-700">৳{financials.costOfGoods.toLocaleString()}</span>
+            <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6">
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Purchase Orders</span>
+                <span className="font-bold text-xs sm:text-sm text-red-700">৳{financials.costOfGoods.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Packaging & Courier</span>
-                <span className="font-bold text-amber-600">৳{financials.packagingCost.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Packaging & Courier</span>
+                <span className="font-bold text-xs sm:text-sm text-amber-600">৳{financials.packagingCost.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Returns (Refunds)</span>
-                <span className="font-bold text-orange-600">৳{financials.actualReturnLoss.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Returns (Refunds)</span>
+                <span className="font-bold text-xs sm:text-sm text-orange-600">৳{financials.actualReturnLoss.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Damage/Waste (Write-off)</span>
-                <span className="font-bold text-red-600">৳{financials.damageLoss.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Damage/Waste</span>
+                <span className="font-bold text-xs sm:text-sm text-red-600">৳{financials.damageLoss.toLocaleString()}</span>
               </div>
               {financials.customExpenses > 0 && (
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm text-slate-600">Production Expenses</span>
-                  <span className="font-bold text-purple-600">৳{financials.customExpenses.toLocaleString()}</span>
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                  <span className="text-xs sm:text-sm text-slate-600">Production</span>
+                  <span className="font-bold text-xs sm:text-sm text-purple-600">৳{financials.customExpenses.toLocaleString()}</span>
                 </div>
               )}
               {financials.otherExpenses > 0 && (
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm text-slate-600">Other Expenses</span>
-                  <span className="font-bold text-pink-600">৳{financials.otherExpenses.toLocaleString()}</span>
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                  <span className="text-xs sm:text-sm text-slate-600">Other</span>
+                  <span className="font-bold text-xs sm:text-sm text-pink-600">৳{financials.otherExpenses.toLocaleString()}</span>
                 </div>
               )}
               {financials.totalSalaries > 0 && (
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm text-slate-600">Employee Salaries</span>
-                  <span className="font-bold text-purple-600">৳{financials.totalSalaries.toLocaleString()}</span>
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                  <span className="text-xs sm:text-sm text-slate-600">Salaries</span>
+                  <span className="font-bold text-xs sm:text-sm text-purple-600">৳{financials.totalSalaries.toLocaleString()}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center p-3 bg-red-100 rounded-lg">
-                <span className="text-sm font-semibold text-slate-700">Total Expenses</span>
-                <span className="font-bold text-red-700">৳{(financials.totalExpenses + financials.totalSalaries).toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-red-100 rounded-lg">
+                <span className="text-xs sm:text-sm font-semibold text-slate-700">Total Expenses</span>
+                <span className="font-bold text-xs sm:text-sm text-red-700">৳{(financials.totalExpenses + financials.totalSalaries).toLocaleString()}</span>
               </div>
             </CardContent>
           </Card>
 
           {/* Stats Card */}
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-blue-600" />
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 Key Metrics
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Profit Margin</span>
-                <Badge className={financials.profitMargin >= 0 ? 'bg-green-600' : 'bg-red-600'}>
+            <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6">
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Profit Margin</span>
+                <Badge className={`text-[10px] sm:text-xs ${financials.profitMargin >= 0 ? 'bg-green-600' : 'bg-red-600'}`}>
                   {financials.profitMargin.toFixed(1)}%
                 </Badge>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Avg Order Value</span>
-                <span className="font-bold text-blue-700">৳{financials.avgOrderValue.toFixed(0)}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Avg Order Value</span>
+                <span className="font-bold text-xs sm:text-sm text-blue-700">৳{financials.avgOrderValue.toFixed(0)}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Discounts Given</span>
-                <span className="font-bold text-orange-600">৳{financials.totalDiscount.toLocaleString()}</span>
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Discounts Given</span>
+                <span className="font-bold text-xs sm:text-sm text-orange-600">৳{financials.totalDiscount.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                <span className="text-sm text-slate-600">Delivery Rate</span>
-                <span className="font-bold text-green-600">
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg">
+                <span className="text-xs sm:text-sm text-slate-600">Delivery Rate</span>
+                <span className="font-bold text-xs sm:text-sm text-green-600">
                   {financials.totalOrders > 0 ? ((financials.deliveredOrders / financials.totalOrders) * 100).toFixed(1) : 0}%
                 </span>
               </div>
