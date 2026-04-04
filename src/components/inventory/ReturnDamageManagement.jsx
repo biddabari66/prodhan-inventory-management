@@ -940,35 +940,35 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         </CardContent>
       </Card>
 
-      {/* Professional Tabs for Returns vs Damages */}
+      {/* Tabs for Returns vs Damages */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-slate-100 rounded-xl">
+        <TabsList className="grid w-full grid-cols-2 h-11 sm:h-14 p-1 bg-slate-100 rounded-xl">
           <TabsTrigger 
             value="returns" 
-            className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-red-700 font-medium"
+            className="gap-1.5 sm:gap-2 h-9 sm:h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-red-700 font-medium text-xs sm:text-sm"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>Product Returns</span>
-            <Badge variant="secondary" className="ml-1 bg-red-100 text-red-700">
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Product</span> Returns
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 bg-red-100 text-red-700 text-[10px] sm:text-xs px-1.5 sm:px-2">
               {returnsData.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger 
             value="damages" 
-            className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-red-700 font-medium"
+            className="gap-1.5 sm:gap-2 h-9 sm:h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-red-700 font-medium text-xs sm:text-sm"
           >
-            <AlertOctagon className="w-4 h-4" />
-            <span>Damaged Products</span>
-            <Badge variant="secondary" className="ml-1 bg-red-100 text-red-700">
+            <AlertOctagon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Damaged</span> Damages
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 bg-red-100 text-red-700 text-[10px] sm:text-xs px-1.5 sm:px-2">
               {damagesData.length}
             </Badge>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="returns" className="mt-6">
-          <Card className="border border-slate-200 shadow-sm">
-            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="text-lg font-semibold text-slate-900">Product Returns History</CardTitle>
+        <TabsContent value="returns" className="mt-3 sm:mt-6">
+          <Card className="border border-slate-200 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-3 sm:px-6 py-3 sm:py-4">
+              <CardTitle className="text-sm sm:text-lg font-semibold text-slate-900">Product Returns History</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1109,30 +1109,20 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               
               {/* Returns Pagination */}
               {returnsData.length > PAGE_SIZE && (
-                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
-                  <p className="text-sm text-slate-600">
-                    Showing {((returnsPage - 1) * PAGE_SIZE) + 1} - {Math.min(returnsPage * PAGE_SIZE, returnsData.length)} of {returnsData.length} records
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50">
+                  <p className="text-xs sm:text-sm text-slate-600">
+                    {((returnsPage - 1) * PAGE_SIZE) + 1}-{Math.min(returnsPage * PAGE_SIZE, returnsData.length)} of {returnsData.length}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <Button variant="outline" size="sm" className="h-8 text-xs"
                       onClick={() => setReturnsPage(p => Math.max(1, p - 1))}
-                      disabled={returnsPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-sm font-medium px-3">
-                      Page {returnsPage} of {Math.ceil(returnsData.length / PAGE_SIZE)}
+                      disabled={returnsPage === 1}>Prev</Button>
+                    <span className="text-xs font-medium px-2">
+                      {returnsPage}/{Math.ceil(returnsData.length / PAGE_SIZE)}
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <Button variant="outline" size="sm" className="h-8 text-xs"
                       onClick={() => setReturnsPage(p => Math.min(Math.ceil(returnsData.length / PAGE_SIZE), p + 1))}
-                      disabled={returnsPage >= Math.ceil(returnsData.length / PAGE_SIZE)}
-                    >
-                      Next
-                    </Button>
+                      disabled={returnsPage >= Math.ceil(returnsData.length / PAGE_SIZE)}>Next</Button>
                   </div>
                 </div>
               )}
@@ -1140,10 +1130,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           </Card>
         </TabsContent>
 
-        <TabsContent value="damages" className="mt-6">
-          <Card className="border border-slate-200 shadow-sm">
-            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="text-lg font-semibold text-slate-900">Damaged Products History</CardTitle>
+        <TabsContent value="damages" className="mt-3 sm:mt-6">
+          <Card className="border border-slate-200 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-3 sm:px-6 py-3 sm:py-4">
+              <CardTitle className="text-sm sm:text-lg font-semibold text-slate-900">Damaged Products History</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1238,30 +1228,20 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               
               {/* Damages Pagination */}
               {damagesData.length > PAGE_SIZE && (
-                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
-                  <p className="text-sm text-slate-600">
-                    Showing {((damagesPage - 1) * PAGE_SIZE) + 1} - {Math.min(damagesPage * PAGE_SIZE, damagesData.length)} of {damagesData.length} records
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50">
+                  <p className="text-xs sm:text-sm text-slate-600">
+                    {((damagesPage - 1) * PAGE_SIZE) + 1}-{Math.min(damagesPage * PAGE_SIZE, damagesData.length)} of {damagesData.length}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <Button variant="outline" size="sm" className="h-8 text-xs"
                       onClick={() => setDamagesPage(p => Math.max(1, p - 1))}
-                      disabled={damagesPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-sm font-medium px-3">
-                      Page {damagesPage} of {Math.ceil(damagesData.length / PAGE_SIZE)}
+                      disabled={damagesPage === 1}>Prev</Button>
+                    <span className="text-xs font-medium px-2">
+                      {damagesPage}/{Math.ceil(damagesData.length / PAGE_SIZE)}
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <Button variant="outline" size="sm" className="h-8 text-xs"
                       onClick={() => setDamagesPage(p => Math.min(Math.ceil(damagesData.length / PAGE_SIZE), p + 1))}
-                      disabled={damagesPage >= Math.ceil(damagesData.length / PAGE_SIZE)}
-                    >
-                      Next
-                    </Button>
+                      disabled={damagesPage >= Math.ceil(damagesData.length / PAGE_SIZE)}>Next</Button>
                   </div>
                 </div>
               )}

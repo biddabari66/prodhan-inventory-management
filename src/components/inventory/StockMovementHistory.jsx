@@ -163,16 +163,16 @@ export default function StockMovementHistory({ itemId, onMovementAdded }) {
 
     return (
         <Card className="premium-card">
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5" />
+            <CardHeader className="px-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
                         Stock Movement History
                         {itemId && ` - ${getItemName(itemId)}`}
                     </CardTitle>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
                         <Select value={filter} onValueChange={setFilter}>
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-28 sm:w-32 h-9 text-sm">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -185,12 +185,12 @@ export default function StockMovementHistory({ itemId, onMovementAdded }) {
                         </Select>
                         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                             <DialogTrigger asChild>
-                                <Button className="btn-primary">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Record Movement
+                                <Button className="btn-primary h-9 text-sm px-3 sm:px-4">
+                                    <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                                    <span className="hidden sm:inline">Record</span> Movement
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Record Stock Movement</DialogTitle>
                                 </DialogHeader>
@@ -338,29 +338,30 @@ export default function StockMovementHistory({ itemId, onMovementAdded }) {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0 sm:p-6">
                 {filteredMovements.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center py-8 text-muted-foreground px-4">
                         No movement records found. Record your first stock movement above.
                     </div>
                 ) : (
+                    <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Item</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Reference</TableHead>
-                                <TableHead>Value</TableHead>
-                                <TableHead>Balance After</TableHead>
-                                <TableHead>Performed By</TableHead>
+                                <TableHead className="whitespace-nowrap">Date</TableHead>
+                                <TableHead className="min-w-[150px]">Item</TableHead>
+                                <TableHead className="whitespace-nowrap">Type</TableHead>
+                                <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                                <TableHead className="whitespace-nowrap">Reference</TableHead>
+                                <TableHead className="whitespace-nowrap">Value</TableHead>
+                                <TableHead className="whitespace-nowrap">Balance After</TableHead>
+                                <TableHead className="whitespace-nowrap">Performed By</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredMovements.map(movement => (
                                 <TableRow key={movement.id}>
-                                    <TableCell>{format(new Date(movement.movement_date), 'MMM dd, yyyy')}</TableCell>
+                                    <TableCell className="whitespace-nowrap">{format(new Date(movement.movement_date), 'MMM dd, yyyy')}</TableCell>
                                     <TableCell className="font-medium">
                                         {getItemName(movement.inventory_item_id)}
                                     </TableCell>
@@ -383,15 +384,16 @@ export default function StockMovementHistory({ itemId, onMovementAdded }) {
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell>৳{(movement.total_value || 0).toLocaleString()}</TableCell>
+                                    <TableCell className="whitespace-nowrap">৳{(movement.total_value || 0).toLocaleString()}</TableCell>
                                     <TableCell className="font-medium">{movement.balance_after}</TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
+                                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                                         {movement.performed_by}
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
+                    </div>
                 )}
             </CardContent>
         </Card>
