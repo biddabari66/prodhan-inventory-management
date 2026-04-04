@@ -456,9 +456,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       return { item, newStock };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['movements']);
-      queryClient.invalidateQueries(['movements-returns-all']);
+      // Invalidate ALL movement caches including two-phase loading
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['movements'] });
+      queryClient.invalidateQueries({ queryKey: ['movements-returns-all'] });
+      queryClient.invalidateQueries({ queryKey: ['movements-returns-recent'] });
       toast.success('Record updated successfully!');
       setIsFormOpen(false);
       setEditingMovement(null);
@@ -487,9 +489,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       return { item, newStock };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['movements']);
-      queryClient.invalidateQueries(['movements-returns-all']);
+      // Invalidate ALL movement caches including two-phase loading
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['movements'] });
+      queryClient.invalidateQueries({ queryKey: ['movements-returns-all'] });
+      queryClient.invalidateQueries({ queryKey: ['movements-returns-recent'] });
       toast.success('Record deleted successfully!');
       setDeleteConfirmOpen(false);
       setMovementToDelete(null);
@@ -559,17 +563,27 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     if (editingMovement) {
       // When editing, extract the first item's details and merge with top-level data
       const firstItem = data.items?.[0];
+      
+      // CRITICAL: Ensure financial_impact is a number from the item (form syncs it in handleSubmit)
+      const itemFinancialImpact = firstItem ? Number(firstItem.financial_impact) : NaN;
+      const finalFinancialImpact = !isNaN(itemFinancialImpact) ? itemFinancialImpact : (editingMovement.financial_impact || 0);
+      
+      const itemRestockingFee = firstItem ? Number(firstItem.restocking_fee) : NaN;
+      const finalRestockingFee = !isNaN(itemRestockingFee) ? itemRestockingFee : (editingMovement.restocking_fee || 0);
+
       const updateData = {
         ...data,
         inventory_item_id: firstItem?.inventory_item_id || editingMovement.inventory_item_id,
         quantity: firstItem?.quantity || editingMovement.quantity,
         action: firstItem?.condition_breakdown?.good?.action || editingMovement.condition_breakdown?.good?.action || 'restock',
         condition: (firstItem?.condition_breakdown?.good?.quantity > 0) ? 'good' : 'fair',
-        financial_impact: firstItem?.financial_impact ?? editingMovement.financial_impact,
-        restocking_fee: firstItem?.restocking_fee ?? editingMovement.restocking_fee ?? 0,
+        financial_impact: finalFinancialImpact,
+        restocking_fee: finalRestockingFee,
         incident_date: data.incident_date || editingMovement.incident_date,
         notes: data.notes ?? editingMovement.notes ?? '',
       };
+      
+      console.log('[EDIT] financial_impact from form item:', firstItem?.financial_impact, '→ final:', finalFinancialImpact);
       updateMovementMutation.mutate({ movementId: editingMovement.id, data: updateData });
       return;
     }
@@ -699,9 +713,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         }
       }
 
-      await queryClient.invalidateQueries(['movements-returns-all']);
-      await queryClient.invalidateQueries(['inventory']);
-      await queryClient.invalidateQueries(['movements']);
+      await queryClient.invalidateQueries({ queryKey: ['movements-returns-all'] });
+      await queryClient.invalidateQueries({ queryKey: ['movements-returns-recent'] });
+      await queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      await queryClient.invalidateQueries({ queryKey: ['movements'] });
       toast.success(`${items.length} product(s) processed successfully!`);
       setIsFormOpen(false);
     } catch (error) {
