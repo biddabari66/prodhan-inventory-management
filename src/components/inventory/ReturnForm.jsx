@@ -205,12 +205,24 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
     if (productItems.length === 0) { toast.error('Please add at least one product'); return; }
     if (!formData.reason) { toast.error('Please provide a reason'); return; }
 
+    // When editing (initialData with id), sync the form's financial_impact back into the product item
+    let finalItems = productItems;
+    if (initialData?.id && finalItems.length === 1) {
+      finalItems = finalItems.map(item => ({
+        ...item,
+        financial_impact: formData.financial_impact,
+        restocking_fee: formData.restocking_fee || 0,
+        quantity: formData.quantity || item.quantity,
+        condition_breakdown: formData.condition_breakdown || item.condition_breakdown,
+      }));
+    }
+
     // Map condition_breakdown to include a zero damaged entry for downstream compatibility
-    const mappedItems = productItems.map(item => ({
+    const mappedItems = finalItems.map(item => ({
       ...item,
       condition_breakdown: {
-        good: item.condition_breakdown.good,
-        fair: item.condition_breakdown.fair,
+        good: item.condition_breakdown?.good || { quantity: 0, action: 'restock' },
+        fair: item.condition_breakdown?.fair || { quantity: 0, action: 'return_to_supplier' },
         damaged: { quantity: 0, action: 'write_off' }
       }
     }));

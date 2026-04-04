@@ -89,12 +89,19 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     gcTime: 30 * 60 * 1000,
   });
 
-  // Fetch orders for enriching export data
+  // Fetch orders for enriching export data + order total display
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-for-export'],
     queryFn: () => base44.entities.Order.list('-order_date', 5000),
     staleTime: 5 * 60 * 1000,
   });
+
+  // Pre-built order lookup map for O(1) access in table rows
+  const orderLookupMap = useMemo(() => {
+    const map = {};
+    allOrders.forEach(o => { if (o.order_number) map[o.order_number] = o; });
+    return map;
+  }, [allOrders]);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -970,6 +977,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                     <TableHead className="min-w-[150px]">Reason</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead className="min-w-[180px]">Notes</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Order Total</TableHead>
                     <TableHead className="text-right whitespace-nowrap">Impact</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -977,7 +985,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 <TableBody>
                   {returnsData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                         <RotateCcw className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No returns recorded</p>
                       </TableCell>
@@ -1048,6 +1056,17 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                                 <span className="text-slate-300">—</span>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            {(() => {
+                              const orderNum = metadata.order_number || movement.reference_number || '';
+                              const order = orderLookupMap[orderNum];
+                              return order ? (
+                                <span className="font-semibold text-slate-700">৳{(order.total_amount || 0).toLocaleString()}</span>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-right text-red-600 font-semibold whitespace-nowrap">
                             -৳{Math.abs(movement.total_value || 0).toLocaleString()}
