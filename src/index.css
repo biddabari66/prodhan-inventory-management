@@ -148,3 +148,19 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile UX: prevent text selection on interactive elements */
+button,
+a,
+[role="button"],
+[role="menuitem"],
+[role="option"],
+.nav-item,
+.nav-sub-item,
+.nav-item-collapsed,
+[data-radix-collection-item],
+label[for],
+svg {
+  user-select: none;
+  -webkit-user-select: none;
+}

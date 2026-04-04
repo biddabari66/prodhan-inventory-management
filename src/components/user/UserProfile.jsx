@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import {
   User as UserIcon,
-  Building2, Phone, Mail, Calendar, DollarSign, Edit, Briefcase, Clock, Shield, Save, Loader2, X, Lock, Settings
+  Building2, Phone, Mail, Calendar, DollarSign, Edit, Briefcase, Clock, Shield, Save, Loader2, X, Lock, Settings, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UploadFile } from '@/integrations/Core';
@@ -20,6 +20,7 @@ import { generateAndSendEmail } from '@/functions/generateAndSendEmail';
 import DepartmentSelect from '../common/DepartmentSelect';
 import ShiftSelector from '../attendance/ShiftSelector';
 import WhatsAppActivationButton from '../whatsapp/WhatsAppActivationButton';
+import DeleteAccountDialog from '../common/DeleteAccountDialog';
 
 const JOB_ROLES = [
   { value: 'employee', label: 'Employee' },
@@ -1007,7 +1008,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
               </Card>
             </TabsContent>
 
-            {/* Security Tab (Placeholder) */}
+            {/* Security Tab */}
             <TabsContent value="security" className="space-y-4 md:space-y-6">
               <Card className="border border-gray-200 dark:border-gray-700">
                 <CardHeader className="p-4 md:p-6">
@@ -1036,6 +1037,22 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                       <Button variant="outline" className="mt-3" disabled>Enable 2FA</Button>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Danger Zone - Delete Account */}
+              <Card className="border border-red-200 dark:border-red-900">
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl text-red-600 dark:text-red-400">
+                    <AlertTriangle className="w-5 h-5" />
+                    Danger Zone
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Permanently delete your account and all associated data.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6 pt-0">
+                  <DeleteAccountDialog />
                 </CardContent>
               </Card>
             </TabsContent>

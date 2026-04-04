@@ -93,6 +93,7 @@ import SmartOnboarding from '../components/onboarding/SmartOnboarding';
 import SmartHelp from '../components/ai/SmartHelp';
 import MobileBottomNav from '../components/common/MobileBottomNav';
 import PWAInstaller from '../components/common/PWAInstaller';
+import PullToRefresh from '../components/common/PullToRefresh';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -1678,6 +1679,23 @@ export default function Layout({ children, currentPageName }) {
             {/* Professional Header */}
             <header className="header h-12 sm:h-14 lg:h-16 px-2 sm:px-4 lg:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
               <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 min-w-0 flex-1">
+                {(() => {
+                  const rootPaths = ['/', '/InventoryOverview', '/Sales', '/EmployeeAttendance', '/ProductAnalytics'];
+                  const isRootScreen = rootPaths.includes(location.pathname);
+                  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 1024;
+                  if (!isRootScreen && isMobileView) {
+                    return (
+                      <Button
+                        onClick={() => window.history.back()}
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-foreground h-8 w-8 sm:h-9 sm:w-9 touch-manipulation lg:hidden">
+                        <ChevronLeft className="w-5 h-5" />
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
                 <Button
                   onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
                   variant="ghost"
@@ -1789,8 +1807,8 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </header>
 
-            {/* Main Content - OPTIMIZED padding */}
-            <main className="px-2 py-2 sm:px-3 sm:py-3 main-content flex-1 overflow-y-auto lg:p-6">
+            {/* Main Content - OPTIMIZED padding with Pull-to-Refresh */}
+            <PullToRefresh className="px-2 py-2 sm:px-3 sm:py-3 main-content flex-1 overflow-y-auto lg:p-6">
               <ErrorBoundary>
                 <Suspense fallback={
                 <div className="text-center p-20 text-muted-foreground">
@@ -1803,7 +1821,7 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                 </Suspense>
               </ErrorBoundary>
-            </main>
+            </PullToRefresh>
           </div>
 
           {/* Mobile Bottom Navigation */}
