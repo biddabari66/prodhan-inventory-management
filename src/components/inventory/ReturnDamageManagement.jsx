@@ -17,6 +17,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import MobileReturnCard from './MobileReturnCard';
+import MobileDamageCard from './MobileDamageCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -966,7 +968,30 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         </TabsList>
 
         <TabsContent value="returns" className="mt-3 sm:mt-6">
-          <Card className="border border-slate-200 shadow-sm overflow-hidden">
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-2.5">
+            {returnsData.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <RotateCcw className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No returns recorded</p>
+              </div>
+            ) : (
+              returnsData.slice((returnsPage - 1) * PAGE_SIZE, returnsPage * PAGE_SIZE).map((movement) => (
+                <MobileReturnCard
+                  key={movement.id}
+                  movement={movement}
+                  getItemName={getItemName}
+                  getActionBadge={getActionBadge}
+                  orderLookupMap={orderLookupMap}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table */}
+          <Card className="border border-slate-200 shadow-sm overflow-hidden hidden md:block">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-3 sm:px-6 py-3 sm:py-4">
               <CardTitle className="text-sm sm:text-lg font-semibold text-slate-900">Product Returns History</CardTitle>
             </CardHeader>
@@ -1036,9 +1061,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           <TableCell className="text-sm text-slate-500 whitespace-nowrap">
                             {metadata.order_date 
                               ? format(new Date(metadata.order_date), 'MMM dd, yyyy') 
-                              : (movement.reference_number && movement.reference_number.startsWith('PD') 
-                                ? '-' 
-                                : '-')}
+                              : '-'}
                           </TableCell>
                           <TableCell className="text-sm font-medium">
                             {metadata.return_type === 'purchase_return' 
@@ -1081,20 +1104,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(movement)}
-                                className="h-8 w-8 p-0"
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(movement)} className="h-8 w-8 p-0">
                                 <Pencil className="w-4 h-4 text-red-600" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(movement)}
-                                className="h-8 w-8 p-0"
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(movement)} className="h-8 w-8 p-0">
                                 <Trash2 className="w-4 h-4 text-red-600" />
                               </Button>
                             </div>
@@ -1106,32 +1119,54 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 </TableBody>
                 </Table>
               </div>
-              
-              {/* Returns Pagination */}
-              {returnsData.length > PAGE_SIZE && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50">
-                  <p className="text-xs sm:text-sm text-slate-600">
-                    {((returnsPage - 1) * PAGE_SIZE) + 1}-{Math.min(returnsPage * PAGE_SIZE, returnsData.length)} of {returnsData.length}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs"
-                      onClick={() => setReturnsPage(p => Math.max(1, p - 1))}
-                      disabled={returnsPage === 1}>Prev</Button>
-                    <span className="text-xs font-medium px-2">
-                      {returnsPage}/{Math.ceil(returnsData.length / PAGE_SIZE)}
-                    </span>
-                    <Button variant="outline" size="sm" className="h-8 text-xs"
-                      onClick={() => setReturnsPage(p => Math.min(Math.ceil(returnsData.length / PAGE_SIZE), p + 1))}
-                      disabled={returnsPage >= Math.ceil(returnsData.length / PAGE_SIZE)}>Next</Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
+
+          {/* Returns Pagination */}
+          {returnsData.length > PAGE_SIZE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
+              <p className="text-xs sm:text-sm text-slate-600">
+                {((returnsPage - 1) * PAGE_SIZE) + 1}-{Math.min(returnsPage * PAGE_SIZE, returnsData.length)} of {returnsData.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="h-8 text-xs"
+                  onClick={() => setReturnsPage(p => Math.max(1, p - 1))}
+                  disabled={returnsPage === 1}>Prev</Button>
+                <span className="text-xs font-medium px-2">
+                  {returnsPage}/{Math.ceil(returnsData.length / PAGE_SIZE)}
+                </span>
+                <Button variant="outline" size="sm" className="h-8 text-xs"
+                  onClick={() => setReturnsPage(p => Math.min(Math.ceil(returnsData.length / PAGE_SIZE), p + 1))}
+                  disabled={returnsPage >= Math.ceil(returnsData.length / PAGE_SIZE)}>Next</Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="damages" className="mt-3 sm:mt-6">
-          <Card className="border border-slate-200 shadow-sm overflow-hidden">
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-2.5">
+            {damagesData.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertOctagon className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No damages recorded</p>
+              </div>
+            ) : (
+              damagesData.slice((damagesPage - 1) * PAGE_SIZE, damagesPage * PAGE_SIZE).map((movement) => (
+                <MobileDamageCard
+                  key={movement.id}
+                  movement={movement}
+                  getItemName={getItemName}
+                  getActionBadge={getActionBadge}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table */}
+          <Card className="border border-slate-200 shadow-sm overflow-hidden hidden md:block">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-3 sm:px-6 py-3 sm:py-4">
               <CardTitle className="text-sm sm:text-lg font-semibold text-slate-900">Damaged Products History</CardTitle>
             </CardHeader>
@@ -1200,20 +1235,10 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(movement)}
-                                className="h-8 w-8 p-0"
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(movement)} className="h-8 w-8 p-0">
                                 <Pencil className="w-4 h-4 text-red-600" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(movement)}
-                                className="h-8 w-8 p-0"
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(movement)} className="h-8 w-8 p-0">
                                 <Trash2 className="w-4 h-4 text-red-600" />
                               </Button>
                             </div>
@@ -1225,28 +1250,28 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                   </TableBody>
                 </Table>
               </div>
-              
-              {/* Damages Pagination */}
-              {damagesData.length > PAGE_SIZE && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50">
-                  <p className="text-xs sm:text-sm text-slate-600">
-                    {((damagesPage - 1) * PAGE_SIZE) + 1}-{Math.min(damagesPage * PAGE_SIZE, damagesData.length)} of {damagesData.length}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs"
-                      onClick={() => setDamagesPage(p => Math.max(1, p - 1))}
-                      disabled={damagesPage === 1}>Prev</Button>
-                    <span className="text-xs font-medium px-2">
-                      {damagesPage}/{Math.ceil(damagesData.length / PAGE_SIZE)}
-                    </span>
-                    <Button variant="outline" size="sm" className="h-8 text-xs"
-                      onClick={() => setDamagesPage(p => Math.min(Math.ceil(damagesData.length / PAGE_SIZE), p + 1))}
-                      disabled={damagesPage >= Math.ceil(damagesData.length / PAGE_SIZE)}>Next</Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
+
+          {/* Damages Pagination */}
+          {damagesData.length > PAGE_SIZE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
+              <p className="text-xs sm:text-sm text-slate-600">
+                {((damagesPage - 1) * PAGE_SIZE) + 1}-{Math.min(damagesPage * PAGE_SIZE, damagesData.length)} of {damagesData.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="h-8 text-xs"
+                  onClick={() => setDamagesPage(p => Math.max(1, p - 1))}
+                  disabled={damagesPage === 1}>Prev</Button>
+                <span className="text-xs font-medium px-2">
+                  {damagesPage}/{Math.ceil(damagesData.length / PAGE_SIZE)}
+                </span>
+                <Button variant="outline" size="sm" className="h-8 text-xs"
+                  onClick={() => setDamagesPage(p => Math.min(Math.ceil(damagesData.length / PAGE_SIZE), p + 1))}
+                  disabled={damagesPage >= Math.ceil(damagesData.length / PAGE_SIZE)}>Next</Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

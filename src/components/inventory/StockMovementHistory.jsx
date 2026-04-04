@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { InventoryMovement } from '@/entities/InventoryMovement';
 import { Inventory } from '@/entities/Inventory';
 import { User } from '@/entities/User';
+import MobileMovementCard from './MobileMovementCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -344,7 +345,20 @@ export default function StockMovementHistory({ itemId, onMovementAdded }) {
                         No movement records found. Record your first stock movement above.
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-2.5 p-3">
+                      {filteredMovements.map(movement => (
+                        <MobileMovementCard
+                          key={movement.id}
+                          movement={movement}
+                          getItemName={getItemName}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="overflow-x-auto hidden md:block">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -394,6 +408,7 @@ export default function StockMovementHistory({ itemId, onMovementAdded }) {
                         </TableBody>
                     </Table>
                     </div>
+                    </>
                 )}
             </CardContent>
         </Card>
