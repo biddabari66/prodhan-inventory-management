@@ -155,62 +155,57 @@ function ProductAnalyticsDashboard() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="w-full p-6 space-y-6">
+      <div className="w-full px-3 py-3 sm:p-6 space-y-3 sm:space-y-6">
         
         {/* Tabs for different sections */}
-        <Tabs defaultValue="analytics" className="w-full space-y-6">
-          <TabsList className="bg-white p-1 rounded-xl border shadow-sm flex-wrap">
-            <TabsTrigger value="analytics" className="gap-2 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white">
-              <BarChart3 className="w-4 h-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="trends" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-              <Activity className="w-4 h-4" />
-              Trends
-            </TabsTrigger>
-            <TabsTrigger value="lowstock" className="gap-2 rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-              <Package className="w-4 h-4" />
-              Stock Alerts
-            </TabsTrigger>
-            <TabsTrigger value="abc" className="gap-2 rounded-lg data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              <Target className="w-4 h-4" />
-              ABC Analysis
-            </TabsTrigger>
-            <TabsTrigger value="adspend" className="gap-2 rounded-lg data-[state=active]:bg-amber-600 data-[state=active]:text-white">
-              <DollarSign className="w-4 h-4" />
-              Ad Spend
-            </TabsTrigger>
-            <TabsTrigger value="roi" className="gap-2 rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white">
-              <DollarSign className="w-4 h-4" />
-              ROI
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="analytics" className="w-full space-y-3 sm:space-y-6">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 pb-1">
+            <TabsList className="bg-white p-1 rounded-xl border shadow-sm inline-flex w-auto min-w-full sm:min-w-0">
+              <TabsTrigger value="analytics" className="gap-1.5 rounded-lg data-[state=active]:bg-red-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 whitespace-nowrap">
+                <BarChart3 className="w-3.5 h-3.5" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="trends" className="gap-1.5 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 whitespace-nowrap">
+                <Activity className="w-3.5 h-3.5" />
+                Trends
+              </TabsTrigger>
+              <TabsTrigger value="lowstock" className="gap-1.5 rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 whitespace-nowrap">
+                <Package className="w-3.5 h-3.5" />
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="abc" className="gap-1.5 rounded-lg data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 whitespace-nowrap">
+                <Target className="w-3.5 h-3.5" />
+                ABC
+              </TabsTrigger>
+              <TabsTrigger value="adspend" className="gap-1.5 rounded-lg data-[state=active]:bg-amber-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 whitespace-nowrap">
+                <DollarSign className="w-3.5 h-3.5" />
+                Ad Spend
+              </TabsTrigger>
+              <TabsTrigger value="roi" className="gap-1.5 rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 whitespace-nowrap">
+                <DollarSign className="w-3.5 h-3.5" />
+                ROI
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="analytics" className="space-y-6">
-
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>Inventory</span>
-          <span>/</span>
-          <span className="text-slate-900 font-medium">Product Analytics</span>
-        </div>
+          <TabsContent value="analytics" className="space-y-3 sm:space-y-6">
 
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-            <BarChart3 className="w-6 h-6 text-[#D32F2F]" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-[#D32F2F]" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Product Analytics</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">Deep-dive analytics for inventory performance</p>
+            <h1 className="text-lg sm:text-2xl font-semibold text-[#111827] tracking-tight">Product Analytics</h1>
+            <p className="text-xs sm:text-sm text-[#6B7280]">Deep-dive analytics for inventory performance</p>
           </div>
         </div>
 
         {/* Filters Row */}
         <Card className="bg-white border-0 shadow-sm rounded-xl">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
+          <CardContent className="p-3 sm:p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+              <div className="col-span-2">
                 <Label className="text-xs text-slate-600">Search Products</Label>
                 <div className="relative mt-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -234,7 +229,7 @@ function ProductAnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
           {/* Product Selection */}
           <Card className="bg-white border-0 shadow-sm rounded-xl">
             <CardHeader className="pb-3 border-b border-slate-100 px-4 pt-4">
@@ -294,7 +289,7 @@ function ProductAnalyticsDashboard() {
             {safeAnalyticsData.length > 0 && !analyticsLoading && (
               <>
                 {/* Summary Stats */}
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
                   {[
                     { label: 'Purchased', value: aggregateStats.totalPurchased, icon: ShoppingBag, color: 'text-green-600', bg: 'bg-green-50' },
                     { label: 'Sold', value: aggregateStats.totalSold, icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -388,7 +383,7 @@ function ProductAnalyticsDashboard() {
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
                       {/* Key Metrics */}
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                         <div>
                           <p className="text-xs text-slate-500">Current Stock</p>
                           <p className="text-lg font-bold text-slate-800">{metric.current_stock}</p>
@@ -409,7 +404,7 @@ function ProductAnalyticsDashboard() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                         <div>
                           <p className="text-xs text-slate-500">Stock Value</p>
                           <p className="text-base font-semibold">৳{metric.stockValue?.toLocaleString()}</p>
@@ -435,8 +430,8 @@ function ProductAnalyticsDashboard() {
                           <h4 className="font-semibold text-slate-800 text-sm">Complete Movement Analysis</h4>
                           <Badge variant="outline" className="ml-auto text-xs">{startDate} - {endDate}</Badge>
                         </div>
-                        <div className="grid grid-cols-4 gap-3">
-                          <div className="bg-white p-2.5 rounded-lg border border-green-200">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                          <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-green-200">
                             <div className="flex items-center gap-1.5 mb-1">
                               <ShoppingBag className="w-3.5 h-3.5 text-green-600" />
                               <span className="text-xs text-green-700 font-medium">Purchased</span>
