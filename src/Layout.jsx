@@ -1665,18 +1665,18 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950 lg:ml-[260px]">
             
             {/* Professional Header */}
-            <header className="header h-14 sm:h-16 px-3 sm:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
-              <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
+            <header className="header h-12 sm:h-14 lg:h-16 px-2 sm:px-4 lg:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
+              <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 min-w-0 flex-1">
                 <Button
                   onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors h-10 w-10 touch-manipulation lg:hidden">
+                  className="text-muted-foreground hover:text-foreground transition-colors h-8 w-8 sm:h-9 sm:w-9 touch-manipulation lg:hidden">
                   <Menu className="w-5 h-5" />
                 </Button>
                 
                 {/* Mobile-optimized search */}
-                <div className="flex-1 max-w-xs lg:max-w-md">
+                <div className="flex-1 max-w-[180px] sm:max-w-xs lg:max-w-md">
                   <UniversalSearch
                     entities={{ User, Lead, Admission, Expense, Income, Inventory }}
                     className="w-full" />
@@ -1685,12 +1685,12 @@ export default function Layout({ children, currentPageName }) {
               </div>
 
               {/* Header Actions */}
-              <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3">
+              <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-3">
                 <Button
                   onClick={toggleTheme}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors relative h-9 w-9 sm:h-10 sm:w-10 touch-manipulation">
+                  className="text-muted-foreground hover:text-foreground transition-colors relative h-7 w-7 sm:h-9 sm:w-9 touch-manipulation">
 
                   <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                   <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -1698,7 +1698,7 @@ export default function Layout({ children, currentPageName }) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9 sm:h-10 sm:w-10 touch-manipulation hidden sm:flex">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-7 w-7 sm:h-9 sm:w-9 touch-manipulation hidden sm:flex">
                       <Globe className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1723,8 +1723,8 @@ export default function Layout({ children, currentPageName }) {
                 {/* Mobile-Optimized User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-red-500/30">
+                    <Button variant="ghost" className="relative h-7 w-7 sm:h-9 sm:w-9 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-red-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
                         <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm lg:text-xs">
                           {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
@@ -1779,7 +1779,7 @@ export default function Layout({ children, currentPageName }) {
             </header>
 
             {/* Main Content - OPTIMIZED padding */}
-            <main className="px-3 py-3 sm:p-4 main-content flex-1 overflow-y-auto lg:p-6">
+            <main className="px-2 py-2 sm:px-3 sm:py-3 main-content flex-1 overflow-y-auto lg:p-6">
               <ErrorBoundary>
                 <Suspense fallback={
                 <div className="text-center p-20 text-muted-foreground">
