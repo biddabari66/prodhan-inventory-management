@@ -377,8 +377,68 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const itemId = data.inventory_item_id || movement.inventory_item_id;
       const item = inventoryMap[itemId] || inventory.find(i => i.id === itemId);
       if (!item) throw new Error('Product not found: ' + itemId);
-      // Normalize inventory_item_id on data
       data.inventory_item_id = itemId;
+
+      // Calculate the difference in quantities
+      const oldQuantity = movement.quantity || 0;
+      let newQuantityChange = 0;
+      if (data.action === 'restock') {
+        newQuantityChange = data.quantity;
+      }
+      const quantityDifference = newQuantityChange - oldQuantity;
+      const newStock = item.current_stock + quantityDifference;
+
+      // Update inventory
+      await base44.entities.Inventory.update(data.inventory_item_id, {
+        current_stock: newStock
+      });
+
+      // Update movement record
+      await base44.entities.InventoryMovement.update(movementId, {
+        inventory_item_id: data.inventory_item_id,
+        movement_type: newQuantityChange > 0 ? 'in' : 'adjustment',
+        quantity: newQuantityChange,
+        reference_number: data.order_number || movement.reference_number,
+        unit_cost: item.purchase_price || 0,
+        total_value: -Math.abs(data.financial_impact || 0),
+        notes: data.notes || '',
+        movement_date: data.incident_date,
+        balance_after: newStock,
+        metadata: {
+          type: data.type,
+          reason: data.reason,
+          condition: data.condition,
+          action: data.action,
+          customer_name: data.customer_name,
+          customer_phone: data.customer_phone,
+          restocking_fee: data.restocking_fee,
+          financial_impact: data.financial_impact
+        }
+      });
+
+      return { item, newStock };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries(['movements']);
+      queryClient.invalidateQueries(['movements-returns-all']);
+      toast.success('Record updated successfully!');
+      setIsFormOpen(false);
+      setEditingMovement(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to update record: ${error.message}`);
+    },
+  });
+
+  // Delete movement mutation
+  const deleteMovementMutation = useMutation({
+    mutationFn: async (movementId) => {
+      const movement = movements.find(m => m.id === movementId);
+      if (!movement) throw new Error('Movement not found');
+
+      const item = inventoryMap[movement.inventory_item_id] || inventory.find(i => i.id === movement.inventory_item_id);
+      if (!item) throw new Error('Product not found');
 
       // Reverse the stock change
       const quantityToReverse = movement.quantity || 0;
