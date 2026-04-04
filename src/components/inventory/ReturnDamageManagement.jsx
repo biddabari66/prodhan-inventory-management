@@ -50,18 +50,20 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [damagesPage, setDamagesPage] = useState(1);
   const PAGE_SIZE = 25;
 
-  // Fetch data with optimized queries
+  // Fetch data with optimized queries — longer cache to reduce API calls
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => base44.entities.Inventory.list('-updated_date', 1000),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
-  // Load ALL returns/damages for complete history with pagination
+  // Load ALL returns/damages — optimized with longer cache & stale-while-revalidate
   const { data: movements = [], isLoading: movementsLoading } = useQuery({
     queryKey: ['movements-returns-all'],
     queryFn: async () => {
-      // Load all return/damage movements in batches
       const batchSize = 500;
       let allMovements = [];
       let offset = 0;
@@ -69,7 +71,6 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       
       while (hasMore) {
         const batch = await base44.entities.InventoryMovement.list('-movement_date', batchSize, offset);
-        // Filter only returns and damages
         const relevantBatch = batch.filter(m => 
           m.reference_type === 'return' || 
           m.reference_type === 'damage' || 
@@ -78,22 +79,27 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         allMovements = [...allMovements, ...relevantBatch];
         offset += batchSize;
         hasMore = batch.length === batchSize;
-        
-        // Limit total to prevent memory issues (max 5000 records)
         if (allMovements.length >= 5000) break;
       }
       
       return allMovements;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes cache
+    staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    placeholderData: (prev) => prev,
   });
 
   // Fetch orders for enriching export data + order total display
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-for-export'],
     queryFn: () => base44.entities.Order.list('-order_date', 5000),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    placeholderData: (prev) => prev,
   });
 
   // Pre-built order lookup map for O(1) access in table rows
@@ -374,59 +380,53 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     return newStock;
   };
 
-  // Update movement mutation — fetches fresh data from API to avoid stale cache issues
+  // Update movement mutation — uses cached movement data + direct API update (no filter by id)
   const updateMovementMutation = useMutation({
     mutationFn: async ({ movementId, data }) => {
-      // 1. Fetch the ACTUAL movement record from the database (not stale cache)
-      const allMovements = await base44.entities.InventoryMovement.filter({ id: movementId });
-      const movement = allMovements?.[0];
-      if (!movement) throw new Error('Movement record not found in database');
+      // Use the editingMovement reference (set before mutation) as the source of truth
+      const cachedMovement = movements.find(m => m.id === movementId);
+      if (!cachedMovement) throw new Error('Movement not found');
 
-      // 2. Determine the inventory item ID
-      const itemId = data.inventory_item_id || movement.inventory_item_id;
-      if (!itemId) throw new Error('No product ID available');
+      const itemId = data.inventory_item_id || cachedMovement.inventory_item_id;
+      if (!itemId) throw new Error('No product ID');
 
-      // 3. Fetch FRESH inventory item from database  
-      const freshInventory = await base44.entities.Inventory.filter({ id: itemId });
-      const item = freshInventory?.[0];
-      if (!item) throw new Error('Product not found in database');
+      const item = inventoryMap[itemId] || inventory.find(i => i.id === itemId);
+      if (!item) throw new Error('Product not found');
 
-      // 4. Calculate stock adjustment
-      const oldQuantity = movement.quantity || 0;
-      const newQuantity = (data.action === 'restock') ? (data.quantity || 0) : 0;
-      const quantityDiff = newQuantity - oldQuantity;
-      const newStock = (item.current_stock || 0) + quantityDiff;
+      // Calculate stock adjustment
+      const oldQty = cachedMovement.quantity || 0;
+      const newQty = (data.action === 'restock') ? (data.quantity || 0) : 0;
+      const diff = newQty - oldQty;
+      const newStock = Math.max(0, (item.current_stock || 0) + diff);
 
-      // 5. Update inventory stock
-      await base44.entities.Inventory.update(itemId, {
-        current_stock: Math.max(0, newStock)
-      });
+      // Update inventory stock
+      await base44.entities.Inventory.update(itemId, { current_stock: newStock });
 
-      // 6. Preserve existing metadata and merge with new data
-      const existingMeta = movement.metadata || {};
+      // Merge metadata preserving existing fields
+      const oldMeta = cachedMovement.metadata || {};
       await base44.entities.InventoryMovement.update(movementId, {
         inventory_item_id: itemId,
-        movement_type: newQuantity > 0 ? 'in' : 'adjustment',
-        quantity: newQuantity,
-        reference_number: data.order_number || movement.reference_number,
+        movement_type: newQty > 0 ? 'in' : 'adjustment',
+        quantity: newQty,
+        reference_number: data.order_number || cachedMovement.reference_number,
         unit_cost: item.purchase_price || 0,
         total_value: -Math.abs(data.financial_impact || 0),
-        notes: data.notes || movement.notes || '',
-        movement_date: data.incident_date || movement.movement_date,
-        balance_after: Math.max(0, newStock),
+        notes: data.notes ?? cachedMovement.notes ?? '',
+        movement_date: data.incident_date || cachedMovement.movement_date,
+        balance_after: newStock,
         metadata: {
-          ...existingMeta,
-          type: data.type || existingMeta.type,
-          return_type: data.return_type || existingMeta.return_type,
-          reason: data.reason || existingMeta.reason,
-          condition: data.condition || existingMeta.condition,
-          action: data.action || existingMeta.action,
-          customer_name: data.customer_name ?? existingMeta.customer_name,
-          customer_phone: data.customer_phone ?? existingMeta.customer_phone,
-          supplier_name: data.supplier_name ?? existingMeta.supplier_name,
-          restocking_fee: data.restocking_fee ?? existingMeta.restocking_fee,
-          financial_impact: data.financial_impact ?? existingMeta.financial_impact,
-          order_number: data.order_number || existingMeta.order_number,
+          ...oldMeta,
+          type: data.type || oldMeta.type,
+          return_type: data.return_type || oldMeta.return_type,
+          reason: data.reason || oldMeta.reason,
+          condition: data.condition || oldMeta.condition,
+          action: data.action || oldMeta.action,
+          customer_name: data.customer_name ?? oldMeta.customer_name,
+          customer_phone: data.customer_phone ?? oldMeta.customer_phone,
+          supplier_name: data.supplier_name ?? oldMeta.supplier_name,
+          restocking_fee: data.restocking_fee ?? oldMeta.restocking_fee,
+          financial_impact: data.financial_impact ?? oldMeta.financial_impact,
+          order_number: data.order_number || oldMeta.order_number,
         }
       });
 
@@ -446,25 +446,19 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     },
   });
 
-  // Delete movement mutation — fetches fresh data from API
+  // Delete movement mutation — uses cached data + direct API calls
   const deleteMovementMutation = useMutation({
     mutationFn: async (movementId) => {
-      const allMovements = await base44.entities.InventoryMovement.filter({ id: movementId });
-      const movement = allMovements?.[0];
-      if (!movement) throw new Error('Movement record not found');
+      const movement = movements.find(m => m.id === movementId);
+      if (!movement) throw new Error('Movement not found');
 
-      const freshInventory = await base44.entities.Inventory.filter({ id: movement.inventory_item_id });
-      const item = freshInventory?.[0];
+      const item = inventoryMap[movement.inventory_item_id] || inventory.find(i => i.id === movement.inventory_item_id);
       if (!item) throw new Error('Product not found');
 
-      // Reverse the stock change
       const quantityToReverse = movement.quantity || 0;
-      const newStock = (item.current_stock || 0) - quantityToReverse;
+      const newStock = Math.max(0, (item.current_stock || 0) - quantityToReverse);
 
-      await base44.entities.Inventory.update(movement.inventory_item_id, {
-        current_stock: Math.max(0, newStock)
-      });
-
+      await base44.entities.Inventory.update(movement.inventory_item_id, { current_stock: newStock });
       await base44.entities.InventoryMovement.delete(movementId);
 
       return { item, newStock };
