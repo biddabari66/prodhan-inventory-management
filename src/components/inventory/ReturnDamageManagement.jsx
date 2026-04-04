@@ -367,52 +367,59 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     return newStock;
   };
 
-  // Update movement mutation
+  // Update movement mutation — fetches fresh data from API to avoid stale cache issues
   const updateMovementMutation = useMutation({
     mutationFn: async ({ movementId, data }) => {
-      const movement = movements.find(m => m.id === movementId);
-      if (!movement) throw new Error('Movement not found');
+      // 1. Fetch the ACTUAL movement record from the database (not stale cache)
+      const allMovements = await base44.entities.InventoryMovement.filter({ id: movementId });
+      const movement = allMovements?.[0];
+      if (!movement) throw new Error('Movement record not found in database');
 
-      // Look up product - fall back to movement's original inventory_item_id
+      // 2. Determine the inventory item ID
       const itemId = data.inventory_item_id || movement.inventory_item_id;
-      const item = inventoryMap[itemId] || inventory.find(i => i.id === itemId);
-      if (!item) throw new Error('Product not found: ' + itemId);
-      data.inventory_item_id = itemId;
+      if (!itemId) throw new Error('No product ID available');
 
-      // Calculate the difference in quantities
+      // 3. Fetch FRESH inventory item from database  
+      const freshInventory = await base44.entities.Inventory.filter({ id: itemId });
+      const item = freshInventory?.[0];
+      if (!item) throw new Error('Product not found in database');
+
+      // 4. Calculate stock adjustment
       const oldQuantity = movement.quantity || 0;
-      let newQuantityChange = 0;
-      if (data.action === 'restock') {
-        newQuantityChange = data.quantity;
-      }
-      const quantityDifference = newQuantityChange - oldQuantity;
-      const newStock = item.current_stock + quantityDifference;
+      const newQuantity = (data.action === 'restock') ? (data.quantity || 0) : 0;
+      const quantityDiff = newQuantity - oldQuantity;
+      const newStock = (item.current_stock || 0) + quantityDiff;
 
-      // Update inventory
-      await base44.entities.Inventory.update(data.inventory_item_id, {
-        current_stock: newStock
+      // 5. Update inventory stock
+      await base44.entities.Inventory.update(itemId, {
+        current_stock: Math.max(0, newStock)
       });
 
-      // Update movement record
+      // 6. Preserve existing metadata and merge with new data
+      const existingMeta = movement.metadata || {};
       await base44.entities.InventoryMovement.update(movementId, {
-        inventory_item_id: data.inventory_item_id,
-        movement_type: newQuantityChange > 0 ? 'in' : 'adjustment',
-        quantity: newQuantityChange,
+        inventory_item_id: itemId,
+        movement_type: newQuantity > 0 ? 'in' : 'adjustment',
+        quantity: newQuantity,
         reference_number: data.order_number || movement.reference_number,
         unit_cost: item.purchase_price || 0,
         total_value: -Math.abs(data.financial_impact || 0),
-        notes: data.notes || '',
-        movement_date: data.incident_date,
-        balance_after: newStock,
+        notes: data.notes || movement.notes || '',
+        movement_date: data.incident_date || movement.movement_date,
+        balance_after: Math.max(0, newStock),
         metadata: {
-          type: data.type,
-          reason: data.reason,
-          condition: data.condition,
-          action: data.action,
-          customer_name: data.customer_name,
-          customer_phone: data.customer_phone,
-          restocking_fee: data.restocking_fee,
-          financial_impact: data.financial_impact
+          ...existingMeta,
+          type: data.type || existingMeta.type,
+          return_type: data.return_type || existingMeta.return_type,
+          reason: data.reason || existingMeta.reason,
+          condition: data.condition || existingMeta.condition,
+          action: data.action || existingMeta.action,
+          customer_name: data.customer_name ?? existingMeta.customer_name,
+          customer_phone: data.customer_phone ?? existingMeta.customer_phone,
+          supplier_name: data.supplier_name ?? existingMeta.supplier_name,
+          restocking_fee: data.restocking_fee ?? existingMeta.restocking_fee,
+          financial_impact: data.financial_impact ?? existingMeta.financial_impact,
+          order_number: data.order_number || existingMeta.order_number,
         }
       });
 
@@ -427,28 +434,30 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       setEditingMovement(null);
     },
     onError: (error) => {
+      console.error('Update mutation error:', error);
       toast.error(`Failed to update record: ${error.message}`);
     },
   });
 
-  // Delete movement mutation
+  // Delete movement mutation — fetches fresh data from API
   const deleteMovementMutation = useMutation({
     mutationFn: async (movementId) => {
-      const movement = movements.find(m => m.id === movementId);
-      if (!movement) throw new Error('Movement not found');
+      const allMovements = await base44.entities.InventoryMovement.filter({ id: movementId });
+      const movement = allMovements?.[0];
+      if (!movement) throw new Error('Movement record not found');
 
-      const item = inventoryMap[movement.inventory_item_id] || inventory.find(i => i.id === movement.inventory_item_id);
+      const freshInventory = await base44.entities.Inventory.filter({ id: movement.inventory_item_id });
+      const item = freshInventory?.[0];
       if (!item) throw new Error('Product not found');
 
       // Reverse the stock change
       const quantityToReverse = movement.quantity || 0;
-      const newStock = item.current_stock - quantityToReverse;
+      const newStock = (item.current_stock || 0) - quantityToReverse;
 
       await base44.entities.Inventory.update(movement.inventory_item_id, {
         current_stock: Math.max(0, newStock)
       });
 
-      // Delete the movement record
       await base44.entities.InventoryMovement.delete(movementId);
 
       return { item, newStock };
