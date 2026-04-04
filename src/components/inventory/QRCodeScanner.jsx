@@ -9,18 +9,23 @@ import { toast } from 'sonner';
 import jsQR from 'jsqr';
 import { extractCodeFromScan } from './QRCodeGenerator';
 
+const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
 export default function QRCodeScanner({ inventory, onProductFound, onClose, open }) {
   const [mode, setMode] = useState('camera');
   const [manualCode, setManualCode] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [matchedProduct, setMatchedProduct] = useState(null);
+  const [scanStatus, setScanStatus] = useState('');
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
   const scanningRef = useRef(false);
+  const barcodeDetectorRef = useRef(null);
+  const lastDetectTimeRef = useRef(0);
 
   const findProduct = useCallback((code) => {
     if (!code || !inventory?.length) return null;
@@ -78,12 +83,34 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     canvas.height = h;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(video, 0, 0, w, h);
+
+    // 1. Try jsQR for QR codes
     const imageData = ctx.getImageData(0, 0, w, h);
-    const result = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
-    if (result && result.data) {
-      handleCodeDetected(result.data);
+    const qrResult = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
+    if (qrResult && qrResult.data) {
+      setScanStatus('QR Code detected!');
+      handleCodeDetected(qrResult.data);
       return;
     }
+
+    // 2. Try BarcodeDetector for barcodes (throttled to every 300ms)
+    const now = Date.now();
+    if (hasBarcodeDetector && now - lastDetectTimeRef.current > 300) {
+      lastDetectTimeRef.current = now;
+      if (!barcodeDetectorRef.current) {
+        barcodeDetectorRef.current = new window.BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar', 'qr_code']
+        });
+      }
+      barcodeDetectorRef.current.detect(video).then(barcodes => {
+        if (!scanningRef.current) return;
+        if (barcodes.length > 0) {
+          setScanStatus(`${barcodes[0].format.toUpperCase()} detected!`);
+          handleCodeDetected(barcodes[0].rawValue);
+        }
+      }).catch(() => {});
+    }
+
     animFrameRef.current = requestAnimationFrame(scanLoop);
   }, [handleCodeDetected]);
 
@@ -143,6 +170,8 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     setMatchedProduct(null);
     setManualCode('');
     setCameraError(null);
+    setScanStatus('');
+    barcodeDetectorRef.current = null;
     if (onClose) onClose();
   };
 
@@ -187,8 +216,17 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
               </div>
               <div className="absolute bottom-3 left-0 right-0 text-center">
                 <Badge className="bg-black/60 text-white border-0 px-3 py-1">
-                  {cameraActive ? 'Point camera at QR code...' : 'Starting camera...'}
+                  {scanStatus || (cameraActive ? 'Point camera at QR code or barcode...' : 'Starting camera...')}
                 </Badge>
+                {cameraActive && (
+                  <div className="mt-1.5 flex items-center justify-center gap-1.5">
+                    <Badge variant="outline" className="bg-black/50 text-white/80 border-white/20 text-[10px] px-2 py-0.5">QR</Badge>
+                    <Badge variant="outline" className="bg-black/50 text-white/80 border-white/20 text-[10px] px-2 py-0.5">EAN-13</Badge>
+                    <Badge variant="outline" className="bg-black/50 text-white/80 border-white/20 text-[10px] px-2 py-0.5">Code-128</Badge>
+                    <Badge variant="outline" className="bg-black/50 text-white/80 border-white/20 text-[10px] px-2 py-0.5">UPC</Badge>
+                    {!hasBarcodeDetector && <Badge variant="outline" className="bg-yellow-500/60 text-white border-white/20 text-[10px] px-2 py-0.5">QR only</Badge>}
+                  </div>
+                )}
               </div>
               {cameraError && (
                 <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6">
@@ -274,9 +312,10 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
           <div className="bg-slate-50 rounded-lg p-3 space-y-2">
             <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">📖 How to use</p>
             <ul className="text-xs text-slate-500 space-y-1">
-              <li>• <strong>Camera Scan:</strong> Point your camera at a QR code printed from this system</li>
-              <li>• <strong>Manual Entry:</strong> Type or scan a barcode/ISBN/SKU using a USB barcode scanner</li>
-              <li>• Products are matched by barcode, ISBN, or internal ID</li>
+              <li>• <strong>Camera Scan:</strong> Point your camera at a QR code or barcode (EAN-13, Code-128, UPC, etc.)</li>
+              <li>• <strong>Manual Entry:</strong> Type or scan a barcode/ISBN/SKU using a USB/Bluetooth scanner</li>
+              <li>• Products are matched by barcode, ISBN, SKU, or internal ID</li>
+              {!hasBarcodeDetector && <li className="text-amber-600">• ⚠️ Your browser doesn't support barcode detection — only QR codes work via camera. Use manual entry for barcodes.</li>}
             </ul>
           </div>
         </div>
