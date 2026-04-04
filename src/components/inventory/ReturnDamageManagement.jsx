@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,13 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   PackageX, AlertOctagon, RotateCcw,
   AlertTriangle, DollarSign, TrendingDown, Building2, Pencil, Trash2,
-  Search, Filter, Download, X
+  Search, Filter, Download, X, Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import ReturnForm from './ReturnForm';
-import DamageForm from './DamageForm';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +27,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// Lazy load heavy form components
+const ReturnForm = lazy(() => import('./ReturnForm'));
+const DamageForm = lazy(() => import('./DamageForm'));
 
 export default function ReturnDamageManagement({ selectedDepartment, defaultTab }) {
   const queryClient = useQueryClient();
@@ -50,59 +52,77 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [damagesPage, setDamagesPage] = useState(1);
   const PAGE_SIZE = 25;
 
-  // Fetch data with optimized queries — longer cache to reduce API calls
-  const { data: inventory = [] } = useQuery({
-    queryKey: ['inventory'],
-    queryFn: () => base44.entities.Inventory.list('-updated_date', 1000),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    placeholderData: (prev) => prev,
-  });
-
-  // Load ALL returns/damages — optimized with longer cache & stale-while-revalidate
-  const { data: movements = [], isLoading: movementsLoading } = useQuery({
-    queryKey: ['movements-returns-all'],
+  // ⚡ PHASE 1: Fast initial load — recent 500 movements (instant display)
+  const { data: recentMovements = [], isLoading: recentLoading } = useQuery({
+    queryKey: ['movements-returns-recent'],
     queryFn: async () => {
-      const batchSize = 500;
-      let allMovements = [];
-      let offset = 0;
-      let hasMore = true;
-      
-      while (hasMore) {
-        const batch = await base44.entities.InventoryMovement.list('-movement_date', batchSize, offset);
-        const relevantBatch = batch.filter(m => 
-          m.reference_type === 'return' || 
-          m.reference_type === 'damage' || 
-          m.reference_type === 'expired'
-        );
-        allMovements = [...allMovements, ...relevantBatch];
-        offset += batchSize;
-        hasMore = batch.length === batchSize;
-        if (allMovements.length >= 5000) break;
-      }
-      
-      return allMovements;
+      const batch = await base44.entities.InventoryMovement.list('-movement_date', 500);
+      return batch.filter(m => 
+        m.reference_type === 'return' || m.reference_type === 'damage' || m.reference_type === 'expired'
+      );
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     placeholderData: (prev) => prev,
   });
 
-  // Fetch orders for enriching export data + order total display
-  const { data: allOrders = [] } = useQuery({
-    queryKey: ['orders-for-export'],
-    queryFn: () => base44.entities.Order.list('-order_date', 5000),
+  // ⚡ PHASE 2: Background load ALL movements (runs after phase 1)
+  const [allLoaded, setAllLoaded] = useState(false);
+  const { data: allMovements = [] } = useQuery({
+    queryKey: ['movements-returns-all'],
+    queryFn: async () => {
+      const batchSize = 500;
+      let result = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const batch = await base44.entities.InventoryMovement.list('-movement_date', batchSize, offset);
+        const relevant = batch.filter(m => 
+          m.reference_type === 'return' || m.reference_type === 'damage' || m.reference_type === 'expired'
+        );
+        result = [...result, ...relevant];
+        offset += batchSize;
+        hasMore = batch.length === batchSize;
+        if (result.length >= 5000) break;
+      }
+      setAllLoaded(true);
+      return result;
+    },
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    enabled: recentMovements.length > 0,
     placeholderData: (prev) => prev,
   });
 
-  // Pre-built order lookup map for O(1) access in table rows
+  // Use all if loaded, otherwise show recent for instant display
+  const movements = allLoaded && allMovements.length > 0 ? allMovements : recentMovements;
+  const movementsLoading = recentLoading;
+
+  // ⚡ Inventory with aggressive cache
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => base44.entities.Inventory.list('-updated_date', 1000),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
+  });
+
+  // ⚡ Orders — deferred load, only for export & order-total column
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['orders-for-export'],
+    queryFn: () => base44.entities.Order.list('-order_date', 5000),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    enabled: !recentLoading, // defer until main data loads
+    placeholderData: (prev) => prev,
+  });
+
   const orderLookupMap = useMemo(() => {
     const map = {};
     allOrders.forEach(o => { if (o.order_number) map[o.order_number] = o; });
@@ -112,6 +132,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -732,10 +755,13 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
             Transaction Records
-            {movementsLoading && <span className="text-sm font-normal text-slate-400 ml-2">(Loading all data...)</span>}
+            {movementsLoading && <span className="text-sm font-normal text-slate-400 ml-2 animate-pulse">(Loading...)</span>}
           </h2>
           <p className="text-sm text-slate-500">
-            Detailed tracking and management • Showing all {returnsData.length + damagesData.length} records
+            Detailed tracking and management • {returnsData.length + damagesData.length} records
+            {!allLoaded && !movementsLoading && (
+              <span className="text-blue-500 ml-2 animate-pulse">Loading older records...</span>
+            )}
           </p>
         </div>
         <div className="flex gap-3">
@@ -1277,27 +1303,34 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
               )}
             </DialogTitle>
           </DialogHeader>
-          {formType === 'return' ? (
-            <ReturnForm
-              inventory={departmentFilteredInventory}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingMovement(null);
-              }}
-              initialData={editingMovement}
-            />
-          ) : (
-            <DamageForm
-              inventory={departmentFilteredInventory}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setEditingMovement(null);
-              }}
-              initialData={editingMovement}
-            />
-          )}
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              <span className="ml-2 text-slate-500">Loading form...</span>
+            </div>
+          }>
+            {formType === 'return' ? (
+              <ReturnForm
+                inventory={departmentFilteredInventory}
+                onSubmit={handleSubmit}
+                onCancel={() => {
+                  setIsFormOpen(false);
+                  setEditingMovement(null);
+                }}
+                initialData={editingMovement}
+              />
+            ) : (
+              <DamageForm
+                inventory={departmentFilteredInventory}
+                onSubmit={handleSubmit}
+                onCancel={() => {
+                  setIsFormOpen(false);
+                  setEditingMovement(null);
+                }}
+                initialData={editingMovement}
+              />
+            )}
+          </Suspense>
         </DialogContent>
       </Dialog>
 
