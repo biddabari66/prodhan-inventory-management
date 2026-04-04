@@ -959,12 +959,12 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .dark {
-              --current-bg-primary: var(--neutral-900);
-              --current-bg-secondary: var(--neutral-800);
+              --current-bg-primary: #111827;
+              --current-bg-secondary: #0d1321;
               --current-text-primary: var(--text-dark-primary);
               --current-text-secondary: var(--text-dark-secondary);
-              --current-card-bg: var(--card-dark-bg);
-              --current-card-border: var(--card-dark-border);
+              --current-card-bg: #151d2e;
+              --current-card-border: #1e293b;
             }
 
             body {
@@ -1107,9 +1107,15 @@ export default function Layout({ children, currentPageName }) {
               box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
             }
 
+            .dark .nav-item:hover {
+              background: rgba(220, 38, 38, 0.08);
+              border-color: rgba(220, 38, 38, 0.15);
+            }
+
             .dark .nav-item.active {
-              background: rgba(220, 38, 38, 0.2);
-              border-color: rgba(220, 38, 38, 0.4);
+              background: rgba(220, 38, 38, 0.15);
+              border-color: rgba(220, 38, 38, 0.35);
+              box-shadow: 0 1px 4px rgba(220, 38, 38, 0.15);
             }
 
             .nav-item.active::before {
@@ -1157,8 +1163,10 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .dark .header {
-              background: rgba(15, 23, 42, 0.95);
-              border-bottom: 1px solid rgba(51, 65, 85, 0.8);
+              background: rgba(13, 19, 33, 0.97);
+              backdrop-filter: blur(16px);
+              -webkit-backdrop-filter: blur(16px);
+              border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             }
 
             @media (max-width: 768px) {
@@ -1445,6 +1453,9 @@ export default function Layout({ children, currentPageName }) {
 
             .dark .premium-card {
               border-left: 3px solid #EF4444;
+              background: hsl(225 25% 11%);
+              border-color: hsl(225 15% 18%);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             }
 
             /* Modern Badge Styles */
@@ -1485,12 +1496,12 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .dark ::-webkit-scrollbar-track {
-              background: #1F1F1F;
+              background: hsl(225 25% 8%);
             }
 
             .dark ::-webkit-scrollbar-thumb {
               background: linear-gradient(180deg, #DC2626, #EF4444);
-              border: 1px solid #1F1F1F;
+              border: 1px solid hsl(225 25% 8%);
             }
 
             /* PERFORMANCE: 3X FASTER - Ultra-Fast Transitions for Production */
@@ -1553,12 +1564,12 @@ export default function Layout({ children, currentPageName }) {
           )}
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
-          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out w-[85vw] max-w-[320px] lg:w-[260px] lg:max-w-[260px]
+          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-200 dark:border-[hsl(225,15%,14%)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] lg:w-[260px] lg:max-w-[260px]
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
             onClick={(e) => e.stopPropagation()}>
             
             {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
                 <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
                             <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
@@ -1593,7 +1604,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
 
             {/* User Footer */}
-            <div className={`border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
+            <div className={`border-t border-slate-200 dark:border-[hsl(225,15%,14%)] p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
               {isSidebarOpen ?
               <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
@@ -1662,7 +1673,7 @@ export default function Layout({ children, currentPageName }) {
           </aside>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-slate-950 lg:ml-[260px]">
+          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-[hsl(225,25%,8%)] lg:ml-[260px]">
             
             {/* Professional Header */}
             <header className="header h-12 sm:h-14 lg:h-16 px-2 sm:px-4 lg:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
