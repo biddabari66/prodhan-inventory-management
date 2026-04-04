@@ -231,53 +231,31 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         'Recipient Address', 'Products Name', 'COD Amount',
         'Shipping Charge', 'Reason', 'Notes'
       ];
-      });
-    } else {
-      headers = [
-        'SL', 'Date', 'Product Name', 'SKU/Barcode', 'Category',
-        'Quantity', 'Reason', 'Condition', 'Action Taken',
-        'Purchase Price (৳)', 'Selling Price (৳)', 'Loss Value (৳)',
-        'Detailed Notes', 'Reported By', 'Record Date'
-      ];
 
-      rows = dataToExport.map((m, idx) => {
+      // Build an order lookup map for enriching return rows
+      const orderMap = {};
+      allOrders.forEach(o => { if (o.order_number) orderMap[o.order_number] = o; });
+
+      rows = dataToExport.map((m) => {
         const metadata = m.metadata || {};
         const item = inventoryMap[m.inventory_item_id] || {};
-
-        const reasonMap = {
-          received_damaged: 'Received Damaged from Supplier',
-          warehouse_damage: 'Damaged in Warehouse',
-          transit_damage: 'Damaged in Transit',
-          water_damage: 'Water Damage',
-          fire_damage: 'Fire/Heat Damage',
-          expired: 'Expired Product',
-          manufacturing_defect: 'Manufacturing Defect',
-          handling_damage: 'Mishandling Damage',
-          theft: 'Theft/Missing',
-          other: 'Other'
-        };
-        const actionMap = {
-          restock: 'Restocked',
-          return_to_supplier: 'Returned to Supplier',
-          write_off: 'Written Off (Loss)'
-        };
+        const orderNum = metadata.order_number || m.reference_number || '';
+        const order = orderMap[orderNum];
+        const address = order?.shipping_address
+          ? [order.shipping_address.address_line, order.shipping_address.city, order.shipping_address.district].filter(Boolean).join(', ')
+          : '';
 
         return [
-          idx + 1,
-          format(new Date(m.movement_date), 'yyyy-MM-dd'),
+          m.movement_date ? format(new Date(m.movement_date), 'dd-MM-yyyy') : '-',
+          orderNum || '-',
+          metadata.customer_name || order?.customer_name || '-',
+          metadata.customer_phone || order?.customer_phone || '-',
+          address || '-',
           item.item_name || 'Unknown',
-          item.barcode || item.isbn || '-',
-          item.category || '-',
-          metadata.original_quantity || Math.abs(m.quantity) || 1,
-          reasonMap[metadata.reason] || metadata.reason?.replace(/_/g, ' ') || m.reference_type,
-          metadata.condition || 'damaged',
-          actionMap[metadata.action] || metadata.action?.replace(/_/g, ' ') || 'Write-off',
-          item.purchase_price || 0,
-          item.selling_price || 0,
           Math.abs(m.total_value || 0),
-          m.notes || '-',
-          m.performed_by || '-',
-          m.created_date ? format(new Date(m.created_date), 'yyyy-MM-dd HH:mm') : '-'
+          order?.shipping_cost || 0,
+          metadata.reason?.replace(/_/g, ' ') || '-',
+          m.notes || '-'
         ];
       });
     }
@@ -395,71 +373,12 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const movement = movements.find(m => m.id === movementId);
       if (!movement) throw new Error('Movement not found');
 
-      const item = inventory.find(i => i.id === data.inventory_item_id);
-      if (!item) throw new Error('Product not found');
-
-      // Calculate the difference in quantities
-      const oldQuantity = movement.quantity || 0;
-      let newQuantityChange = 0;
-
-      if (data.action === 'restock') {
-        newQuantityChange = data.quantity;
-      }
-
-      const quantityDifference = newQuantityChange - oldQuantity;
-      const newStock = item.current_stock + quantityDifference;
-
-      // Update inventory
-      await base44.entities.Inventory.update(data.inventory_item_id, {
-        current_stock: newStock
-      });
-
-      // Update movement record
-      await base44.entities.InventoryMovement.update(movementId, {
-        inventory_item_id: data.inventory_item_id,
-        movement_type: newQuantityChange > 0 ? 'in' : 'adjustment',
-        quantity: newQuantityChange,
-        reference_number: data.order_number || movement.reference_number,
-        unit_cost: item.purchase_price || 0,
-        total_value: -Math.abs(data.financial_impact),
-        notes: data.notes || '',
-        movement_date: data.incident_date,
-        balance_after: newStock,
-        metadata: {
-          type: data.type,
-          reason: data.reason,
-          condition: data.condition,
-          action: data.action,
-          customer_name: data.customer_name,
-          customer_phone: data.customer_phone,
-          restocking_fee: data.restocking_fee,
-          financial_impact: data.financial_impact
-        }
-      });
-
-      return { item, newStock };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['movements']);
-      queryClient.invalidateQueries(['movements-returns-all']);
-      toast.success('Record updated successfully!');
-      setIsFormOpen(false);
-      setEditingMovement(null);
-    },
-    onError: (error) => {
-      toast.error(`Failed to update record: ${error.message}`);
-    },
-  });
-
-  // Delete movement mutation
-  const deleteMovementMutation = useMutation({
-    mutationFn: async (movementId) => {
-      const movement = movements.find(m => m.id === movementId);
-      if (!movement) throw new Error('Movement not found');
-
-      const item = inventory.find(i => i.id === movement.inventory_item_id);
-      if (!item) throw new Error('Product not found');
+      // Look up product - fall back to movement's original inventory_item_id
+      const itemId = data.inventory_item_id || movement.inventory_item_id;
+      const item = inventoryMap[itemId] || inventory.find(i => i.id === itemId);
+      if (!item) throw new Error('Product not found: ' + itemId);
+      // Normalize inventory_item_id on data
+      data.inventory_item_id = itemId;
 
       // Reverse the stock change
       const quantityToReverse = movement.quantity || 0;
@@ -551,10 +470,12 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
         ...data,
         inventory_item_id: firstItem?.inventory_item_id || editingMovement.inventory_item_id,
         quantity: firstItem?.quantity || editingMovement.quantity,
-        action: firstItem?.condition_breakdown?.good?.action || 'restock',
-        condition: firstItem?.condition_breakdown?.good?.quantity > 0 ? 'good' : 'fair',
+        action: firstItem?.condition_breakdown?.good?.action || editingMovement.condition_breakdown?.good?.action || 'restock',
+        condition: (firstItem?.condition_breakdown?.good?.quantity > 0) ? 'good' : 'fair',
         financial_impact: firstItem?.financial_impact ?? editingMovement.financial_impact,
-        restocking_fee: firstItem?.restocking_fee ?? 0,
+        restocking_fee: firstItem?.restocking_fee ?? editingMovement.restocking_fee ?? 0,
+        incident_date: data.incident_date || editingMovement.incident_date,
+        notes: data.notes ?? editingMovement.notes ?? '',
       };
       updateMovementMutation.mutate({ movementId: editingMovement.id, data: updateData });
       return;
