@@ -28,14 +28,19 @@ export default function DailySalesFinalizer({ isAdmin, onComplete }) {
   const handleFinalize = async () => {
     setConfirmOpen(false);
     setIsLoading(true);
+    const loadingToast = toast.loading('Finalizing orders... This may take a minute.');
     try {
       const response = await finalizeDailySales({ sales_date: todayBDT });
       const data = response.data;
+      toast.dismiss(loadingToast);
       
       if (data.success) {
         setResult(data);
         if (data.finalized_count > 0) {
           toast.success(`✅ ${data.finalized_count} orders finalized for ${todayBDT}`);
+          if (data.remaining > 0) {
+            toast.info(`${data.remaining} more orders remaining. Please run again.`);
+          }
         } else {
           toast.info('All orders are already finalized for today.');
         }
@@ -44,7 +49,13 @@ export default function DailySalesFinalizer({ isAdmin, onComplete }) {
         toast.error(data.error || 'Failed to finalize');
       }
     } catch (error) {
-      toast.error('Error: ' + error.message);
+      toast.dismiss(loadingToast);
+      const msg = error?.message || 'Unknown error';
+      if (msg.includes('Timeout') || msg.includes('timeout')) {
+        toast.error('Request timed out. Too many orders to process at once. Try again — it will pick up where it left off.');
+      } else {
+        toast.error('Error: ' + msg);
+      }
     } finally {
       setIsLoading(false);
     }

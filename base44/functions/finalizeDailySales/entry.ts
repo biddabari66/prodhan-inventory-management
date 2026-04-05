@@ -18,38 +18,20 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { sales_date } = body;
 
-    // Determine the business date for finalization (BDT timezone)
     const nowBDT = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
     const targetDate = sales_date || `${nowBDT.getFullYear()}-${String(nowBDT.getMonth() + 1).padStart(2, '0')}-${String(nowBDT.getDate()).padStart(2, '0')}`;
 
-    // Fetch orders in smaller batches, only those without sales_day_date
-    const batchSize = 200;
-    let ordersToFinalize = [];
-    let offset = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const batch = await base44.asServiceRole.entities.Order.list('-order_date', batchSize, offset);
-      
-      const eligible = batch.filter(o => {
-        if (o.sales_day_date) return false; // Already finalized
-        if (!o.order_date) return false;
-        const orderDate = new Date(o.order_date);
-        if (isNaN(orderDate.getTime())) return false;
-        const bdtDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(orderDate);
-        return bdtDate <= targetDate;
-      });
-
-      ordersToFinalize = [...ordersToFinalize, ...eligible];
-      offset += batchSize;
-      hasMore = batch.length === batchSize;
-
-      // Safety limit: max 5000 orders per finalization
-      if (ordersToFinalize.length >= 5000 || offset > 20000) break;
-
-      // Small delay between list calls to avoid rate limiting
-      if (hasMore) await sleep(200);
-    }
+    // Fetch recent orders in a single batch
+    const allOrders = await base44.asServiceRole.entities.Order.list('-order_date', 1000);
+    
+    const ordersToFinalize = allOrders.filter(o => {
+      if (o.sales_day_date) return false;
+      if (!o.order_date) return false;
+      const orderDate = new Date(o.order_date);
+      if (isNaN(orderDate.getTime())) return false;
+      const bdtDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(orderDate);
+      return bdtDate <= targetDate;
+    });
 
     if (ordersToFinalize.length === 0) {
       return Response.json({
@@ -60,43 +42,48 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update in small batches with delays to avoid rate limits
+    // Process max 100 per run to stay within time/rate limits
+    const batch = ordersToFinalize.slice(0, 100);
     let finalizedCount = 0;
     const errors = [];
-    const UPDATE_BATCH_SIZE = 5;
 
-    for (let i = 0; i < ordersToFinalize.length; i += UPDATE_BATCH_SIZE) {
-      const chunk = ordersToFinalize.slice(i, i + UPDATE_BATCH_SIZE);
-      
-      const results = await Promise.allSettled(
-        chunk.map(order => {
-          const orderDate = new Date(order.order_date);
-          const bdtDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(orderDate);
-          return base44.asServiceRole.entities.Order.update(order.id, { sales_day_date: bdtDateStr });
-        })
-      );
-
-      results.forEach((result, idx) => {
-        if (result.status === 'fulfilled') {
-          finalizedCount++;
+    // Update ONE at a time with 2s delay to avoid rate limits
+    for (const order of batch) {
+      try {
+        const orderDate = new Date(order.order_date);
+        const bdtDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(orderDate);
+        await base44.asServiceRole.entities.Order.update(order.id, { sales_day_date: bdtDateStr });
+        finalizedCount++;
+      } catch (err) {
+        if (err.message?.includes('Rate limit')) {
+          // Wait longer on rate limit, then retry once
+          await sleep(5000);
+          try {
+            const orderDate = new Date(order.order_date);
+            const bdtDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(orderDate);
+            await base44.asServiceRole.entities.Order.update(order.id, { sales_day_date: bdtDateStr });
+            finalizedCount++;
+          } catch (retryErr) {
+            errors.push({ order_id: order.id, error: retryErr.message });
+          }
         } else {
-          errors.push({ order_id: chunk[idx].id, error: result.reason?.message });
+          errors.push({ order_id: order.id, error: err.message });
         }
-      });
-
-      // Delay between batches to avoid rate limits
-      if (i + UPDATE_BATCH_SIZE < ordersToFinalize.length) {
-        await sleep(500);
       }
+      // Wait between each update
+      await sleep(800);
     }
+
+    const remaining = ordersToFinalize.length - batch.length;
 
     return Response.json({
       success: true,
-      message: `Successfully finalized ${finalizedCount} orders for ${targetDate}.`,
+      message: `Finalized ${finalizedCount} orders for ${targetDate}.${remaining > 0 ? ` ${remaining} more remaining — run again.` : ''}`,
       finalized_count: finalizedCount,
       total_eligible: ordersToFinalize.length,
+      remaining,
       sales_date: targetDate,
-      errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
+      errors: errors.length > 0 ? errors.slice(0, 5) : undefined,
       finalized_by: user.full_name || user.email
     });
 
