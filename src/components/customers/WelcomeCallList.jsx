@@ -79,11 +79,14 @@ export default function WelcomeCallList() {
   }, [welcomeStatuses]);
 
   // 🚀 OPTIMIZED: Convert orders to call cards with status
+  // ONLY shipped orders should appear in welcome calls
   const orderCards = useMemo(() => {
     if (!allOrders.length) return [];
     
-    // All orders already filtered by query
-    return allOrders.map(order => {
+    const shippedStatuses = ['shipped', 'out_for_delivery', 'delivered'];
+    return allOrders
+      .filter(order => shippedStatuses.includes(order.order_status))
+      .map(order => {
         const existingStatus = statusMap.get(order.order_number);
         return {
           ...order,

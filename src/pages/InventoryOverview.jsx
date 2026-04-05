@@ -393,29 +393,63 @@ function InventoryOverviewPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <Card className="bg-card border-0 shadow-sm rounded-xl">
-            <CardContent className="p-3 sm:p-5">
-              <div className="flex items-center gap-3 mb-2 sm:mb-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 dark:bg-red-950/50 flex items-center justify-center">
-                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+        {/* Stats Cards — Enhanced 4-card grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Card className="bg-card border-0 shadow-sm rounded-2xl overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-rose-400" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-red-500 to-rose-400 flex items-center justify-center shadow-lg shadow-red-200">
+                  <Package className="w-5 h-5 text-white" />
                 </div>
+                <Badge className="bg-red-50 text-red-700 text-[10px] border border-red-200">Products</Badge>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold text-foreground">{departmentStats.total}</p>
-              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mt-1">Total Products</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{departmentStats.total}</p>
+              <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">Total Products</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-0 shadow-sm rounded-xl">
-            <CardContent className="p-3 sm:p-5">
-              <div className="flex items-center gap-3 mb-2 sm:mb-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 dark:bg-red-950/50 flex items-center justify-center">
-                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+          <Card className="bg-card border-0 shadow-sm rounded-2xl overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-400" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-200">
+                  <AlertTriangle className="w-5 h-5 text-white" />
                 </div>
+                <Badge className={`text-[10px] border ${departmentStats.low_stock > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                  {departmentStats.low_stock > 0 ? 'Alert' : 'Healthy'}
+                </Badge>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold text-foreground">{departmentStats.low_stock}</p>
-              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mt-1">Low Stock</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{departmentStats.low_stock}</p>
+              <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">Low Stock</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-0 shadow-sm rounded-2xl overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-green-400" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-green-400 flex items-center justify-center shadow-lg shadow-green-200">
+                  <span className="text-white text-lg font-bold">৳</span>
+                </div>
+                <Badge className="bg-emerald-50 text-emerald-700 text-[10px] border border-emerald-200">Value</Badge>
+              </div>
+              <p className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">৳{(departmentStats.total_value / 1000).toFixed(0)}K</p>
+              <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">Stock Value</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-0 shadow-sm rounded-2xl overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-purple-400" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center shadow-lg shadow-violet-200">
+                  <Filter className="w-5 h-5 text-white" />
+                </div>
+                <Badge className="bg-violet-50 text-violet-700 text-[10px] border border-violet-200">Categories</Badge>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{categories.length}</p>
+              <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">Categories</p>
             </CardContent>
           </Card>
         </div>

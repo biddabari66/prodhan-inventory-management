@@ -165,11 +165,80 @@ const ROLE_PERMISSIONS = {
       can_view_salary_data: false,
     }
   },
+  finance_officer: {
+    finance: { can_view: true, can_create: true, can_edit: true, can_approve: true, can_export: true },
+    finance_dashboard: { can_view: true, can_export: true },
+    financial_analytics: { can_view: true, can_export: true },
+    payroll: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    sales: { can_view: true, can_export: true },
+    purchase_orders: { can_view: true, can_export: true },
+    inventory_overview: { can_view: true },
+    inventory_reports: { can_view: true, can_export: true },
+    attendance: { can_view: true, can_export: true },
+    _confidential: {
+      can_view_purchase_price: true,
+      can_view_cost_data: true,
+      can_view_profit_data: true,
+      can_view_sensitive_finance: true,
+      can_view_salary_data: true,
+    }
+  },
+  hr_manager: {
+    attendance: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    payroll: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    user_access_manager: { can_view: true, can_edit: true },
+    inventory_overview: { can_view: true },
+    sales: { can_view: true },
+    _confidential: {
+      can_view_purchase_price: false,
+      can_view_cost_data: false,
+      can_view_profit_data: false,
+      can_view_sensitive_finance: false,
+      can_view_salary_data: true,
+    }
+  },
+  marketing_staff: {
+    inventory_overview: { can_view: true },
+    sales: { can_view: true, can_export: true },
+    customer_management: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    discount_campaigns: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_export: true },
+    marketing_roi: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    product_analytics: { can_view: true, can_export: true },
+    inventory_reports: { can_view: true, can_export: true },
+    _confidential: {
+      can_view_purchase_price: false,
+      can_view_cost_data: false,
+      can_view_profit_data: false,
+      can_view_sensitive_finance: false,
+      can_view_salary_data: false,
+    }
+  },
+  operations_staff: {
+    inventory_overview: { can_view: true, can_create: true, can_edit: true },
+    sales: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    customer_management: { can_view: true, can_create: true, can_edit: true },
+    purchase_orders: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    production_house: { can_view: true, can_create: true, can_edit: true },
+    inventory_movements: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_returns: { can_view: true, can_create: true, can_edit: true, can_export: true },
+    inventory_reconciliation: { can_view: true, can_create: true, can_edit: true },
+    inventory_suppliers: { can_view: true, can_create: true, can_edit: true },
+    inventory_categories: { can_view: true, can_edit: true },
+    _confidential: {
+      can_view_purchase_price: true,
+      can_view_cost_data: false,
+      can_view_profit_data: false,
+      can_view_sensitive_finance: false,
+      can_view_salary_data: false,
+    }
+  },
   viewer: {
     inventory_overview: { can_view: true },
     sales: { can_view: true },
     customer_management: { can_view: true },
     inventory_reports: { can_view: true, can_export: true },
+    product_analytics: { can_view: true },
+    finance_dashboard: { can_view: true },
     _confidential: {
       can_view_purchase_price: false,
       can_view_cost_data: false,
@@ -432,7 +501,11 @@ function UserAccessManagerPage() {
                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
                           <SelectItem value="procurement_officer">Procurement Officer</SelectItem>
+                          <SelectItem value="finance_officer">Finance Officer</SelectItem>
+                          <SelectItem value="hr_manager">HR Manager</SelectItem>
                           <SelectItem value="sales_staff">Sales Staff</SelectItem>
+                          <SelectItem value="marketing_staff">Marketing Staff</SelectItem>
+                          <SelectItem value="operations_staff">Operations Staff</SelectItem>
                           <SelectItem value="warehouse_staff">Warehouse Staff</SelectItem>
                           <SelectItem value="viewer">Viewer (Read Only)</SelectItem>
                         </SelectContent>

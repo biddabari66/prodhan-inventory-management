@@ -88,7 +88,7 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
               good: { quantity: qty, action: 'restock' },
               fair: { quantity: 0, action: 'return_to_supplier' },
             },
-            financial_impact: (invItem.selling_price || 0) * qty,
+            financial_impact: 0,
             restocking_fee: 0,
             unit_price: invItem.selling_price || 0
           });
@@ -96,7 +96,6 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
       }
       if (autoItems.length > 0) {
         setProductItems(autoItems);
-        // Also select the first product in the form for convenience
         const firstItem = autoItems[0];
         const invItem = inventory.find(i => i.id === firstItem.inventory_item_id);
         if (invItem) {
@@ -106,10 +105,10 @@ export default function ReturnForm({ inventory, onSubmit, onCancel, initialData 
             inventory_item_id: firstItem.inventory_item_id,
             quantity: firstItem.quantity,
             condition_breakdown: firstItem.condition_breakdown,
-            financial_impact: firstItem.financial_impact,
+            financial_impact: 0,
           }));
         }
-        toast.success(`Order ${order.order_number} loaded — ${autoItems.length} product(s) auto-added`);
+        toast.success(`Order ${order.order_number} loaded — ${autoItems.length} product(s) added. Please enter financial impact manually.`);
       } else {
         toast.success(`Order ${order.order_number} loaded — customer details auto-filled`);
       }
