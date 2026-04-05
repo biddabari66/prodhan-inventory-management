@@ -52,15 +52,25 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  const handleCodeDetected = useCallback((rawValue) => {
+  const [lastScannedCode, setLastScannedCode] = useState(null);
+  const [scanError, setScanError] = useState(null);
+
+  const handleCodeDetected = useCallback((rawValue, format) => {
     stopCamera();
+    setScanError(null);
     const code = extractCodeFromScan(rawValue);
+    setLastScannedCode({ code, raw: rawValue, format: format || 'unknown' });
     const product = findProduct(code);
     if (product) {
       setMatchedProduct(product);
       toast.success(`Product found: ${product.item_name}`);
     } else {
-      toast.error(`No product found for code: ${code}`);
+      setScanError({
+        code,
+        raw: rawValue,
+        format: format || 'unknown',
+        message: `No product matched this code. Make sure the product exists in inventory with this barcode/SKU.`
+      });
       setMatchedProduct(null);
     }
   }, [findProduct, stopCamera]);
@@ -89,7 +99,7 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     const qrResult = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
     if (qrResult && qrResult.data) {
       setScanStatus('QR Code detected!');
-      handleCodeDetected(qrResult.data);
+      handleCodeDetected(qrResult.data, 'QR_CODE');
       return;
     }
 
@@ -105,8 +115,9 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
       barcodeDetectorRef.current.detect(video).then(barcodes => {
         if (!scanningRef.current) return;
         if (barcodes.length > 0) {
-          setScanStatus(`${barcodes[0].format.toUpperCase()} detected!`);
-          handleCodeDetected(barcodes[0].rawValue);
+          const detected = barcodes[0];
+          setScanStatus(`${detected.format.toUpperCase()} detected!`);
+          handleCodeDetected(detected.rawValue, detected.format.toUpperCase());
         }
       }).catch(() => {});
     }
@@ -171,6 +182,8 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
     setManualCode('');
     setCameraError(null);
     setScanStatus('');
+    setScanError(null);
+    setLastScannedCode(null);
     barcodeDetectorRef.current = null;
     if (onClose) onClose();
   };
@@ -242,14 +255,58 @@ export default function QRCodeScanner({ inventory, onProductFound, onClose, open
             </div>
           )}
 
-          {mode === 'manual' && !matchedProduct && (
+          {/* Scan Error Details */}
+          {scanError && !matchedProduct && (
+            <Card className="border-2 border-red-300 bg-red-50">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2 text-red-700 font-semibold">
+                  <AlertCircle className="w-5 h-5" /> No Product Found
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-red-200 space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="text-slate-500">Scanned Code:</span></div>
+                    <div className="font-mono font-bold text-red-800 break-all">{scanError.code}</div>
+                    <div><span className="text-slate-500">Format:</span></div>
+                    <div><Badge className="bg-red-100 text-red-700">{scanError.format}</Badge></div>
+                    {scanError.raw !== scanError.code && (
+                      <>
+                        <div><span className="text-slate-500">Raw Value:</span></div>
+                        <div className="font-mono text-xs text-slate-600 break-all">{scanError.raw}</div>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-red-600 mt-2 border-t pt-2">
+                    {scanError.message}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => {
+                    setScanError(null);
+                    setLastScannedCode(null);
+                    if (mode === 'camera') startCamera();
+                  }}>
+                    Scan Again
+                  </Button>
+                  <Button variant="outline" onClick={() => {
+                    setScanError(null);
+                    setMode('manual');
+                    setManualCode(scanError.code);
+                  }}>
+                    <Keyboard className="w-4 h-4 mr-1" /> Try Manual
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {mode === 'manual' && !matchedProduct && !scanError && (
             <Card className="border-2 border-dashed border-slate-300">
               <CardContent className="p-4 space-y-3">
                 <p className="text-sm text-slate-600 font-medium">Enter the product barcode, ISBN, or SKU code:</p>
                 <div className="flex gap-2">
                   <Input value={manualCode} onChange={e => setManualCode(e.target.value)}
                     placeholder="Scan or type barcode / ISBN / SKU..."
-                    className="flex-1" autoFocus
+                    className="flex-1 font-mono" autoFocus
                     onKeyDown={e => e.key === 'Enter' && handleManualSearch()} />
                   <Button onClick={handleManualSearch} className="bg-red-600 hover:bg-red-700">
                     <Search className="w-4 h-4" />

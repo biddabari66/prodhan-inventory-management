@@ -16,6 +16,7 @@ import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
 import { base44 } from '@/api/base44Client';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import AdvancedVariantManager from './AdvancedVariantManager';
+import { generateProductBarcode } from '../common/BarcodeGenerator';
 
 // Helper function to detect if text contains Bengali characters
 const containsBengali = (text) => {
@@ -154,6 +155,12 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
 
     // Note: Stock validation is optional - users can set stock manually
     // Color/variant quantities are informational only, not enforced
+
+    // Auto-generate barcode if empty for new products
+    if (!product?.id && !formData.barcode) {
+      formData.barcode = generateProductBarcode();
+      toast.info(`Auto-generated UPC barcode: ${formData.barcode}`);
+    }
 
     // Check for duplicate barcode (only for new products with barcode)
     if (!product?.id && formData.barcode) {
@@ -532,13 +539,38 @@ Return ONLY valid JSON with no additional text.`,
               </div>
 
               <div>
-                <Label htmlFor="barcode">Barcode/SKU</Label>
-                <Input
-                  id="barcode"
-                  value={formData.barcode}
-                  onChange={(e) => setFormData({...formData, barcode: e.target.value})}
-                  placeholder="Product barcode or SKU"
-                />
+                <Label htmlFor="barcode">Barcode (UPC-A)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) => setFormData({...formData, barcode: e.target.value})}
+                    placeholder="12-digit UPC barcode"
+                    className="flex-1 font-mono"
+                    maxLength={12}
+                  />
+                  {!product?.id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-nowrap"
+                      onClick={() => {
+                        const code = generateProductBarcode();
+                        setFormData({...formData, barcode: code});
+                        toast.success(`UPC barcode generated: ${code}`);
+                      }}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1" /> Auto
+                    </Button>
+                  )}
+                </div>
+                {formData.barcode && formData.barcode.length === 12 && /^\d{12}$/.test(formData.barcode) && (
+                  <p className="text-xs text-green-600 mt-1">✓ Valid 12-digit UPC-A barcode</p>
+                )}
+                {formData.barcode && (formData.barcode.length !== 12 || !/^\d{12}$/.test(formData.barcode)) && (
+                  <p className="text-xs text-amber-600 mt-1">⚠ UPC-A requires exactly 12 digits</p>
+                )}
               </div>
 
               <div>

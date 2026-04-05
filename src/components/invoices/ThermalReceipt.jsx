@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import BarcodeGenerator, { generateOrderBarcode, getBarcodeDataURL } from '../common/BarcodeGenerator';
 
 /**
  * THERMAL RECEIPT INVOICE - 4x3 inch size  
@@ -27,6 +28,10 @@ export default function ThermalReceipt({ order, onPrint }) {
   };
 
   const shortInvoiceNo = getShortInvoiceNo();
+
+  // Generate scannable order barcode for logistics
+  const orderBarcode = generateOrderBarcode(shortInvoiceNo);
+  const barcodeSvgDataUrl = getBarcodeDataURL(orderBarcode, 180, 40, true);
 
   // QR Code URL - links to prodhan.com website
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://www.prodhan.com')}&format=png`;
@@ -221,8 +226,12 @@ export default function ThermalReceipt({ order, onPrint }) {
         </div>
 
         <div class="qr-section">
-          <img src="${qrCodeUrl}" alt="QR Code" class="qr-img" />
-          <div class="invoice-no">Invoice No: ${shortInvoiceNo}</div>
+          <div style="margin-bottom:6px;">
+            <img src="${barcodeSvgDataUrl}" alt="Order Barcode" style="width:180px;height:58px;margin:0 auto;display:block;" />
+          </div>
+          <div class="invoice-no">Invoice: ${shortInvoiceNo}</div>
+          <div style="font-size:7px;color:#666;margin-top:2px;">📦 Logistics: Scan barcode to stock out</div>
+          <img src="${qrCodeUrl}" alt="QR Code" class="qr-img" style="margin-top:4px;" />
         </div>
 
         <div class="footer">
@@ -321,14 +330,20 @@ export default function ThermalReceipt({ order, onPrint }) {
           </div>
         </div>
 
-        {/* QR Code & Invoice */}
+        {/* Order Barcode for Logistics + QR Code & Invoice */}
         <div className="mt-3 text-center border-t border-dashed border-black pt-2">
+          {orderBarcode && (
+            <div className="mb-2">
+              <BarcodeGenerator value={orderBarcode} width={180} height={40} showText={true} className="mx-auto" />
+              <p className="text-[7px] text-slate-500 mt-0.5">📦 Logistics: Scan to stock out</p>
+            </div>
+          )}
+          <div className="text-[11px] font-extrabold">Invoice: {shortInvoiceNo}</div>
           <img 
             src={qrCodeUrl} 
             alt="Scan for prodhan.com" 
-            className="w-14 h-14 mx-auto"
+            className="w-12 h-12 mx-auto mt-1"
           />
-          <div className="text-[11px] font-extrabold mt-1">Invoice No: {shortInvoiceNo}</div>
         </div>
 
         {/* Footer */}
