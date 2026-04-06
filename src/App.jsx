@@ -10,6 +10,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import QRInventory from './pages/QRInventory';
+import LogisticsScan from './pages/LogisticsScan';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -64,6 +65,11 @@ const AuthenticatedApp = () => {
       <Route path="/QRInventory" element={
         <LayoutWrapper currentPageName="QRInventory">
           <QRInventory />
+        </LayoutWrapper>
+      } />
+      <Route path="/LogisticsScan" element={
+        <LayoutWrapper currentPageName="LogisticsScan">
+          <LogisticsScan />
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />
