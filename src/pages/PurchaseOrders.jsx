@@ -56,6 +56,9 @@ function PurchaseOrdersPage() {
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const isAdmin = currentUser?.job_role === 'admin' || currentUser?.role === 'admin';
@@ -63,11 +66,19 @@ function PurchaseOrdersPage() {
   const { data: purchaseOrders = [], isLoading } = useQuery({
     queryKey: ['purchaseOrders'],
     queryFn: () => base44.entities.PurchaseOrder.list('-order_date', 500),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => base44.entities.Supplier.list(),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: inventory = [] } = useQuery({
@@ -80,6 +91,10 @@ function PurchaseOrdersPage() {
   const { data: packagingExpenses = [] } = useQuery({
     queryKey: ['packagingExpenses'],
     queryFn: () => base44.entities.PackagingExpense.list('-expense_date', 500),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   // Create purchase order mutation

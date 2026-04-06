@@ -60,6 +60,7 @@ function SalesPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
   const [productFilter, setProductFilter] = useState('all');
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({
     includeCustomerDetails: true,
@@ -521,6 +522,18 @@ function SalesPage() {
       );
     }
 
+    if (showDuplicates) {
+      const seen = new Map();
+      filtered.forEach(o => {
+        const key = `${(o.customer_phone || '').trim()}_${o.total_amount || 0}`;
+        if (!seen.has(key)) seen.set(key, []);
+        seen.get(key).push(o.id);
+      });
+      const dupIds = new Set();
+      seen.forEach(ids => { if (ids.length > 1) ids.forEach(id => dupIds.add(id)); });
+      filtered = filtered.filter(o => dupIds.has(o.id));
+    }
+
     return filtered;
   }, [ordersWithDateStr, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
 
@@ -912,7 +925,20 @@ function SalesPage() {
                     />
                   </div>
 
-                  {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all') && (
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Duplicate Detection</Label>
+                    <Button
+                      variant={showDuplicates ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowDuplicates(!showDuplicates)}
+                      className={`w-full h-9 text-sm ${showDuplicates ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'text-amber-700 border-amber-300 hover:bg-amber-50'}`}
+                    >
+                      {showDuplicates ? '✓ Showing Duplicates' : '🔍 Find Duplicate Orders'}
+                    </Button>
+                    <p className="text-xs text-slate-400 mt-1">Same phone + same amount</p>
+                  </div>
+
+                  {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all' || productFilter !== 'all' || showDuplicates) && (
                     <>
                       <Separator />
                       <Button
@@ -923,6 +949,7 @@ function SalesPage() {
                           setStatusFilter('all');
                           setPaymentFilter('all');
                           setProductFilter('all');
+                          setShowDuplicates(false);
                         }}
                         className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                       >

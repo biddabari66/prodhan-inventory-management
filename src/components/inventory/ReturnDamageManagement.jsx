@@ -116,12 +116,15 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   // ⚡ Orders — deferred load, only for export & order-total column
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-for-export'],
-    queryFn: () => base44.entities.Order.list('-order_date', 5000),
+    queryFn: async () => {
+      const batch1 = await base44.entities.Order.list('-order_date', 1000);
+      return batch1;
+    },
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    enabled: !recentLoading, // defer until main data loads
+    enabled: !recentLoading,
     placeholderData: (prev) => prev,
   });
 
