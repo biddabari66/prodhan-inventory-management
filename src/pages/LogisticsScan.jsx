@@ -10,17 +10,16 @@ import { toast } from 'sonner';
 export default function LogisticsScan() {
   const queryClient = useQueryClient();
 
+  // Load ALL recent orders — scanner needs full coverage to match any barcode
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
-    queryKey: ['orders-logistics'],
+    queryKey: ['orders-logistics-all'],
     queryFn: async () => {
-      // Load confirmed/processing/packed/shipped orders (relevant for logistics)
-      const [confirmed, processing, packed, shipped] = await Promise.all([
-        base44.entities.Order.filter({ order_status: 'confirmed' }, '-order_date', 1000),
-        base44.entities.Order.filter({ order_status: 'processing' }, '-order_date', 1000),
-        base44.entities.Order.filter({ order_status: 'packed' }, '-order_date', 500),
-        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 500),
-      ]);
-      return [...confirmed, ...processing, ...packed, ...shipped];
+      // Load all order statuses that logistics may encounter
+      const statuses = ['pending', 'on_hold', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'call_not_received', 'follow_up', 'callback_requested'];
+      const results = await Promise.all(
+        statuses.map(s => base44.entities.Order.filter({ order_status: s }, '-order_date', 500).catch(() => []))
+      );
+      return results.flat();
     },
     staleTime: 2 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
@@ -50,12 +49,13 @@ export default function LogisticsScan() {
   };
 
   const stats = useMemo(() => {
-    let ready = 0, shipped = 0;
+    let ready = 0, shipped = 0, pending = 0;
     orders.forEach(o => {
       if (['confirmed', 'processing', 'packed'].includes(o.order_status)) ready++;
-      if (o.order_status === 'shipped') shipped++;
+      else if (o.order_status === 'shipped' || o.order_status === 'out_for_delivery') shipped++;
+      else if (['pending', 'on_hold', 'call_not_received', 'follow_up', 'callback_requested'].includes(o.order_status)) pending++;
     });
-    return { total: orders.length, ready, shipped };
+    return { total: orders.length, ready, shipped, pending };
   }, [orders]);
 
   if (ordersLoading && orders.length === 0) {
