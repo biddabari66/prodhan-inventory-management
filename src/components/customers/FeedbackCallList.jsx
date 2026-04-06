@@ -27,38 +27,42 @@ export default function FeedbackCallList() {
   const pageSize = 50;
 
   // Fetch ALL orders 3+ days old (shipped, out_for_delivery, delivered)
-  // Human agents will manually confirm delivery status
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-feedback-calls-all'],
     queryFn: async () => {
       const [delivered, shipped, outForDelivery] = await Promise.all([
-        base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 5000),
-        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 5000),
-        base44.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 5000),
+        base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 2000),
+        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 2000),
+        base44.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 2000),
       ]);
       const allOrd = [...delivered, ...shipped, ...outForDelivery];
-      // Filter to orders 3+ days old
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
       return allOrd.filter(o => {
         const d = new Date(o.order_date || o.created_date);
         return !isNaN(d.getTime()) && d < threeDaysAgo;
       });
     },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   // Fetch feedback call statuses
   const { data: feedbackStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['feedback-call-statuses'],
-    queryFn: () => base44.entities.FeedbackCall.list('-created_date', 10000),
-    staleTime: 30000
+    queryFn: () => base44.entities.FeedbackCall.list('-created_date', 5000),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: () => base44.auth.me(),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Create status lookup map
@@ -175,6 +179,20 @@ export default function FeedbackCallList() {
       console.warn('Webhook send failed:', err);
     }
   };
+
+  // Mark order as delivered mutation
+  const markDeliveredMutation = useMutation({
+    mutationFn: async (order) => {
+      await base44.entities.Order.update(order.id, { order_status: 'delivered' });
+      return order;
+    },
+    onSuccess: (order) => {
+      queryClient.invalidateQueries({ queryKey: ['orders-feedback-calls-all'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success(`Order ${order.order_number} marked as delivered!`);
+    },
+    onError: (err) => toast.error('Failed: ' + err.message),
+  });
 
   // Update status mutation
   const updateStatusMutation = useMutation({
@@ -404,11 +422,24 @@ export default function FeedbackCallList() {
                     )}
                   </div>
                   {order.is_awaiting_delivery && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-2">
                       <p className="text-xs text-amber-800 font-medium">⚠️ Delivery not confirmed yet — 3+ days old. Please verify manually.</p>
                       {order.courier_tracking_code && (
-                        <p className="text-xs text-amber-600 mt-1">Tracking: {order.courier_tracking_code}</p>
+                        <p className="text-xs text-amber-600">Tracking: {order.courier_tracking_code}</p>
                       )}
+                      <Button
+                        size="sm"
+                        className="w-full h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5"
+                        onClick={() => markDeliveredMutation.mutate(order)}
+                        disabled={markDeliveredMutation.isPending}
+                      >
+                        {markDeliveredMutation.isPending ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
+                        Mark as Delivered
+                      </Button>
                     </div>
                   )}
                   {order.courier_status && (

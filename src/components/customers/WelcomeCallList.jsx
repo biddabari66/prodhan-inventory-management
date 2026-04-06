@@ -23,47 +23,38 @@ export default function WelcomeCallList() {
   const [othersDialog, setOthersDialog] = useState({ open: false, order: null, notes: '' });
   const pageSize = 50;
 
-  // Fetch ALL orders for welcome calls by paginating through all records
+  // Fetch orders for welcome calls — only shipped/delivered statuses
   const { data: allOrders = [], isLoading: ordersLoading, refetch } = useQuery({
     queryKey: ['orders-welcome-calls-all'],
     queryFn: async () => {
-      const batchSize = 5000;
-      let all = [];
-      let offset = 0;
-      while (true) {
-        const batch = await base44.entities.Order.list('-order_date', batchSize, offset);
-        all = all.concat(batch);
-        if (batch.length < batchSize) break;
-        offset += batchSize;
-      }
-      return all;
+      const [shipped, outForDelivery, delivered] = await Promise.all([
+        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 2000),
+        base44.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 2000),
+        base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 2000),
+      ]);
+      return [...shipped, ...outForDelivery, ...delivered];
     },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
-  // Fetch welcome call statuses by paginating through all records
+  // Fetch welcome call statuses
   const { data: welcomeStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['welcome-call-statuses'],
-    queryFn: async () => {
-      const batchSize = 5000;
-      let all = [];
-      let offset = 0;
-      while (true) {
-        const batch = await base44.entities.WelcomeCall.list('-created_date', batchSize, offset);
-        all = all.concat(batch);
-        if (batch.length < batchSize) break;
-        offset += batchSize;
-      }
-      return all;
-    },
-    staleTime: 30000
+    queryFn: () => base44.entities.WelcomeCall.list('-created_date', 5000),
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: () => base44.auth.me(),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Create status lookup map for O(1) access
@@ -78,15 +69,10 @@ export default function WelcomeCallList() {
     return map;
   }, [welcomeStatuses]);
 
-  // 🚀 OPTIMIZED: Convert orders to call cards with status
-  // ONLY shipped orders should appear in welcome calls
+  // Convert orders to call cards with status (already filtered at query level)
   const orderCards = useMemo(() => {
     if (!allOrders.length) return [];
-    
-    const shippedStatuses = ['shipped', 'out_for_delivery', 'delivered'];
-    return allOrders
-      .filter(order => shippedStatuses.includes(order.order_status))
-      .map(order => {
+    return allOrders.map(order => {
         const existingStatus = statusMap.get(order.order_number);
         return {
           ...order,
