@@ -17,6 +17,7 @@ import { base44 } from '@/api/base44Client';
 import { Order } from '@/entities/Order';
 import { Customer } from '@/entities/Customer';
 import { Inventory } from '@/entities/Inventory';
+import { InventoryMovement } from '@/entities/InventoryMovement';
 import { User } from '@/entities/User';
 import BulkOrderCSVUpload from '../components/sales/BulkOrderCSVUpload';
 import OrderForm from '../components/sales/OrderForm';
@@ -216,6 +217,197 @@ function SalesPage() {
     return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
   }, [currentUser]);
 
+  // ─────────────────────────────────────────────────────────────────────
+  // INLINE INVENTORY DEDUCTION
+  // Runs entirely in the browser — no Base44 automation, no integration
+  // credits consumed. Idempotent: if an InventoryMovement already exists
+  // for this order_number with reference_type='sale', we skip.
+  // ─────────────────────────────────────────────────────────────────────
+  const deductInventoryInline = useCallback(async (order) => {
+    const result = { success: false, skipped: false, items_deducted: 0, errors: [] };
+
+    try {
+      if (!order || !order.order_number) {
+        return { ...result, error: 'Order missing order_number' };
+      }
+
+      // 1. Idempotency check — bail if any sale movement exists for this order
+      let existing = [];
+      try {
+        const movements = await InventoryMovement.filter({ reference_number: order.order_number });
+        existing = (movements || []).filter(m => m.reference_type === 'sale');
+      } catch (err) {
+        console.error('[deduct] idempotency check failed:', err);
+        return { ...result, error: `Idempotency check failed: ${err.message}` };
+      }
+      if (existing.length > 0) {
+        console.log(`[deduct] ${order.order_number}: already deducted (${existing.length} movements) — skip`);
+        return { ...result, success: true, skipped: true };
+      }
+
+      // 2. Pick line items source (barcode flow wins when scanned_items[] is present)
+      const scanned = Array.isArray(order.scanned_items) ? order.scanned_items : [];
+      const useBarcode = scanned.length > 0;
+      const items = useBarcode ? scanned : (order.order_items || []);
+      if (!Array.isArray(items) || items.length === 0) {
+        return { ...result, success: true, skipped: true };
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const performedBy = currentUser?.email || order.created_by || 'system';
+
+      // 3. Process each line item
+      for (const item of items) {
+        try {
+          // Resolve inventory_id (multi-field fallback for different schemas)
+          let invId = '';
+          if (useBarcode) {
+            const barcode = item.barcode || item.sku || item.code || item.item_code || '';
+            if (!barcode) {
+              result.errors.push({ item: JSON.stringify(item), error: 'No barcode' });
+              continue;
+            }
+            const hits = await Inventory.filter({ barcode });
+            const hit = hits && hits[0];
+            if (!hit) {
+              result.errors.push({ item: barcode, error: 'Inventory not found by barcode' });
+              continue;
+            }
+            invId = hit.id;
+            item.inventory_id = hit.id;
+            item.item_name = item.item_name || hit.item_name;
+            item.quantity = item.quantity || 1;
+            item.unit_price = item.unit_price || hit.selling_price || 0;
+            item.selected_color = item.selected_color || item.color || null;
+          } else {
+            invId =
+              item.inventory_id ||
+              item.inventoryId ||
+              item.product_id ||
+              item.productId ||
+              item.item_id ||
+              (item.inventory && item.inventory.id) ||
+              (item.product && item.product.id) ||
+              '';
+          }
+
+          if (!invId) {
+            result.errors.push({ item: item.item_name || 'unknown', error: 'No inventory_id' });
+            continue;
+          }
+
+          const inv = await Inventory.get(invId);
+          if (!inv) {
+            result.errors.push({ item: item.item_name || invId, error: 'Inventory record not found' });
+            continue;
+          }
+
+          // ── BUNDLE / COMBO ──
+          if (inv.is_bundle && Array.isArray(inv.bundle_items) && inv.bundle_items.length > 0) {
+            for (const bi of inv.bundle_items) {
+              try {
+                const cid = bi.inventory_id || bi.inventoryId || bi.product_id || bi.id || '';
+                if (!cid) {
+                  result.errors.push({ item: `Bundle component of "${inv.item_name}"`, error: 'No component id' });
+                  continue;
+                }
+                const comp = await Inventory.get(cid);
+                if (!comp) {
+                  result.errors.push({ item: `Bundle component ${cid}`, error: 'Not found' });
+                  continue;
+                }
+                const qty = (bi.quantity || 1) * (item.quantity || 1);
+                const oldStock = comp.current_stock ?? 0;
+                const newStock = Math.max(0, oldStock - qty);
+
+                await Inventory.update(cid, {
+                  current_stock: newStock,
+                  last_sale_date: today,
+                  total_sold: (comp.total_sold ?? 0) + qty,
+                  status: newStock <= 0 ? 'out_of_stock'
+                    : newStock <= (comp.minimum_stock || 0) ? 'low_stock' : 'active'
+                });
+
+                await InventoryMovement.create({
+                  inventory_item_id: cid,
+                  movement_type: 'out',
+                  quantity: -qty,
+                  reference_type: 'sale',
+                  reference_id: order.id,
+                  reference_number: order.order_number,
+                  unit_cost: comp.purchase_price || 0,
+                  total_value: -(qty * (comp.purchase_price || 0)),
+                  performed_by: performedBy,
+                  notes: `Ship-deduct | Combo: ${inv.item_name} | Order: ${order.order_number}`,
+                  movement_date: today,
+                  balance_after: newStock
+                });
+
+                result.items_deducted++;
+              } catch (e) {
+                result.errors.push({ item: `Bundle component of ${inv.item_name}`, error: e.message });
+              }
+            }
+            continue;
+          }
+
+          // ── REGULAR PRODUCT ──
+          const qty = item.quantity || 1;
+          const oldStock = inv.current_stock ?? 0;
+          const newStock = Math.max(0, oldStock - qty);
+
+          let updatedVariants = inv.color_variants;
+          if (item.selected_color && Array.isArray(inv.color_variants) && inv.color_variants.length > 0) {
+            updatedVariants = inv.color_variants.map(v =>
+              v.color === item.selected_color
+                ? { ...v, quantity: Math.max(0, (v.quantity ?? 0) - qty) }
+                : v
+            );
+          }
+
+          const updateData = {
+            current_stock: newStock,
+            last_sale_date: today,
+            total_sold: (inv.total_sold ?? 0) + qty,
+            status: newStock <= 0 ? 'out_of_stock'
+              : newStock <= (inv.minimum_stock || 0) ? 'low_stock' : 'active'
+          };
+          if (updatedVariants) updateData.color_variants = updatedVariants;
+
+          await Inventory.update(invId, updateData);
+
+          await InventoryMovement.create({
+            inventory_item_id: invId,
+            movement_type: 'out',
+            quantity: -qty,
+            reference_type: 'sale',
+            reference_id: order.id,
+            reference_number: order.order_number,
+            unit_cost: item.unit_price || 0,
+            total_value: -(qty * (item.unit_price || 0)),
+            performed_by: performedBy,
+            notes: `Ship-deduct | Order: ${order.order_number}${item.selected_color ? ` | Color: ${item.selected_color}` : ''}`,
+            movement_date: today,
+            balance_after: newStock
+          });
+
+          console.log(`[deduct] "${inv.item_name}": ${oldStock} - ${qty} = ${newStock}`);
+          result.items_deducted++;
+        } catch (itemErr) {
+          console.error('[deduct] item error:', itemErr);
+          result.errors.push({ item: item.item_name || 'unknown', error: itemErr.message });
+        }
+      }
+
+      result.success = true;
+      console.log(`[deduct] DONE ${order.order_number} | deducted=${result.items_deducted} | errors=${result.errors.length}`);
+      return result;
+    } catch (fatal) {
+      console.error('[deduct] fatal:', fatal);
+      return { ...result, error: fatal.message };
+    }
+  }, [currentUser]);
+
   // Create order mutation - NO inventory deduction on create
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
@@ -289,24 +481,41 @@ function SalesPage() {
     },
   });
 
-  // Update order status - inventory deduction is handled automatically by backend automation
+  // Update order status - inventory deducted INLINE when status becomes 'shipped'
+  // (no backend automation, no integration credits consumed)
   const updateOrderStatusMutation = useMutation({
-    mutationFn: async ({ orderId, newStatus }) => {
-      return await Order.update(orderId, { order_status: newStatus });
+    mutationFn: async ({ orderId, newStatus, orderObject }) => {
+      // 1. Update the order status
+      const updated = await Order.update(orderId, { order_status: newStatus });
+
+      // 2. If shipping, deduct inventory inline
+      if (String(newStatus).toLowerCase() === 'shipped') {
+        const order = orderObject || updated;
+        const deduction = await deductInventoryInline(order);
+        return { updated, deduction };
+      }
+
+      return { updated, deduction: null };
     },
-    onSuccess: (_, { newStatus }) => {
+    onSuccess: (data, { newStatus }) => {
       queryClient.invalidateQueries(['orders']);
-      if (newStatus === 'shipped') {
-        // Backend automation deducts inventory; refresh after short delays to catch the update
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['inventory'] });
-          queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
-        }, 2000);
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['inventory'] });
-          queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
-        }, 5000);
-        toast.success('Order shipped! Inventory will be deducted automatically.');
+
+      if (String(newStatus).toLowerCase() === 'shipped') {
+        queryClient.invalidateQueries({ queryKey: ['inventory'] });
+        queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+
+        const d = data?.deduction;
+        if (!d) {
+          toast.success('Order shipped!');
+        } else if (!d.success) {
+          toast.error(`Order shipped but deduction failed: ${d.error}`);
+        } else if (d.skipped) {
+          toast.success('Order shipped! (Already deducted earlier)');
+        } else {
+          const msg = `Order shipped! Deducted ${d.items_deducted} item(s)${d.errors.length ? ` — ${d.errors.length} warning(s), see console` : ''}`;
+          toast.success(msg);
+          if (d.errors.length) console.warn('[Ship] Partial deduction errors:', d.errors);
+        }
       } else {
         toast.success('Order status updated!');
       }
@@ -317,7 +526,7 @@ function SalesPage() {
   });
 
   const handleQuickStatusChange = (order, newStatus) => {
-    updateOrderStatusMutation.mutate({ orderId: order.id, newStatus });
+    updateOrderStatusMutation.mutate({ orderId: order.id, newStatus, orderObject: order });
   };
 
   // Payment status update mutation
@@ -369,21 +578,41 @@ function SalesPage() {
       }
     } else {
       try {
-        // Process sequentially to avoid race conditions, especially for 'shipped' status
+        const isShipping = String(action).toLowerCase() === 'shipped';
+        let totalDeducted = 0;
+        let deductionFailures = 0;
+        let deductionSkipped = 0;
+
+        const loadingToast = isShipping
+          ? toast.loading(`Shipping ${selectedOrderIds.length} order(s) and deducting inventory...`)
+          : null;
+
+        // Process sequentially to avoid race conditions
         for (const id of selectedOrderIds) {
           await Order.update(id, { order_status: action });
+
+          if (isShipping) {
+            const orderObj = orders.find(o => o.id === id);
+            if (orderObj) {
+              const d = await deductInventoryInline(orderObj);
+              if (!d.success) deductionFailures++;
+              else if (d.skipped) deductionSkipped++;
+              else totalDeducted += d.items_deducted;
+            }
+          }
         }
+
+        if (loadingToast) toast.dismiss(loadingToast);
+
         queryClient.invalidateQueries(['orders']);
-        if (action === 'shipped') {
-          setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['inventory'] });
-            queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
-          }, 3000);
-          setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['inventory'] });
-            queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
-          }, 6000);
-          toast.success(`${selectedOrderIds.length} order(s) shipped! Inventory will be deducted automatically.`);
+
+        if (isShipping) {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] });
+          queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+          const parts = [`${selectedOrderIds.length} order(s) shipped`, `${totalDeducted} items deducted`];
+          if (deductionSkipped) parts.push(`${deductionSkipped} already deducted`);
+          if (deductionFailures) parts.push(`${deductionFailures} FAILED (see console)`);
+          toast.success(parts.join(' | '));
         } else {
           toast.success(`${selectedOrderIds.length} order(s) updated to ${action}`);
         }
