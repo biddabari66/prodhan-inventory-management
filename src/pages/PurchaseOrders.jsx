@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +15,7 @@ import {
   Plus, Package, ShoppingCart, DollarSign,
   CheckCircle, Clock, Edit, Trash2, Eye,
   FileText, Search, MoreVertical, Box,
-  Image, ShieldCheck, ShieldX, User
+  Image, ShieldCheck, ShieldX, User, X
 } from 'lucide-react';
 import PackagingExpenseForm from '../components/procurement/PackagingExpenseForm';
 import PurchaseOrderForm from '../components/procurement/PurchaseOrderForm';
@@ -39,7 +40,7 @@ function PurchaseOrdersPage() {
   const [viewOrderDialog, setViewOrderDialog] = useState(null);
   const [approvalDialog, setApprovalDialog] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  
+
   // Packaging Expense Form state
   const [isPackagingFormOpen, setIsPackagingFormOpen] = useState(false);
   const [editingPackagingExpense, setEditingPackagingExpense] = useState(null);
@@ -47,10 +48,16 @@ function PurchaseOrdersPage() {
   const [packagingRejectionReason, setPackagingRejectionReason] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null);
 
+  // ── BULK SELECTION STATE ──
+  const [selectedPOIds, setSelectedPOIds] = useState([]);
+  const [selectedPackagingIds, setSelectedPackagingIds] = useState([]);
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(null); // { type: 'po' | 'packaging', count }
+
   // Permission-based access control
   const { hasPermission: canCreate } = usePermission('purchase_orders', 'can_create');
   const { hasPermission: canEdit } = usePermission('purchase_orders', 'can_edit');
   const { hasPermission: canApprove } = usePermission('purchase_orders', 'can_approve');
+  const { hasPermission: canDelete } = usePermission('purchase_orders', 'can_delete');
 
   // Fetch data
   const { data: currentUser } = useQuery({
@@ -403,6 +410,92 @@ function PurchaseOrdersPage() {
     onError: (error) => toast.error('Failed to delete: ' + error.message),
   });
 
+  // ──────────────────────────────────────────────────────────────────
+  // BULK DELETE MUTATIONS
+  // Use Promise.allSettled so one failure doesn't abort the whole batch.
+  // Writes one audit log per successful delete for full traceability.
+  // ──────────────────────────────────────────────────────────────────
+  const bulkDeletePOMutation = useMutation({
+    mutationFn: async (orders) => {
+      const results = await Promise.allSettled(
+        orders.map(async (o) => {
+          await base44.entities.PurchaseOrder.delete(o.id);
+          // Best-effort audit — don't fail the delete if log creation errors
+          try {
+            await base44.entities.AuditLog.create({
+              user_id: currentUser?.id,
+              user_name: currentUser?.full_name,
+              action: 'delete',
+              entity_type: 'PurchaseOrder',
+              entity_id: o.id,
+              module: 'purchase_orders',
+              description: `Bulk deleted PO ${o.po_number}`,
+              timestamp: new Date().toISOString()
+            });
+          } catch (_) { /* ignore audit failures */ }
+          return o;
+        })
+      );
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      return { succeeded, failed, total: orders.length };
+    },
+    onSuccess: ({ succeeded, failed, total }) => {
+      queryClient.invalidateQueries(['purchaseOrders']);
+      setSelectedPOIds([]);
+      setBulkDeleteDialog(null);
+      if (failed > 0) {
+        toast.success(`Deleted ${succeeded} of ${total} POs. ${failed} failed — they may have already been removed.`);
+      } else {
+        toast.success(`${succeeded} purchase order${succeeded !== 1 ? 's' : ''} deleted`);
+      }
+    },
+    onError: (error) => {
+      toast.error('Bulk delete failed: ' + error.message);
+      setBulkDeleteDialog(null);
+    },
+  });
+
+  const bulkDeletePackagingMutation = useMutation({
+    mutationFn: async (expenses) => {
+      const results = await Promise.allSettled(
+        expenses.map(async (e) => {
+          await base44.entities.PackagingExpense.delete(e.id);
+          try {
+            await base44.entities.AuditLog.create({
+              user_id: currentUser?.id,
+              user_name: currentUser?.full_name,
+              action: 'delete',
+              entity_type: 'PackagingExpense',
+              entity_id: e.id,
+              module: 'purchase_orders',
+              description: `Bulk deleted packaging expense ${e.expense_number}`,
+              timestamp: new Date().toISOString()
+            });
+          } catch (_) { /* ignore audit failures */ }
+          return e;
+        })
+      );
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      return { succeeded, failed, total: expenses.length };
+    },
+    onSuccess: ({ succeeded, failed, total }) => {
+      queryClient.invalidateQueries(['packagingExpenses']);
+      setSelectedPackagingIds([]);
+      setBulkDeleteDialog(null);
+      if (failed > 0) {
+        toast.success(`Deleted ${succeeded} of ${total} expenses. ${failed} failed — they may have already been removed.`);
+      } else {
+        toast.success(`${succeeded} packaging expense${succeeded !== 1 ? 's' : ''} deleted`);
+      }
+    },
+    onError: (error) => {
+      toast.error('Bulk delete failed: ' + error.message);
+      setBulkDeleteDialog(null);
+    },
+  });
+
   const handlePackagingExpenseSubmit = (expenseData) => {
     if (editingPackagingExpense) {
       updatePackagingExpenseMutation.mutate({ id: editingPackagingExpense.id, data: expenseData });
@@ -487,6 +580,30 @@ function PurchaseOrdersPage() {
       pendingPackagingApproval: packagingExpenses.filter(e => e.status === 'pending_approval').length
     };
   }, [filteredOrders, purchaseOrders, packagingExpenses]);
+
+  // ── BULK SELECTION HELPERS ──
+  const togglePO = (id) => {
+    setSelectedPOIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleAllPO = () => {
+    if (selectedPOIds.length === filteredOrders.length && filteredOrders.length > 0) {
+      setSelectedPOIds([]);
+    } else {
+      setSelectedPOIds(filteredOrders.map(o => o.id));
+    }
+  };
+  const togglePackaging = (id) => {
+    setSelectedPackagingIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleAllPackaging = () => {
+    if (selectedPackagingIds.length === packagingExpenses.length && packagingExpenses.length > 0) {
+      setSelectedPackagingIds([]);
+    } else {
+      setSelectedPackagingIds(packagingExpenses.map(e => e.id));
+    }
+  };
+  const allPOSelected = filteredOrders.length > 0 && selectedPOIds.length === filteredOrders.length;
+  const allPackagingSelected = packagingExpenses.length > 0 && selectedPackagingIds.length === packagingExpenses.length;
 
   const getPackagingStatusBadge = (status) => {
     const c = { pending_approval: { l: 'Pending Approval', c: 'bg-amber-100 text-amber-800' }, approved: { l: 'Approved', c: 'bg-green-100 text-green-800' }, rejected: { l: 'Rejected', c: 'bg-red-100 text-red-800' } };
@@ -690,8 +807,56 @@ function PurchaseOrdersPage() {
           </TabsList>
 
           <TabsContent value="purchase_orders">
+            {/* ── BULK ACTION BAR (POs) ── */}
+            {canDelete && selectedPOIds.length > 0 && (
+              <Card className="bg-red-50 border border-red-200 shadow-sm rounded-xl mb-3">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-red-600 text-white rounded-full px-3 py-0.5 text-xs">
+                        {selectedPOIds.length} selected
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedPOIds([])}
+                        className="text-slate-600 hover:text-slate-900 rounded-lg h-8"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" />
+                        Clear
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => setBulkDeleteDialog({ type: 'po', count: selectedPOIds.length })}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete {selectedPOIds.length} Purchase Order{selectedPOIds.length !== 1 ? 's' : ''}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Mobile PO Cards */}
             <div className="md:hidden space-y-3">
+              {/* Select-all row on mobile */}
+              {canDelete && filteredOrders.length > 0 && (
+                <div className="flex items-center justify-between px-1">
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <Checkbox
+                      checked={allPOSelected}
+                      onCheckedChange={toggleAllPO}
+                    />
+                    Select all ({filteredOrders.length})
+                  </label>
+                  {selectedPOIds.length > 0 && (
+                    <span className="text-xs text-red-600 font-medium">{selectedPOIds.length} selected</span>
+                  )}
+                </div>
+              )}
+
               {filteredOrders.length === 0 ? (
                 <Card className="bg-white border-0 shadow-sm rounded-xl">
                   <CardContent className="py-12 text-center">
@@ -701,21 +866,32 @@ function PurchaseOrdersPage() {
                 </Card>
               ) : (
                 filteredOrders.map((order) => (
-                  <MobilePOCard
-                    key={order.id}
-                    order={order}
-                    getStatusBadge={getStatusBadge}
-                    onView={setViewOrderDialog}
-                    onEdit={handleEdit}
-                    onApprove={(o) => setApprovalDialog({ order: o, action: 'approve' })}
-                    onReject={(o) => setApprovalDialog({ order: o, action: 'reject' })}
-                    onReceive={handleReceive}
-                    onDelete={(o) => setDeleteDialog({ type: 'po', item: o })}
-                    canEdit={canEdit}
-                    canApprove={canApprove}
-                    isAdmin={isAdmin}
-                    supplierName={supplierMap[order.supplier_id]?.supplier_name || order.supplier_name}
-                  />
+                  <div key={order.id} className="flex items-start gap-2">
+                    {canDelete && (
+                      <div className="pt-3 pl-1">
+                        <Checkbox
+                          checked={selectedPOIds.includes(order.id)}
+                          onCheckedChange={() => togglePO(order.id)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <MobilePOCard
+                        order={order}
+                        getStatusBadge={getStatusBadge}
+                        onView={setViewOrderDialog}
+                        onEdit={handleEdit}
+                        onApprove={(o) => setApprovalDialog({ order: o, action: 'approve' })}
+                        onReject={(o) => setApprovalDialog({ order: o, action: 'reject' })}
+                        onReceive={handleReceive}
+                        onDelete={(o) => setDeleteDialog({ type: 'po', item: o })}
+                        canEdit={canEdit}
+                        canApprove={canApprove}
+                        isAdmin={isAdmin}
+                        supplierName={supplierMap[order.supplier_id]?.supplier_name || order.supplier_name}
+                      />
+                    </div>
+                  </div>
                 ))
               )}
             </div>
@@ -723,14 +899,34 @@ function PurchaseOrdersPage() {
             {/* Desktop Orders Table */}
             <Card className="bg-white border border-slate-200 shadow-sm hidden md:block">
               <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
+                <CardTitle className="text-xl font-semibold text-slate-900 flex items-center justify-between">
+                  <span>Purchase Orders ({filteredOrders.length})</span>
+                  {canDelete && filteredOrders.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleAllPO}
+                      className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      {allPOSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                     <TableHead>PO Number</TableHead>
+                    {canDelete && (
+                      <TableHead className="w-12 pl-6">
+                        <Checkbox
+                          checked={allPOSelected}
+                          onCheckedChange={toggleAllPO}
+                        />
+                      </TableHead>
+                    )}
+                    <TableHead>PO Number</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Supplier</TableHead>
@@ -743,14 +939,25 @@ function PurchaseOrdersPage() {
                 <TableBody>
                   {filteredOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={canDelete ? 9 : 8} className="text-center py-8 text-muted-foreground">
                         <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>No purchase orders found</p>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredOrders.map((order) => (
-                      <TableRow key={order.id} className="hover:bg-gray-50">
+                      <TableRow
+                        key={order.id}
+                        className={`hover:bg-gray-50 ${selectedPOIds.includes(order.id) ? 'bg-red-50/50' : ''}`}
+                      >
+                        {canDelete && (
+                          <TableCell className="pl-6">
+                            <Checkbox
+                              checked={selectedPOIds.includes(order.id)}
+                              onCheckedChange={() => togglePO(order.id)}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-mono font-semibold text-violet-600">
                           {order.po_number}
                         </TableCell>
@@ -845,11 +1052,55 @@ function PurchaseOrdersPage() {
 
           {/* Packaging Expenses Tab */}
           <TabsContent value="packaging">
+            {/* ── BULK ACTION BAR (Packaging) ── */}
+            {canDelete && selectedPackagingIds.length > 0 && (
+              <Card className="bg-amber-50 border border-amber-200 shadow-sm rounded-xl mb-3">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-amber-600 text-white rounded-full px-3 py-0.5 text-xs">
+                        {selectedPackagingIds.length} selected
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedPackagingIds([])}
+                        className="text-slate-600 hover:text-slate-900 rounded-lg h-8"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" />
+                        Clear
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => setBulkDeleteDialog({ type: 'packaging', count: selectedPackagingIds.length })}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete {selectedPackagingIds.length} Expense{selectedPackagingIds.length !== 1 ? 's' : ''}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                <CardTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-                  <Box className="w-5 h-5 text-amber-600" />
-                  Packaging Expenses ({packagingExpenses.length})
+                <CardTitle className="text-xl font-semibold text-slate-900 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <Box className="w-5 h-5 text-amber-600" />
+                    Packaging Expenses ({packagingExpenses.length})
+                  </span>
+                  {canDelete && packagingExpenses.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleAllPackaging}
+                      className="text-sm text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                    >
+                      {allPackagingSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -857,6 +1108,14 @@ function PurchaseOrdersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {canDelete && (
+                          <TableHead className="w-12 pl-6">
+                            <Checkbox
+                              checked={allPackagingSelected}
+                              onCheckedChange={toggleAllPackaging}
+                            />
+                          </TableHead>
+                        )}
                         <TableHead>Expense #</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Products</TableHead>
@@ -870,14 +1129,25 @@ function PurchaseOrdersPage() {
                     <TableBody>
                       {packagingExpenses.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={canDelete ? 9 : 8} className="text-center py-8 text-muted-foreground">
                             <Box className="w-12 h-12 mx-auto mb-2 opacity-50" />
                             <p>No packaging expenses found</p>
                           </TableCell>
                         </TableRow>
                       ) : (
                         packagingExpenses.map((expense) => (
-                          <TableRow key={expense.id} className="hover:bg-gray-50">
+                          <TableRow
+                            key={expense.id}
+                            className={`hover:bg-gray-50 ${selectedPackagingIds.includes(expense.id) ? 'bg-amber-50/50' : ''}`}
+                          >
+                            {canDelete && (
+                              <TableCell className="pl-6">
+                                <Checkbox
+                                  checked={selectedPackagingIds.includes(expense.id)}
+                                  onCheckedChange={() => togglePackaging(expense.id)}
+                                />
+                              </TableCell>
+                            )}
                             <TableCell className="font-mono font-semibold text-amber-600">
                               {expense.expense_number}
                             </TableCell>
@@ -1047,9 +1317,9 @@ function PurchaseOrdersPage() {
                     <div className="flex flex-wrap gap-3">
                       {(viewOrderDialog.invoice_images?.length > 0 ? viewOrderDialog.invoice_images : [viewOrderDialog.invoice_image_url]).map((url, idx) => (
                         <div key={idx} className="relative">
-                          <img 
-                            src={url} 
-                            alt={`Invoice ${idx + 1}`} 
+                          <img
+                            src={url}
+                            alt={`Invoice ${idx + 1}`}
                             className="h-48 w-auto rounded border cursor-pointer hover:opacity-90 object-contain"
                             onClick={() => window.open(url, '_blank')}
                           />
@@ -1157,14 +1427,14 @@ function PurchaseOrdersPage() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setRejectionReason('')}>Cancel</AlertDialogCancel>
               {approvalDialog?.action === 'approve' ? (
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={() => approveOrderMutation.mutate(approvalDialog.order)}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   Approve
                 </AlertDialogAction>
               ) : (
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={() => {
                     if (!rejectionReason.trim()) {
                       toast.error('Please provide a rejection reason');
@@ -1205,7 +1475,7 @@ function PurchaseOrdersPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete Confirmation Dialog (single) */}
         <AlertDialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -1220,6 +1490,40 @@ function PurchaseOrdersPage() {
                 if (deleteDialog?.type === 'po') deleteOrderMutation.mutate(deleteDialog.item);
                 else deletePackagingMutation.mutate(deleteDialog.item);
               }}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <AlertDialog open={!!bulkDeleteDialog} onOpenChange={() => setBulkDeleteDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-red-600">
+                🗑️ Delete {bulkDeleteDialog?.count} {bulkDeleteDialog?.type === 'po' ? 'Purchase Order' : 'Packaging Expense'}{bulkDeleteDialog?.count !== 1 ? 's' : ''}?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{bulkDeleteDialog?.count}</strong> {bulkDeleteDialog?.type === 'po' ? 'purchase order' : 'packaging expense'}{bulkDeleteDialog?.count !== 1 ? 's' : ''} and cannot be undone. An audit log entry will be created for each deletion.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                disabled={bulkDeletePOMutation.isPending || bulkDeletePackagingMutation.isPending}
+                onClick={() => {
+                  if (bulkDeleteDialog?.type === 'po') {
+                    const toDelete = purchaseOrders.filter(o => selectedPOIds.includes(o.id));
+                    bulkDeletePOMutation.mutate(toDelete);
+                  } else {
+                    const toDelete = packagingExpenses.filter(e => selectedPackagingIds.includes(e.id));
+                    bulkDeletePackagingMutation.mutate(toDelete);
+                  }
+                }}
+              >
+                {(bulkDeletePOMutation.isPending || bulkDeletePackagingMutation.isPending)
+                  ? 'Deleting...'
+                  : `Delete ${bulkDeleteDialog?.count}`}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -1252,14 +1556,14 @@ function PurchaseOrdersPage() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPackagingRejectionReason('')}>Cancel</AlertDialogCancel>
               {packagingApprovalDialog?.action === 'approve' ? (
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={() => approvePackagingExpenseMutation.mutate(packagingApprovalDialog.expense)}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   Approve
                 </AlertDialogAction>
               ) : (
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={() => {
                     if (!packagingRejectionReason.trim()) {
                       toast.error('Please provide a rejection reason');
