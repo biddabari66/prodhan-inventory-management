@@ -1,7 +1,8 @@
 // Base entity class that mimics the Base44 SDK entity API
 // All entities use the local Express API server instead of Base44
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Use relative URL so it works in both dev (Vite proxy) and production (Railway)
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function getAuthHeaders() {
     const token = localStorage.getItem('auth_token');

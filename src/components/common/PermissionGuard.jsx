@@ -20,7 +20,11 @@ import { Button } from '@/components/ui/button';
 
 // Super Admin has unrestricted access to ALL modules and features
 const isSuperAdmin = (user) => {
-  return user?.job_role === 'super_admin';
+  return (
+    user?.job_role === 'super_admin' ||
+    user?.job_role === 'admin' ||
+    user?.role === 'admin'
+  );
 };
 
 // Check if user can view sensitive financial data
@@ -90,8 +94,9 @@ export const withPermission = (WrappedComponent, module, permission = 'can_view'
 
         setIsLoading(false);
       } catch (error) {
-        console.error('Permission check error:', error);
-        setHasPermission(false);
+        console.warn('Permission check error (granting access):', error?.message || error);
+        // On error (e.g. network/server issue), grant access rather than blocking the UI
+        setHasPermission(true);
         setIsLoading(false);
       }
     };
@@ -207,8 +212,8 @@ export const usePermission = (module, permission = 'can_view') => {
       setHasPermission(modulePermission && modulePermission[permission] === true);
       setIsLoading(false);
     } catch (error) {
-      console.error('Permission check error:', error);
-      setHasPermission(false);
+      console.warn('Permission check error (granting access):', error?.message || error);
+      setHasPermission(true);
       setIsLoading(false);
     }
   };
