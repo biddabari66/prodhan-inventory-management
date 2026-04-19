@@ -5,12 +5,14 @@ import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import QRInventory from './pages/QRInventory';
 import LogisticsScan from './pages/LogisticsScan';
+import LoginPage from './pages/LoginPage';
+
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -20,57 +22,80 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+// Auth guard: redirects to /login if not authenticated
+const RequireAuth = ({ children }) => {
+  const { isAuthenticated, isLoadingAuth } = useAuth();
+  const location = useLocation();
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-900">
+        <div className="w-12 h-12 rounded-2xl bg-amber-400 flex items-center justify-center mb-4 shadow-lg">
+          <span className="text-2xl">🐝</span>
+        </div>
+        <div className="w-8 h-8 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin"></div>
+        <p className="text-slate-400 text-sm mt-3">Loading BeeERP...</p>
       </div>
     );
   }
 
-  // Handle authentication errors
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
+const AuthenticatedApp = () => {
+  const { authError } = useAuth();
+
+  // Handle specific auth errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
     }
+    // auth_required is handled by RequireAuth below
   }
 
-  // Render the main app
   return (
     <Routes>
+      {/* Public route */}
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Protected routes */}
       <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
-        </LayoutWrapper>
+        <RequireAuth>
+          <LayoutWrapper currentPageName={mainPageKey}>
+            <MainPage />
+          </LayoutWrapper>
+        </RequireAuth>
       } />
       {Object.entries(Pages).map(([path, Page]) => (
         <Route
           key={path}
           path={`/${path}`}
           element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
+            <RequireAuth>
+              <LayoutWrapper currentPageName={path}>
+                <Page />
+              </LayoutWrapper>
+            </RequireAuth>
           }
         />
       ))}
       <Route path="/QRInventory" element={
-        <LayoutWrapper currentPageName="QRInventory">
-          <QRInventory />
-        </LayoutWrapper>
+        <RequireAuth>
+          <LayoutWrapper currentPageName="QRInventory">
+            <QRInventory />
+          </LayoutWrapper>
+        </RequireAuth>
       } />
       <Route path="/LogisticsScan" element={
-        <LayoutWrapper currentPageName="LogisticsScan">
-          <LogisticsScan />
-        </LayoutWrapper>
+        <RequireAuth>
+          <LayoutWrapper currentPageName="LogisticsScan">
+            <LogisticsScan />
+          </LayoutWrapper>
+        </RequireAuth>
       } />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
@@ -79,7 +104,6 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>

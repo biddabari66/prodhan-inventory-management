@@ -16,12 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger } from
-"@/components/ui/dropdown-menu";
+  DropdownMenuTrigger
+} from
+  "@/components/ui/dropdown-menu";
 import {
   Dialog,
-  DialogContent } from
-"@/components/ui/dialog";
+  DialogContent
+} from
+  "@/components/ui/dialog";
 import {
   LayoutDashboard,
   Users,
@@ -75,26 +77,27 @@ import {
   ShoppingCart,
   RotateCcw,
   PackageX,
-  ScanLine } from
-"lucide-react";
+  ScanLine
+} from
+  "lucide-react";
 import { toast, Toaster } from "sonner";
 import { AuditLog } from "@/entities/AuditLog";
-import UserProfile from "../components/user/UserProfile";
-import NotificationCenter from "../components/notifications/NotificationCenter";
-import ErrorBoundary from "../components/common/ErrorBoundary";
+import UserProfile from "@/components/user/UserProfile";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 import Chatbot from "@/components/common/Chatbot";
-import SessionProvider from '../components/common/EnhancedSessionManager';
-import UniversalSearch from '../components/common/UniversalSearch';
+import SessionProvider from '@/components/common/EnhancedSessionManager';
+import UniversalSearch from '@/components/common/UniversalSearch';
 import { base44 } from '@/api/base44Client';
-import FastLoadingProvider from '../components/common/FastLoadingProvider';
-import { ShimmerStyles } from '../components/common/SkeletonLoaders';
-import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
-import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
-import SmartOnboarding from '../components/onboarding/SmartOnboarding';
-import SmartHelp from '../components/ai/SmartHelp';
-import MobileBottomNav from '../components/common/MobileBottomNav';
-import PWAInstaller from '../components/common/PWAInstaller';
-import PullToRefresh from '../components/common/PullToRefresh';
+import FastLoadingProvider from '@/components/common/FastLoadingProvider';
+import { ShimmerStyles } from '@/components/common/SkeletonLoaders';
+import { registerServiceWorker } from '@/components/common/PerformanceOptimizer';
+import { usePrefetchOnHover } from '@/components/common/DataPrefetcher';
+import SmartOnboarding from '@/components/onboarding/SmartOnboarding';
+import SmartHelp from '@/components/ai/SmartHelp';
+import MobileBottomNav from '@/components/common/MobileBottomNav';
+import PWAInstaller from '@/components/common/PWAInstaller';
+import PullToRefresh from '@/components/common/PullToRefresh';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -202,10 +205,9 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
         <div className="relative group">
           <Link
             to={module.url}
-            className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
-            isActive(module.url) ?
-            'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
-            'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
+            className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${isActive(module.url) ?
+              'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
+              'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
             }>
 
             <module.icon className={`w-5 h-5 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
@@ -221,10 +223,9 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     return (
       <div className="relative group">
         <button
-          className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
-          isModuleActive() ?
-          'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
-          'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
+          className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${isModuleActive() ?
+            'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
+            'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
           }>
 
           <module.icon className={`w-5 h-5 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
@@ -235,14 +236,13 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
           </div>
           <div className="py-1">
             {module.subItems?.map((subItem, index) =>
-            <Link
-              key={index}
-              to={subItem.url}
-              className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-              isActive(subItem.url) ?
-              'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' :
-              'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'}`
-              }>
+              <Link
+                key={index}
+                to={subItem.url}
+                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isActive(subItem.url) ?
+                  'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' :
+                  'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'}`
+                }>
 
                 <subItem.icon className={`w-4 h-4 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
                 <span>{subItem.label}</span>
@@ -259,9 +259,7 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     return (
       <Link
         to={module.url}
-        className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
-        isActive(module.url) ? 'active' : ''}`}>
+        className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${isActive(module.url) ? 'active' : ''}`}>
 
         <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
         <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
@@ -273,9 +271,7 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
     <div>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-        isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
-        isModuleActive() ? 'active' : ''}`}>
+        className={`nav-item group w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${isModuleActive() ? 'active' : ''}`}>
 
         <div className="flex items-center gap-3">
           <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
@@ -285,22 +281,20 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
       </button>
 
       {isExpanded && module.subItems &&
-      <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
+        <div className="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5">
           {module.subItems.map((subItem, index) =>
-        <Link
-          key={index}
-          to={subItem.url}
-          className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-          isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'} ${
-          isActive(subItem.url) ?
-          'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' :
-          'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'}`
-          }>
+            <Link
+              key={index}
+              to={subItem.url}
+              className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'} ${isActive(subItem.url) ?
+                'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' :
+                'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'}`
+              }>
 
               <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
               <span>{subItem.label}</span>
             </Link>
-        )}
+          )}
         </div>
       }
     </div>);
@@ -360,7 +354,7 @@ export default function Layout({ children, currentPageName }) {
 
     // Preload critical fonts
     const fontLinks = [
-    'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap'];
+      'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap'];
 
     fontLinks.forEach((href) => {
       const link = document.createElement('link');
@@ -732,34 +726,34 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
 
     const baseModules = [
-    { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-red-600', permission: 'inventory_overview' },
-    { label: t('QR Scan'), url: createPageUrl('QRInventory'), icon: QrCode, colorClass: 'text-rose-600', permission: 'inventory_overview' },
-    { label: t('Scan & Ship'), url: createPageUrl('LogisticsScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
-    { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
-    { label: t('CRM'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-purple-600', permission: 'customer_management' },
-    { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
-    { label: t('Discount Offers'), url: createPageUrl('DiscountCampaigns'), icon: Sparkles, colorClass: 'text-amber-500', permission: 'discount_campaigns' },
-    { label: t('Marketing ROI'), url: createPageUrl('MarketingROI'), icon: TrendingUp, colorClass: 'text-pink-600', permission: 'marketing_roi' },
-    { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-indigo-600', permission: 'purchase_orders' },
-    { label: t('Production House'), url: createPageUrl('ProductionHouse'), icon: Briefcase, colorClass: 'text-purple-600', permission: 'production_house' },
-    { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-red-500', permission: 'inventory_movements' },
-    { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-600', permission: 'inventory_returns' },
-    { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
-    { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-red-700', permission: 'inventory_suppliers' },
-    { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
-    { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-indigo-600', permission: 'attendance' },
-    { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
-    { label: t('Payroll'), url: createPageUrl('Payroll'), icon: Calculator, colorClass: 'text-green-600', permission: 'payroll' },
-    { label: t('Finance Dashboard'), url: createPageUrl('FinanceDashboard'), icon: DollarSign, colorClass: 'text-emerald-600', permission: 'finance_dashboard' },
-    { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-red-500', permission: 'product_analytics' },
-    { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
-    { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-red-600', permission: 'inventory_ai_insights' },
+      { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-red-600', permission: 'inventory_overview' },
+      { label: t('QR Scan'), url: createPageUrl('QRInventory'), icon: QrCode, colorClass: 'text-rose-600', permission: 'inventory_overview' },
+      { label: t('Scan & Ship'), url: createPageUrl('LogisticsScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
+      { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
+      { label: t('CRM'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-purple-600', permission: 'customer_management' },
+      { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
+      { label: t('Discount Offers'), url: createPageUrl('DiscountCampaigns'), icon: Sparkles, colorClass: 'text-amber-500', permission: 'discount_campaigns' },
+      { label: t('Marketing ROI'), url: createPageUrl('MarketingROI'), icon: TrendingUp, colorClass: 'text-pink-600', permission: 'marketing_roi' },
+      { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-indigo-600', permission: 'purchase_orders' },
+      { label: t('Production House'), url: createPageUrl('ProductionHouse'), icon: Briefcase, colorClass: 'text-purple-600', permission: 'production_house' },
+      { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-red-500', permission: 'inventory_movements' },
+      { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-600', permission: 'inventory_returns' },
+      { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
+      { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-red-700', permission: 'inventory_suppliers' },
+      { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
+      { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-indigo-600', permission: 'attendance' },
+      { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
+      { label: t('Payroll'), url: createPageUrl('Payroll'), icon: Calculator, colorClass: 'text-green-600', permission: 'payroll' },
+      { label: t('Finance Dashboard'), url: createPageUrl('FinanceDashboard'), icon: DollarSign, colorClass: 'text-emerald-600', permission: 'finance_dashboard' },
+      { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-red-500', permission: 'product_analytics' },
+      { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
+      { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-red-600', permission: 'inventory_ai_insights' },
 
-    { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'auto_reports' },
-    { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
-    { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
-    { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'system_alerts' },
-    { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-slate-600', permission: 'audit_trail' }];
+      { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'auto_reports' },
+      { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
+      { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
+      { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'system_alerts' },
+      { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-slate-600', permission: 'audit_trail' }];
 
 
 
@@ -796,14 +790,14 @@ export default function Layout({ children, currentPageName }) {
           </div>
           <div className="flex-1 p-4 space-y-2">
             {[...Array(8)].map((_, i) =>
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
                 <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
                 <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
               </div>
             )}
           </div>
         </aside>
-        
+
         {/* Skeleton Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Skeleton Header */}
@@ -817,7 +811,7 @@ export default function Layout({ children, currentPageName }) {
               <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
             </div>
           </header>
-          
+
           {/* Skeleton Content Area */}
           <main className="flex-1 p-6 lg:p-8 overflow-hidden">
             <div className="max-w-7xl mx-auto space-y-6">
@@ -829,17 +823,17 @@ export default function Layout({ children, currentPageName }) {
                   <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
                 </div>
               </div>
-              
+
               {/* Stats cards skeleton */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) =>
-                <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                  <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
                     <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-3" />
                     <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
                   </div>
                 )}
               </div>
-              
+
               {/* Table skeleton */}
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700">
@@ -847,7 +841,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
                 <div className="p-4 space-y-3">
                   {[...Array(5)].map((_, i) =>
-                  <div key={i} className="flex items-center gap-4">
+                    <div key={i} className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
                       <div className="flex-1 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
                       <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
@@ -883,8 +877,7 @@ export default function Layout({ children, currentPageName }) {
       <div {...hoverProps}>
         <Link
           to={module.url}
-          className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isActive ? 'active bg-indigo-50 dark:bg-indigo-900/30' : ''}`
+          className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive ? 'active bg-indigo-50 dark:bg-indigo-900/30' : ''}`
           }>
 
           <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
@@ -903,7 +896,7 @@ export default function Layout({ children, currentPageName }) {
             className: 'sm:top-4 top-20',
             duration: 3000
           }} />
-          
+
           <style>{`
             /* PROFESSIONAL UI DESIGN SYSTEM - Expert Color Palette & Typography */
             @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -1570,21 +1563,19 @@ export default function Layout({ children, currentPageName }) {
           <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-200 dark:border-[hsl(225,15%,14%)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] lg:w-[260px] lg:max-w-[260px]
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
             onClick={(e) => e.stopPropagation()}>
-            
+
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                            <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
+                <div className="bg-amber-100 dark:bg-amber-900/30 rounded-xl w-10 h-10 flex items-center justify-center shadow-sm flex-shrink-0">
+                  <span className="text-2xl leading-none">🐝</span>
                 </div>
                 {isSidebarOpen &&
-                <div className="min-w-0">
-                    <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      PIM
+                  <div className="min-w-0">
+                    <span className="text-[17px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
+                      BeeERP
                     </span>
-                    <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Prodhan Inventory
-
-                  </span>
+                    <span className="text-slate-500 text-xs font-medium tracking-wide dark:text-slate-400">Business Management</span>
                   </div>
                 }
               </Link>
@@ -1601,7 +1592,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex-1 overflow-y-auto py-4 px-3">
               <nav className="space-y-1">
                 {getNavigationModules().map((mod) =>
-                <SimpleNavLink key={mod.url} module={mod} />
+                  <SimpleNavLink key={mod.url} module={mod} />
                 )}
               </nav>
             </div>
@@ -1609,10 +1600,10 @@ export default function Layout({ children, currentPageName }) {
             {/* User Footer */}
             <div className={`border-t border-slate-200 dark:border-[hsl(225,15%,14%)] p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
               {isSidebarOpen ?
-              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                        {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                      </div>
+                    {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                       {currentUser?.display_name || currentUser?.full_name}
@@ -1624,9 +1615,9 @@ export default function Layout({ children, currentPageName }) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
 
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
@@ -1646,7 +1637,7 @@ export default function Layout({ children, currentPageName }) {
                   </DropdownMenu>
                 </div> :
 
-              <div className="relative group">
+                <div className="relative group">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-red-300 transition-all">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
@@ -1656,15 +1647,15 @@ export default function Layout({ children, currentPageName }) {
                       <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
                     </div>
                     <button
-                    onClick={() => setIsProfileOpen(true)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left">
+                      onClick={() => setIsProfileOpen(true)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left">
 
                       <UserIcon className="w-4 h-4" />
                       <span>Profile</span>
                     </button>
                     <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left">
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left">
 
                       <LogOut className="w-4 h-4" />
                       <span>Log out</span>
@@ -1677,7 +1668,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-[hsl(225,25%,8%)] lg:ml-[260px]">
-            
+
             {/* Professional Header */}
             <header className="header h-12 sm:h-14 lg:h-16 px-2 sm:px-4 lg:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
               <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 min-w-0 flex-1">
@@ -1705,7 +1696,7 @@ export default function Layout({ children, currentPageName }) {
                   className="text-muted-foreground hover:text-foreground transition-colors h-8 w-8 sm:h-9 sm:w-9 touch-manipulation lg:hidden">
                   <Menu className="w-5 h-5" />
                 </Button>
-                
+
                 {/* Mobile-optimized search */}
                 <div className="flex-1 max-w-[180px] sm:max-w-xs lg:max-w-md">
                   <UniversalSearch
@@ -1769,8 +1760,8 @@ export default function Layout({ children, currentPageName }) {
                         <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
                           <AvatarImage src={currentUser?.profile_picture_url || ''} />
                           <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm">
-                              {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
-                            </AvatarFallback>
+                            {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
@@ -1813,7 +1804,7 @@ export default function Layout({ children, currentPageName }) {
             <PullToRefresh className="px-2 py-2 sm:px-3 sm:py-3 main-content flex-1 overflow-y-auto lg:p-6">
               <ErrorBoundary>
                 <Suspense fallback={
-                <div className="text-center p-20 text-muted-foreground">
+                  <div className="text-center p-20 text-muted-foreground">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
                     <p>Loading page...</p>
                   </div>
@@ -1842,20 +1833,20 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Smart Onboarding - Shows only once */}
           {currentUser && !isAuthPage &&
-          <SmartOnboarding
-            user={currentUser}
-            onComplete={() => {
-              console.log('✅ Onboarding completed');
-              toast.success('🎉 Welcome! You\'re all set to explore the ERP!');
-            }} />
+            <SmartOnboarding
+              user={currentUser}
+              onComplete={() => {
+                console.log('✅ Onboarding completed');
+                toast.success('🎉 Welcome! You\'re all set to explore the ERP!');
+              }} />
 
           }
 
           {/* AI Smart Help - Contextual assistance */}
           {currentUser && !isAuthPage && currentPageName &&
-          <SmartHelp
-            currentPage={`/${currentPageName}`}
-            currentLanguage={currentLanguage} />
+            <SmartHelp
+              currentPage={`/${currentPageName}`}
+              currentLanguage={currentLanguage} />
 
           }
 

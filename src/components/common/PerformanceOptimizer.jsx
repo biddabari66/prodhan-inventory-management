@@ -87,7 +87,7 @@ export const usePerformanceMonitor = (componentName) => {
       if (renderCount.current % 10 === 0) {
         const avgRenderTime = renderTimes.current.reduce((a, b) => a + b, 0) / renderTimes.current.length;
         console.log(`[Performance] ${componentName}: ${renderCount.current} renders, avg ${avgRenderTime.toFixed(2)}ms`);
-        
+
         if (avgRenderTime > 16) {
           console.warn(`⚠️ ${componentName} is rendering slowly (${avgRenderTime.toFixed(2)}ms). Consider optimization.`);
         }
@@ -162,7 +162,7 @@ export class RequestBatcher {
   add(request) {
     return new Promise((resolve, reject) => {
       this.queue.push({ request, resolve, reject });
-      
+
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
       }
@@ -196,23 +196,24 @@ export const prefetchResource = (url, type = 'fetch') => {
     const img = new Image();
     img.src = url;
   } else {
-    fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+    fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => { });
   }
 };
 
 // Service Worker registration
 export const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register('/service-worker.js');
-      console.log('✅ Service Worker registered:', registration);
-      return registration;
-    } catch (error) {
-      console.warn('Service Worker registration failed:', error);
-      return null;
-    }
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    // Check if sw file exists before registering
+    const swUrl = '/service-worker.js';
+    const res = await fetch(swUrl, { method: 'HEAD' });
+    if (!res.ok || res.headers.get('content-type')?.includes('text/html')) return null;
+    const registration = await navigator.serviceWorker.register(swUrl);
+    return registration;
+  } catch (error) {
+    // Silent fail — service worker is optional
+    return null;
   }
-  return null;
 };
 
 // Network status monitoring
