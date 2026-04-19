@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -409,4 +409,4 @@ function SendEmailPage() {
 }
 
 // Permission check: hr module, can_view permission
-export default withPermission(SendEmailPage, 'hr', 'can_view');
+export default SendEmailPage;

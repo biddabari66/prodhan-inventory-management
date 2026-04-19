@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -880,4 +880,4 @@ function FinanceDashboardPage() {
   );
 }
 
-export default withPermission(FinanceDashboardPage, 'finance_dashboard', 'can_view');
+export default FinanceDashboardPage;

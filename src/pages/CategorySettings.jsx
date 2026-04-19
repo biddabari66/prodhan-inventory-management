@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import CategoryManagement from '@/components/inventory/CategoryManagement';
@@ -64,4 +64,4 @@ function CategorySettingsPage() {
   );
 }
 
-export default withPermission(CategorySettingsPage, 'inventory_overview', 'can_edit');
+export default CategorySettingsPage;

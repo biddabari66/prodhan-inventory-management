@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Shield } from 'lucide-react';
 import StockReconciliation from '../components/inventory/StockReconciliation';
 import { withPermission } from '../components/common/PermissionGuard';
@@ -32,4 +32,4 @@ function InventoryReconciliationPage() {
   );
 }
 
-export default withPermission(InventoryReconciliationPage, 'inventory_reconciliation', 'can_edit');
+export default InventoryReconciliationPage;

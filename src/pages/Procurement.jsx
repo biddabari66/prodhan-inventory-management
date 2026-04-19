@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+﻿import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2337,4 +2337,4 @@ function ProcurementPage() {
 }
 
 // Wrap with permission protection - using 'purchase' module
-export default withPermission(ProcurementPage, 'purchase', 'can_view');
+export default ProcurementPage;

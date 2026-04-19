@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { User } from '@/entities/User';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, RefreshCw, Loader2 } from 'lucide-react';
@@ -88,4 +88,4 @@ function InventorySuppliersPage() {
   );
 }
 
-export default withPermission(InventorySuppliersPage, 'inventory_suppliers', 'can_view');
+export default InventorySuppliersPage;

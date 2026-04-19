@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { AuditLog } from '@/entities/AuditLog';
 import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -371,4 +371,4 @@ function AuditTrailViewer() {
   );
 }
 
-export default withPermission(AuditTrailViewer, 'settings', 'can_view');
+export default AuditTrailViewer;

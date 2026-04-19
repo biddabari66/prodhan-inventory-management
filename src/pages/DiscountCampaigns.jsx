@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { User } from '@/entities/User';
 import { withPermission } from '../components/common/PermissionGuard';
@@ -26,4 +26,4 @@ function DiscountCampaignsPage() {
   );
 }
 
-export default withPermission(DiscountCampaignsPage, 'sales', 'can_view');
+export default DiscountCampaignsPage;
