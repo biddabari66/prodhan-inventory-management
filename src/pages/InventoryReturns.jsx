@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { PackageX } from 'lucide-react';
 import ReturnDamageManagement from '../components/inventory/ReturnDamageManagement';
 import { withPermission } from '../components/common/PermissionGuard';
@@ -40,4 +40,4 @@ function InventoryReturnsPage() {
   );
 }
 
-export default InventoryReturnsPage;
+export default withPermission(InventoryReturnsPage, 'inventory_returns', 'can_view');

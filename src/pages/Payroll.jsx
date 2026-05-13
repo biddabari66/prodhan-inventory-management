@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -556,4 +556,4 @@ function PayrollPage() {
   );
 }
 
-export default PayrollPage;
+export default withPermission(PayrollPage, 'payroll', 'can_view');

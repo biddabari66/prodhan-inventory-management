@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -746,4 +746,4 @@ function EmployeesPage() {
   );
 }
 
-export default EmployeesPage;
+export default withPermission(EmployeesPage, 'user_access_manager', 'can_view');

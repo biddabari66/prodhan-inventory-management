@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -626,4 +626,4 @@ function AutoReportSettingsPage() {
   );
 }
 
-export default AutoReportSettingsPage;
+export default withPermission(AutoReportSettingsPage, 'auto_reports', 'can_view');

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { User } from "@/entities/User";
 import { AlertConfiguration } from "@/entities/AlertConfiguration";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -925,4 +925,4 @@ function AlertsConfigurationPage() {
   );
 }
 
-export default AlertsConfigurationPage;
+export default withPermission(AlertsConfigurationPage, 'settings', 'can_view');

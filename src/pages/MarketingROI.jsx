@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -845,4 +845,4 @@ function MarketingROIPage() {
   );
 }
 
-export default MarketingROIPage;
+export default withPermission(MarketingROIPage, 'marketing_roi', 'can_view');

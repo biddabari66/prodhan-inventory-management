@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Inventory } from '@/entities/Inventory';
 import { User } from '@/entities/User';
 import { Card, CardContent } from '@/components/ui/card';
@@ -87,4 +87,4 @@ function InventoryAIInsightsPage() {
   );
 }
 
-export default InventoryAIInsightsPage;
+export default withPermission(InventoryAIInsightsPage, 'inventory_ai_insights', 'can_view');

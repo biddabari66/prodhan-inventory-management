@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User } from '@/entities/User';
 import { UserPermission } from '@/entities/UserPermission';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -569,4 +569,4 @@ function UserAccessManagerPage() {
   );
 }
 
-export default UserAccessManagerPage;
+export default withPermission(UserAccessManagerPage, 'user_access_manager', 'can_view');

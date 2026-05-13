@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { RotateCcw } from 'lucide-react';
 import StockMovementHistory from '../components/inventory/StockMovementHistory';
 import { withPermission } from '../components/common/PermissionGuard';
@@ -32,4 +32,4 @@ function InventoryMovementsPage() {
   );
 }
 
-export default InventoryMovementsPage;
+export default withPermission(InventoryMovementsPage, 'inventory_movements', 'can_view');

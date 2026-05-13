@@ -27,11 +27,4 @@ dist-ssr
 *.sln
 *.sw?
 
-# SQLite database (persisted on Railway volume, not committed)
-server/*.db
-server/*.sqlite
-server/*.sqlite3
-*.db
-
-# Uploaded files
-server/uploads/
+.env

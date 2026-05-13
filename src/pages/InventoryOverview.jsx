@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -771,4 +771,4 @@ function InventoryOverviewPage() {
 
 }
 
-export default InventoryOverviewPage;
+export default withPermission(InventoryOverviewPage, 'inventory_overview', 'can_view');
