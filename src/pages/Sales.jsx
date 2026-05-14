@@ -256,6 +256,8 @@ function SalesPage() {
         customer_id: customerId
       });
 
+      // NO inventory deduction here - only when shipped
+
       return order;
     },
     onSuccess: () => {
@@ -295,6 +297,7 @@ function SalesPage() {
     onSuccess: (_, { newStatus }) => {
       queryClient.invalidateQueries(['orders']);
       if (newStatus === 'shipped') {
+        // Backend automation deducts inventory; refresh after short delays to catch the update
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['inventory'] });
           queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
@@ -366,6 +369,7 @@ function SalesPage() {
       }
     } else {
       try {
+        // Process sequentially to avoid race conditions, especially for 'shipped' status
         for (const id of selectedOrderIds) {
           await Order.update(id, { order_status: action });
         }
@@ -566,7 +570,7 @@ function SalesPage() {
         }
 
         if (exportOptions.includeProductDetails) {
-          headers.push('Products', 'Variants', 'Total Items', 'Subtotal');
+          headers.push('Products', 'Total Items', 'Subtotal');
         }
 
         if (exportOptions.includePaymentInfo) {
@@ -605,9 +609,8 @@ function SalesPage() {
             const products = (order.order_items || []).map(item =>
               `${item.item_name} (×${item.quantity})`
             ).join('; ');
-            const variants = (order.order_items || []).map(item => item.variant_label || '').filter(Boolean).join('; ');
             const totalItems = (order.order_items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
-            row.push(products, variants || '—', totalItems, order.subtotal || 0);
+            row.push(products, totalItems, order.subtotal || 0);
           }
 
           if (exportOptions.includePaymentInfo) {
@@ -1005,6 +1008,847 @@ function SalesPage() {
           </div>
         </div>
 
+        {/* Premium Minimalist Stats Cards */}
+        {stats.isFiltered && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
+            <Filter className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-700 font-medium">
+              Showing stats for filtered date range: {dateRange.from} {dateRange.to && dateRange.to !== dateRange.from ? `to ${dateRange.to}` : ''}
+            </span>
+          </div>
+        )}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+          {/* Total Orders */}
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
+                </div>
+                {!stats.isFiltered && (
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
+                )}
+              </div>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalOrders}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">{stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Product Qty */}
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-[#D32F2F]" />
+                </div>
+                {!stats.isFiltered && (
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
+                )}
+              </div>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalProductQuantity}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Products Sold</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Returns */}
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <RefreshCw className="w-5 h-5 text-[#D32F2F]" />
+                </div>
+                {!stats.isFiltered && (
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
+                )}
+              </div>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalReturns}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Returns</p>
+            </CardContent>
+          </Card>
+
+          {/* Pending Orders */}
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                {!stats.isFiltered && (
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
+                )}
+              </div>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pendingOrders}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Pending</p>
+            </CardContent>
+          </Card>
+
+          {/* Confirmed Orders */}
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                {!stats.isFiltered && (
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
+                )}
+              </div>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.confirmedOrders}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Confirmed</p>
+            </CardContent>
+          </Card>
+
+          {/* Shipped Orders */}
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <Truck className="w-5 h-5 text-blue-600" />
+                </div>
+                {!stats.isFiltered && (
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
+                )}
+              </div>
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.shippedOrders}</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Shipped</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bulk Actions Bar */}
+        {selectedOrderIds.length > 0 && (
+          <Card className="bg-white border-0 shadow-lg rounded-2xl">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-[#D32F2F] text-white rounded-full px-3 py-0.5 text-xs">
+                    {selectedOrderIds.length} selected
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedOrderIds([])}
+                    className="text-slate-600 hover:text-slate-900 rounded-lg"
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {/* Bulk Print Invoices */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const selectedOrders = orders.filter(o => selectedOrderIds.includes(o.id));
+                      if (selectedOrders.length === 0) {
+                        toast.error('No orders selected');
+                        return;
+                      }
+
+                      const printWindow = window.open('', '_blank', 'width=800,height=600');
+                      if (!printWindow) {
+                        toast.error('Please allow popups for bulk printing');
+                        return;
+                      }
+
+                      import('../components/invoices/BulkInvoiceTemplate').then(module => {
+                        const html = module.generateBulkInvoiceHTML(selectedOrders);
+                        printWindow.document.write(html);
+                        printWindow.document.close();
+                        setTimeout(() => {
+                          printWindow.print();
+                        }, 800);
+                        toast.success(`Printing ${selectedOrders.length} branded invoices...`);
+                      }).catch(err => {
+                        console.error('Failed to load invoice template:', err);
+                        toast.error('Failed to generate invoices');
+                        printWindow.close();
+                      });
+                    }}
+                    className="text-orange-600 hover:bg-orange-50"
+                  >
+                    <Printer className="w-4 h-4 mr-1" />
+                    Print All Invoices
+                  </Button>
+                  {canApprove && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkAction('confirmed')}
+                        className="text-blue-600 hover:bg-blue-50"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Confirm All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkAction('shipped')}
+                        className="text-cyan-600 hover:bg-cyan-50"
+                      >
+                        <Truck className="w-4 h-4 mr-1" />
+                        Ship All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkAction('delivered')}
+                        className="text-green-600 hover:bg-green-50"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Mark Delivered
+                      </Button>
+                    </>
+                  )}
+                  {canDelete && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('delete')}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Mobile Order Cards */}
+        <div className="md:hidden space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">Orders</span>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredOrders.length}</Badge>
+            </div>
+            {filteredOrders.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={toggleSelectAll} className="text-xs text-red-600 h-7">
+                {selectedOrderIds.length === filteredOrders.length ? 'Deselect' : 'Select All'}
+              </Button>
+            )}
+          </div>
+          {displayedOrders.length === 0 ? (
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+              <CardContent className="py-12 text-center">
+                <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm text-slate-500">No orders found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            displayedOrders.map((order) => (
+              <MobileOrderCard
+                key={order.id}
+                order={order}
+                isSelected={selectedOrderIds.includes(order.id)}
+                onToggleSelect={() => toggleOrderSelection(order.id)}
+                onViewInvoice={handleViewInvoice}
+                onEdit={handleEditOrder}
+                onStatusChange={handleQuickStatusChange}
+                onPaymentChange={handlePaymentStatusChange}
+                onCancelOrder={(o) => handleQuickStatusChange(o, 'cancelled')}
+                canEdit={canEdit}
+                inventoryMap={inventoryMap}
+              />
+            ))
+          )}
+          {displayedOrders.length < filteredOrders.length && (
+            <Button variant="outline" onClick={loadMoreOrders} className="w-full gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Load More ({filteredOrders.length - displayedOrders.length} remaining)
+            </Button>
+          )}
+        </div>
+
+        {/* Desktop Orders Table */}
+        <Card className="bg-white border-0 shadow-sm rounded-2xl overflow-hidden hidden md:block">
+          <CardHeader className="border-b border-slate-100 bg-white px-6 py-4">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-semibold text-slate-900">Sales Orders</span>
+                <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
+                  {filteredOrders.length}
+                </Badge>
+                {displayedOrders.length < filteredOrders.length && (
+                  <span className="text-sm text-slate-400">showing {displayedOrders.length}</span>
+                )}
+                {!allOrdersLoaded && recentOrders.length > 0 && (
+                  <Badge className="bg-blue-100 text-blue-700 font-medium rounded-full px-3 animate-pulse">
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />
+                    Loading all...
+                  </Badge>
+                )}
+                {allOrdersLoaded && (
+                  <Badge className="bg-green-100 text-green-700 font-medium rounded-full px-3">
+                    ✓ All {orders.length} loaded
+                  </Badge>
+                )}
+              </div>
+              {filteredOrders.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                  className="text-[#D32F2F] hover:text-[#B71C1C] hover:bg-red-50 rounded-lg"
+                >
+                  {selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50 border-b border-slate-100">
+                    <TableHead className="w-12 pl-6">
+                      <Checkbox
+                        checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        className="border-slate-300"
+                      />
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Order #</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Items</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-center">Qty</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">Amount</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider pr-6">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayedOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No sales orders found</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    displayedOrders.map((order) => (
+                      <TableRow key={order.id} className="hover:bg-slate-50/50 border-b border-slate-100 transition-colors h-16">
+                        <TableCell className="pl-6">
+                          <Checkbox
+                            checked={selectedOrderIds.includes(order.id)}
+                            onCheckedChange={() => toggleOrderSelection(order.id)}
+                            className="border-slate-300"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-mono font-bold text-[#D32F2F] text-sm">
+                              {order.order_number?.startsWith('PD')
+                                ? order.order_number
+                                : order.order_number
+                                  ? `PD${order.order_number.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
+                                  : `PD${order.id?.slice(-6) || '000000'}`}
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {order.adprofit_synced && (
+                                <Badge className="bg-emerald-500 text-white text-xs w-fit shadow-sm">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Adprofit Synced
+                                </Badge>
+                              )}
+                              {(order.order_source === 'website' || order.order_source === 'landing_page' || order.tags?.some(tag => tag?.includes('woocommerce') || tag?.includes('WP-') || tag?.includes('landing'))) && (
+                                <Badge className="bg-purple-100 text-purple-700 text-xs w-fit">
+                                  🌐 Landing Page
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {(() => { const d = new Date(order.order_date || order.created_date); return isNaN(d.getTime()) ? '-' : format(d, 'dd MMM yyyy'); })()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-red-100 text-red-700 text-xs">
+                                {order.customer_name?.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>{order.customer_name}</p>
+                              <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                              {order.shipping_address && (
+                                <p className="text-xs text-slate-400 mt-0.5 max-w-[200px] truncate" title={[order.shipping_address.address_line, order.shipping_address.city, order.shipping_address.district].filter(Boolean).join(', ')}>
+                                  📍 {[order.shipping_address.address_line, order.shipping_address.city, order.shipping_address.district].filter(Boolean).join(', ') || 'No address'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-[300px]">
+                            {order.order_items && order.order_items.length > 0 ? (
+                              <div className="text-sm space-y-1.5">
+                                {order.order_items.map((item, idx) => {
+                                  const inventoryItem = inventoryMap.get(item.inventory_id);
+                                  const isCombo = inventoryItem?.is_bundle && inventoryItem?.bundle_items?.length > 0;
+
+                                  return (
+                                    <div key={idx} className="border-l-2 border-slate-200 pl-2">
+                                      <p className="font-medium text-slate-800" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
+                                        {item.item_name}
+                                      </p>
+                                      <div className="flex flex-wrap gap-1 mt-0.5">
+                                        <span className="text-xs text-slate-500">×{item.quantity}</span>
+                                        <span className="text-xs text-slate-500">@৳{item.unit_price?.toLocaleString()}</span>
+                                        {item.discount > 0 && (
+                                          <span className="text-xs text-red-500">-৳{item.discount}</span>
+                                        )}
+                                        <span className="text-xs font-medium text-emerald-600">= ৳{item.subtotal?.toLocaleString()}</span>
+                                      </div>
+                                      {isCombo && (
+                                        <p className="text-xs text-blue-600 mt-0.5">
+                                          🎁 Combo: {inventoryItem.bundle_items.map(bi => {
+                                            const comp = inventoryMap.get(bi.inventory_id);
+                                            return `${bi.quantity}×${comp?.item_name || 'Unknown'}`;
+                                          }).join(' + ')}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-slate-500 text-sm">No items</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {order.order_items && order.order_items.length > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {order.order_items.map((item, idx) => {
+                                const inventoryItem = inventoryMap.get(item.inventory_id);
+                                const bundleCount = getComboCount(inventoryItem, item);
+                                const isCombo = bundleCount > 1;
+                                const actualQty = getActualQuantity(item.quantity, inventoryItem, item);
+
+                                return (
+                                  <div key={idx} className="inline-flex items-center gap-1.5">
+                                    <span className="font-bold text-red-600 text-base">×{actualQty}</span>
+                                    {isCombo && (
+                                      <Badge className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4">
+                                        {bundleCount}×{item.quantity}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="font-bold text-slate-900 text-sm">৳{order.total_amount?.toLocaleString()}</span>
+                            {((order.discount_amount || 0) + (order.coupon_discount || 0)) > 0 && (
+                              <Badge className="bg-green-50 text-green-700 border border-green-200 text-[10px] px-1.5 py-0 h-4 font-medium rounded-full">
+                                -৳{((order.discount_amount || 0) + (order.coupon_discount || 0)).toLocaleString()} off
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 gap-1">
+                                {getPaymentBadge(order.payment_status)}
+                                <ChevronDown className="w-3 h-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" sideOffset={4}>
+                              <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'pending')}>
+                                <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                                Mark as Pending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'partial')}>
+                                <DollarSign className="w-4 h-4 mr-2 text-orange-600" />
+                                Mark as Partial
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePaymentStatusChange(order, 'paid')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                Mark as Paid
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 gap-1">
+                                {getStatusBadge(order.order_status)}
+                                <ChevronDown className="w-3 h-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" sideOffset={4} className="min-w-[200px]">
+                              {/* Pre-confirmation statuses */}
+                              {['pending', 'on_hold', 'call_not_received', 'follow_up', 'callback_requested'].includes(order.order_status) && (
+                                <>
+                                  {order.order_status !== 'on_hold' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'on_hold')}>
+                                      <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                                      Put On Hold
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'call_not_received' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'call_not_received')}>
+                                      <Phone className="w-4 h-4 mr-2 text-amber-600" />
+                                      Call Not Received
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'follow_up' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'follow_up')}>
+                                      <RefreshCw className="w-4 h-4 mr-2 text-indigo-600" />
+                                      Needs Follow Up
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'callback_requested' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'callback_requested')}>
+                                      <Phone className="w-4 h-4 mr-2 text-pink-600" />
+                                      Callback Requested
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'pending' && (
+                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'pending')}>
+                                      <AlertCircle className="w-4 h-4 mr-2 text-slate-600" />
+                                      Back to Pending
+                                    </DropdownMenuItem>
+                                  )}
+                                  <div className="border-t border-slate-100 my-1" />
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
+                                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                    ✅ Confirm Order
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {/* Post-confirmation statuses — same as before */}
+                              {order.order_status === 'confirmed' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
+                                  <Package className="w-4 h-4 mr-2 text-indigo-600" />
+                                  Mark as Processing
+                                </DropdownMenuItem>
+                              )}
+                              {(order.order_status === 'processing' || order.order_status === 'packed') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
+                                  <Truck className="w-4 h-4 mr-2 text-purple-600" />
+                                  Mark as Shipped
+                                </DropdownMenuItem>
+                              )}
+                              {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                  Mark as Delivered
+                                </DropdownMenuItem>
+                              )}
+                              {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                                <DropdownMenuItem onClick={async () => {
+                                  // For shipped orders, use the revert function
+                                  if (['shipped', 'out_for_delivery'].includes(order.order_status)) {
+                                    const reason = prompt('Enter cancellation reason (inventory will be reverted):');
+                                    if (reason === null) return;
+                                    
+                                    const loadingToast = toast.loading('Cancelling order and reverting inventory...');
+                                    try {
+                                      const response = await base44.functions.invoke('revertInventoryOnCancel', {
+                                        order_id: order.id,
+                                        reason: reason
+                                      });
+                                      toast.dismiss(loadingToast);
+                                      
+                                      if (response.data?.success) {
+                                        queryClient.invalidateQueries(['orders']);
+                                        queryClient.invalidateQueries(['inventory']);
+                                        toast.success(`Order cancelled. ${response.data.items_reverted} items restored to inventory.`);
+                                      } else {
+                                        toast.error(response.data?.error || 'Failed to cancel order');
+                                      }
+                                    } catch (error) {
+                                      toast.dismiss(loadingToast);
+                                      toast.error('Error: ' + error.message);
+                                    }
+                                  } else {
+                                    handleQuickStatusChange(order, 'cancelled');
+                                  }
+                                }}>
+                                  <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                                  Cancel Order
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewInvoice(order)}
+                              className="h-9 w-9 p-0 hover:bg-blue-50"
+                              title="Full Invoice"
+                            >
+                              <FileText className="w-4 h-4 text-blue-600" />
+                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 w-9 p-0 hover:bg-orange-50"
+                                  title="Print Small Receipt"
+                                >
+                                  <Receipt className="w-4 h-4 text-orange-600" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle className="text-center">Small Receipt</DialogTitle>
+                                </DialogHeader>
+                                <ThermalReceipt order={order} />
+                              </DialogContent>
+                            </Dialog>
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditOrder(order)}
+                                className="h-9 w-9 p-0 hover:bg-purple-50"
+                                title="Edit Order"
+                              >
+                                <Edit className="w-4 h-4 text-purple-600" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const blob = new Blob([JSON.stringify(order, null, 2)], { type: 'application/json' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `invoice-${order.order_number}.pdf`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                toast.success('Invoice downloaded!');
+                              }}
+                              className="h-9 w-9 p-0 hover:bg-green-50"
+                              title="Download Invoice"
+                            >
+                              <Download className="w-4 h-4 text-green-600" />
+                            </Button>
+                            {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                    .then(async (response) => {
+                                      if (response.data?.success) {
+                                        queryClient.invalidateQueries(['orders']);
+                                      }
+                                    })
+                                    .catch((error) => {
+                                      console.error('Adprofit sync error:', error);
+                                    });
+                                  toast.success('Sync started in background');
+                                }}
+                                className="h-9 w-9 p-0 hover:bg-indigo-50"
+                                title="Sync to Adprofit"
+                              >
+                                <Send className="w-4 h-4 text-indigo-600" />
+                              </Button>
+                            )}
+                            {/* Send to Courier Button */}
+                            {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  const loadingToast = toast.loading('🚚 Sending to Courier...');
+                                  try {
+                                    // Build item description
+                                    const itemDescription = order.order_items?.map(item =>
+                                      `${item.item_name} (×${item.quantity})`
+                                    ).join(', ') || 'Products';
+
+                                    // Build full address
+                                    const address = order.shipping_address || {};
+                                    const fullAddress = [
+                                      address.address_line,
+                                      address.city,
+                                      address.district,
+                                      address.postal_code
+                                    ].filter(Boolean).join(', ');
+
+                                    // Calculate total items
+                                    const totalLot = order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
+
+                                    // ✅ FIX: Normalize invoice number to PD***** format for ALL order sources
+                                    // (manual orders, WooCommerce, landing page all get consistent PD format)
+                                    const rawNumber = order.order_number || '';
+                                    const invoiceNumber = rawNumber.startsWith('PD')
+                                      ? rawNumber
+                                      : rawNumber
+                                        ? `PD${rawNumber.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
+                                        : `PD${Date.now().toString().slice(-6)}`;
+
+                                    // If order_number in DB is not PD format, update it now so
+                                    // all future lookups (status check, invoice etc.) use PD format
+                                    if (rawNumber !== invoiceNumber) {
+                                      await Order.update(order.id, { order_number: invoiceNumber });
+                                    }
+
+                                    // Prepare payload as per Steadfast documentation
+                                    const courierPayload = {
+                                      invoice: invoiceNumber,
+                                      recipient_name: order.customer_name,
+                                      recipient_phone: order.customer_phone,
+                                      recipient_address: fullAddress || 'Address not provided',
+                                      cod_amount: order.payment_status === 'paid' ? 0 : (order.total_amount || 0),
+                                      note: order.customer_notes || '',
+                                      item_description: itemDescription,
+                                      total_lot: totalLot,
+                                      delivery_type: 0 // 0 = home delivery
+                                    };
+
+                                    // Send to webhook
+                                    const response = await fetch('https://primary-production-2437.up.railway.app/webhook/cc89a1d1-b50c-4126-ab94-5952ecf1a2e5', {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json'
+                                      },
+                                      body: JSON.stringify(courierPayload)
+                                    });
+
+                                    toast.dismiss(loadingToast);
+
+                                    if (response.ok) {
+                                      const result = await response.json();
+
+                                      // Handle response - can be array or object
+                                      const consignmentData = Array.isArray(result) ? result[0] : result;
+                                      const consignment = consignmentData?.consignment || consignmentData;
+
+                                      // Check if successful (status 200 or consignment exists)
+                                      if (consignmentData?.status === 200 || consignment?.consignment_id || consignment?.tracking_code) {
+                                        // Update order with courier info
+                                        await Order.update(order.id, {
+                                          courier_placed: true,
+                                          courier_placed_date: new Date().toISOString(),
+                                          courier_tracking_code: consignment?.tracking_code || null,
+                                          courier_consignment_id: String(consignment?.consignment_id || '')
+                                        });
+
+                                        queryClient.invalidateQueries(['orders']);
+                                        toast.success('✅ Order sent to courier successfully!');
+                                      } else {
+                                        toast.error('Courier response invalid: ' + JSON.stringify(result));
+                                      }
+                                    } else {
+                                      const errorText = await response.text();
+                                      toast.error('Courier request failed: ' + (errorText || response.statusText));
+                                    }
+                                  } catch (error) {
+                                    toast.dismiss(loadingToast);
+                                    toast.error('Failed to send to courier: ' + error.message);
+                                  }
+                                }}
+                                className="h-9 w-9 p-0 hover:bg-orange-50"
+                                title="Send to Courier"
+                              >
+                                <Truck className="w-4 h-4 text-orange-600" />
+                              </Button>
+                            )}
+                            {order.courier_placed && (
+                              <>
+                                <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
+                                  <PackageCheck className="w-3 h-3 mr-1" />
+                                  {order.courier_status || 'Sent'}
+                                </Badge>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={async () => {
+                                    const loadingToast = toast.loading('🔄 Updating status...');
+                                    try {
+                                      // Normalize to PD format
+                                      const rawNum = order.order_number || '';
+                                      const pdOrderNumber = rawNum.startsWith('PD')
+                                        ? rawNum
+                                        : rawNum
+                                          ? `PD${rawNum.replace(/\D/g, '').slice(-6).padStart(6, '0')}`
+                                          : `PD${order.id?.slice(-6) || '000000'}`;
+
+                                      // Send webhook to status update endpoint
+                                      const webhookResponse = await fetch('https://primary-production-2437.up.railway.app/webhook/49c76188-047b-4479-8166-2e5e92fd8b1a', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          tracking_code: order.courier_tracking_code,
+                                          consignment_id: order.courier_consignment_id,
+                                          order_number: pdOrderNumber
+                                        })
+                                      });
+
+                                      toast.dismiss(loadingToast);
+
+                                      if (webhookResponse.ok) {
+                                        const result = await webhookResponse.json();
+                                        queryClient.invalidateQueries(['orders-sales-recent']);
+                                        queryClient.invalidateQueries(['orders-sales-all']);
+                                        toast.success(`✅ Status: ${result.new_status || 'Updated'}`);
+                                      } else {
+                                        const errorText = await webhookResponse.text();
+                                        toast.error('Failed: ' + (errorText || webhookResponse.statusText));
+                                      }
+                                    } catch (error) {
+                                      toast.dismiss(loadingToast);
+                                      toast.error('Error: ' + error.message);
+                                    }
+                                  }}
+                                  className="h-8 px-3 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                  title="Update Status from Steadfast"
+                                >
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                  Update
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                  {/* Load More Row */}
+                  {displayedOrders.length < filteredOrders.length && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-4">
+                        <Button
+                          variant="outline"
+                          onClick={loadMoreOrders}
+                          className="gap-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Load More ({filteredOrders.length - displayedOrders.length} remaining)
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Order Form Dialog */}
         <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
           <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
@@ -1014,12 +1858,11 @@ function SalesPage() {
                 {editingOrder ? 'Edit Sale Order' : 'Create New Sale Order'}
               </DialogTitle>
             </DialogHeader>
-            <div className="px-6 pb-6 overflow-y-auto max-h-[calc(95vh-100px)]">
+            <div className="px-6 pb-6">
               <OrderForm
                 order={editingOrder}
                 customers={customers}
                 inventory={inventory}
-                inventoryMap={inventoryMap}
                 onSubmit={handleOrderSubmit}
                 onCancel={() => {
                   setIsOrderFormOpen(false);
@@ -1034,7 +1877,120 @@ function SalesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Export Dialog and other dialogs... (keep all existing dialogs as before) */}
+        {/* Export Dialog */}
+        <AlertDialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                Export Sales Orders
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Choose what data to include in your export.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <Label className="font-medium">Export filtered orders only</Label>
+                <Checkbox
+                  checked={exportOptions.onlyFiltered}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, onlyFiltered: checked})}
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                {exportOptions.onlyFiltered
+                  ? `Will export ${filteredOrders.length} filtered orders`
+                  : `Will export all ${orders.length} orders`}
+              </p>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Include in Export:</Label>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Customer Details (Name, Phone, Email)</Label>
+                  <Checkbox
+                    checked={exportOptions.includeCustomerDetails}
+                    onCheckedChange={(checked) => setExportOptions({...exportOptions, includeCustomerDetails: checked})}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Shipping Address</Label>
+                  <Checkbox
+                    checked={exportOptions.includeShippingAddress}
+                    onCheckedChange={(checked) => setExportOptions({...exportOptions, includeShippingAddress: checked})}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Product Details</Label>
+                  <Checkbox
+                    checked={exportOptions.includeProductDetails}
+                    onCheckedChange={(checked) => setExportOptions({...exportOptions, includeProductDetails: checked})}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Payment Info (Method, Amounts)</Label>
+                  <Checkbox
+                    checked={exportOptions.includePaymentInfo}
+                    onCheckedChange={(checked) => setExportOptions({...exportOptions, includePaymentInfo: checked})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleExportExcel}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Invoice Dialog */}
+        <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Order Invoice</DialogTitle>
+            </DialogHeader>
+            {selectedOrder && (
+              <OrderInvoice order={selectedOrder} />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Upload Dialog */}
+        <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0">
+            <DialogHeader className="px-6 pt-6 pb-2">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <Upload className="w-6 h-6 text-blue-600" />
+                Bulk Order Import (CSV)
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6 overflow-y-auto max-h-[80vh]">
+              <BulkOrderCSVUpload
+                inventory={inventory}
+                customers={customers}
+                onComplete={() => {
+                  queryClient.invalidateQueries(['orders-sales-recent']);
+                  queryClient.invalidateQueries(['orders-sales-all']);
+                  setIsBulkUploadOpen(false);
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
