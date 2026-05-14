@@ -33,6 +33,7 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [formData, setFormData] = useState({
     item_name: product?.item_name || '',
     english_item_name: product?.english_item_name || '',
+    sku: product?.sku || '',                          // ← NEW: dedicated SKU field
     category: product?.category || 'electronics',
     current_stock: product?.current_stock || 0,
     minimum_stock: product?.minimum_stock || 10,
@@ -153,9 +154,6 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
       return;
     }
 
-    // Note: Stock validation is optional - users can set stock manually
-    // Color/variant quantities are informational only, not enforced
-
     // Auto-generate barcode if empty for new products
     if (!product?.id && !formData.barcode) {
       formData.barcode = generateProductBarcode();
@@ -172,6 +170,19 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
         }
       } catch (err) {
         console.warn('Could not check for duplicates:', err);
+      }
+    }
+
+    // Check for duplicate SKU (only for new products with SKU)
+    if (!product?.id && formData.sku) {
+      try {
+        const existingProducts = await Inventory.filter({ sku: formData.sku });
+        if (existingProducts.length > 0) {
+          toast.error(`A product with SKU "${formData.sku}" already exists: ${existingProducts[0].item_name}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not check for duplicate SKU:', err);
       }
     }
 
@@ -208,8 +219,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
       },
       department: 'prodhan_com_e_commerce',
       category: formData.category,
-      // Use item_name as english_item_name if not Bengali and english_item_name is empty
-      english_item_name: formData.english_item_name || (!containsBengali(formData.item_name) ? formData.item_name : '')
+      english_item_name: formData.english_item_name || (!containsBengali(formData.item_name) ? formData.item_name : ''),
+      sku: formData.sku || '',
     };
 
     console.log('Submitting product data:', cleanedData);
@@ -264,10 +275,8 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const parseWeight = (weightStr) => {
     if (!weightStr) return null;
     const str = weightStr.toLowerCase().trim();
-    
-    // Match patterns like "500g", "1kg", "1.5 kg", "1000 grams"
     const kgMatch = str.match(/(\d+\.?\d*)\s*k?g/);
-    const gramsMatch = str.match(/(\d+\.?\d*)\s*g(?!r)/); // g but not gr
+    const gramsMatch = str.match(/(\d+\.?\d*)\s*g(?!r)/);
     const gramsWordMatch = str.match(/(\d+\.?\d*)\s*grams?/);
     
     if (kgMatch) {
@@ -342,7 +351,6 @@ Return ONLY valid JSON with no additional text.`,
       toast.dismiss(loadingToast);
 
       if (response && response.product_name) {
-        // Auto-fill form with extracted data
         const updates = { product_source_url: productUrl };
         
         if (response.product_name) {
@@ -352,7 +360,6 @@ Return ONLY valid JSON with no additional text.`,
           }
         }
         
-        // Auto-create category if it doesn't exist
         if (response.category) {
           const categoryName = response.category;
           const categorySlug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -380,8 +387,13 @@ Return ONLY valid JSON with no additional text.`,
           }
         }
         
+        // Populate both SKU field AND barcode from extracted SKU
         if (response.sku) {
-          updates.barcode = response.sku;
+          updates.sku = response.sku;
+          // Only fill barcode if it looks like a numeric UPC (12 digits)
+          if (/^\d{12}$/.test(response.sku)) {
+            updates.barcode = response.sku;
+          }
         }
         
         if (response.selling_price && response.selling_price > 0) {
@@ -392,7 +404,6 @@ Return ONLY valid JSON with no additional text.`,
           updates.description = response.description;
         }
         
-        // Parse weight intelligently
         if (response.weight) {
           const parsedWeight = parseWeight(response.weight);
           if (parsedWeight) {
@@ -410,7 +421,6 @@ Return ONLY valid JSON with no additional text.`,
           updates.dimensions = newDimensions;
         }
 
-        // Auto-detect color variants
         if (response.colors && Array.isArray(response.colors) && response.colors.length > 0) {
           const qtyPerColor = Math.floor(formData.current_stock / response.colors.length);
           updates.color_variants = response.colors.map(color => ({
@@ -535,6 +545,26 @@ Return ONLY valid JSON with no additional text.`,
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Manage categories in Category Settings
+                </p>
+              </div>
+
+              {/* ── SKU field (NEW — dedicated, separate from barcode) ── */}
+              <div>
+                <Label htmlFor="sku" className="flex items-center gap-1.5">
+                  SKU
+                  <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-200 px-1.5 py-0 font-medium">
+                    Internal Code
+                  </Badge>
+                </Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({...formData, sku: e.target.value.trim()})}
+                  placeholder="e.g. PRD-SHIRT-BLK-L"
+                  className="font-mono"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Your internal stock-keeping code (letters, numbers, hyphens)
                 </p>
               </div>
 
@@ -708,7 +738,7 @@ Return ONLY valid JSON with no additional text.`,
               }}
               basePrice={formData.selling_price}
               baseWeight={formData.weight_kg}
-              baseSKU={formData.barcode}
+              baseSKU={formData.sku || formData.barcode}
             />
             {formData.product_variants?.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
@@ -893,7 +923,6 @@ Return ONLY valid JSON with no additional text.`,
 
             {formData.is_bundle && (
               <div className="space-y-3">
-                {/* Add Bundle Item */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                   <div className="md:col-span-1">
                     <Label className="text-xs font-semibold">Select Product</Label>
@@ -951,20 +980,19 @@ Return ONLY valid JSON with no additional text.`,
                   </div>
                 </div>
 
-                {/* Bundle Items Display */}
                 {formData.bundle_items?.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">Bundle Components ({formData.bundle_items.length})</Label>
                     <div className="space-y-2">
                       {formData.bundle_items.map((item, index) => {
-                        const product = allInventory.find(i => i.id === item.inventory_id);
+                        const bundleProduct = allInventory.find(i => i.id === item.inventory_id);
                         return (
                           <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-slate-200">
                             <div className="flex items-center gap-3">
                               <Badge className="bg-orange-100 text-orange-800">{item.quantity}×</Badge>
                               <div>
-                                <p className="font-semibold text-sm">{product?.item_name || 'Unknown Product'}</p>
-                                <p className="text-xs text-slate-500">Stock: {product?.current_stock || 0}</p>
+                                <p className="font-semibold text-sm">{bundleProduct?.item_name || 'Unknown Product'}</p>
+                                <p className="text-xs text-slate-500">Stock: {bundleProduct?.current_stock || 0}</p>
                               </div>
                             </div>
                             <Button
@@ -990,8 +1018,6 @@ Return ONLY valid JSON with no additional text.`,
               </div>
             )}
           </div>
-
-
 
           {/* E-commerce Settings */}
           <div className="space-y-4">
