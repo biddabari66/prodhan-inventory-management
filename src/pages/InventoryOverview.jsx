@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import QRCodeScanner from '../components/inventory/QRCodeScanner.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InventoryImportExport from '../components/inventory/InventoryImportExport';
 import GeneralProductForm from '../components/inventory/GeneralProductForm';
 import SmartInventorySearch from '../components/inventory/SmartInventorySearch';
@@ -27,56 +26,106 @@ import { usePurchasePriceResolver } from '../components/sales/useDiscountCampaig
 import { Lock } from 'lucide-react';
 import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// Your form stores variants as: { size, color, quality, material, weight,
-//   flavor, sku, quantity (stock), price (selling), purchase_price, ... }
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// VARIANT UTILITIES
+// Handles ALL possible field names Base44 might store:
+//   stock field:  quantity | stock | current_stock | qty | in_stock
+//   label fields: size | color | quality | material | flavor | weight | name | title | variant_name
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function buildVariantLabel(variant) {
-  const parts = [variant.size, variant.color, variant.quality, variant.material, variant.flavor, variant.weight]
-    .filter(Boolean);
-  if (parts.length > 0) return parts.join(' / ');
-  if (variant.variant_name) return variant.variant_name;
-  if (variant.sku) return variant.sku;
+function getVariantStock(v) {
+  // Try every possible field name in priority order
+  const val =
+    v.quantity      ?? v.stock          ?? v.current_stock ??
+    v.qty           ?? v.in_stock       ?? v.available_stock ??
+    v.stock_quantity ?? v.inventory_qty ?? 0;
+  return typeof val === 'number' ? val : parseInt(val, 10) || 0;
+}
+
+function buildVariantLabel(v) {
+  // Build from all known attribute fields
+  const parts = [
+    v.size, v.color, v.colour, v.quality, v.material,
+    v.flavor, v.flavour, v.weight, v.style, v.type
+  ].filter(val => val && String(val).trim() !== '');
+
+  if (parts.length > 0) return parts.map(p => String(p).trim()).join(' / ');
+
+  // Fallback to generic name fields
+  const fallback = v.variant_name || v.name || v.title || v.label || v.option;
+  if (fallback) return String(fallback).trim();
+
+  // Last resort: show SKU
+  if (v.sku) return `SKU: ${v.sku}`;
+
   return 'Variant';
 }
 
-// Supports both field names: quantity (your form) and stock (generic)
-function getVariantStock(variant) {
-  if (typeof variant.quantity === 'number') return variant.quantity;
-  if (typeof variant.stock === 'number') return variant.stock;
-  return 0;
+// Safely extract the variants array from an inventory item
+// Base44 might store it under different keys
+function getVariants(item) {
+  const arr =
+    item.variants      ||
+    item.variant_list  ||
+    item.product_variants ||
+    item.sizes         ||
+    item.options       ||
+    null;
+
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  return arr;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VARIANT STOCK CHIPS
-// Shows inline under product name: [S: 3] [M: 7] [L: 0✕] [XL: 2]
-// ─────────────────────────────────────────────────────────────────────────────
+// Debug helper — call this once to log what your data actually looks like
+function debugLogItem(item) {
+  if (process.env.NODE_ENV === 'development') {
+    const variants = getVariants(item);
+    if (variants) {
+      console.log('[Variant Debug] Item:', item.item_name);
+      console.log('  variants array key found:', Object.keys(item).find(k => Array.isArray(item[k]) && item[k].length > 0));
+      console.log('  first variant keys:', Object.keys(variants[0]));
+      console.log('  first variant data:', variants[0]);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VARIANT STOCK CHIPS — compact inline badges: [S: 3] [M: 0✕] [L: 2!]
+// ═══════════════════════════════════════════════════════════════════════════════
 function VariantStockChips({ variants, minimumStock = 0 }) {
-  if (!Array.isArray(variants) || variants.length === 0) return null;
+  if (!variants || variants.length === 0) return null;
+
   return (
-    <div className="flex flex-wrap gap-1 mt-1.5">
+    <div className="flex flex-wrap gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
       {variants.map((v, idx) => {
         const label = buildVariantLabel(v);
         const stock = getVariantStock(v);
         const isOut = stock === 0;
         const isLow = !isOut && stock < minimumStock;
+
         return (
           <div
             key={v.id || idx}
-            title={`SKU: ${v.sku || '—'}  |  Stock: ${stock}${v.price ? `  |  Price: ৳${v.price}` : ''}`}
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold border
+            title={[
+              `Label: ${label}`,
+              `Stock: ${stock}`,
+              v.sku   && `SKU: ${v.sku}`,
+              v.price && `Price: ৳${v.price}`,
+            ].filter(Boolean).join('  |  ')}
+            className={`
+              inline-flex items-center gap-1 rounded-md px-2 py-0.5
+              text-[11px] font-semibold border select-none
               ${isOut  ? 'bg-red-50   text-red-700   border-red-200'
               : isLow  ? 'bg-amber-50 text-amber-700 border-amber-200'
-              :           'bg-slate-50 text-slate-700 border-slate-200'}`}
+              :           'bg-slate-50 text-slate-700 border-slate-200'}
+            `}
           >
-            <span className="text-slate-500 font-medium">{label}:</span>
-            <span className={isOut ? 'text-red-700' : isLow ? 'text-amber-700' : 'text-slate-900'}>
-              {stock}
+            <span className="font-medium opacity-60">{label}:</span>
+            <span className="font-bold">
+              {isOut ? '0' : stock}
             </span>
-            {isOut  && <span className="text-red-400 text-[10px]">✕</span>}
-            {isLow  && <span className="text-amber-400 text-[10px]">!</span>}
+            {isOut && <span className="opacity-50 text-[9px]">✕</span>}
+            {isLow && <span className="opacity-60 text-[9px]">!</span>}
           </div>
         );
       })}
@@ -84,225 +133,269 @@ function VariantStockChips({ variants, minimumStock = 0 }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VARIANT DETAIL ROW (expanded sub-row per variant)
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// VARIANT DETAIL ROW — sub-row shown when parent row is expanded
+// ═══════════════════════════════════════════════════════════════════════════════
 function VariantDetailRow({ variant, parentItem, canViewPurchasePrice, getPurchasePrice }) {
-  const label     = buildVariantLabel(variant);
-  const stock     = getVariantStock(variant);
-  const minStock  = parentItem.minimum_stock ?? 0;
-  const isOut     = stock === 0;
-  const isLow     = !isOut && stock < minStock;
+  const label    = buildVariantLabel(variant);
+  const stock    = getVariantStock(variant);
+  const minStock = parentItem.minimum_stock ?? 0;
+  const isOut    = stock === 0;
+  const isLow    = !isOut && stock < minStock;
 
-  const sellingPrice  = variant.price ?? variant.selling_price ?? parentItem.selling_price ?? 0;
-  const purchasePrice = variant.purchase_price ?? getPurchasePrice(parentItem);
+  // Price resolution — variant overrides parent
+  const sellingPrice  = variant.price ?? variant.selling_price ?? variant.unit_price ?? parentItem.selling_price ?? 0;
+  const purchasePrice = variant.purchase_price ?? variant.cost_price ?? getPurchasePrice(parentItem);
 
   return (
-    <TableRow className="bg-indigo-50/25 border-b border-indigo-100/40 h-11 hover:bg-indigo-50/50 transition-colors">
-      {/* Name — indented */}
+    <TableRow
+      className="bg-indigo-50/20 border-b border-indigo-100/30 h-11
+                 hover:bg-indigo-50/40 transition-colors"
+    >
+      {/* Variant Name — indented */}
       <TableCell className="py-2 pl-[76px]">
         <div className="flex items-center gap-2.5">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isOut ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+          {/* Color dot */}
+          <div className={`w-2 h-2 rounded-full flex-shrink-0
+            ${isOut ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-emerald-400'}`}
+          />
           <span className="text-[13px] font-semibold text-slate-700">{label}</span>
           {variant.sku && (
             <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
               {variant.sku}
             </span>
           )}
+          {variant.weight && (
+            <span className="text-[10px] text-slate-400">· {variant.weight}kg</span>
+          )}
         </div>
       </TableCell>
 
-      {/* Category placeholder */}
-      <TableCell><span className="text-[11px] text-slate-300 italic">—</span></TableCell>
+      {/* Category — inherited */}
+      <TableCell>
+        <span className="text-[11px] text-slate-300">—</span>
+      </TableCell>
 
       {/* Stock */}
       <TableCell className="text-center">
         <div className="inline-flex flex-col items-center">
-          <span className={`text-base font-bold ${isOut ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-slate-900'}`}>
+          <span className={`text-base font-bold
+            ${isOut ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-slate-900'}`}>
             {stock}
           </span>
-          {isOut && <span className="text-[10px] text-red-500 font-medium">out</span>}
-          {isLow && <span className="text-[10px] text-amber-500 font-medium">low</span>}
+          {isOut && <span className="text-[10px] text-red-500 font-medium leading-none">out</span>}
+          {isLow && <span className="text-[10px] text-amber-500 font-medium leading-none">low</span>}
         </div>
       </TableCell>
 
-      {/* Returns / Damages — tracked at parent level */}
-      <TableCell className="text-right"><span className="text-[11px] text-slate-300">—</span></TableCell>
-      <TableCell className="text-right"><span className="text-[11px] text-slate-300">—</span></TableCell>
+      {/* Returns / Damages — not tracked per-variant */}
+      <TableCell className="text-right"><span className="text-slate-200">—</span></TableCell>
+      <TableCell className="text-right"><span className="text-slate-200">—</span></TableCell>
 
-      {/* Purchase price */}
+      {/* Purchase Price */}
       <TableCell className="text-right">
         {canViewPurchasePrice ? (
-          <span className="text-[13px] font-semibold text-slate-600">
-            ৳{purchasePrice.toLocaleString()}
+          <span className="text-[13px] font-semibold text-slate-500">
+            {purchasePrice > 0 ? `৳${purchasePrice.toLocaleString()}` : '—'}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-300">
-            <Lock className="w-3 h-3" />
-          </span>
+          <span className="text-slate-200"><Lock className="w-3 h-3 inline" /></span>
         )}
       </TableCell>
 
-      {/* Selling price */}
+      {/* Selling Price */}
       <TableCell className="text-right">
-        <span className="text-[13px] font-semibold text-slate-700">৳{sellingPrice.toLocaleString()}</span>
+        <span className="text-[13px] font-semibold text-slate-700">
+          {sellingPrice > 0 ? `৳${sellingPrice.toLocaleString()}` : '—'}
+        </span>
       </TableCell>
 
-      {/* Today's sales — blank for variant level */}
-      <TableCell className="text-center"><span className="text-[11px] text-slate-300">—</span></TableCell>
+      {/* Today's Sales */}
+      <TableCell className="text-center">
+        <span className="text-slate-200 text-xs">—</span>
+      </TableCell>
 
       {/* Status */}
       <TableCell className="text-center">
-        <Badge className={`rounded-full px-2.5 text-[11px] font-medium border ${
-          isOut ? 'bg-red-50 text-red-700 border-red-200'
-          : isLow ? 'bg-amber-50 text-amber-700 border-amber-200'
-          : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+        <Badge className={`rounded-full px-2 text-[11px] font-medium border
+          ${isOut  ? 'bg-red-50   text-red-700   border-red-200'
+          : isLow  ? 'bg-amber-50 text-amber-700 border-amber-200'
+          :           'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
           {isOut ? 'Out' : isLow ? 'Low' : 'OK'}
         </Badge>
       </TableCell>
 
-      {/* Actions — blank */}
+      {/* Actions — empty */}
       <TableCell className="pr-6" />
     </TableRow>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN INVENTORY TABLE ROW
-// - Products with variants: shows size chips inline, expands to detail rows
-// - Products without variants: renders exactly as before
-// ─────────────────────────────────────────────────────────────────────────────
-function InventoryTableRow({ item, todaySalesData, canEdit, canDelete, canViewPurchasePrice, getPurchasePrice, onEdit, onDelete }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVENTORY TABLE ROW — with inline chips + expandable variant detail rows
+// ═══════════════════════════════════════════════════════════════════════════════
+function InventoryTableRow({
+  item, todaySalesData, canEdit, canDelete,
+  canViewPurchasePrice, getPurchasePrice, onEdit, onDelete
+}) {
   const [expanded, setExpanded] = useState(false);
+  const variants = getVariants(item);
 
-  const variants = Array.isArray(item.variants) && item.variants.length > 0 ? item.variants : null;
+  // Debug once per item (dev only)
+  useEffect(() => { debugLogItem(item); }, []);
 
-  // Aggregate stock from variants; fall back to item.current_stock
+  // Total stock: sum variants OR use item.current_stock
   const totalStock = variants
     ? variants.reduce((sum, v) => sum + getVariantStock(v), 0)
     : (item.current_stock ?? 0);
 
-  const minStock   = item.minimum_stock ?? 0;
-  const isLow      = totalStock < minStock;
-  const outCount   = variants ? variants.filter(v => getVariantStock(v) === 0).length : 0;
-  const lowCount   = variants ? variants.filter(v => { const s = getVariantStock(v); return s > 0 && s < minStock; }).length : 0;
+  const minStock  = item.minimum_stock ?? 0;
+  const isLow     = totalStock < minStock;
+  const outCount  = variants ? variants.filter(v => getVariantStock(v) === 0).length : 0;
+  const lowCount  = variants ? variants.filter(v => {
+    const s = getVariantStock(v);
+    return s > 0 && s < minStock;
+  }).length : 0;
 
   return (
     <>
       <TableRow
-        className={`border-b border-slate-100 h-16 transition-colors ${
-          variants ? 'hover:bg-indigo-50/20 cursor-pointer' : 'hover:bg-slate-50/50'
-        }`}
+        className={`border-b border-slate-100 transition-colors
+          ${variants
+            ? 'cursor-pointer hover:bg-indigo-50/30'
+            : 'hover:bg-slate-50/50'
+          }
+          ${expanded ? 'bg-indigo-50/10' : ''}
+        `}
+        style={{ minHeight: variants ? 'auto' : '4rem' }}
         onClick={variants ? () => setExpanded(p => !p) : undefined}
       >
-        {/* ── Item Name ──────────────────────────────────────────── */}
+        {/* ── ITEM NAME CELL ─────────────────────────────────────── */}
         <TableCell className="py-3 pl-6">
-          <div className="flex items-center gap-3">
-            {/* Expand toggle OR spacer */}
-            {variants ? (
-              <button
-                onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}
-                className="w-6 h-6 rounded-md bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center flex-shrink-0 transition-colors"
-              >
-                {expanded
-                  ? <ChevronDown  className="w-3.5 h-3.5 text-indigo-600" />
-                  : <ChevronRight className="w-3.5 h-3.5 text-indigo-600" />}
-              </button>
-            ) : (
-              <div className="w-6 flex-shrink-0" />
-            )}
+          <div className="flex items-start gap-3">
 
-            {/* Category icon */}
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-              item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'}`}>
-              {item.category === 'books'
-                ? <BookOpen className="w-5 h-5 text-cyan-600" />
-                : <Package  className="w-5 h-5 text-purple-600" />}
+            {/* Expand toggle / spacer */}
+            <div className="flex-shrink-0 mt-0.5">
+              {variants ? (
+                <button
+                  onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}
+                  className="w-6 h-6 rounded-md bg-indigo-100 hover:bg-indigo-200
+                             flex items-center justify-center transition-colors"
+                >
+                  {expanded
+                    ? <ChevronDown  className="w-3.5 h-3.5 text-indigo-600" />
+                    : <ChevronRight className="w-3.5 h-3.5 text-indigo-600" />}
+                </button>
+              ) : (
+                <div className="w-6" />
+              )}
             </div>
 
-            {/* Name + badges + chips */}
-            <div className="min-w-0 flex-1">
+            {/* Category icon */}
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5
+              ${item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'}`}>
+              {item.category === 'books'
+                ? <BookOpen className="w-4.5 h-4.5 text-cyan-600" />
+                : <Package  className="w-4.5 h-4.5 text-purple-600" />}
+            </div>
+
+            {/* Name block */}
+            <div className="min-w-0 flex-1 pb-1">
+              {/* Row 1: Name + badges */}
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-slate-900 leading-tight" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
+                <p className="font-semibold text-slate-900 text-sm leading-tight"
+                   style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
                   {item.item_name}
                 </p>
+
                 {variants && (
-                  <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full px-2 text-[10px] font-semibold gap-1 inline-flex items-center flex-shrink-0">
+                  <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200
+                                   rounded-full px-2 text-[10px] font-bold gap-1
+                                   inline-flex items-center flex-shrink-0">
                     <Layers className="w-2.5 h-2.5" />
-                    {variants.length} variants
+                    {variants.length}
                   </Badge>
                 )}
                 {outCount > 0 && (
-                  <Badge className="bg-red-100 text-red-700 border border-red-200 rounded-full px-2 text-[10px] font-semibold flex-shrink-0">
+                  <Badge className="bg-red-100 text-red-700 border border-red-200
+                                   rounded-full px-2 text-[10px] font-semibold flex-shrink-0">
                     {outCount} out
                   </Badge>
                 )}
                 {lowCount > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 text-[10px] font-semibold flex-shrink-0">
+                  <Badge className="bg-amber-100 text-amber-700 border border-amber-200
+                                   rounded-full px-2 text-[10px] font-semibold flex-shrink-0">
                     {lowCount} low
                   </Badge>
                 )}
               </div>
 
-              {/* Sub-meta */}
+              {/* Row 2: meta */}
               <div className="flex gap-2 mt-0.5 flex-wrap">
-                {item.isbn        && <span className="text-xs text-slate-400">ISBN: {item.isbn}</span>}
-                {item.author_name && <span className="text-xs text-slate-400">· {item.author_name}</span>}
-                {item.barcode     && <span className="text-xs text-slate-400">· SKU: {item.barcode}</span>}
+                {item.isbn        && <span className="text-[11px] text-slate-400">ISBN: {item.isbn}</span>}
+                {item.author_name && <span className="text-[11px] text-slate-400">· {item.author_name}</span>}
+                {item.barcode     && <span className="text-[11px] text-slate-400">· SKU: {item.barcode}</span>}
               </div>
 
-              {/* ── VARIANT CHIPS (collapsed view) ── */}
+              {/* Row 3: VARIANT CHIPS (collapsed state only) */}
               {variants && !expanded && (
                 <VariantStockChips variants={variants} minimumStock={minStock} />
               )}
               {variants && expanded && (
-                <p className="text-[10px] text-indigo-400 mt-1">↓ variant details below</p>
+                <p className="text-[10px] text-indigo-400 mt-1 select-none">
+                  ▼ {variants.length} variants expanded below
+                </p>
               )}
             </div>
           </div>
         </TableCell>
 
-        {/* ── Category ── */}
+        {/* ── CATEGORY ── */}
         <TableCell>
           <Badge className="bg-slate-100 text-slate-700 border border-slate-200 rounded-full px-3 text-xs font-medium">
             {item.category}
           </Badge>
         </TableCell>
 
-        {/* ── Stock Level ── */}
+        {/* ── STOCK LEVEL ── */}
         <TableCell className="text-center">
           <div className="inline-flex flex-col items-center">
-            <span className={`text-lg font-bold ${isLow ? 'text-red-600' : 'text-slate-900'}`}>{totalStock}</span>
-            <span className="text-xs text-slate-400">min: {minStock}</span>
+            <span className={`text-lg font-bold leading-tight
+              ${isLow ? 'text-red-600' : 'text-slate-900'}`}>
+              {totalStock}
+            </span>
+            <span className="text-[11px] text-slate-400">min: {minStock}</span>
             {variants && (
               <span className="text-[10px] text-indigo-400 font-medium mt-0.5">
-                {variants.length} sizes total
+                {variants.length} variants
               </span>
             )}
           </div>
         </TableCell>
 
-        {/* ── Returns ── */}
+        {/* ── RETURNS ── */}
         <TableCell className="text-right">
           <div className="font-semibold text-orange-600">{item.returned_qty || 0}</div>
           <div className="text-xs text-slate-400">৳{(item.returned_value || 0).toLocaleString()}</div>
         </TableCell>
 
-        {/* ── Damages ── */}
+        {/* ── DAMAGES ── */}
         <TableCell className="text-right">
           <div className="font-semibold text-red-600">{item.damaged_qty || 0}</div>
           <div className="text-xs text-slate-400">৳{(item.damaged_value || 0).toLocaleString()}</div>
         </TableCell>
 
-        {/* ── Purchase Price ── */}
+        {/* ── PURCHASE PRICE ── */}
         <TableCell className="text-right">
           {canViewPurchasePrice ? (
             <div>
-              <span className="font-semibold text-slate-700">৳{getPurchasePrice(item).toLocaleString()}</span>
+              <span className="font-semibold text-slate-700">
+                ৳{getPurchasePrice(item).toLocaleString()}
+              </span>
               {getPurchasePrice(item) !== (item.purchase_price || 0) && (
                 <p className="text-[10px] text-blue-500">from PO</p>
               )}
-              {variants && <p className="text-[10px] text-slate-400">base / varies</p>}
+              {variants && <p className="text-[10px] text-slate-400">base/varies</p>}
             </div>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs text-slate-400">
@@ -311,33 +404,35 @@ function InventoryTableRow({ item, todaySalesData, canEdit, canDelete, canViewPu
           )}
         </TableCell>
 
-        {/* ── Selling Price ── */}
+        {/* ── SELLING PRICE ── */}
         <TableCell className="text-right">
-          <span className="font-semibold text-slate-900">৳{(item.selling_price || 0).toLocaleString()}</span>
+          <span className="font-semibold text-slate-900">
+            ৳{(item.selling_price || 0).toLocaleString()}
+          </span>
           {variants && <p className="text-[10px] text-slate-400">base</p>}
         </TableCell>
 
-        {/* ── Today's Sales ── */}
+        {/* ── TODAY'S SALES ── */}
         <TableCell className="text-center">
-          <Badge className={`rounded-full px-3 text-xs font-medium border ${
-            todaySalesData[item.id] > 0
+          <Badge className={`rounded-full px-3 text-xs font-medium border
+            ${todaySalesData[item.id] > 0
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
             {todaySalesData[item.id] || 0} units
           </Badge>
         </TableCell>
 
-        {/* ── Status ── */}
+        {/* ── STATUS ── */}
         <TableCell className="text-center">
-          <Badge className={`rounded-full px-3 text-xs font-medium border ${
-            isLow
+          <Badge className={`rounded-full px-3 text-xs font-medium border
+            ${isLow
               ? 'bg-red-50 text-red-700 border-red-200'
               : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
             {isLow ? 'Low Stock' : 'In Stock'}
           </Badge>
         </TableCell>
 
-        {/* ── Actions ── */}
+        {/* ── ACTIONS ── */}
         <TableCell className="text-center pr-6" onClick={e => e.stopPropagation()}>
           <div className="flex gap-2 justify-center">
             {canEdit && (
@@ -358,7 +453,7 @@ function InventoryTableRow({ item, todaySalesData, canEdit, canDelete, canViewPu
         </TableCell>
       </TableRow>
 
-      {/* ── Expanded variant detail rows ── */}
+      {/* ── EXPANDED VARIANT DETAIL ROWS ── */}
       {variants && expanded && variants.map((variant, vIdx) => (
         <VariantDetailRow
           key={variant.id || vIdx}
@@ -372,13 +467,16 @@ function InventoryTableRow({ item, todaySalesData, canEdit, canDelete, canViewPu
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOBILE CARD (variant-aware)
-// ─────────────────────────────────────────────────────────────────────────────
-function MobileInventoryItemCard({ item, todaySalesData, canEdit, canDelete, canViewPurchasePrice, getPurchasePrice, onEdit, onDelete }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CARD — variant-aware
+// ═══════════════════════════════════════════════════════════════════════════════
+function MobileInventoryItemCard({
+  item, todaySalesData, canEdit, canDelete,
+  canViewPurchasePrice, getPurchasePrice, onEdit, onDelete
+}) {
   const [expanded, setExpanded] = useState(false);
-  const variants  = Array.isArray(item.variants) && item.variants.length > 0 ? item.variants : null;
-  const minStock  = item.minimum_stock ?? 0;
+  const variants = getVariants(item);
+  const minStock = item.minimum_stock ?? 0;
 
   if (!variants) {
     return (
@@ -400,81 +498,100 @@ function MobileInventoryItemCard({ item, todaySalesData, canEdit, canDelete, can
   return (
     <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
       <CardContent className="p-4">
+
+        {/* Header row */}
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'}`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
+            ${item.category === 'books' ? 'bg-cyan-100' : 'bg-purple-100'}`}>
             {item.category === 'books'
               ? <BookOpen className="w-5 h-5 text-cyan-600" />
               : <Package  className="w-5 h-5 text-purple-600" />}
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-900 text-sm truncate" style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
+            <p className="font-semibold text-slate-900 text-sm leading-snug"
+               style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
               {item.item_name}
             </p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full px-2 text-[10px] font-semibold gap-1 inline-flex items-center">
-                <Layers className="w-2.5 h-2.5" />{variants.length} variants · {totalStock} total
+              <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200
+                               rounded-full px-2 text-[10px] font-bold gap-1 inline-flex items-center">
+                <Layers className="w-2.5 h-2.5" />
+                {variants.length} variants · total {totalStock}
               </Badge>
               {outCount > 0 && (
                 <Badge className="bg-red-100 text-red-700 border border-red-200 rounded-full px-2 text-[10px]">
-                  {outCount} out of stock
+                  {outCount} out
                 </Badge>
               )}
-              <Badge className={`rounded-full px-2 text-[10px] border ${
-                isLow ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+              <Badge className={`rounded-full px-2 text-[10px] border
+                ${isLow ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                 {isLow ? 'Low' : 'OK'}
               </Badge>
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
             {canEdit && (
-              <Button variant="ghost" size="sm" onClick={() => onEdit(item)} className="h-8 px-2 text-xs text-slate-600 rounded-lg">Edit</Button>
+              <Button variant="ghost" size="sm" onClick={() => onEdit(item)}
+                className="h-8 px-2 text-xs text-slate-600 rounded-lg">Edit</Button>
             )}
             {canDelete && (
-              <Button variant="ghost" size="sm" onClick={() => onDelete(item)} className="h-8 w-8 p-0 text-red-500 rounded-lg">
+              <Button variant="ghost" size="sm" onClick={() => onDelete(item)}
+                className="h-8 w-8 p-0 text-red-500 rounded-lg">
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             )}
             <Button variant="ghost" size="sm"
               onClick={() => setExpanded(p => !p)}
               className="h-8 w-8 p-0 rounded-lg bg-indigo-50 hover:bg-indigo-100">
-              {expanded ? <ChevronDown className="w-4 h-4 text-indigo-600" /> : <ChevronRight className="w-4 h-4 text-indigo-600" />}
+              {expanded
+                ? <ChevronDown  className="w-4 h-4 text-indigo-600" />
+                : <ChevronRight className="w-4 h-4 text-indigo-600" />}
             </Button>
           </div>
         </div>
 
-        {/* Variant chips (collapsed) */}
+        {/* Collapsed: show chips */}
         {!expanded && (
-          <div className="mt-2">
+          <div className="mt-2.5">
             <VariantStockChips variants={variants} minimumStock={minStock} />
           </div>
         )}
 
-        {/* Expanded detail */}
+        {/* Expanded: full detail cards */}
         {expanded && (
           <div className="mt-3 border-t border-slate-100 pt-3 space-y-2">
             {variants.map((v, idx) => {
-              const label  = buildVariantLabel(v);
-              const stock  = getVariantStock(v);
-              const isOut  = stock === 0;
-              const isVLow = !isOut && stock < minStock;
-              const price  = v.price ?? v.selling_price ?? item.selling_price ?? 0;
+              const label   = buildVariantLabel(v);
+              const stock   = getVariantStock(v);
+              const isOut   = stock === 0;
+              const isVLow  = !isOut && stock < minStock;
+              const price   = v.price ?? v.selling_price ?? v.unit_price ?? item.selling_price ?? 0;
+
               return (
-                <div key={v.id || idx} className={`flex items-center justify-between rounded-lg px-3 py-2.5 ${
-                  isOut ? 'bg-red-50' : isVLow ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                <div key={v.id || idx}
+                  className={`flex items-center justify-between rounded-lg px-3 py-2.5
+                    ${isOut ? 'bg-red-50' : isVLow ? 'bg-amber-50' : 'bg-slate-50'}`}>
                   <div>
-                    <p className="text-xs font-bold text-slate-800">{label}</p>
-                    {v.sku && <p className="text-[10px] text-slate-400 font-mono mt-0.5">{v.sku}</p>}
-                    {price > 0 && <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">৳{price.toLocaleString()}</p>}
+                    <p className="text-sm font-bold text-slate-800">{label}</p>
+                    {v.sku && (
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{v.sku}</p>
+                    )}
+                    {price > 0 && (
+                      <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                        ৳{price.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-xl font-extrabold ${isOut ? 'text-red-600' : isVLow ? 'text-amber-600' : 'text-slate-900'}`}>
+                    <span className={`text-xl font-extrabold
+                      ${isOut ? 'text-red-600' : isVLow ? 'text-amber-600' : 'text-slate-900'}`}>
                       {stock}
                     </span>
-                    <Badge className={`rounded-full px-2 text-[10px] border ${
-                      isOut  ? 'bg-red-100   text-red-700   border-red-200'
+                    <Badge className={`rounded-full px-2 text-[10px] border
+                      ${isOut  ? 'bg-red-100   text-red-700   border-red-200'
                       : isVLow ? 'bg-amber-100 text-amber-700 border-amber-200'
                       :           'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
                       {isOut ? 'Out' : isVLow ? 'Low' : 'OK'}
@@ -490,35 +607,35 @@ function MobileInventoryItemCard({ item, todaySalesData, canEdit, canDelete, can
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 // FORM WRAPPER
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 function InventoryForm({ item, onSubmit, onCancel }) {
   return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 function InventoryOverviewPage() {
   usePerformanceMonitor('InventoryOverviewPage');
 
-  const [inventory, setInventory]                       = useState([]);
-  const [filteredInventory, setFilteredInventory]       = useState([]);
-  const [inventoryWithMovements, setInventoryWithMovements] = useState([]);
-  const [isLoading, setIsLoading]                       = useState(true);
-  const [isFormOpen, setIsFormOpen]                     = useState(false);
-  const [editingItem, setEditingItem]                   = useState(null);
-  const [currentUser, setCurrentUser]                   = useState(null);
-  const [searchTerm, setSearchTerm]                     = useState('');
-  const [deleteConfirmOpen, setDeleteConfirmOpen]       = useState(false);
-  const [itemToDelete, setItemToDelete]                 = useState(null);
-  const [categoryFilter, setCategoryFilter]             = useState('all');
-  const [todaySalesData, setTodaySalesData]             = useState({});
-  const [selectedDepartment]                            = useState('prodhan_com_e_commerce');
-  const [displayLimit, setDisplayLimit]                 = useState(50);
-  const [isScannerOpen, setIsScannerOpen]               = useState(false);
-  const [variantFilter, setVariantFilter]               = useState('all');
+  const [inventory,             setInventory]             = useState([]);
+  const [filteredInventory,     setFilteredInventory]     = useState([]);
+  const [inventoryWithMovements,setInventoryWithMovements]= useState([]);
+  const [isLoading,             setIsLoading]             = useState(true);
+  const [isFormOpen,            setIsFormOpen]            = useState(false);
+  const [editingItem,           setEditingItem]           = useState(null);
+  const [currentUser,           setCurrentUser]           = useState(null);
+  const [searchTerm,            setSearchTerm]            = useState('');
+  const [deleteConfirmOpen,     setDeleteConfirmOpen]     = useState(false);
+  const [itemToDelete,          setItemToDelete]          = useState(null);
+  const [categoryFilter,        setCategoryFilter]        = useState('all');
+  const [todaySalesData,        setTodaySalesData]        = useState({});
+  const [selectedDepartment]                              = useState('prodhan_com_e_commerce');
+  const [displayLimit,          setDisplayLimit]          = useState(50);
+  const [isScannerOpen,         setIsScannerOpen]         = useState(false);
+  const [variantFilter,         setVariantFilter]         = useState('all');
 
   const { hasPermission: canCreate } = usePermission('inventory_overview', 'can_create');
   const { hasPermission: canEdit }   = usePermission('inventory_overview', 'can_edit');
@@ -527,7 +644,9 @@ function InventoryOverviewPage() {
 
   const { data: purchaseOrders = [] } = useQuery({
     queryKey: ['purchase-orders-for-prices'],
-    queryFn: () => base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 200),
+    queryFn: () => base44.entities.PurchaseOrder.filter(
+      { department: 'prodhan_com_e_commerce' }, '-order_date', 200
+    ),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -537,7 +656,9 @@ function InventoryOverviewPage() {
     queryKey: ['product-categories', selectedDepartment],
     queryFn: async () => {
       const all = await base44.entities.ProductCategory.list('sort_order');
-      return all.filter(c => c.is_active && (c.department === selectedDepartment || c.department === 'both'));
+      return all.filter(c =>
+        c.is_active && (c.department === selectedDepartment || c.department === 'both')
+      );
     }
   });
 
@@ -559,6 +680,7 @@ function InventoryOverviewPage() {
     });
 
     const ticker = setInterval(() => loadTodaySales(), 60000);
+
     return () => {
       unsubOrders(); unsubInventory();
       if (invTimeout) clearTimeout(invTimeout);
@@ -566,14 +688,16 @@ function InventoryOverviewPage() {
     };
   }, []);
 
-  useEffect(() => { filterInventory(); }, [inventory, inventoryWithMovements, searchTerm, currentUser, categoryFilter, variantFilter]);
+  useEffect(() => {
+    filterInventory();
+  }, [inventory, inventoryWithMovements, searchTerm, currentUser, categoryFilter, variantFilter]);
 
   // ── Data loading ─────────────────────────────────────────────────────────────
   const loadTodaySales = async () => {
     try {
       const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
       const recentOrders = await base44.entities.Order.list('-order_date', 200);
-      const validStatuses = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+      const validStatuses = ['confirmed','processing','packed','shipped','out_for_delivery','delivered'];
       const salesMap = {};
 
       for (const order of recentOrders) {
@@ -583,7 +707,6 @@ function InventoryOverviewPage() {
         if (isNaN(parsed.getTime())) continue;
         const dateBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(parsed);
         if (dateBDT !== todayBDT || !validStatuses.includes(order.order_status)) continue;
-
         for (const item of (order.order_items || [])) {
           salesMap[item.inventory_id] = (salesMap[item.inventory_id] || 0) + (item.quantity || 0);
           if (item.variant_id) {
@@ -593,7 +716,7 @@ function InventoryOverviewPage() {
       }
       setTodaySalesData(salesMap);
     } catch (err) {
-      console.error('Error loading today sales:', err);
+      console.error('loadTodaySales error:', err);
     }
   };
 
@@ -610,13 +733,15 @@ function InventoryOverviewPage() {
         if (cachedMovements) enrichInventoryWithMovements(cachedInventory, cachedMovements);
         setIsLoading(false);
 
+        // Background refresh
         setTimeout(async () => {
           const [user, data, movements] = await Promise.all([
             base44.auth.me(),
             base44.entities.Inventory.list('-updated_date', 2000),
             base44.entities.InventoryMovement.list('-movement_date', 500)
           ]);
-          setCurrentUser(user); setInventory(data);
+          setCurrentUser(user);
+          setInventory(data);
           enrichInventoryWithMovements(data, movements);
           CacheManager.set('current_user',       user,      10 * 60 * 1000);
           CacheManager.set('inventory_list',     data,      10 * 60 * 1000);
@@ -628,14 +753,15 @@ function InventoryOverviewPage() {
           base44.entities.Inventory.list('-updated_date', 2000),
           base44.entities.InventoryMovement.list('-movement_date', 500)
         ]);
-        setCurrentUser(user); setInventory(data);
+        setCurrentUser(user);
+        setInventory(data);
         enrichInventoryWithMovements(data, movements);
         CacheManager.set('current_user',       user,      10 * 60 * 1000);
         CacheManager.set('inventory_list',     data,      10 * 60 * 1000);
         CacheManager.set('inventory_movements', movements, 5  * 60 * 1000);
       }
     } catch (err) {
-      console.error('Error loading data:', err);
+      console.error('loadUserAndInventory error:', err);
       toast.error('Failed to load inventory data');
     } finally {
       setIsLoading(false);
@@ -646,19 +772,25 @@ function InventoryOverviewPage() {
     const byItem = {};
     movements.forEach(m => {
       if (!byItem[m.inventory_item_id]) {
-        byItem[m.inventory_item_id] = { total_returned_qty: 0, total_damaged_qty: 0, total_returned_value: 0, total_damaged_value: 0 };
+        byItem[m.inventory_item_id] = {
+          total_returned_qty: 0, total_damaged_qty: 0,
+          total_returned_value: 0, total_damaged_value: 0
+        };
       }
       const d = byItem[m.inventory_item_id];
       if (m.reference_type === 'return') {
         const meta = m.metadata || {};
-        const qty = meta.original_quantity || meta.good_qty || meta.damaged_qty || Math.abs(m.quantity || 0);
-        d.total_returned_qty += qty; d.total_returned_value += Math.abs(m.total_value || 0);
+        const qty  = meta.original_quantity || meta.good_qty || meta.damaged_qty || Math.abs(m.quantity || 0);
+        d.total_returned_qty   += qty;
+        d.total_returned_value += Math.abs(m.total_value || 0);
       } else if (m.reference_type === 'damage' || m.reference_type === 'expired') {
         const meta = m.metadata || {};
-        const qty = meta.original_quantity || Math.abs(m.quantity || 0);
-        d.total_damaged_qty += qty; d.total_damaged_value += Math.abs(m.total_value || 0);
+        const qty  = meta.original_quantity || Math.abs(m.quantity || 0);
+        d.total_damaged_qty   += qty;
+        d.total_damaged_value += Math.abs(m.total_value || 0);
       }
     });
+
     setInventoryWithMovements(inventoryData.map(item => ({
       ...item,
       returned_qty:   byItem[item.id]?.total_returned_qty   || 0,
@@ -670,25 +802,36 @@ function InventoryOverviewPage() {
 
   const filterInventory = () => {
     if (!currentUser) return;
+
     let filtered = (inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory)
       .filter(item => item.department === 'prodhan_com_e_commerce');
 
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.item_name?.toLowerCase().includes(q)    ||
-        item.category?.toLowerCase().includes(q)     ||
-        item.isbn?.toLowerCase().includes(q)         ||
-        item.author_name?.toLowerCase().includes(q)  ||
-        item.barcode?.toLowerCase().includes(q)      ||
-        (Array.isArray(item.variants) && item.variants.some(v =>
-          v.size?.toLowerCase().includes(q)          ||
-          v.color?.toLowerCase().includes(q)         ||
-          v.quality?.toLowerCase().includes(q)       ||
-          v.sku?.toLowerCase().includes(q)           ||
-          v.variant_name?.toLowerCase().includes(q)
-        ))
-      );
+      filtered = filtered.filter(item => {
+        if (
+          item.item_name?.toLowerCase().includes(q)   ||
+          item.category?.toLowerCase().includes(q)    ||
+          item.isbn?.toLowerCase().includes(q)        ||
+          item.author_name?.toLowerCase().includes(q) ||
+          item.barcode?.toLowerCase().includes(q)
+        ) return true;
+
+        // Also search inside variants
+        const variants = getVariants(item);
+        if (variants) {
+          return variants.some(v =>
+            v.size?.toLowerCase().includes(q)         ||
+            v.color?.toLowerCase().includes(q)        ||
+            v.colour?.toLowerCase().includes(q)       ||
+            v.quality?.toLowerCase().includes(q)      ||
+            v.sku?.toLowerCase().includes(q)          ||
+            v.variant_name?.toLowerCase().includes(q) ||
+            v.name?.toLowerCase().includes(q)
+          );
+        }
+        return false;
+      });
     }
 
     if (categoryFilter !== 'all') {
@@ -699,9 +842,9 @@ function InventoryOverviewPage() {
     }
 
     if (variantFilter === 'with_variants') {
-      filtered = filtered.filter(item => Array.isArray(item.variants) && item.variants.length > 0);
+      filtered = filtered.filter(item => !!getVariants(item));
     } else if (variantFilter === 'without_variants') {
-      filtered = filtered.filter(item => !Array.isArray(item.variants) || item.variants.length === 0);
+      filtered = filtered.filter(item => !getVariants(item));
     }
 
     setFilteredInventory(filtered);
@@ -709,7 +852,11 @@ function InventoryOverviewPage() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleFormSubmit = async (data) => {
-    if (!data) { setIsFormOpen(false); setEditingItem(null); await loadUserAndInventory(); return; }
+    if (!data) {
+      setIsFormOpen(false); setEditingItem(null);
+      await loadUserAndInventory();
+      return;
+    }
     try {
       if (editingItem) {
         await base44.entities.Inventory.update(editingItem.id, data);
@@ -719,7 +866,8 @@ function InventoryOverviewPage() {
         toast.success('Product added successfully');
       }
       setIsFormOpen(false); setEditingItem(null);
-      await loadUserAndInventory(); await loadTodaySales();
+      await loadUserAndInventory();
+      await loadTodaySales();
     } catch (err) {
       toast.error(`Failed to save product: ${err.message}`);
     }
@@ -734,7 +882,8 @@ function InventoryOverviewPage() {
       await base44.entities.Inventory.delete(itemToDelete.id);
       toast.success(`${itemToDelete.item_name} deleted successfully`);
       setDeleteConfirmOpen(false); setItemToDelete(null);
-      await loadUserAndInventory(); await loadTodaySales();
+      await loadUserAndInventory();
+      await loadTodaySales();
     } catch (err) {
       toast.error(`Failed to delete item: ${err.message}`);
     }
@@ -744,12 +893,16 @@ function InventoryOverviewPage() {
   const lowStockItems = useMemo(() => {
     const result = [];
     for (const item of filteredInventory) {
-      const variants = Array.isArray(item.variants) && item.variants.length > 0 ? item.variants : null;
+      const variants = getVariants(item);
       if (variants) {
         variants.forEach(v => {
           const s = getVariantStock(v);
           if (s < (item.minimum_stock ?? 0)) {
-            result.push({ ...item, current_stock: s, _variantLabel: buildVariantLabel(v) });
+            result.push({
+              ...item,
+              current_stock: s,
+              _variantLabel: buildVariantLabel(v)
+            });
           }
         });
       } else {
@@ -759,23 +912,31 @@ function InventoryOverviewPage() {
     return result;
   }, [filteredInventory]);
 
-  const displayedInventory = useMemo(() => filteredInventory.slice(0, displayLimit), [filteredInventory, displayLimit]);
+  const displayedInventory = useMemo(() =>
+    filteredInventory.slice(0, displayLimit),
+  [filteredInventory, displayLimit]);
 
   const stats = useMemo(() => {
-    let totalValue = 0;
+    let totalValue   = 0;
     let withVariants = 0;
     for (const item of filteredInventory) {
-      const variants = Array.isArray(item.variants) && item.variants.length > 0 ? item.variants : null;
+      const variants = getVariants(item);
       if (variants) {
         withVariants++;
         variants.forEach(v => {
-          totalValue += getVariantStock(v) * (v.price ?? v.selling_price ?? item.selling_price ?? 0);
+          const price = v.price ?? v.selling_price ?? v.unit_price ?? item.selling_price ?? 0;
+          totalValue += getVariantStock(v) * price;
         });
       } else {
         totalValue += (item.current_stock || 0) * (item.selling_price || 0);
       }
     }
-    return { total: filteredInventory.length, low_stock: lowStockItems.length, total_value: totalValue, with_variants: withVariants };
+    return {
+      total: filteredInventory.length,
+      low_stock: lowStockItems.length,
+      total_value: totalValue,
+      with_variants: withVariants,
+    };
   }, [filteredInventory, lowStockItems]);
 
   // ── Loading ───────────────────────────────────────────────────────────────────
@@ -803,7 +964,7 @@ function InventoryOverviewPage() {
           <span className="text-foreground font-medium">Inventory Overview</span>
         </div>
 
-        {/* Header */}
+        {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Inventory Overview</h1>
@@ -829,16 +990,38 @@ function InventoryOverviewPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { gradient: 'from-red-500 to-rose-400',    shadow: 'shadow-red-200',    icon: <Package className="w-5 h-5 text-white" />,     badge: 'bg-red-50 text-red-700 border-red-200',      badgeText: 'Products', value: stats.total,         label: 'Total Products' },
-            { gradient: 'from-amber-500 to-orange-400',shadow: 'shadow-amber-200',  icon: <AlertTriangle className="w-5 h-5 text-white" />,badge: stats.low_stock > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200', badgeText: stats.low_stock > 0 ? 'Alert' : 'Healthy', value: stats.low_stock, label: 'Low Stock' },
-            { gradient: 'from-emerald-500 to-green-400',shadow:'shadow-green-200',  icon: <span className="text-white text-lg font-bold">৳</span>, badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', badgeText: 'Value', value: `৳${(stats.total_value/1000).toFixed(0)}K`, label: 'Stock Value' },
-            { gradient: 'from-indigo-500 to-violet-400',shadow:'shadow-indigo-200', icon: <Layers className="w-5 h-5 text-white" />,       badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', badgeText: 'Variants', value: stats.with_variants, label: 'Products w/ Variants' },
+            {
+              gradient: 'from-red-500 to-rose-400', shadow: 'shadow-red-200',
+              icon: <Package className="w-5 h-5 text-white" />,
+              badge: 'bg-red-50 text-red-700 border-red-200', badgeText: 'Products',
+              value: stats.total, label: 'Total Products'
+            },
+            {
+              gradient: 'from-amber-500 to-orange-400', shadow: 'shadow-amber-200',
+              icon: <AlertTriangle className="w-5 h-5 text-white" />,
+              badge: stats.low_stock > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200',
+              badgeText: stats.low_stock > 0 ? 'Alert' : 'Healthy',
+              value: stats.low_stock, label: 'Low Stock'
+            },
+            {
+              gradient: 'from-emerald-500 to-green-400', shadow: 'shadow-green-200',
+              icon: <span className="text-white text-lg font-bold">৳</span>,
+              badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', badgeText: 'Value',
+              value: `৳${(stats.total_value / 1000).toFixed(0)}K`, label: 'Stock Value'
+            },
+            {
+              gradient: 'from-indigo-500 to-violet-400', shadow: 'shadow-indigo-200',
+              icon: <Layers className="w-5 h-5 text-white" />,
+              badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', badgeText: 'Variants',
+              value: stats.with_variants, label: 'w/ Variants'
+            },
           ].map((s, i) => (
             <Card key={i} className="bg-card border-0 shadow-sm rounded-2xl overflow-hidden relative">
               <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${s.gradient}`} />
               <CardContent className="p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center shadow-lg ${s.shadow}`}>
+                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${s.gradient}
+                                  flex items-center justify-center shadow-lg ${s.shadow}`}>
                     {s.icon}
                   </div>
                   <Badge className={`text-[10px] border ${s.badge}`}>{s.badgeText}</Badge>
@@ -868,9 +1051,12 @@ function InventoryOverviewPage() {
                   <Filter className="w-4 h-4" /><span className="font-medium">Category:</span>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  <Button variant={categoryFilter === 'all' ? 'default' : 'outline'} size="sm"
+                  <Button
+                    variant={categoryFilter === 'all' ? 'default' : 'outline'} size="sm"
                     onClick={() => setCategoryFilter('all')}
-                    className={categoryFilter === 'all' ? 'bg-violet-600' : ''}>All</Button>
+                    className={categoryFilter === 'all' ? 'bg-violet-600' : ''}>
+                    All
+                  </Button>
                   {categories.map(cat => (
                     <Button key={cat.id}
                       variant={categoryFilter === cat.slug ? 'default' : 'outline'} size="sm"
@@ -882,7 +1068,8 @@ function InventoryOverviewPage() {
                   ))}
                 </div>
                 {categoryFilter !== 'all' && (
-                  <Button variant="ghost" size="sm" onClick={() => setCategoryFilter('all')} className="text-slate-500">
+                  <Button variant="ghost" size="sm"
+                    onClick={() => setCategoryFilter('all')} className="text-slate-500">
                     <X className="w-4 h-4 mr-1" />Clear
                   </Button>
                 )}
@@ -903,7 +1090,9 @@ function InventoryOverviewPage() {
                   <Button key={opt.v}
                     variant={variantFilter === opt.v ? 'default' : 'outline'} size="sm"
                     onClick={() => setVariantFilter(opt.v)}
-                    className={variantFilter === opt.v ? 'bg-indigo-600 hover:bg-indigo-700' : 'text-slate-600'}>
+                    className={variantFilter === opt.v
+                      ? 'bg-indigo-600 hover:bg-indigo-700'
+                      : 'text-slate-600'}>
                     {opt.l}
                   </Button>
                 ))}
@@ -918,11 +1107,13 @@ function InventoryOverviewPage() {
         {/* Low Stock Panel */}
         <LowStockPanel lowStockItems={lowStockItems} todaySalesData={todaySalesData} />
 
-        {/* Mobile */}
+        {/* ── MOBILE ─────────────────────────────────────────────────────────── */}
         <div className="md:hidden space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-slate-900">Inventory</span>
-            <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredInventory.length}</Badge>
+            <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">
+              {filteredInventory.length}
+            </Badge>
           </div>
 
           {filteredInventory.length === 0 ? (
@@ -946,26 +1137,31 @@ function InventoryOverviewPage() {
           )}
 
           {displayedInventory.length < filteredInventory.length && (
-            <Button variant="outline" onClick={() => setDisplayLimit(p => p + 50)} className="w-full gap-2">
+            <Button variant="outline"
+              onClick={() => setDisplayLimit(p => p + 50)}
+              className="w-full gap-2">
               <RefreshCw className="w-4 h-4" />
               Load More ({filteredInventory.length - displayedInventory.length} remaining)
             </Button>
           )}
         </div>
 
-        {/* Desktop Table */}
+        {/* ── DESKTOP TABLE ───────────────────────────────────────────────────── */}
         <Card className="bg-card border-0 shadow-sm rounded-xl overflow-hidden hidden md:block">
           <CardHeader className="border-b border-slate-100 px-6 py-4">
             <CardTitle className="flex items-center gap-3 flex-wrap">
               <span className="text-lg font-semibold text-[#111827]">All Inventory Items</span>
-              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">{filteredInventory.length}</Badge>
+              <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-3">
+                {filteredInventory.length}
+              </Badge>
               {displayedInventory.length < filteredInventory.length && (
                 <span className="text-sm text-slate-400">showing {displayedInventory.length}</span>
               )}
               {stats.with_variants > 0 && (
-                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium rounded-full px-3 gap-1.5 inline-flex items-center">
+                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200
+                                 font-medium rounded-full px-3 gap-1.5 inline-flex items-center">
                   <Layers className="w-3 h-3" />
-                  {stats.with_variants} products with size/color variants — click to expand
+                  {stats.with_variants} have variants — click row to expand
                 </Badge>
               )}
             </CardTitle>
@@ -976,11 +1172,11 @@ function InventoryOverviewPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/50 border-b border-slate-100">
-                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-6 min-w-[300px]">
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-6 min-w-[320px]">
                       Item Name
                       {stats.with_variants > 0 && (
-                        <span className="ml-2 text-indigo-400 font-normal normal-case text-[10px]">
-                          · size chips inline · click to expand
+                        <span className="ml-1 text-indigo-400 font-normal normal-case text-[10px]">
+                          · size/color chips shown inline
                         </span>
                       )}
                     </TableHead>
@@ -989,7 +1185,9 @@ function InventoryOverviewPage() {
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Returns</TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Damages</TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">
-                      {canViewPurchasePrice ? 'Purchase' : <span className="flex items-center justify-end gap-1"><Lock className="w-3 h-3" />Purchase</span>}
+                      {canViewPurchasePrice
+                        ? 'Purchase'
+                        : <span className="flex items-center justify-end gap-1"><Lock className="w-3 h-3" />Purchase</span>}
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Selling</TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-center">Today's Sales</TableHead>
@@ -1023,7 +1221,9 @@ function InventoryOverviewPage() {
                   {displayedInventory.length < filteredInventory.length && (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-4">
-                        <Button variant="outline" onClick={() => setDisplayLimit(p => p + 50)} className="gap-2">
+                        <Button variant="outline"
+                          onClick={() => setDisplayLimit(p => p + 50)}
+                          className="gap-2">
                           <RefreshCw className="w-4 h-4" />
                           Load More ({filteredInventory.length - displayedInventory.length} remaining)
                         </Button>
@@ -1037,7 +1237,7 @@ function InventoryOverviewPage() {
         </Card>
       </div>
 
-      {/* Dialogs */}
+      {/* ── DIALOGS ──────────────────────────────────────────────────────────── */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="w-full max-w-[100vw] sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-y-auto p-0 rounded-none sm:rounded-xl m-0 sm:m-auto">
           <DialogHeader className="p-6 pb-0">
@@ -1047,7 +1247,11 @@ function InventoryOverviewPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="p-6 pt-4">
-            <InventoryForm item={editingItem} onSubmit={handleFormSubmit} onCancel={() => setIsFormOpen(false)} />
+            <InventoryForm
+              item={editingItem}
+              onSubmit={handleFormSubmit}
+              onCancel={() => setIsFormOpen(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -1063,17 +1267,25 @@ function InventoryOverviewPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{itemToDelete?.item_name}</strong> from your inventory. This action cannot be undone.
+              This will permanently delete{' '}
+              <strong>{itemToDelete?.item_name}</strong> from your inventory.
+              This action cannot be undone.
               {itemToDelete?.current_stock > 0 && (
                 <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
-                  <p className="text-orange-800 font-semibold">⚠️ Warning: This item has {itemToDelete.current_stock} units in stock.</p>
+                  <p className="text-orange-800 font-semibold">
+                    ⚠️ Warning: This item has {itemToDelete.current_stock} units in stock.
+                  </p>
                 </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
