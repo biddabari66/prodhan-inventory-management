@@ -1,0 +1,49 @@
+[version]
+schema = 2
+
+# ─── Backend API ──────────────────────────────────────────────────────────────
+[[services]]
+name = "backend"
+source.repo = "biddabari66/prodhan-inventory-management"
+source.branch = "main"
+
+[services.build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+buildCommand = ""
+
+[services.deploy]
+startCommand = "node dist/server.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+[services.variables]
+PORT = "3000"
+NODE_ENV = "production"
+
+# ─── Frontend ─────────────────────────────────────────────────────────────────
+[[services]]
+name = "frontend"
+source.repo = "biddabari66/prodhan-inventory-management"
+source.branch = "main"
+
+[services.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.frontend"
+
+[services.deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 20
+
+# ─── n8n Automation ───────────────────────────────────────────────────────────
+[[services]]
+name = "n8n"
+
+[services.source]
+image = "n8nio/n8n:latest"
+
+[services.deploy]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 60
