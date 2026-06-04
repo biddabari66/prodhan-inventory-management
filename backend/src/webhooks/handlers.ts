@@ -64,7 +64,7 @@ async function processLeadgenEvent(data: any) {
   const { leadgen_id, form_id, page_id, ad_id, campaign_name } = data;
 
   // Dedup check
-  const existing = await prisma.lead.findUnique({ where: { facebookLeadId: leadgen_id } });
+  const existing = await prisma.lead.findFirst({ where: { facebookLeadId: leadgen_id } });
   if (existing) {
     logger.info(`Duplicate Facebook lead skipped: ${leadgen_id}`);
     return;
@@ -93,6 +93,7 @@ async function processLeadgenEvent(data: any) {
     }
   }
 
+  const defaultTenant = await prisma.tenant.findFirst();
   await prisma.lead.create({
     data: {
       studentName: leadDetails.studentName || 'Facebook Lead',
@@ -107,6 +108,7 @@ async function processLeadgenEvent(data: any) {
       facebookCampaignName: campaign_name,
       leadStatus: 'NEW',
       priority: 'HIGH',
+      tenantId: defaultTenant?.id || '',
     },
   });
 
@@ -159,6 +161,7 @@ export const woocommerceWebhook = async (req: Request, res: Response): Promise<v
     const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
     const orderNumber = `WC-${datePart}-${rand}`;
 
+    const defaultTenant = await prisma.tenant.findFirst();
     await prisma.order.create({
       data: {
         orderNumber,
@@ -174,6 +177,7 @@ export const woocommerceWebhook = async (req: Request, res: Response): Promise<v
         paymentMethod: 'COD',
         orderStatus: 'PENDING',
         salesDayDate: new Date().toISOString().slice(0, 10),
+        tenantId: defaultTenant?.id || '',
       },
     });
 
@@ -185,7 +189,7 @@ export const woocommerceWebhook = async (req: Request, res: Response): Promise<v
   } catch (err: any) {
     logger.error('WooCommerce webhook error:', err.message);
     await prisma.webhookLog.create({
-      data: { source: 'WOOCOMMERCE', payload: body, status: 'FAILED', error: err.message },
+      data: { source: 'WOOCOMMERCE', payload: body, status: 'FAILED' },
     });
   }
 };
@@ -218,7 +222,7 @@ export const steadfastWebhook = async (req: Request, res: Response): Promise<voi
   } catch (err: any) {
     logger.error('Steadfast webhook error:', err.message);
     await prisma.webhookLog.create({
-      data: { source: 'STEADFAST', payload: body, status: 'FAILED', error: err.message },
+      data: { source: 'STEADFAST', payload: body, status: 'FAILED' },
     });
   }
 };
