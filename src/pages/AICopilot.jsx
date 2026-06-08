@@ -61,7 +61,7 @@ export default function AICopilot() {
   return (
     <div className="space-y-4 p-4 md:p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg">
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-600 to-orange-600 flex items-center justify-center shadow-lg">
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         <div>
@@ -91,17 +91,17 @@ export default function AICopilot() {
               <div className="h-[52vh] overflow-y-auto p-4 space-y-4">
                 {messages.map((m, i) => (
                   <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'user' ? 'bg-slate-200' : 'bg-gradient-to-br from-violet-600 to-indigo-600'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'user' ? 'bg-slate-200' : 'bg-gradient-to-br from-orange-600 to-orange-600'}`}>
                       {m.role === 'user' ? <UserIcon className="w-4 h-4 text-slate-600" /> : <Bot className="w-4 h-4 text-white" />}
                     </div>
-                    <div className={`rounded-2xl px-4 py-2.5 max-w-[80%] text-sm whitespace-pre-wrap ${m.role === 'user' ? 'bg-violet-600 text-white' : 'bg-muted'}`}>
+                    <div className={`rounded-2xl px-4 py-2.5 max-w-[80%] text-sm whitespace-pre-wrap ${m.role === 'user' ? 'bg-orange-600 text-white' : 'bg-muted'}`}>
                       {m.content}
                     </div>
                   </div>
                 ))}
                 {busy && (
                   <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center"><Bot className="w-4 h-4 text-white" /></div>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-600 to-orange-600 flex items-center justify-center"><Bot className="w-4 h-4 text-white" /></div>
                     <div className="rounded-2xl px-4 py-2.5 bg-muted"><Loader2 className="w-4 h-4 animate-spin" /></div>
                   </div>
                 )}

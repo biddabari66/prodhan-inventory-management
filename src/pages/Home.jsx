@@ -121,7 +121,7 @@ export default function Home() {
           value={bdt(finance?.revenue)}
           sub={`Profit ${bdt(finance?.profit)}`}
           icon={BarChart3}
-          accent="bg-violet-500"
+          accent="bg-orange-500"
           to="/FinanceDashboard"
         />
         <StatCard
@@ -153,15 +153,15 @@ export default function Home() {
               <AreaChart data={trend}>
                 <defs>
                   <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="date" fontSize={12} />
                 <YAxis fontSize={12} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} />
                 <Tooltip formatter={(v) => bdt(v)} />
-                <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" fill="url(#rev)" strokeWidth={2} />
+                <Area type="monotone" dataKey="revenue" stroke="#f97316" fill="url(#rev)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>

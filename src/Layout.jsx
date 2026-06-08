@@ -205,11 +205,11 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
             to={module.url}
             className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
             isActive(module.url) ?
-            'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
+            'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' :
             'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
             }>
 
-            <module.icon className={`w-5 h-5 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+            <module.icon className={`w-5 h-5 ${isActive(module.url) ? 'text-orange-600 dark:text-orange-400' : module.colorClass}`} />
           </Link>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-[100] shadow-lg">
             {module.label}
@@ -224,11 +224,11 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
         <button
           className={`nav-item-collapsed flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-all duration-200 ${
           isModuleActive() ?
-          'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' :
+          'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' :
           'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'}`
           }>
 
-          <module.icon className={`w-5 h-5 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
+          <module.icon className={`w-5 h-5 ${isModuleActive() ? 'text-orange-600 dark:text-orange-400' : module.colorClass}`} />
         </button>
         <div className="absolute left-full ml-3 top-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
           <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
@@ -241,11 +241,11 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
               to={subItem.url}
               className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
               isActive(subItem.url) ?
-              'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' :
+              'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium' :
               'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'}`
               }>
 
-                <subItem.icon className={`w-4 h-4 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
+                <subItem.icon className={`w-4 h-4 ${isActive(subItem.url) ? 'text-orange-600 dark:text-orange-400' : subItem.colorClass}`} />
                 <span>{subItem.label}</span>
               </Link>
             )}
@@ -264,8 +264,8 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
         isMobile ? 'min-h-[52px]' : 'min-h-[44px]'} ${
         isActive(module.url) ? 'active' : ''}`}>
 
-        <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+        <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive(module.url) ? 'text-orange-600 dark:text-orange-400' : module.colorClass}`} />
+        <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isActive(module.url) ? 'text-orange-600 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
       </Link>);
 
   }
@@ -279,8 +279,8 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
         isModuleActive() ? 'active' : ''}`}>
 
         <div className="flex items-center gap-3">
-          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isModuleActive() ? 'text-orange-600 dark:text-orange-400' : module.colorClass}`} />
+          <span className={`font-semibold ${isMobile ? 'text-base' : 'text-[15px]'} ${isModuleActive() ? 'text-orange-600 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
         </div>
         <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
       </button>
@@ -294,11 +294,11 @@ const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
           className={`nav-sub-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
           isMobile ? 'min-h-[44px] text-sm' : 'min-h-[36px] text-[14px]'} ${
           isActive(subItem.url) ?
-          'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' :
+          'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-semibold' :
           'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 font-medium'}`
           }>
 
-              <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-indigo-600 dark:text-indigo-400' : subItem.colorClass}`} />
+              <subItem.icon className={`w-4 h-4 flex-shrink-0 ${isActive(subItem.url) ? 'text-orange-600 dark:text-orange-400' : subItem.colorClass}`} />
               <span>{subItem.label}</span>
             </Link>
         )}
@@ -744,7 +744,7 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
 
     const baseModules = [
-    { label: t('Dashboard'), url: createPageUrl('Home'), icon: LayoutDashboard, colorClass: 'text-indigo-600', permission: 'inventory_overview' },
+    { label: t('Dashboard'), url: createPageUrl('Home'), icon: LayoutDashboard, colorClass: 'text-orange-600', permission: 'inventory_overview' },
     { label: t('Zypra Copilot'), url: createPageUrl('AICopilot'), icon: Sparkles, colorClass: 'text-violet-600', permission: 'inventory_overview' },
     { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: Package, colorClass: 'text-red-600', permission: 'inventory_overview' },
     { label: t('Barcode Scan'), url: createPageUrl('BarcodeScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
@@ -753,14 +753,14 @@ export default function Layout({ children, currentPageName }) {
     { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
     { label: t('Discount Offers'), url: createPageUrl('DiscountCampaigns'), icon: Sparkles, colorClass: 'text-amber-500', permission: 'discount_campaigns' },
     { label: t('Marketing ROI'), url: createPageUrl('MarketingROI'), icon: TrendingUp, colorClass: 'text-pink-600', permission: 'marketing_roi' },
-    { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-indigo-600', permission: 'purchase_orders' },
+    { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-orange-600', permission: 'purchase_orders' },
     { label: t('Production House'), url: createPageUrl('ProductionHouse'), icon: Briefcase, colorClass: 'text-purple-600', permission: 'production_house' },
     { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-red-500', permission: 'inventory_movements' },
     { label: t('Returns & Damages'), url: createPageUrl('InventoryReturns'), icon: PackageX, colorClass: 'text-amber-600', permission: 'inventory_returns' },
     { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
     { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-red-700', permission: 'inventory_suppliers' },
     { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
-    { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-indigo-600', permission: 'attendance' },
+    { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-orange-600', permission: 'attendance' },
     { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
     { label: t('Payroll'), url: createPageUrl('Payroll'), icon: Calculator, colorClass: 'text-green-600', permission: 'payroll' },
     { label: t('Expenses'), url: createPageUrl('Expenses'), icon: Wallet, colorClass: 'text-rose-600', permission: 'expenses' },
@@ -907,11 +907,11 @@ export default function Layout({ children, currentPageName }) {
         <Link
           to={module.url}
           className={`nav-item group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isActive ? 'active bg-indigo-50 dark:bg-indigo-900/30' : ''}`
+          isActive ? 'active bg-orange-50 dark:bg-orange-900/30' : ''}`
           }>
 
-          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : module.colorClass}`} />
-          <span className={`font-semibold text-[15px] ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
+          <module.icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-orange-600 dark:text-orange-400' : module.colorClass}`} />
+          <span className={`font-semibold text-[15px] ${isActive ? 'text-orange-600 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'}`}>{module.label}</span>
         </Link>
       </div>);
 
@@ -1597,8 +1597,8 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                            <span className="text-white font-extrabold text-lg tracking-tight">Z</span>
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                            <Zap className="w-6 h-6 text-white" fill="white" />
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">

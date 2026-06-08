@@ -44,15 +44,15 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900">
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-orange-900 to-orange-900">
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-r from-orange-500/30 to-purple-500/30 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-pink-500/20 to-orange-500/20 rounded-full blur-3xl animate-pulse" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
         <Card className="bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
           <CardHeader className="text-center pb-4 pt-10">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-600 to-orange-600 rounded-2xl shadow-lg flex items-center justify-center">
               <LogIn className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">ZYPRA ERP</h1>
@@ -101,7 +101,7 @@ export default function AuthPage() {
               <Button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+                className="w-full bg-gradient-to-r from-orange-600 to-orange-600 hover:from-orange-700 hover:to-orange-700"
               >
                 {isLoggingIn ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Signing in…</>

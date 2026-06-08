@@ -193,15 +193,16 @@ router.patch('/notifications/:id/read', authenticate, async (req: any, res) => {
 });
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-router.get('/dashboard/stats', authenticate, apiLimiter, async (_req, res) => {
+router.get('/dashboard/stats', authenticate, apiLimiter, async (req: any, res) => {
   const { default: prisma } = await import('../config/db');
   const today = new Date().toISOString().slice(0, 10);
+  const tenantId = req.user?.tenantId;
 
   const [todayOrders, todayRevenue, newLeads, lowStockCount] = await Promise.all([
-    prisma.order.count({ where: { salesDayDate: today } }),
-    prisma.order.aggregate({ where: { salesDayDate: today }, _sum: { totalAmount: true } }),
-    prisma.lead.count({ where: { leadStatus: 'NEW' } }),
-    prisma.$queryRaw<[{ count: bigint }]>`SELECT COUNT(*) FROM "Inventory" WHERE stock <= "minStockLevel" AND "isActive" = true`,
+    prisma.order.count({ where: { tenantId, salesDayDate: today } }),
+    prisma.order.aggregate({ where: { tenantId, salesDayDate: today }, _sum: { totalAmount: true } }),
+    prisma.lead.count({ where: { tenantId, leadStatus: 'NEW' } }),
+    prisma.$queryRaw<[{ count: bigint }]>`SELECT COUNT(*) FROM "Inventory" WHERE "tenantId" = ${tenantId} AND stock <= "minStockLevel" AND "isActive" = true`,
   ]);
 
   res.json({
