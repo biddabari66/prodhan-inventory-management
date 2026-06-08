@@ -776,10 +776,16 @@ export default function Layout({ children, currentPageName }) {
 
 
 
-    return baseModules.filter((module) => {
+    const visible = baseModules.filter((module) => {
       const permissionKey = module.permission || getPermissionKey(module.url?.split('/').pop()?.split('?')[0] || module.label);
       return hasPermission(permissionKey);
     });
+
+    // Platform owner only (SaaS super admin): tenant + subscription management.
+    if ((currentUser?.job_role || '').toUpperCase() === 'SUPER_ADMIN') {
+      visible.push({ label: t('Platform Admin'), url: createPageUrl('SuperAdmin'), icon: Shield, colorClass: 'text-fuchsia-600', permission: 'inventory_overview' });
+    }
+    return visible;
   }, [currentUser, userPermissions, currentLanguage, t, createPageUrl, hasPermission, getPermissionKey]);
 
   if (isAuthPage) {

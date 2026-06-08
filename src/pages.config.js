@@ -86,6 +86,8 @@ import ManualReporting from './pages/ManualReporting';
 import MarketingROI from './pages/MarketingROI';
 import MyAttendance from './pages/MyAttendance';
 import NotificationPreferences from './pages/NotificationPreferences';
+import Onboarding from './pages/Onboarding';
+import SuperAdmin from './pages/SuperAdmin';
 import NotificationSettings from './pages/NotificationSettings';
 import Payroll from './pages/Payroll';
 import PayrollReport from './pages/PayrollReport';
@@ -153,6 +155,8 @@ export const PAGES = {
     "MarketingROI": MarketingROI,
     "MyAttendance": MyAttendance,
     "NotificationPreferences": NotificationPreferences,
+    "Onboarding": Onboarding,
+    "SuperAdmin": SuperAdmin,
     "NotificationSettings": NotificationSettings,
     "Payroll": Payroll,
     "PayrollReport": PayrollReport,

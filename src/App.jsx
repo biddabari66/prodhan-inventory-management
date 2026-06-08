@@ -1,11 +1,13 @@
 import './App.css'
+import React, { useEffect, useState } from 'react'
+import api from '@/api/client'
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -24,6 +26,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isAuthenticated } = useAuth();
+  const location = useLocation();
 
   // Show loading spinner while checking auth
   if (isLoadingAuth) {
@@ -34,9 +37,38 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Not signed in → show the login screen (no layout chrome).
+  // Not signed in → marketing Landing page, except on /Auth which shows login.
   if (!isAuthenticated) {
-    return <Pages.Auth />;
+    const path = (location.pathname || '').toLowerCase();
+    if (path.startsWith('/auth')) return <Pages.Auth />;
+    return <Landing />;
+  }
+
+  return <OnboardingGate />;
+};
+
+// Force first-time tenants through the onboarding wizard before the app.
+const OnboardingGate = () => {
+  const [state, setState] = useState('loading'); // loading | onboard | ready
+
+  useEffect(() => {
+    let alive = true;
+    api.get('/onboarding/status')
+      .then((r) => { if (alive) setState(r.data?.onboardingCompleted === false ? 'onboard' : 'ready'); })
+      .catch(() => { if (alive) setState('ready'); }); // fail open — never lock the user out
+    return () => { alive = false; };
+  }, []);
+
+  if (state === 'loading') {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (state === 'onboard') {
+    return <Pages.Onboarding />;
   }
 
   // Render the main app

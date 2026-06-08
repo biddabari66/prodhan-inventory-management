@@ -11,6 +11,7 @@ import * as attendanceCtrl from '../controllers/attendance.controller';
 import * as payrollCtrl from '../controllers/payroll.controller';
 import * as financeCtrl from '../controllers/finance.controller';
 import * as scanCtrl from '../controllers/scan.controller';
+import * as platformCtrl from '../controllers/platform.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
@@ -207,6 +208,17 @@ router.get('/dashboard/stats', authenticate, apiLimiter, async (_req, res) => {
     lowStockAlerts: Number(lowStockCount[0]?.count ?? 0),
   });
 });
+
+// ─── Onboarding (first-login wizard) ──────────────────────────────────────────
+router.get('/onboarding/status', authenticate, apiLimiter, platformCtrl.getOnboardingStatus);
+router.post('/onboarding', authenticate, apiLimiter, platformCtrl.completeOnboarding);
+
+// ─── Platform admin (SaaS owner: tenants + subscriptions) ─────────────────────
+router.use('/admin', authenticate, apiLimiter, requireRole('SUPER_ADMIN'));
+router.get('/admin/metrics', platformCtrl.platformMetrics);
+router.get('/admin/tenants', platformCtrl.listTenants);
+router.get('/admin/tenants/:id', platformCtrl.getTenant);
+router.patch('/admin/tenants/:id', platformCtrl.updateTenant);
 
 // ─── Generic tenant-scoped resources ─────────────────────────────────────────
 // These back the frontend entity proxy for models without bespoke controllers.

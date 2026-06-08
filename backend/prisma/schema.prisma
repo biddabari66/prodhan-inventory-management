@@ -254,6 +254,15 @@ model Tenant {
   paymentMethod   String? // e.g. 'BKASH'
   paymentNotes    String?
 
+  // Onboarding profile (collected on first login)
+  industry            String?
+  employeeCount       String? // bucket e.g. "1-10", "11-50"
+  hearAboutUs         String?
+  country             String?
+  website             String?
+  onboardingCompleted Boolean   @default(false)
+  onboardingCompletedAt DateTime?
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
