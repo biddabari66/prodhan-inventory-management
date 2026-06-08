@@ -1597,8 +1597,8 @@ export default function Layout({ children, currentPageName }) {
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                            <img src={NEW_LOGO_URL} alt="ZYPRA ERP" className="w-7 h-7" />
+                <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                            <span className="text-white font-extrabold text-lg tracking-tight">Z</span>
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">
