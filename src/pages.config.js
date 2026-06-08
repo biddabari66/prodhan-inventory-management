@@ -65,6 +65,7 @@ import EmailNotifications from './pages/EmailNotifications';
 import EmployeeAttendance from './pages/EmployeeAttendance';
 import Employees from './pages/Employees';
 import ExpenseApprovals from './pages/ExpenseApprovals';
+import Expenses from './pages/Expenses';
 import ExportCenter from './pages/ExportCenter';
 import FacebookLeadsWebhook from './pages/FacebookLeadsWebhook';
 import FeludaAnalytics from './pages/FeludaAnalytics';
@@ -130,6 +131,7 @@ export const PAGES = {
     "EmployeeAttendance": EmployeeAttendance,
     "Employees": Employees,
     "ExpenseApprovals": ExpenseApprovals,
+    "Expenses": Expenses,
     "ExportCenter": ExportCenter,
     "FacebookLeadsWebhook": FacebookLeadsWebhook,
     "FeludaAnalytics": FeludaAnalytics,

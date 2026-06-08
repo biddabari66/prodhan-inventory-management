@@ -126,6 +126,7 @@ router.get('/finance/expenses', financeCtrl.listExpenses);
 router.post('/finance/expenses', requirePermission('expenses:create'), financeCtrl.createExpense);
 router.patch('/finance/expenses/:id/approve', requirePermission('expenses:approve'), financeCtrl.approveExpense);
 router.patch('/finance/expenses/:id/reject', requirePermission('expenses:reject'), financeCtrl.rejectExpense);
+router.patch('/finance/expenses/:id/sign-requisition', requireRole('SUPER_ADMIN', 'ADMIN', 'FINANCE_HEAD'), financeCtrl.signRequisition);
 router.get('/finance/expenses/summary', financeCtrl.expenseSummary);
 
 // Income

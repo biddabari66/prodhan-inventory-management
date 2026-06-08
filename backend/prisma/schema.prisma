@@ -739,6 +739,16 @@ model Expense {
   tags               String[]       @default([])
   isRecurring        Boolean        @default(false)
   recurringFrequency String?
+
+  // Invoice + requisition (MD sign-off) workflow
+  invoiceNumber      String?
+  requisitionNumber  String?
+  requisitionStatus  String?  @default("none") // none | pending_md | signed | rejected
+  mdApprovedById     String?
+  mdApprovedByName   String?
+  mdApprovedAt       DateTime?
+  mdRemarks          String?
+
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 

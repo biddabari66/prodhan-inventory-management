@@ -97,9 +97,43 @@ export const approveExpense = async (req: AuthenticatedRequest, res: Response): 
   if (!expense) throw new AppError(404, 'Expense not found');
   if (expense.status !== 'PENDING') throw new AppError(400, 'Only PENDING expenses can be approved');
 
+  const stamp = Date.now().toString().slice(-6);
   const updated = await prisma.expense.update({
     where: { id: req.params.id },
-    data: { status: 'APPROVED', approvedById: req.user.id },
+    data: {
+      status: 'APPROVED',
+      approvedById: req.user.id,
+      invoiceNumber: expense.invoiceNumber || `INV-${stamp}`,
+      requisitionNumber: expense.requisitionNumber || `REQ-${stamp}`,
+      requisitionStatus: 'pending_md',
+    },
+  });
+  res.json(updated);
+};
+
+// MD signs the requisition (final approval to release funds).
+export const signRequisition = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+
+  const { action, remarks } = z
+    .object({ action: z.enum(['sign', 'reject']).default('sign'), remarks: z.string().optional() })
+    .parse(req.body);
+
+  const expense = await prisma.expense.findFirst({
+    where: { id: req.params.id, tenantId: req.user.tenantId },
+  });
+  if (!expense) throw new AppError(404, 'Expense not found');
+  if (expense.status !== 'APPROVED') throw new AppError(400, 'Expense must be admin-approved before MD sign-off');
+
+  const updated = await prisma.expense.update({
+    where: { id: req.params.id },
+    data: {
+      requisitionStatus: action === 'sign' ? 'signed' : 'rejected',
+      mdApprovedById: req.user.id,
+      mdApprovedByName: req.user.displayName,
+      mdApprovedAt: new Date(),
+      mdRemarks: remarks,
+    },
   });
   res.json(updated);
 };

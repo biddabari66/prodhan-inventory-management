@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission } from '../components/common/PermissionGuard';
+import LeadExcelUpload from '../components/crm/LeadExcelUpload';
 import { format, subDays, differenceInDays } from 'date-fns';
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -216,13 +217,16 @@ function CRMPage() {
               <p className="text-slate-500 text-sm">Lead management & sales pipeline</p>
             </div>
           </div>
-          <Button 
-            onClick={() => setIsAddLeadOpen(true)}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Lead
-          </Button>
+          <div className="flex items-center gap-2">
+            <LeadExcelUpload onComplete={() => queryClient.invalidateQueries({ queryKey: ['crm-leads'] })} />
+            <Button
+              onClick={() => setIsAddLeadOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Lead
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}
