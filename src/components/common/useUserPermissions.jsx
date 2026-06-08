@@ -20,8 +20,9 @@ export const useUserPermissions = () => {
       const currentUser = await User.me();
       setUser(currentUser);
 
-      // Super Admin and Admin have all permissions
-      if (['super_admin', 'admin'].includes(currentUser?.job_role)) {
+      // Super Admin and Admin have all permissions (case-insensitive)
+      const jr = (currentUser?.job_role || '').toLowerCase();
+      if (jr === 'super_admin' || jr === 'admin' || currentUser?.role === 'admin') {
         const allPermissions = {
           inventory_overview: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           sales: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
@@ -71,13 +72,20 @@ export const useUserPermissions = () => {
   };
 
   const hasPermission = useCallback((module, action = 'can_view') => {
-    // Super Admin and Admin bypass
-    if (['super_admin', 'admin'].includes(user?.job_role)) return true;
+    // Super Admin and Admin bypass (case-insensitive)
+    const jr = (user?.job_role || '').toLowerCase();
+    if (jr === 'super_admin' || jr === 'admin' || user?.role === 'admin') return true;
     return permissions[module]?.[action] === true;
-  }, [user?.job_role, permissions]);
+  }, [user?.job_role, user?.role, permissions]);
 
-  const isSuperAdmin = useMemo(() => user?.job_role === 'super_admin', [user?.job_role]);
-  const isAdmin = useMemo(() => ['super_admin', 'admin'].includes(user?.job_role), [user?.job_role]);
+  const isSuperAdmin = useMemo(
+    () => (user?.job_role || '').toLowerCase() === 'super_admin',
+    [user?.job_role]
+  );
+  const isAdmin = useMemo(() => {
+    const jr = (user?.job_role || '').toLowerCase();
+    return jr === 'super_admin' || jr === 'admin' || user?.role === 'admin';
+  }, [user?.job_role, user?.role]);
 
   return {
     user,

@@ -71,7 +71,15 @@ async function bootstrap() {
     logger.info('✅ Database connected');
 
     const { redis } = await import('./config/redis');
-    await redis.connect();
+    if (redis) {
+      try {
+        await redis.connect();
+      } catch (e) {
+        logger.warn('Redis unavailable — continuing without it');
+      }
+    } else {
+      logger.info('Redis not configured — skipping');
+    }
 
     startCronJobs();
 

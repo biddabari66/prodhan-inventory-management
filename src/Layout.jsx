@@ -313,7 +313,9 @@ export default function Layout({ children, currentPageName }) {
   const [userPermissions, setUserPermissions] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile-first: closed by default
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    typeof window !== 'undefined' && window.innerWidth >= 768
+  ); // Open by default on desktop/tablet, closed on mobile
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [theme, setTheme] = useState('light');
   const [currentLanguage, setCurrentLanguage] = useState('en');
@@ -405,7 +407,7 @@ export default function Layout({ children, currentPageName }) {
       }
 
       logoutAttempted = true;
-      await User.logout();
+      await erp.auth.logout();
 
       toast.success("Successfully signed out!");
 
@@ -482,7 +484,7 @@ export default function Layout({ children, currentPageName }) {
     try {
       console.log('🔄 Fetching fresh user data from server...');
 
-      let user = await User.me();
+      let user = await erp.auth.me();
 
       if (!user) {
         console.warn("No user found. Redirecting to login page.");
@@ -501,7 +503,7 @@ export default function Layout({ children, currentPageName }) {
 
           if (response.data && response.data.employee_id) {
             toast.success(`Employee ID generated: ${response.data.employee_id}`);
-            user = await User.me();
+            user = await erp.auth.me();
           }
         } catch (genError) {
           console.error("Could not generate Employee ID:", genError);
@@ -514,8 +516,14 @@ export default function Layout({ children, currentPageName }) {
       // Cache user data for next visit
       localStorage.setItem('cached_user_data', JSON.stringify(user));
 
-      // Load permissions in background
-      const permissions = await UserPermission.filter({ user_id: user.id });
+      // Load permissions in background (fail-safe: never block the layout)
+      let permissions = [];
+      try {
+        permissions = await UserPermission.filter({ user_id: user.id });
+      } catch (permErr) {
+        console.warn('Permission fetch failed, defaulting to role-based access:', permErr?.message);
+        permissions = [];
+      }
       const permissionsMap = {};
 
       permissions.forEach((p) => {
@@ -529,7 +537,10 @@ export default function Layout({ children, currentPageName }) {
         };
       });
 
-      if (permissions.length === 0 && user.job_role === 'admin') {
+      const isAdminUser =
+        user.role === 'admin' ||
+        ['admin', 'ADMIN', 'SUPER_ADMIN'].includes(user.job_role);
+      if (permissions.length === 0 && isAdminUser) {
         const adminPermissions = {
           dashboard: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
           crm: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, can_export: true },
@@ -599,11 +610,11 @@ export default function Layout({ children, currentPageName }) {
       const checkSessionAndRedirect = async () => {
         setIsLoading(true);
         try {
-          const user = await User.me();
+          const user = await erp.auth.me();
           if (user) {
             setCurrentUser(user);
-            console.log("Logged in user found on auth page. Redirecting to Inventory Overview.");
-            window.location.href = createPageUrl('InventoryOverview');
+            console.log("Logged in user found on auth page. Redirecting to Dashboard.");
+            window.location.href = createPageUrl('Home');
           } else {
             console.log("No active session on auth page. Rendering login/auth content.");
           }
@@ -622,7 +633,7 @@ export default function Layout({ children, currentPageName }) {
   // Mobile-first sidebar behavior — ALWAYS closed on mobile
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 768) {
         setIsSidebarOpen(true);
       } else {
         setIsSidebarOpen(false);
@@ -635,7 +646,7 @@ export default function Layout({ children, currentPageName }) {
 
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
-    if (isSidebarOpen && window.innerWidth < 1024) {
+    if (isSidebarOpen && window.innerWidth < 768) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -645,7 +656,7 @@ export default function Layout({ children, currentPageName }) {
 
   // Close mobile sidebar when navigating
   useEffect(() => {
-    if (window.innerWidth < 1024) {
+    if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
   }, [location.pathname]);
@@ -732,7 +743,8 @@ export default function Layout({ children, currentPageName }) {
     const isMobile = window.innerWidth < 1024;
 
     const baseModules = [
-    { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: LayoutDashboard, colorClass: 'text-red-600', permission: 'inventory_overview' },
+    { label: t('Dashboard'), url: createPageUrl('Home'), icon: LayoutDashboard, colorClass: 'text-indigo-600', permission: 'inventory_overview' },
+    { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: Package, colorClass: 'text-red-600', permission: 'inventory_overview' },
     { label: t('QR Scan'), url: createPageUrl('QRInventory'), icon: QrCode, colorClass: 'text-rose-600', permission: 'inventory_overview' },
     { label: t('Scan & Ship'), url: createPageUrl('LogisticsScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
     { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
@@ -1567,22 +1579,22 @@ export default function Layout({ children, currentPageName }) {
           )}
 
           {/* Professional Fixed Sidebar - Clean Enterprise Design */}
-          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-200 dark:border-[hsl(225,15%,14%)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] lg:w-[260px] lg:max-w-[260px]
-            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-200 dark:border-[hsl(225,15%,14%)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] md:w-[260px] md:max-w-[260px]
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             onClick={(e) => e.stopPropagation()}>
             
             {/* Premium Sidebar Header */}
             <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
                 <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                            <img src={NEW_LOGO_URL} alt="Prodhan Inventory" className="w-7 h-7" />
+                            <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">
                     <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      PIM
+                      Bee ERP
                     </span>
-                    <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Prodhan Inventory
+                    <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Business Suite
 
                   </span>
                   </div>
@@ -1591,7 +1603,7 @@ export default function Layout({ children, currentPageName }) {
               <button
                 data-sidebar-close
                 onClick={() => setIsSidebarOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden h-10 w-10 p-0 rounded-lg flex items-center justify-center flex-shrink-0"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden h-10 w-10 p-0 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ WebkitTapHighlightColor: 'transparent' }}>
                 <X className="w-5 h-5" />
               </button>
@@ -1676,7 +1688,7 @@ export default function Layout({ children, currentPageName }) {
           </aside>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 lg:pb-0 bg-slate-50 dark:bg-[hsl(225,25%,8%)] lg:ml-[260px]">
+          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 md:pb-0 bg-slate-50 dark:bg-[hsl(225,25%,8%)] md:ml-[260px]">
             
             {/* Professional Header */}
             <header className="header h-12 sm:h-14 lg:h-16 px-2 sm:px-4 lg:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
@@ -1702,7 +1714,7 @@ export default function Layout({ children, currentPageName }) {
                   onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors h-8 w-8 sm:h-9 sm:w-9 touch-manipulation lg:hidden">
+                  className="text-muted-foreground hover:text-foreground transition-colors h-8 w-8 sm:h-9 sm:w-9 touch-manipulation md:hidden">
                   <Menu className="w-5 h-5" />
                 </Button>
                 

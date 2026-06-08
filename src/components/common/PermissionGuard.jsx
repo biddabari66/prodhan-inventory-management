@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User } from '@/entities/User';
+import { erp } from '@/api/erpClient';
 import { UserPermission } from '@/entities/UserPermission';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -18,9 +18,14 @@ import { Button } from '@/components/ui/button';
  * - Clean unauthorized UI with helpful messaging
  */
 
-// Super Admin has unrestricted access to ALL modules and features
+// Super Admin / Admin have unrestricted access to ALL modules and features
 const isSuperAdmin = (user) => {
-  return user?.job_role === 'super_admin';
+  const jr = (user?.job_role || '').toLowerCase();
+  return (
+    jr === 'super_admin' ||
+    jr === 'admin' ||
+    user?.role === 'admin'
+  );
 };
 
 // Check if user can view sensitive financial data
@@ -48,7 +53,7 @@ export const withPermission = (WrappedComponent, module, permission = 'can_view'
 
     const checkPermission = async () => {
       try {
-        const user = await User.me();
+        const user = await erp.auth.me();
         setCurrentUser(user);
 
         // Super Admin bypasses ALL permission checks
@@ -183,7 +188,7 @@ export const usePermission = (module, permission = 'can_view') => {
 
   const checkPermission = async () => {
     try {
-      const currentUser = await User.me();
+      const currentUser = await erp.auth.me();
       setUser(currentUser);
 
       // Super Admin bypass
@@ -241,7 +246,7 @@ export const FinancialDataGate = ({ children, fallback = null }) => {
 
   const checkFinancialAccess = async () => {
     try {
-      const user = await User.me();
+      const user = await erp.auth.me();
       setCanView(canViewFinancialData(user));
     } catch (error) {
       console.error('Financial access check error:', error);
@@ -276,7 +281,7 @@ export const useConfidentialPermission = (confidentialField) => {
     let cancelled = false;
     const check = async () => {
       try {
-        const user = await User.me();
+        const user = await erp.auth.me();
         // Super admin always has access
         if (isSuperAdmin(user)) { setCanView(true); setIsLoading(false); return; }
         // Check user permissions records for the confidential flag
