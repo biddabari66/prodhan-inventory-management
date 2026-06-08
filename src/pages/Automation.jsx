@@ -152,7 +152,7 @@ export default function Automation() {
             <WebhookIcon className="h-6 w-6" /> Automation &amp; Webhooks
           </h1>
           <p className="text-muted-foreground text-sm">
-            Connect Bee ERP to n8n, Zapier, or any HTTP endpoint to automate your workflows.
+            Connect ZYPRA ERP to n8n, Zapier, or any HTTP endpoint to automate your workflows.
           </p>
         </div>
       </div>

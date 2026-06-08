@@ -125,7 +125,7 @@ export default function ReportComments({ report, currentUser, onCommentAdded }) 
           if (reportSubmitter?.whatsapp_activated) {
             await sendWhatsAppMessage({
               recipientUserId: report.submitted_by_id,
-              messageContent: `You have a new comment on your "${report.template_name}" report from ${currentUser.full_name}:\n\n"${newComment}"\n\nPlease check your Bee ERP dashboard for full details.`,
+              messageContent: `You have a new comment on your "${report.template_name}" report from ${currentUser.full_name}:\n\n"${newComment}"\n\nPlease check your ZYPRA ERP dashboard for full details.`,
               messageType: 'report_comment'
             });
           }

@@ -657,7 +657,7 @@ const exportToPDF = (report, template, reportRef) => {
         ${content}
 
         <div class="footer">
-          <p>Generated on ${format(new Date(), 'PPP')} | Bee ERP System</p>
+          <p>Generated on ${format(new Date(), 'PPP')} | ZYPRA ERP System</p>
           <p>This is a computer-generated report</p>
         </div>
       </body>
@@ -944,7 +944,7 @@ export default function ManualReportingPage() {
                 type: 'system_notification',
                 data: {
                   title: 'New Manual Report Submitted',
-                  message: `${currentUser.display_name || currentUser.full_name} has submitted a new manual report titled "${selectedTemplate.template_name}" for ${format(new Date(reportDate), 'PPP')}. You can review it in the Bee ERP system.`,
+                  message: `${currentUser.display_name || currentUser.full_name} has submitted a new manual report titled "${selectedTemplate.template_name}" for ${format(new Date(reportDate), 'PPP')}. You can review it in the ZYPRA ERP system.`,
                   actionUrl: `${window.location.origin}/ManualReporting`
                 }
               }

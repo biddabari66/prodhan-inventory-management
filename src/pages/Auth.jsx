@@ -55,7 +55,7 @@ export default function AuthPage() {
             <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center">
               <LogIn className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Bee ERP</h1>
+            <h1 className="text-2xl font-bold text-slate-900">ZYPRA ERP</h1>
             <p className="text-sm text-slate-500 mt-1">Sign in to your workspace</p>
           </CardHeader>
           <CardContent className="px-8 pb-10">

@@ -745,6 +745,7 @@ export default function Layout({ children, currentPageName }) {
 
     const baseModules = [
     { label: t('Dashboard'), url: createPageUrl('Home'), icon: LayoutDashboard, colorClass: 'text-indigo-600', permission: 'inventory_overview' },
+    { label: t('Zypra Copilot'), url: createPageUrl('AICopilot'), icon: Sparkles, colorClass: 'text-violet-600', permission: 'inventory_overview' },
     { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: Package, colorClass: 'text-red-600', permission: 'inventory_overview' },
     { label: t('Barcode Scan'), url: createPageUrl('BarcodeScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
     { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
@@ -1597,12 +1598,12 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
               <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
                 <div className="bg-rose-100 rounded-xl w-12 h-12 from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                            <img src={NEW_LOGO_URL} alt="Bee ERP" className="w-7 h-7" />
+                            <img src={NEW_LOGO_URL} alt="ZYPRA ERP" className="w-7 h-7" />
                 </div>
                 {isSidebarOpen &&
                 <div className="min-w-0">
                     <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      Bee ERP
+                      ZYPRA ERP
                     </span>
                     <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Business Suite
 

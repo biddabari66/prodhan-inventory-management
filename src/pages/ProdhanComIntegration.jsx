@@ -79,7 +79,7 @@ function ProdhanComIntegrationPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Prodhan.com Integration</h1>
-            <p className="text-slate-600 mt-1">Automatic order synchronization from Prodhan.com to BEE ERP</p>
+            <p className="text-slate-600 mt-1">Automatic order synchronization from Prodhan.com to ZYPRA ERP</p>
           </div>
         </div>
 
@@ -134,7 +134,7 @@ function ProdhanComIntegrationPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-slate-600">
-                  Configure this URL in your Prodhan.com backend to send orders automatically to BEE ERP:
+                  Configure this URL in your Prodhan.com backend to send orders automatically to ZYPRA ERP:
                 </p>
                 <div className="flex gap-2">
                   <Input

@@ -87,7 +87,7 @@ const steps = [
   {
     n: '01',
     title: 'Sign up free in minutes',
-    desc: 'Create your Bee ERP workspace, add your team and import data from Excel — no credit card needed.',
+    desc: 'Create your ZYPRA ERP workspace, add your team and import data from Excel — no credit card needed.',
   },
   {
     n: '02',
@@ -104,7 +104,7 @@ const steps = [
 const testimonials = [
   {
     quote:
-      'Bee ERP replaced four different tools for us. Our stock counts finally match reality and payroll takes minutes, not days.',
+      'ZYPRA ERP replaced four different tools for us. Our stock counts finally match reality and payroll takes minutes, not days.',
     name: 'Rafiqul Islam',
     role: 'Owner, Dhaka Retail Group',
   },
@@ -166,8 +166,8 @@ const tiers = [
 
 const faqs = [
   {
-    q: 'Is Bee ERP built for Bangladeshi businesses?',
-    a: 'Yes. Bee ERP supports BDT (৳), bKash payouts, Bangla-friendly workflows and payroll rules designed for SMEs across Bangladesh.',
+    q: 'Is ZYPRA ERP built for Bangladeshi businesses?',
+    a: 'Yes. ZYPRA ERP supports BDT (৳), bKash payouts, Bangla-friendly workflows and payroll rules designed for SMEs across Bangladesh.',
   },
   {
     q: 'Can I pay with bKash?',
@@ -179,7 +179,7 @@ const faqs = [
   },
   {
     q: 'Does it work with biometric attendance devices?',
-    a: 'Yes. Bee ERP connects to popular biometric devices and also supports mobile and web check-ins for remote staff.',
+    a: 'Yes. ZYPRA ERP connects to popular biometric devices and also supports mobile and web check-ins for remote staff.',
   },
   {
     q: 'Is my data secure?',
@@ -197,7 +197,7 @@ export default function Landing() {
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30">
               <Zap className="h-5 w-5" />
             </span>
-            <span className="text-lg font-extrabold tracking-tight">Bee ERP</span>
+            <span className="text-lg font-extrabold tracking-tight">ZYPRA ERP</span>
           </a>
 
           <div className="hidden items-center gap-8 md:flex">
@@ -350,7 +350,7 @@ export default function Landing() {
             One platform. Every part of your business.
           </h2>
           <p className="mt-4 text-lg text-slate-600">
-            Stop juggling spreadsheets and disconnected apps. Bee ERP brings your whole operation under one roof.
+            Stop juggling spreadsheets and disconnected apps. ZYPRA ERP brings your whole operation under one roof.
           </p>
         </Reveal>
 
@@ -508,7 +508,7 @@ export default function Landing() {
               Ready to run your business smarter?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-white/90">
-              Join 1,200+ Bangladeshi businesses growing with Bee ERP. Start free today — no card needed.
+              Join 1,200+ Bangladeshi businesses growing with ZYPRA ERP. Start free today — no card needed.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 bg-white px-8 text-base font-semibold text-orange-600 hover:bg-slate-100">
@@ -531,7 +531,7 @@ export default function Landing() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white">
                   <Zap className="h-5 w-5" />
                 </span>
-                <span className="text-lg font-extrabold">Bee ERP</span>
+                <span className="text-lg font-extrabold">ZYPRA ERP</span>
               </div>
               <p className="mt-4 max-w-xs text-sm text-slate-600">
                 The all-in-one business suite built for Bangladeshi SMEs. Inventory, HR, payroll, accounting & more — in one hive.
@@ -557,7 +557,7 @@ export default function Landing() {
           </div>
 
           <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200 pt-8 sm:flex-row">
-            <p className="text-sm text-slate-500">© 2026 Bee ERP. All rights reserved.</p>
+            <p className="text-sm text-slate-500">© 2026 ZYPRA ERP. All rights reserved.</p>
             <p className="text-sm text-slate-500">Made with care in Bangladesh 🇧🇩 · Pay with bKash</p>
           </div>
         </div>

@@ -14,6 +14,7 @@ import * as scanCtrl from '../controllers/scan.controller';
 import * as platformCtrl from '../controllers/platform.controller';
 import * as webhookCtrl from '../controllers/webhook.controller';
 import * as billingCtrl from '../controllers/billing.controller';
+import * as aiCtrl from '../controllers/ai.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
@@ -234,6 +235,13 @@ router.post('/billing/payments', billingCtrl.submitPayment);
 router.get('/billing/payments', billingCtrl.listPayments);
 router.get('/billing/admin/payments', requireRole('SUPER_ADMIN'), billingCtrl.adminListPayments);
 router.patch('/billing/admin/payments/:id/verify', requireRole('SUPER_ADMIN'), billingCtrl.adminVerifyPayment);
+
+// ─── AI (Zypra Copilot) ───────────────────────────────────────────────────────
+router.use('/ai', authenticate, apiLimiter);
+router.get('/ai/status', aiCtrl.aiStatus);
+router.post('/ai/ask', aiCtrl.aiAsk);
+router.get('/ai/insights', aiCtrl.aiInsights);
+router.post('/ai/compose', aiCtrl.aiCompose);
 
 // ─── Onboarding (first-login wizard) ──────────────────────────────────────────
 router.get('/onboarding/status', authenticate, apiLimiter, platformCtrl.getOnboardingStatus);

@@ -74,7 +74,7 @@ export default function InvoiceGenerator({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Bee ERP ${type === 'expense' ? 'Expense Voucher' : 'Income Invoice'}</title>
+          <title>ZYPRA ERP ${type === 'expense' ? 'Expense Voucher' : 'Income Invoice'}</title>
           <style>
             @page {
               size: A4;
@@ -130,7 +130,7 @@ export default function InvoiceGenerator({
   };
 
   const companyInfo = {
-    name: "Bee ERP",
+    name: "ZYPRA ERP",
     tagline: "Your Success Benchmark",
     address: "1st, 5th-7th Floor, Jashore Malik Shamiti Vobon, Nilkhet, Dhaka-1205",
     email: "info@biddabari.com",
@@ -173,7 +173,7 @@ export default function InvoiceGenerator({
                   <div className="w-20 h-20 bg-black rounded-xl shadow-lg flex items-center justify-center relative overflow-hidden">
                     <img 
                       src={BiddabariLogo} 
-                      alt="Bee ERP Logo" 
+                      alt="ZYPRA ERP Logo" 
                       className="w-16 h-16 object-contain relative z-10"
                     />
                   </div>

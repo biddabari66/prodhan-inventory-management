@@ -27,9 +27,9 @@ export default function WhatsAppAdminPanel({ currentUser }) {
   const [messageType, setMessageType] = useState('reminder');
   const [isSending, setIsSending] = useState(false);
 
-  // Message templates with Bee ERP branding
+  // Message templates with ZYPRA ERP branding
   const messageTemplates = {
-    reminder: `🐝 *Bee ERP Reminder*
+    reminder: `🐝 *ZYPRA ERP Reminder*
 
 Hi {name}! ⏰
 
@@ -38,9 +38,9 @@ Your shift starts in 15 minutes. Please remember to check in on time.
 📱 Quick Check-in: {attendanceLink}
 
 Stay productive! 💼✨
-_Bee ERP HR Team_`,
+_ZYPRA ERP HR Team_`,
     
-    announcement: `🐝 *Bee ERP Announcement*
+    announcement: `🐝 *ZYPRA ERP Announcement*
 
 Hi {name}! 📢
 
@@ -49,7 +49,7 @@ Hi {name}! 📢
 For any questions, contact your HR department.
 
 Best regards,
-_Bee ERP Team_🌟`,
+_ZYPRA ERP Team_🌟`,
     
     leave_approved: `🐝 *Leave Request Update*
 
@@ -59,7 +59,7 @@ Good news! Your leave request for {date} has been *approved*.
 
 Enjoy your time off! 🌴
 
-_Bee ERP HR Team_`,
+_ZYPRA ERP HR Team_`,
     
     performance: `🐝 *Performance Update*
 
@@ -69,7 +69,7 @@ Hi {name}! 🎯
 
 Keep up the excellent work! 💪
 
-_Bee ERP Team_`
+_ZYPRA ERP Team_`
   };
 
   useEffect(() => {

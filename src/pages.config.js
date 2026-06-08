@@ -88,6 +88,7 @@ import MyAttendance from './pages/MyAttendance';
 import NotificationPreferences from './pages/NotificationPreferences';
 import Onboarding from './pages/Onboarding';
 import SuperAdmin from './pages/SuperAdmin';
+import AICopilot from './pages/AICopilot';
 import Automation from './pages/Automation';
 import Billing from './pages/Billing';
 import BillingAdmin from './pages/BillingAdmin';
@@ -160,6 +161,7 @@ export const PAGES = {
     "NotificationPreferences": NotificationPreferences,
     "Onboarding": Onboarding,
     "SuperAdmin": SuperAdmin,
+    "AICopilot": AICopilot,
     "Automation": Automation,
     "Billing": Billing,
     "BillingAdmin": BillingAdmin,

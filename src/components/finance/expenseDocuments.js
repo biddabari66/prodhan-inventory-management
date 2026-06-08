@@ -13,7 +13,7 @@ const fmtDate = (d) => {
 };
 
 const COMPANY = {
-  name: 'Bee ERP',
+  name: 'ZYPRA ERP',
   tagline: 'Business Suite',
   address: 'Dhaka, Bangladesh',
 };

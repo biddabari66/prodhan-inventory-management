@@ -68,7 +68,7 @@ export default function PWAInstaller() {
                 <Smartphone className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="font-bold text-base">Install Bee ERP</p>
+                <p className="font-bold text-base">Install ZYPRA ERP</p>
                 <p className="text-xs text-muted-foreground">Get native app experience</p>
               </div>
             </div>

@@ -4,14 +4,14 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding BEE ERP Database (SaaS)...');
+  console.log('🌱 Seeding ZYPRA ERP Database (SaaS)...');
 
   // 1. Create a default SaaS Tenant
   const tenant = await prisma.tenant.upsert({
     where: { subdomain: 'hq' },
     update: {},
     create: {
-      name: 'BEE ERP Headquarters',
+      name: 'ZYPRA ERP Headquarters',
       subdomain: 'hq',
       plan: 'ENTERPRISE',
       status: 'ACTIVE',

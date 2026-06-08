@@ -379,9 +379,9 @@ export const NotificationService = {
   async notifyWelcomeNewUser(userId, userName) {
     console.log(`🎉 Triggering welcome notification for new user: ${userName}`);
     
-    const message = `Welcome to Bee ERP, ${userName}! Your account has been successfully created. Please explore the system and let us know if you need any assistance.`;
+    const message = `Welcome to ZYPRA ERP, ${userName}! Your account has been successfully created. Please explore the system and let us know if you need any assistance.`;
     
-    return this.send(userId, 'Welcome to Bee ERP! 🎉', message, {
+    return this.send(userId, 'Welcome to ZYPRA ERP! 🎉', message, {
       category: 'system',
       priority: 'medium',
       forceEmail: true, // Welcome messages always send email
@@ -390,7 +390,7 @@ export const NotificationService = {
       emailContext: {
         type: 'system_notification',
         data: {
-          title: 'Welcome to Bee ERP!',
+          title: 'Welcome to ZYPRA ERP!',
           message,
           actionUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/Dashboard`
         }

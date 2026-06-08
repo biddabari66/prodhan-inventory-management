@@ -130,7 +130,7 @@ export default function Onboarding() {
         phone: form.phone.trim(),
         address: form.address.trim(),
       });
-      toast.success("Welcome to Bee ERP! 🐝");
+      toast.success("Welcome to ZYPRA ERP! 🐝");
       window.location.href = "/";
     } catch (err) {
       const msg =
@@ -152,7 +152,7 @@ export default function Onboarding() {
             <p className="text-sm font-medium uppercase tracking-wider text-white/80">
               🐝 Welcome aboard
             </p>
-            <h1 className="text-2xl font-bold">Let's set up Bee ERP</h1>
+            <h1 className="text-2xl font-bold">Let's set up ZYPRA ERP</h1>
             <p className="text-white/90 text-sm">
               A few quick questions so we can tailor your workspace.
             </p>
