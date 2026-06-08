@@ -8,7 +8,7 @@ import {
   OrderStatus, PaymentMethod, PaymentStatus, OrderSource,
   CourierService,
 } from '@prisma/client';
-import { qs } from '../utils/query';
+import { qs, orderBarcode } from '../utils/query';
 
 const orderItemSchema = z.object({
   inventoryId: z.string().optional(),
@@ -198,6 +198,7 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
       ...data,
       tenantId: req.user.tenantId,
       orderNumber,
+      barcode: orderBarcode(orderNumber),
       orderItems: data.orderItems as any,
       shippingAddress: data.shippingAddress as any,
       orderDate: data.orderDate ? new Date(data.orderDate) : new Date(),

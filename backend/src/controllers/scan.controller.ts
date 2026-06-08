@@ -19,6 +19,7 @@ export const scanShipOrder = async (req: AuthenticatedRequest, res: Response): P
     where: {
       tenantId: req.user.tenantId,
       OR: [
+        { barcode: code },
         { orderNumber: code },
         { trackingNumber: code },
         { courierTrackingCode: code },
@@ -125,8 +126,8 @@ export const scanLookup = async (req: AuthenticatedRequest, res: Response): Prom
   if (!code) throw new AppError(400, 'barcode required');
 
   const order = await prisma.order.findFirst({
-    where: { tenantId: req.user.tenantId, OR: [{ orderNumber: code }, { trackingNumber: code }, { courierTrackingCode: code }] },
-    select: { id: true, orderNumber: true, customerName: true, orderStatus: true, totalAmount: true, orderItems: true },
+    where: { tenantId: req.user.tenantId, OR: [{ barcode: code }, { orderNumber: code }, { trackingNumber: code }, { courierTrackingCode: code }] },
+    select: { id: true, orderNumber: true, barcode: true, customerName: true, orderStatus: true, totalAmount: true, orderItems: true },
   });
   if (order) { res.json({ type: 'order', data: order }); return; }
 

@@ -398,6 +398,7 @@ model Order {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   orderNumber   String
+  barcode       String? // scannable UPC-A code for ship-scan
   customerId    String?
   customer      Customer? @relation(fields: [customerId], references: [id])
   customerName  String
@@ -451,6 +452,7 @@ model Order {
   convertedLead Lead?          @relation("ConvertedOrder")
 
   @@unique([tenantId, orderNumber])
+  @@index([barcode])
   @@index([tenantId])
   @@index([orderStatus])
   @@index([paymentStatus])

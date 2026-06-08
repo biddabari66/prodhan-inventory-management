@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScanLine, Truck, PackagePlus, CheckCircle2, XCircle, Loader2, Camera, CameraOff } from 'lucide-react';
+import { ScanLine, Truck, PackagePlus, CheckCircle2, XCircle, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
@@ -13,64 +13,24 @@ export default function BarcodeScan() {
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [feed, setFeed] = useState([]);
-  const [camOn, setCamOn] = useState(false);
   const inputRef = useRef(null);
-  const videoRef = useRef(null);
+  const photoRef = useRef(null);
   const readerRef = useRef(null);
-  const controlsRef = useRef(null);
-  const lastScanRef = useRef({ code: '', at: 0 });
 
-  // Keep the scanner input focused (keyboard-wedge scanners type + Enter here).
-  // Paused while the camera is active so it doesn't steal focus.
+  // Keep the scanner input focused (USB/Bluetooth scanners type + Enter here).
   useEffect(() => {
-    if (camOn) return;
     const i = setInterval(() => {
-      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
-    }, 1200);
+      const a = document.activeElement;
+      if (a !== inputRef.current && a?.tagName !== 'BUTTON') inputRef.current?.focus();
+    }, 1500);
     inputRef.current?.focus();
     return () => clearInterval(i);
-  }, [mode, camOn]);
-
-  // Keep a stable ref to the latest scan handler for the camera callback.
-  const onScanRef = useRef(null);
-
-  const stopCamera = () => {
-    try { controlsRef.current?.stop(); } catch { /* ignore */ }
-    controlsRef.current = null;
-    setCamOn(false);
-  };
-
-  const startCamera = async () => {
-    try {
-      if (!readerRef.current) readerRef.current = new BrowserMultiFormatReader();
-      setCamOn(true);
-      controlsRef.current = await readerRef.current.decodeFromVideoDevice(
-        undefined, // default camera (rear on phones)
-        videoRef.current,
-        (result) => {
-          if (!result) return;
-          const code = result.getText();
-          const now = Date.now();
-          // Debounce duplicate reads of the same code within 2.5s.
-          if (code === lastScanRef.current.code && now - lastScanRef.current.at < 2500) return;
-          lastScanRef.current = { code, at: now };
-          try { navigator.vibrate?.(80); } catch { /* ignore */ }
-          onScanRef.current?.(code);
-        }
-      );
-    } catch (err) {
-      setCamOn(false);
-      toast.error('Could not access camera. Grant permission or use a USB scanner.');
-    }
-  };
-
-  // Stop the camera when leaving the page.
-  useEffect(() => () => stopCamera(), []);
+  }, [mode]);
 
   const pushFeed = (entry) => setFeed((f) => [{ ...entry, at: new Date() }, ...f].slice(0, 25));
 
   const handleScan = async (code) => {
-    const barcode = code.trim();
+    const barcode = (code || '').trim();
     if (!barcode) return;
     setBusy(true);
     try {
@@ -100,14 +60,33 @@ export default function BarcodeScan() {
     }
   };
 
-  // Keep the camera callback pointed at the current handler.
-  onScanRef.current = handleScan;
+  // Phone camera: take a single photo, then decode the still image (no live video).
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    setBusy(true);
+    try {
+      if (!readerRef.current) readerRef.current = new BrowserMultiFormatReader();
+      const url = URL.createObjectURL(file);
+      const result = await readerRef.current.decodeFromImageUrl(url);
+      URL.revokeObjectURL(url);
+      const code = result?.getText();
+      if (code) {
+        try { navigator.vibrate?.(80); } catch { /* ignore */ }
+        await handleScan(code);
+      } else {
+        toast.error('No barcode detected — try again, closer and in focus');
+        setBusy(false);
+      }
+    } catch (err) {
+      toast.error('No barcode detected in the photo. Hold steady and fill the frame.');
+      setBusy(false);
+    }
+  };
 
   const onKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleScan(value);
-    }
+    if (e.key === 'Enter') { e.preventDefault(); handleScan(value); }
   };
 
   return (
@@ -118,7 +97,7 @@ export default function BarcodeScan() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Scan a <b>sales order</b> to ship (stock out) or a <b>purchase order</b> to receive (stock in).
-          Works with any USB/Bluetooth barcode scanner.
+          Works with a USB/Bluetooth scanner or your phone camera.
         </p>
       </div>
 
@@ -167,32 +146,25 @@ export default function BarcodeScan() {
               {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Go'}
             </Button>
           </div>
+
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Tip: a USB/Bluetooth scanner types the code and presses Enter automatically.
+              USB/Bluetooth scanner: just scan — it types the code and presses Enter.
             </p>
-            {!camOn ? (
-              <Button variant="outline" onClick={startCamera} className="shrink-0">
-                <Camera className="h-4 w-4 mr-2" /> Scan with Camera
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={stopCamera} className="shrink-0 text-rose-600">
-                <CameraOff className="h-4 w-4 mr-2" /> Stop Camera
-              </Button>
-            )}
+            {/* Native phone camera — opens the camera app to take one photo */}
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handlePhoto}
+            />
+            <Button variant="outline" className="shrink-0" disabled={busy}
+              onClick={() => photoRef.current?.click()}>
+              <Camera className="h-4 w-4 mr-2" /> Scan with Phone Camera
+            </Button>
           </div>
-
-          {camOn && (
-            <div className="mt-4 relative overflow-hidden rounded-xl bg-black">
-              <video ref={videoRef} className="w-full max-h-[320px] object-contain" muted playsInline />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="h-24 w-3/4 rounded-lg border-2 border-emerald-400/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-              </div>
-              <div className="absolute bottom-2 left-0 right-0 text-center text-xs text-white/80">
-                Point the camera at the barcode
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
