@@ -108,6 +108,129 @@ export const checkOut = async (req: AuthenticatedRequest, res: Response): Promis
   res.json(updated);
 };
 
+// ─── Biometric (fingerprint device) ───────────────────────────────────────────
+
+// Admin enrolls an employee's fingerprint-terminal user id.
+export const enrollBiometric = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+  const { userId, biometricId } = z
+    .object({ userId: z.string(), biometricId: z.string().min(1) })
+    .parse(req.body);
+
+  const user = await prisma.user.findFirst({ where: { id: userId, tenantId: req.user.tenantId } });
+  if (!user) throw new AppError(404, 'Employee not found in your workspace');
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { biometricId, biometricEnrolledAt: new Date() },
+    select: { id: true, displayName: true, employeeId: true, biometricId: true, biometricEnrolledAt: true },
+  });
+  res.json(updated);
+};
+
+// Core in/out toggle for a resolved user. Shared by the device webhook.
+async function markByUser(user: any, tenantId: string, when: Date) {
+  const day = new Date(when);
+  day.setHours(0, 0, 0, 0);
+
+  const existing = await prisma.attendance.findUnique({
+    where: { userId_date: { userId: user.id, date: day } },
+  });
+
+  // No record or no check-in yet → CHECK IN
+  if (!existing || !existing.checkIn) {
+    const shift = await prisma.shift.findFirst({ where: { isDefault: true, tenantId } });
+    let lateMinutes = 0;
+    let status: AttendanceStatus = 'PRESENT';
+    if (shift) {
+      const [h, m] = shift.startTime.split(':').map(Number);
+      const shiftStart = new Date(day);
+      shiftStart.setHours(h, m + (shift.lateAfterMinutes || 0), 0, 0);
+      if (when > shiftStart) {
+        lateMinutes = Math.floor((when.getTime() - shiftStart.getTime()) / 60000);
+        status = 'LATE';
+      }
+    }
+    const rec = existing
+      ? await prisma.attendance.update({ where: { id: existing.id }, data: { checkIn: when, status, lateMinutes } })
+      : await prisma.attendance.create({
+          data: { tenantId, userId: user.id, date: day, checkIn: when, status, lateMinutes, notes: 'Biometric check-in' },
+        });
+    return { action: 'check_in', attendance: rec };
+  }
+
+  // Has check-in but no check-out → CHECK OUT
+  if (!existing.checkOut) {
+    const workingHours = Math.round(((when.getTime() - existing.checkIn.getTime()) / 3600000) * 100) / 100;
+    const rec = await prisma.attendance.update({
+      where: { id: existing.id },
+      data: { checkOut: when, workingHours },
+    });
+    return { action: 'check_out', attendance: rec };
+  }
+
+  // Already complete for the day
+  return { action: 'already_complete', attendance: existing };
+}
+
+// Public webhook hit by the local fingerprint bridge agent (device-key auth).
+export const biometricScan = async (req: any, res: Response): Promise<void> => {
+  const deviceKey = req.headers['x-device-key'] || req.body.deviceKey;
+  const { biometricId, timestamp, tenantId: bodyTenantId } = z
+    .object({ biometricId: z.string().min(1), timestamp: z.string().optional(), tenantId: z.string().optional(), deviceKey: z.string().optional() })
+    .parse(req.body);
+
+  // Resolve tenant: explicit body tenantId, or per-tenant device setting, or single-tenant env key.
+  let tenantId = bodyTenantId || null;
+  if (!tenantId) {
+    const setting = await prisma.integrationSetting.findFirst({
+      where: { provider: 'biometric_device' as any },
+    });
+    if (setting) tenantId = setting.tenantId;
+  }
+  const envKey = process.env.BIOMETRIC_DEVICE_KEY;
+  if (!tenantId && envKey && deviceKey === envKey) {
+    const t = await prisma.tenant.findFirst({ where: { isActive: true } });
+    tenantId = t?.id || null;
+  }
+  if (!tenantId) {
+    res.status(401).json({ error: 'Unrecognized device key' });
+    return;
+  }
+  if (envKey && deviceKey !== envKey) {
+    res.status(401).json({ error: 'Invalid device key' });
+    return;
+  }
+
+  const user = await prisma.user.findFirst({ where: { tenantId, biometricId, isActive: true } });
+  if (!user) {
+    res.status(404).json({ error: `No employee enrolled with biometric id ${biometricId}` });
+    return;
+  }
+
+  const when = timestamp ? new Date(timestamp) : new Date();
+  const result = await markByUser(user, tenantId, when);
+
+  // Log the raw scan for audit.
+  await prisma.webhookLog.create({
+    data: {
+      tenantId,
+      source: 'N8N' as any, // generic external source bucket
+      status: 'PROCESSED' as any,
+      payload: { kind: 'biometric', biometricId, action: result.action, at: when.toISOString() } as any,
+      processedAt: new Date(),
+    },
+  }).catch(() => {});
+
+  res.json({
+    success: true,
+    employee: user.displayName,
+    employeeId: user.employeeId,
+    action: result.action,
+    time: when.toISOString(),
+  });
+};
+
 export const manualMark = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
   

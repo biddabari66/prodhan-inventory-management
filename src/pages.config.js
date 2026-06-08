@@ -53,6 +53,7 @@ import Attendance from './pages/Attendance';
 import AttendanceMy from './pages/AttendanceMy';
 import AuditTrailViewer from './pages/AuditTrailViewer';
 import Auth from './pages/Auth';
+import BarcodeScan from './pages/BarcodeScan';
 import AutoReportSettings from './pages/AutoReportSettings';
 import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
@@ -119,6 +120,7 @@ export const PAGES = {
     "AttendanceMy": AttendanceMy,
     "AuditTrailViewer": AuditTrailViewer,
     "Auth": Auth,
+    "BarcodeScan": BarcodeScan,
     "AutoReportSettings": AutoReportSettings,
     "CRM": CRM,
     "CategorySettings": CategorySettings,

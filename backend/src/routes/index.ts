@@ -10,6 +10,7 @@ import * as crmCtrl from '../controllers/crm.controller';
 import * as attendanceCtrl from '../controllers/attendance.controller';
 import * as payrollCtrl from '../controllers/payroll.controller';
 import * as financeCtrl from '../controllers/finance.controller';
+import * as scanCtrl from '../controllers/scan.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
@@ -74,6 +75,12 @@ router.get('/orders/:id', requirePermission('orders:read'), ordersCtrl.getOrder)
 router.patch('/orders/:id', requirePermission('orders:update'), ordersCtrl.updateOrder);
 router.delete('/orders/:id', requireRole('SUPER_ADMIN', 'ADMIN', 'SALES_MANAGER'), ordersCtrl.deleteOrder);
 
+// ─── Barcode scanning (ship orders / receive POs) ─────────────────────────────
+router.use('/scan', authenticate, apiLimiter);
+router.get('/scan/lookup', scanCtrl.scanLookup);
+router.post('/scan/ship', requirePermission('orders:update'), scanCtrl.scanShipOrder);
+router.post('/scan/receive', requirePermission('purchase_orders:update'), scanCtrl.scanReceivePurchaseOrder);
+
 // ─── Inventory ────────────────────────────────────────────────────────────────
 router.use('/inventory', authenticate, apiLimiter);
 router.get('/inventory', requirePermission('inventory:read'), inventoryCtrl.listInventory);
@@ -104,6 +111,7 @@ router.use('/attendance', authenticate, apiLimiter);
 router.post('/attendance/check-in', attendanceCtrl.checkIn);
 router.post('/attendance/check-out', attendanceCtrl.checkOut);
 router.post('/attendance/manual', requirePermission('attendance:admin_mark'), attendanceCtrl.manualMark);
+router.post('/attendance/biometric/enroll', requirePermission('attendance:admin_mark'), attendanceCtrl.enrollBiometric);
 router.get('/attendance', requirePermission('attendance:read'), attendanceCtrl.listAttendance);
 router.get('/attendance/my', attendanceCtrl.getMyAttendance);
 router.get('/attendance/daily-report', requirePermission('attendance:read'), attendanceCtrl.getDailyReport);
@@ -160,6 +168,7 @@ router.post('/webhooks/facebook', webhookLimiter, facebookWebhook);
 router.post('/webhooks/woocommerce', webhookLimiter, woocommerceWebhook);
 router.post('/webhooks/steadfast', webhookLimiter, steadfastWebhook);
 router.post('/webhooks/prodhan-com', webhookLimiter, prodhanComWebhook);
+router.post('/webhooks/biometric', webhookLimiter, attendanceCtrl.biometricScan);
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 router.get('/notifications', authenticate, apiLimiter, async (req: any, res) => {

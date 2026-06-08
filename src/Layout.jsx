@@ -746,8 +746,7 @@ export default function Layout({ children, currentPageName }) {
     const baseModules = [
     { label: t('Dashboard'), url: createPageUrl('Home'), icon: LayoutDashboard, colorClass: 'text-indigo-600', permission: 'inventory_overview' },
     { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: Package, colorClass: 'text-red-600', permission: 'inventory_overview' },
-    { label: t('QR Scan'), url: createPageUrl('QRInventory'), icon: QrCode, colorClass: 'text-rose-600', permission: 'inventory_overview' },
-    { label: t('Scan & Ship'), url: createPageUrl('LogisticsScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
+    { label: t('Barcode Scan'), url: createPageUrl('BarcodeScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
     { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
     { label: t('CRM'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-purple-600', permission: 'customer_management' },
     { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },

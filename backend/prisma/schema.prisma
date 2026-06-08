@@ -335,6 +335,10 @@ model User {
   maxAllowedAbsences      Int                @default(2)
   maxAllowedLates         Int                @default(3)
 
+  // Biometric (fingerprint device) enrollment
+  biometricId        String? // enrollment number / device user id from the fingerprint terminal
+  biometricEnrolledAt DateTime?
+
   // Profile
   profilePictureUrl     String?
   whatsappNumber        String?
