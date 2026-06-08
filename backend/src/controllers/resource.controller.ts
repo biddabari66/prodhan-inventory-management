@@ -18,6 +18,25 @@ const CONTROL_PARAMS = new Set(['sort', 'limit', 'page', 'offset']);
 // Models that should never be exposed through the generic CRUD layer.
 const READONLY_MODELS = new Set(['auditLog', 'webhookLog']);
 
+// Fields a client must never set/override through the generic layer
+// (prevents mass-assignment & workflow/ownership tampering).
+const PROTECTED_FIELDS = new Set([
+  'id', 'tenantId', 'createdAt', 'updatedAt', 'created_date', 'updated_date',
+  'status', 'approvedById', 'paidById', 'mdApprovedById', 'mdApprovedByName',
+  'mdApprovedAt', 'requisitionStatus', 'invoiceNumber', 'requisitionNumber',
+  'createdById', 'passwordHash', 'role', 'jobRole', 'isActive',
+  'totalSpent', 'totalOrders', 'performancePoints', 'biometricId',
+]);
+
+function sanitizeWrite(body: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(body || {})) {
+    if (PROTECTED_FIELDS.has(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
 interface ResourceOptions {
   model: string; // prisma delegate key, e.g. 'customer'
   // optional default ordering when none supplied
@@ -86,12 +105,7 @@ export function makeResource({ model, defaultSort = '-createdAt' }: ResourceOpti
       if (READONLY_MODELS.has(model)) {
         return res.status(405).json({ error: 'Read-only resource' });
       }
-      const data: Record<string, any> = { ...req.body };
-      delete data.id;
-      delete data.created_date;
-      delete data.updated_date;
-      delete data.createdAt;
-      delete data.updatedAt;
+      const data: Record<string, any> = sanitizeWrite(req.body);
       if (req.user?.tenantId) data.tenantId = req.user.tenantId;
 
       const row = await delegate().create({ data });
@@ -102,13 +116,7 @@ export function makeResource({ model, defaultSort = '-createdAt' }: ResourceOpti
       if (READONLY_MODELS.has(model)) {
         return res.status(405).json({ error: 'Read-only resource' });
       }
-      const data: Record<string, any> = { ...req.body };
-      delete data.id;
-      delete data.tenantId;
-      delete data.createdAt;
-      delete data.updatedAt;
-      delete data.created_date;
-      delete data.updated_date;
+      const data: Record<string, any> = sanitizeWrite(req.body);
 
       // Ensure the record belongs to this tenant before updating.
       const existing = await delegate().findFirst({

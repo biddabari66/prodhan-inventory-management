@@ -12,6 +12,8 @@ import * as payrollCtrl from '../controllers/payroll.controller';
 import * as financeCtrl from '../controllers/finance.controller';
 import * as scanCtrl from '../controllers/scan.controller';
 import * as platformCtrl from '../controllers/platform.controller';
+import * as webhookCtrl from '../controllers/webhook.controller';
+import * as billingCtrl from '../controllers/billing.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
@@ -208,6 +210,30 @@ router.get('/dashboard/stats', authenticate, apiLimiter, async (_req, res) => {
     lowStockAlerts: Number(lowStockCount[0]?.count ?? 0),
   });
 });
+
+// ─── Automation / Webhooks ────────────────────────────────────────────────────
+router.use('/automation', authenticate, apiLimiter, requireRole('SUPER_ADMIN', 'ADMIN'));
+router.get('/automation/events', webhookCtrl.getEvents);
+router.get('/automation/webhooks/deliveries', webhookCtrl.listDeliveries); // before /:id
+router.get('/automation/webhooks', webhookCtrl.listWebhooks);
+router.post('/automation/webhooks', webhookCtrl.createWebhook);
+router.post('/automation/webhooks/:id/test', webhookCtrl.testWebhook);
+router.get('/automation/webhooks/:id', webhookCtrl.getWebhook);
+router.patch('/automation/webhooks/:id', webhookCtrl.updateWebhook);
+router.delete('/automation/webhooks/:id', webhookCtrl.deleteWebhook);
+router.get('/automation/rules', webhookCtrl.listRules);
+router.post('/automation/rules', webhookCtrl.createRule);
+router.patch('/automation/rules/:id', webhookCtrl.updateRule);
+router.delete('/automation/rules/:id', webhookCtrl.deleteRule);
+
+// ─── Billing (bKash subscriptions) ────────────────────────────────────────────
+router.use('/billing', authenticate, apiLimiter);
+router.get('/billing/plans', billingCtrl.getPlans);
+router.get('/billing/subscription', billingCtrl.getSubscription);
+router.post('/billing/payments', billingCtrl.submitPayment);
+router.get('/billing/payments', billingCtrl.listPayments);
+router.get('/billing/admin/payments', requireRole('SUPER_ADMIN'), billingCtrl.adminListPayments);
+router.patch('/billing/admin/payments/:id/verify', requireRole('SUPER_ADMIN'), billingCtrl.adminVerifyPayment);
 
 // ─── Onboarding (first-login wizard) ──────────────────────────────────────────
 router.get('/onboarding/status', authenticate, apiLimiter, platformCtrl.getOnboardingStatus);

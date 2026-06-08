@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { AttendanceStatus } from '@prisma/client';
 import { qs } from '../utils/query';
+import { safeEqual } from '../utils/crypto';
 
 const checkInSchema = z.object({
   location: z.object({ lat: z.number(), lng: z.number(), address: z.string().optional() }).optional(),
@@ -189,7 +190,7 @@ export const biometricScan = async (req: any, res: Response): Promise<void> => {
     if (setting) tenantId = setting.tenantId;
   }
   const envKey = process.env.BIOMETRIC_DEVICE_KEY;
-  if (!tenantId && envKey && deviceKey === envKey) {
+  if (!tenantId && envKey && safeEqual(deviceKey, envKey)) {
     const t = await prisma.tenant.findFirst({ where: { isActive: true } });
     tenantId = t?.id || null;
   }
@@ -197,7 +198,7 @@ export const biometricScan = async (req: any, res: Response): Promise<void> => {
     res.status(401).json({ error: 'Unrecognized device key' });
     return;
   }
-  if (envKey && deviceKey !== envKey) {
+  if (envKey && !safeEqual(deviceKey, envKey)) {
     res.status(401).json({ error: 'Invalid device key' });
     return;
   }

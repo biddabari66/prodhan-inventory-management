@@ -283,6 +283,9 @@ model Tenant {
   integrations  IntegrationSetting[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  webhooks      Webhook[]
+  automationRules AutomationRule[]
+  payments      Payment[]
 }
 
 model Department {
@@ -1041,4 +1044,83 @@ model Report {
   createdById String?
   createdBy   User?        @relation(fields: [createdById], references: [id])
   createdAt   DateTime     @default(now())
+}
+
+// ─────────────────────────────────────────────
+// AUTOMATION / WEBHOOKS
+// ─────────────────────────────────────────────
+
+model Webhook {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  url         String
+  events      String[] @default([]) // e.g. order.created, lead.converted
+  secret      String?  // HMAC signing secret (encrypted at rest)
+  headers     Json?
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deliveries  WebhookDelivery[]
+
+  @@index([tenantId])
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  tenantId     String
+  webhookId    String
+  webhook      Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event        String
+  payload      Json
+  status       String   @default("pending") // pending | success | failed
+  responseCode Int?
+  responseBody String?
+  attempts     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([tenantId])
+}
+
+model AutomationRule {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  triggerEvent String
+  conditions   Json?    // [{ field, op, value }]
+  actions      Json     // [{ type, config }]
+  isActive     Boolean  @default(true)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────
+// BILLING (bKash)
+// ─────────────────────────────────────────────
+
+model Payment {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount       Float
+  method       String    @default("BKASH")
+  trxId        String // bKash transaction id submitted by the customer
+  senderNumber String?
+  plan         String
+  periodMonths Int       @default(1)
+  status       String    @default("PENDING") // PENDING | VERIFIED | REJECTED
+  notes        String?
+  verifiedById String?
+  verifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([trxId])
 }

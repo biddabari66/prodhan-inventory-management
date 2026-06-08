@@ -771,6 +771,8 @@ export default function Layout({ children, currentPageName }) {
     { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'auto_reports' },
     { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
     { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
+    { label: t('Automation'), url: createPageUrl('Automation'), icon: Zap, colorClass: 'text-amber-500', permission: 'integrations' },
+    { label: t('Billing'), url: createPageUrl('Billing'), icon: CreditCard, colorClass: 'text-emerald-600', permission: 'integrations' },
     { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'system_alerts' },
     { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-slate-600', permission: 'audit_trail' }];
 
@@ -784,6 +786,7 @@ export default function Layout({ children, currentPageName }) {
     // Platform owner only (SaaS super admin): tenant + subscription management.
     if ((currentUser?.job_role || '').toUpperCase() === 'SUPER_ADMIN') {
       visible.push({ label: t('Platform Admin'), url: createPageUrl('SuperAdmin'), icon: Shield, colorClass: 'text-fuchsia-600', permission: 'inventory_overview' });
+      visible.push({ label: t('Payment Approvals'), url: createPageUrl('BillingAdmin'), icon: CreditCard, colorClass: 'text-fuchsia-600', permission: 'inventory_overview' });
     }
     return visible;
   }, [currentUser, userPermissions, currentLanguage, t, createPageUrl, hasPermission, getPermissionKey]);

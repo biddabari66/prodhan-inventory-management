@@ -9,6 +9,7 @@ import {
   CourierService,
 } from '@prisma/client';
 import { qs, orderBarcode } from '../utils/query';
+import { emitEvent } from '../services/eventBus';
 
 const orderItemSchema = z.object({
   inventoryId: z.string().optional(),
@@ -226,6 +227,8 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
   await prisma.auditLog.create({
     data: { tenantId: req.user.tenantId, userId: req.user.id, action: 'CREATE', entity: 'Order', entityId: order.id, newValue: { orderNumber } as any, ipAddress: req.ip },
   });
+
+  emitEvent(req.user.tenantId, 'order.created', order);
 
   res.status(201).json(order);
 };

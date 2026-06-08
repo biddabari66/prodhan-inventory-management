@@ -26,11 +26,20 @@ app.use(helmet({
 }));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  'http://localhost:5173',
+  ...(process.env.ADDITIONAL_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
+];
 app.use(cors({
-  origin: [env.FRONTEND_URL, /\.railway\.app$/],
+  origin: (origin, cb) => {
+    // allow same-origin / server-to-server (no origin) and whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Key'],
 }));
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────

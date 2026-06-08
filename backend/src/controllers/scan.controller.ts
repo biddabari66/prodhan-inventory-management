@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '../config/db';
 import { AppError } from '../middleware/errorHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { emitEvent } from '../services/eventBus';
 
 const NON_DEDUCTED = ['PENDING', 'ON_HOLD', 'CALL_NOT_RECEIVED', 'FOLLOW_UP', 'CALLBACK_REQUESTED'];
 
@@ -61,6 +62,8 @@ export const scanShipOrder = async (req: AuthenticatedRequest, res: Response): P
     where: { id: order.id },
     data: { orderStatus: 'SHIPPED', courierPlaced: true, courierPlacedDate: new Date() },
   });
+
+  emitEvent(req.user.tenantId, 'order.shipped', updated);
 
   res.json({
     success: true,

@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { LeadPriority, LeadSource, LeadStatus } from '@prisma/client';
 import { qs } from '../utils/query';
+import { emitEvent } from '../services/eventBus';
 
 const createLeadSchema = z.object({
   studentName: z.string().min(1),
@@ -161,6 +162,7 @@ export const createLead = async (req: AuthenticatedRequest, res: Response): Prom
     },
   });
 
+  emitEvent(req.user.tenantId, 'lead.created', lead);
   res.status(201).json(lead);
 };
 
@@ -263,6 +265,7 @@ export const convertLead = async (req: AuthenticatedRequest, res: Response): Pro
     },
   });
 
+  emitEvent(req.user.tenantId, 'lead.converted', { lead: updated, customer });
   res.json({ message: 'Lead converted successfully', customer, lead: updated });
 };
 

@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ExpenseStatus, PaymentMethod } from '@prisma/client';
 import { qs } from '../utils/query';
+import { emitEvent } from '../services/eventBus';
 
 const createExpenseSchema = z.object({
   category: z.string().min(1),
@@ -108,6 +109,7 @@ export const approveExpense = async (req: AuthenticatedRequest, res: Response): 
       requisitionStatus: 'pending_md',
     },
   });
+  emitEvent(req.user.tenantId, 'expense.approved', updated);
   res.json(updated);
 };
 
@@ -135,6 +137,7 @@ export const signRequisition = async (req: AuthenticatedRequest, res: Response):
       mdRemarks: remarks,
     },
   });
+  if (action === 'sign') emitEvent(req.user.tenantId, 'requisition.signed', updated);
   res.json(updated);
 };
 
