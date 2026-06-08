@@ -237,16 +237,66 @@ export const convertLead = async (req: AuthenticatedRequest, res: Response): Pro
   if (!lead) throw new AppError(404, 'Lead not found');
   if (lead.leadStatus === 'CONVERTED') throw new AppError(400, 'Lead already converted');
 
-  await prisma.lead.update({
+  // Create or link a Customer from the lead's contact details.
+  let customer = await prisma.customer.findFirst({
+    where: { tenantId: req.user.tenantId, phone: lead.phone },
+  });
+  if (!customer) {
+    customer = await prisma.customer.create({
+      data: {
+        tenantId: req.user.tenantId,
+        name: lead.studentName,
+        phone: lead.phone,
+        email: lead.email || undefined,
+        tags: lead.tags || [],
+      },
+    });
+  }
+
+  const updated = await prisma.lead.update({
     where: { id: req.params.id },
     data: {
       leadStatus: 'CONVERTED',
       convertedAt: new Date(),
       convertedOrderId: orderId,
+      customerId: customer.id,
     },
   });
 
-  res.json({ message: 'Lead converted successfully' });
+  res.json({ message: 'Lead converted successfully', customer, lead: updated });
+};
+
+// Agent leaderboard: per-assignee lead counts, conversions and pipeline value.
+export const getAgentLeaderboard = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+  const tenantId = req.user.tenantId;
+
+  const [assigned, converted, agents] = await Promise.all([
+    prisma.lead.groupBy({ by: ['assignedToId'], where: { tenantId }, _count: { id: true }, _sum: { value: true } }),
+    prisma.lead.groupBy({ by: ['assignedToId'], where: { tenantId, leadStatus: 'CONVERTED' }, _count: { id: true } }),
+    prisma.user.findMany({ where: { tenantId, isActive: true }, select: { id: true, displayName: true, employeeId: true } }),
+  ]);
+
+  const convMap = new Map(converted.map((c) => [c.assignedToId, c._count.id]));
+  const leaderboard = assigned
+    .filter((a) => a.assignedToId)
+    .map((a) => {
+      const agent = agents.find((u) => u.id === a.assignedToId);
+      const total = a._count.id;
+      const conv = convMap.get(a.assignedToId) || 0;
+      return {
+        agentId: a.assignedToId,
+        agentName: agent?.displayName || 'Unknown',
+        employeeId: agent?.employeeId,
+        totalLeads: total,
+        converted: conv,
+        conversionRate: total > 0 ? ((conv / total) * 100).toFixed(1) : '0',
+        pipelineValue: a._sum.value ?? 0,
+      };
+    })
+    .sort((x, y) => y.converted - x.converted || y.totalLeads - x.totalLeads);
+
+  res.json(leaderboard);
 };
 
 export const getLeadStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

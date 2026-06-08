@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { format, startOfDay, endOfDay, startOfWeek, startOfMonth, subDays } from 'date-fns';
 import DepartmentSelect from '../components/common/DepartmentSelect';
 import ReportComments from '../components/reports/ReportComments';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { TableSkeleton, CardSkeleton } from '../components/common/SkeletonLoader';
 import { useDebounce } from '../components/common/useDebounce';
 import {
@@ -340,7 +340,7 @@ export default function SubmittedReports() {
     try {
       console.log('📄 Exporting single report:', report.id);
       
-      const response = await base44.functions.invoke('exportDepartmentReportsPDF', {
+      const response = await erp.functions.invoke('exportDepartmentReportsPDF', {
         singleReportId: report.id
       });
 
@@ -378,7 +378,7 @@ export default function SubmittedReports() {
     try {
       console.log('📄 Exporting department reports:', department);
       
-      const response = await base44.functions.invoke('exportDepartmentReportsPDF', {
+      const response = await erp.functions.invoke('exportDepartmentReportsPDF', {
         department: department
       });
 

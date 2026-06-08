@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,7 +28,7 @@ import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VARIANT UTILITIES
-// Handles ALL possible field names Base44 might store:
+// Handles ALL possible field names erp might store:
 //   stock field:  quantity | stock | current_stock | qty | in_stock
 //   label fields: size | color | quality | material | flavor | weight | name | title | variant_name
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,7 +62,7 @@ function buildVariantLabel(v) {
 }
 
 // Safely extract the variants array from an inventory item
-// Base44 might store it under different keys
+// erp might store it under different keys
 function getVariants(item) {
   const arr =
     item.variants      ||
@@ -644,7 +644,7 @@ function InventoryOverviewPage() {
 
   const { data: purchaseOrders = [] } = useQuery({
     queryKey: ['purchase-orders-for-prices'],
-    queryFn: () => base44.entities.PurchaseOrder.filter(
+    queryFn: () => erp.entities.PurchaseOrder.filter(
       { department: 'prodhan_com_e_commerce' }, '-order_date', 200
     ),
     staleTime: 10 * 60 * 1000,
@@ -655,7 +655,7 @@ function InventoryOverviewPage() {
   const { data: categories = [] } = useQuery({
     queryKey: ['product-categories', selectedDepartment],
     queryFn: async () => {
-      const all = await base44.entities.ProductCategory.list('sort_order');
+      const all = await erp.entities.ProductCategory.list('sort_order');
       return all.filter(c =>
         c.is_active && (c.department === selectedDepartment || c.department === 'both')
       );
@@ -667,10 +667,10 @@ function InventoryOverviewPage() {
     loadUserAndInventory();
     loadTodaySales();
 
-    const unsubOrders = base44.entities.Order.subscribe(() => loadTodaySales());
+    const unsubOrders = erp.entities.Order.subscribe(() => loadTodaySales());
 
     let invTimeout = null;
-    const unsubInventory = base44.entities.Inventory.subscribe(() => {
+    const unsubInventory = erp.entities.Inventory.subscribe(() => {
       if (invTimeout) clearTimeout(invTimeout);
       invTimeout = setTimeout(() => {
         CacheManager.remove('inventory_list');
@@ -696,7 +696,7 @@ function InventoryOverviewPage() {
   const loadTodaySales = async () => {
     try {
       const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
-      const recentOrders = await base44.entities.Order.list('-order_date', 200);
+      const recentOrders = await erp.entities.Order.list('-order_date', 200);
       const validStatuses = ['confirmed','processing','packed','shipped','out_for_delivery','delivered'];
       const salesMap = {};
 
@@ -736,9 +736,9 @@ function InventoryOverviewPage() {
         // Background refresh
         setTimeout(async () => {
           const [user, data, movements] = await Promise.all([
-            base44.auth.me(),
-            base44.entities.Inventory.list('-updated_date', 2000),
-            base44.entities.InventoryMovement.list('-movement_date', 500)
+            erp.auth.me(),
+            erp.entities.Inventory.list('-updated_date', 2000),
+            erp.entities.InventoryMovement.list('-movement_date', 500)
           ]);
           setCurrentUser(user);
           setInventory(data);
@@ -749,9 +749,9 @@ function InventoryOverviewPage() {
         }, 100);
       } else {
         const [user, data, movements] = await Promise.all([
-          base44.auth.me(),
-          base44.entities.Inventory.list('-updated_date', 2000),
-          base44.entities.InventoryMovement.list('-movement_date', 500)
+          erp.auth.me(),
+          erp.entities.Inventory.list('-updated_date', 2000),
+          erp.entities.InventoryMovement.list('-movement_date', 500)
         ]);
         setCurrentUser(user);
         setInventory(data);
@@ -859,10 +859,10 @@ function InventoryOverviewPage() {
     }
     try {
       if (editingItem) {
-        await base44.entities.Inventory.update(editingItem.id, data);
+        await erp.entities.Inventory.update(editingItem.id, data);
         toast.success('Product updated successfully');
       } else {
-        await base44.entities.Inventory.create(data);
+        await erp.entities.Inventory.create(data);
         toast.success('Product added successfully');
       }
       setIsFormOpen(false); setEditingItem(null);
@@ -879,7 +879,7 @@ function InventoryOverviewPage() {
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
     try {
-      await base44.entities.Inventory.delete(itemToDelete.id);
+      await erp.entities.Inventory.delete(itemToDelete.id);
       toast.success(`${itemToDelete.item_name} deleted successfully`);
       setDeleteConfirmOpen(false); setItemToDelete(null);
       await loadUserAndInventory();

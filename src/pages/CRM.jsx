@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,27 +51,27 @@ function CRMPage() {
   // Fetch leads
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['crm-leads'],
-    queryFn: () => base44.entities.Lead.filter({ department: 'prodhan_com_e_commerce' }, '-created_date', 1000),
+    queryFn: () => erp.entities.Lead.filter({ department: 'prodhan_com_e_commerce' }, '-created_date', 1000),
     staleTime: 2 * 60 * 1000
   });
 
   // Fetch customers for conversion tracking
   const { data: customers = [] } = useQuery({
     queryKey: ['crm-customers'],
-    queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    queryFn: () => erp.entities.Customer.list('-created_date', 500),
     staleTime: 5 * 60 * 1000
   });
 
   // Fetch orders for revenue tracking
   const { data: orders = [] } = useQuery({
     queryKey: ['crm-orders'],
-    queryFn: () => base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
+    queryFn: () => erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
     staleTime: 5 * 60 * 1000
   });
 
   // Create lead mutation
   const createLeadMutation = useMutation({
-    mutationFn: (data) => base44.entities.Lead.create(data),
+    mutationFn: (data) => erp.entities.Lead.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['crm-leads']);
       toast.success('Lead created successfully');
@@ -91,7 +91,7 @@ function CRMPage() {
 
   // Update lead mutation
   const updateLeadMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
+    mutationFn: ({ id, data }) => erp.entities.Lead.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['crm-leads']);
       toast.success('Lead updated');

@@ -3,7 +3,7 @@ import { Lead } from '../entities/Lead';
 import { WhatsAppMessage } from '../entities/WhatsAppMessage';
 
 // This is a placeholder page to represent the webhook endpoint.
-// In a real Base44 application, this logic would be server-side.
+// In a real erp application, this logic would be server-side.
 // We are simulating the behavior here.
 
 export default function WhatsAppWebhook() {

@@ -3,6 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+RUN apk add --no-cache openssl libc6-compat
 RUN npm ci
 
 COPY prisma ./prisma
@@ -20,6 +21,7 @@ ENV NODE_ENV=production
 
 # Install only production deps
 COPY package*.json ./
+RUN apk add --no-cache openssl libc6-compat
 RUN npm ci --only=production
 
 # Copy prisma client and generated artifacts

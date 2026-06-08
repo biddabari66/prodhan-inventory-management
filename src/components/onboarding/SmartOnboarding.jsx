@@ -14,7 +14,7 @@ import {
   X,
   Globe
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
@@ -101,7 +101,7 @@ export default function SmartOnboarding({ user, onComplete }) {
     if (!user) return;
 
     try {
-      const records = await base44.entities.UserOnboarding.filter({ user_id: user.id });
+      const records = await erp.entities.UserOnboarding.filter({ user_id: user.id });
       
       if (records.length === 0) {
         // New user - show onboarding
@@ -130,13 +130,13 @@ export default function SmartOnboarding({ user, onComplete }) {
     // Save language preference
     try {
       if (onboardingData) {
-        await base44.entities.UserOnboarding.update(onboardingData.id, {
+        await erp.entities.UserOnboarding.update(onboardingData.id, {
           preferred_language: lang,
           current_step: 2,
           steps_completed: ['language_selected']
         });
       } else {
-        const newRecord = await base44.entities.UserOnboarding.create({
+        const newRecord = await erp.entities.UserOnboarding.create({
           user_id: user.id,
           preferred_language: lang,
           current_step: 2,
@@ -160,7 +160,7 @@ export default function SmartOnboarding({ user, onComplete }) {
 
     try {
       if (onboardingData) {
-        await base44.entities.UserOnboarding.update(onboardingData.id, {
+        await erp.entities.UserOnboarding.update(onboardingData.id, {
           onboarding_completed: true,
           completed_date: new Date().toISOString(),
           current_step: 2,
@@ -168,7 +168,7 @@ export default function SmartOnboarding({ user, onComplete }) {
           role_intro_shown: true
         });
       } else {
-        await base44.entities.UserOnboarding.create({
+        await erp.entities.UserOnboarding.create({
           user_id: user.id,
           onboarding_completed: true,
           completed_date: new Date().toISOString(),
@@ -202,13 +202,13 @@ export default function SmartOnboarding({ user, onComplete }) {
   const handleSkip = async () => {
     try {
       if (onboardingData) {
-        await base44.entities.UserOnboarding.update(onboardingData.id, {
+        await erp.entities.UserOnboarding.update(onboardingData.id, {
           skipped: true,
           onboarding_completed: true,
           completed_date: new Date().toISOString()
         });
       } else {
-        await base44.entities.UserOnboarding.create({
+        await erp.entities.UserOnboarding.create({
           user_id: user.id,
           skipped: true,
           onboarding_completed: true,

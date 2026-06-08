@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Palette, Layers, Weight, Recycle } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 export default function EnhancedReportButtons() {
   const [downloading, setDownloading] = useState(null);
@@ -12,7 +12,7 @@ export default function EnhancedReportButtons() {
     const loadingToast = toast.loading(`Generating ${label}...`);
     
     try {
-      const response = await base44.functions.invoke('generateEnhancedInventoryReport', {
+      const response = await erp.functions.invoke('generateEnhancedInventoryReport', {
         reportType
       });
 

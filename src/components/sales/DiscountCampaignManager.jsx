@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +55,7 @@ export default function DiscountCampaignManager({ currentUser }) {
 
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ['discount-campaigns'],
-    queryFn: () => base44.entities.DiscountCampaign.list('-created_date', 100),
+    queryFn: () => erp.entities.DiscountCampaign.list('-created_date', 100),
     staleTime: 60000,
   });
 
@@ -64,9 +64,9 @@ export default function DiscountCampaignManager({ currentUser }) {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (editingCampaign) {
-        return base44.entities.DiscountCampaign.update(editingCampaign.id, data);
+        return erp.entities.DiscountCampaign.update(editingCampaign.id, data);
       }
-      return base44.entities.DiscountCampaign.create({
+      return erp.entities.DiscountCampaign.create({
         ...data,
         created_by_name: currentUser?.full_name || 'Admin',
       });
@@ -82,7 +82,7 @@ export default function DiscountCampaignManager({ currentUser }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DiscountCampaign.delete(id),
+    mutationFn: (id) => erp.entities.DiscountCampaign.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['discount-campaigns']);
       toast.success('Campaign deleted');
@@ -91,7 +91,7 @@ export default function DiscountCampaignManager({ currentUser }) {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, is_active }) => base44.entities.DiscountCampaign.update(id, { is_active }),
+    mutationFn: ({ id, is_active }) => erp.entities.DiscountCampaign.update(id, { is_active }),
     onSuccess: () => queryClient.invalidateQueries(['discount-campaigns']),
   });
 

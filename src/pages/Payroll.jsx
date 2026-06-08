@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { withPermission } from '@/components/common/PermissionGuard';
 
@@ -39,7 +39,7 @@ function PayrollPage() {
   const { data: employees = [] } = useQuery({
     queryKey: ['payroll-employees'],
     queryFn: async () => {
-      const all = await base44.entities.User.list();
+      const all = await erp.entities.User.list();
       return all.filter(u => (u.base_salary || 0) > 0);
     },
     staleTime: 10 * 60 * 1000
@@ -51,14 +51,14 @@ function PayrollPage() {
       const [y, m] = selectedMonth.split('-');
       const start = format(startOfMonth(new Date(y, m - 1)), 'yyyy-MM-dd');
       const end = format(endOfMonth(new Date(y, m - 1)), 'yyyy-MM-dd');
-      const records = await base44.entities.Attendance.list('-date', 5000);
+      const records = await erp.entities.Attendance.list('-date', 5000);
       return records.filter(r => r.date >= start && r.date <= end);
     }
   });
 
   const { data: existingPayroll = [], refetch: refetchPayroll } = useQuery({
     queryKey: ['payroll-records', selectedMonth],
-    queryFn: () => base44.entities.PayrollRecord.filter({ month: selectedMonth })
+    queryFn: () => erp.entities.PayrollRecord.filter({ month: selectedMonth })
   });
 
   // Calculate payroll for each employee
@@ -128,10 +128,10 @@ function PayrollPage() {
     if (!pending.length) { toast.info('All payroll already generated'); return; }
     if (!confirm(`Generate payroll for ${pending.length} employees?`)) return;
     setIsGenerating(true);
-    const me = await base44.auth.me();
+    const me = await erp.auth.me();
     let ok = 0;
     for (const emp of pending) {
-      await base44.entities.PayrollRecord.create({
+      await erp.entities.PayrollRecord.create({
         employee_id: emp.id, employee_name: emp.full_name, month: selectedMonth,
         base_salary: emp.baseSalary, present_days: emp.presentDays, late_days: emp.lateDays,
         absent_days: emp.absentDays, working_hours: emp.totalHours,
@@ -149,7 +149,7 @@ function PayrollPage() {
   const handleSaveAdjust = async () => {
     if (!selectedEmployee) return;
     setIsSaving(true);
-    const me = await base44.auth.me();
+    const me = await erp.auth.me();
     const ot = adjustments.overtime_hours * settings.overtime_rate;
     const baseDed = (selectedEmployee.absentDeduction || selectedEmployee.absent_deduction || 0) + (selectedEmployee.lateDeduction || selectedEmployee.late_deduction || 0);
     const finalNet = Math.max(0, (selectedEmployee.baseSalary || selectedEmployee.base_salary || 0) - baseDed + adjustments.bonus + adjustments.mercy - adjustments.deduction + ot);
@@ -163,9 +163,9 @@ function PayrollPage() {
     };
 
     if (existing) {
-      await base44.entities.PayrollRecord.update(existing.id, data);
+      await erp.entities.PayrollRecord.update(existing.id, data);
     } else {
-      await base44.entities.PayrollRecord.create({
+      await erp.entities.PayrollRecord.create({
         employee_id: selectedEmployee.id, employee_name: selectedEmployee.full_name, month: selectedMonth,
         base_salary: selectedEmployee.baseSalary || selectedEmployee.base_salary,
         present_days: selectedEmployee.presentDays || selectedEmployee.present_days || 0,
@@ -185,7 +185,7 @@ function PayrollPage() {
   const handleMarkPaid = async (emp) => {
     const existing = existingPayroll.find(p => p.employee_id === emp.id);
     if (!existing) { toast.error('Generate payroll first'); return; }
-    await base44.entities.PayrollRecord.update(existing.id, {
+    await erp.entities.PayrollRecord.update(existing.id, {
       payment_status: 'paid', payment_date: format(new Date(), 'yyyy-MM-dd')
     });
     refetchPayroll(); toast.success(`${emp.full_name} marked as paid`);

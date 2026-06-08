@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 const DEPARTMENT_BRANDING = {
   prodhan_com_e_commerce: {
     name: 'Prodhan.com',
-    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/85b255904_LOGO_PRODHAN-removebg-preview1.png',
+    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/686aeb57b62314958e21fd12/85b255904_LOGO_PRODHAN-removebg-preview1.png',
     primaryColor: '#B91C1C',
     secondaryColor: '#FEE2E2',
     accentColor: '#DC2626',
@@ -16,7 +16,7 @@ const DEPARTMENT_BRANDING = {
   },
   boibari: {
     name: 'Boibari.com',
-    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/391b002f2_image.png',
+    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/686aeb57b62314958e21fd12/391b002f2_image.png',
     primaryColor: '#F59E0B',
     secondaryColor: '#FEF3C7',
     accentColor: '#D97706',

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,26 +67,26 @@ function MarketingROIPage() {
   // Fetch data
   const { data: adSpends = [] } = useQuery({
     queryKey: ['ad-spends'],
-    queryFn: () => base44.entities.AdSpend.list('-spend_date', 2000),
+    queryFn: () => erp.entities.AdSpend.list('-spend_date', 2000),
     staleTime: 2 * 60 * 1000
   });
 
   const { data: orders = [] } = useQuery({
     queryKey: ['marketing-orders'],
-    queryFn: () => base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+    queryFn: () => erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
     staleTime: 5 * 60 * 1000
   });
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['marketing-inventory'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
     staleTime: 5 * 60 * 1000
   });
 
   const { data: budgets = [] } = useQuery({
     queryKey: ['marketing-budgets'],
     queryFn: async () => {
-      const all = await base44.entities.Budget.list('-period', 200);
+      const all = await erp.entities.Budget.list('-period', 200);
       return all.filter(b => b.category === 'marketing');
     },
     staleTime: 5 * 60 * 1000
@@ -97,7 +97,7 @@ function MarketingROIPage() {
     mutationFn: (data) => {
       if (!data.campaign_name) throw new Error('Campaign name is required');
       if (!data.total_spend_usd || data.total_spend_usd <= 0) throw new Error('Amount must be > 0');
-      return base44.entities.AdSpend.create({
+      return erp.entities.AdSpend.create({
         ad_type: data.ad_type || 'single_product',
         period_type: data.period_type || 'daily',
         spend_date: data.spend_date,
@@ -135,7 +135,7 @@ function MarketingROIPage() {
     mutationFn: (data) => {
       if (!data.allocated_amount || data.allocated_amount <= 0) throw new Error('Budget amount must be > 0');
       const periodDate = new Date(data.period + '-01');
-      return base44.entities.Budget.create({
+      return erp.entities.Budget.create({
         period_type: 'monthly',
         period: data.period,
         department: data.department || 'prodhan_com_e_commerce',

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import {
   CheckCircle, Loader2, ExternalLink, ArrowRight, Play,
   RefreshCw, Clock

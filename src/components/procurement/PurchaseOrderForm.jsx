@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,7 +59,7 @@ export default function PurchaseOrderForm({ order, suppliers, inventory, current
 
   const { data: registeredCategories = [] } = useQuery({
     queryKey: ['product-categories-form'],
-    queryFn: () => base44.entities.ProductCategory.filter({ department: 'prodhan_com_e_commerce', is_active: true }),
+    queryFn: () => erp.entities.ProductCategory.filter({ department: 'prodhan_com_e_commerce', is_active: true }),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -83,7 +83,7 @@ export default function PurchaseOrderForm({ order, suppliers, inventory, current
     if (files.length === 0) return;
     setIsUploadingInvoice(true);
     try {
-      const results = await Promise.all(files.map(file => base44.integrations.Core.UploadFile({ file })));
+      const results = await Promise.all(files.map(file => erp.integrations.Core.UploadFile({ file })));
       const newUrls = results.map(r => r.file_url);
       setFormData(prev => ({ ...prev, invoice_images: [...(prev.invoice_images || []), ...newUrls], invoice_image_url: prev.invoice_image_url || newUrls[0] }));
       toast.success(`${files.length} image(s) uploaded!`);
@@ -141,7 +141,7 @@ export default function PurchaseOrderForm({ order, suppliers, inventory, current
   const handleAddNewProduct = async () => {
     if (!newProduct.item_name || !newProduct.category) { toast.error('Fill product name and category'); return; }
     try {
-      const created = await base44.entities.Inventory.create({ ...newProduct, department: 'prodhan_com_e_commerce', status: 'active' });
+      const created = await erp.entities.Inventory.create({ ...newProduct, department: 'prodhan_com_e_commerce', status: 'active' });
       const totalPrice = itemQuantity * newProduct.purchase_price;
       const newItem = { inventory_id: created.id, item_name: created.item_name, quantity_ordered: itemQuantity, quantity_received: 0, unit_price: newProduct.purchase_price, total_price: totalPrice, unit: itemUnit, is_new_product: true };
       const newItems = [...formData.order_items, newItem];

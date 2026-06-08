@@ -54,7 +54,7 @@ export const registerEnhancedServiceWorker = async () => {
           const { url } = event.request;
 
           // API requests - Network first, cache fallback
-          if (url.includes('/api/') || url.includes('base44')) {
+          if (url.includes('/api/') || url.includes('erp')) {
             event.respondWith(
               fetch(event.request)
                 .then((response) => {
@@ -175,7 +175,7 @@ export function useEnhancedServiceWorker() {
     // Add apple touch icon
     const appleTouchIcon = document.createElement('link');
     appleTouchIcon.rel = 'apple-touch-icon';
-    appleTouchIcon.href = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png';
+    appleTouchIcon.href = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png';
     document.head.appendChild(appleTouchIcon);
   }, []);
 }

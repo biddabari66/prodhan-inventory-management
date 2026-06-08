@@ -11,7 +11,7 @@ import BarcodeGenerator, { generateOrderBarcode, getBarcodeDataURL } from '../co
  */
 
 // Prodhan logo URL (প্রধান cart-style logo - red)
-const PRODHAN_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/56809d469_LOGO_PRODHAN-removebg-preview1.png";
+const PRODHAN_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/686aeb57b62314958e21fd12/56809d469_LOGO_PRODHAN-removebg-preview1.png";
 
 export default function ThermalReceipt({ order, onPrint }) {
   const receiptRef = useRef(null);

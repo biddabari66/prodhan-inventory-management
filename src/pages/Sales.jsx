@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from 'date-fns';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Order } from '@/entities/Order';
 import { Customer } from '@/entities/Customer';
 import { Inventory } from '@/entities/Inventory';
@@ -179,7 +179,7 @@ function SalesPage() {
   // 🚀 LIGHTNING FAST: Permissions with long cache
   const { data: rawUserPermissions = [] } = useQuery({
     queryKey: ['user-permissions', currentUser?.id],
-    queryFn: () => base44.entities.UserPermission.filter({ user_id: currentUser.id }),
+    queryFn: () => erp.entities.UserPermission.filter({ user_id: currentUser.id }),
     enabled: !!currentUser?.id,
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -1559,7 +1559,7 @@ function SalesPage() {
                                     
                                     const loadingToast = toast.loading('Cancelling order and reverting inventory...');
                                     try {
-                                      const response = await base44.functions.invoke('revertInventoryOnCancel', {
+                                      const response = await erp.functions.invoke('revertInventoryOnCancel', {
                                         order_id: order.id,
                                         reason: reason
                                       });
@@ -1650,7 +1650,7 @@ function SalesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  base44.functions.invoke('syncToAdprofit', { order_id: order.id })
+                                  erp.functions.invoke('syncToAdprofit', { order_id: order.id })
                                     .then(async (response) => {
                                       if (response.data?.success) {
                                         queryClient.invalidateQueries(['orders']);

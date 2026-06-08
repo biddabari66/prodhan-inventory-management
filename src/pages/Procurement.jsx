@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from 'date-fns';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Order } from '@/entities/Order';
 import { Customer } from '@/entities/Customer';
 import { Inventory } from '@/entities/Inventory';
@@ -316,7 +316,7 @@ const OrderImportDialog = ({ isOpen, onClose, onImportComplete, customers, inven
                     current_stock: newStock
                   });
                    try {
-                    await base44.entities.InventoryMovement.create({
+                    await erp.entities.InventoryMovement.create({
                       inventory_item_id: item.inventory_id,
                       movement_type: 'out',
                       quantity: -item.quantity,
@@ -1244,7 +1244,7 @@ function ProcurementPage() {
 
           // 📊 CREATE INVENTORY MOVEMENT RECORD
           try {
-            await base44.entities.InventoryMovement.create({
+            await erp.entities.InventoryMovement.create({
               inventory_item_id: item.inventory_id,
               movement_type: 'out',
               quantity: -item.quantity, // Negative for outbound
@@ -1312,7 +1312,7 @@ function ProcurementPage() {
 
             // 📊 RECORD MOVEMENT
             try {
-              await base44.entities.InventoryMovement.create({
+              await erp.entities.InventoryMovement.create({
                 inventory_item_id: updatedItem.inventory_id,
                 movement_type: quantityDifference > 0 ? 'out' : 'in',
                 quantity: -quantityDifference, // Negative for out, positive for in (reversal)
@@ -1347,7 +1347,7 @@ function ProcurementPage() {
 
             // 📊 RECORD MOVEMENT (REVERSAL)
             try {
-              await base44.entities.InventoryMovement.create({
+              await erp.entities.InventoryMovement.create({
                 inventory_item_id: originalItem.inventory_id,
                 movement_type: 'in',
                 quantity: originalItem.quantity, // Positive for return to stock
@@ -1636,7 +1636,7 @@ function ProcurementPage() {
       console.log('📊 Generating Order Report PDF...');
 
       // Call backend function to generate report HTML
-      const response = await base44.functions.invoke('generateOrderReportPDF', {
+      const response = await erp.functions.invoke('generateOrderReportPDF', {
         department: departmentFilter,
         dateRange: dateRange.from ? { from: dateRange.from.toISOString(), to: dateRange.to?.toISOString() } : null,
         statusFilter,

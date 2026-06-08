@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +55,7 @@ function PurchaseOrdersPage() {
   // Fetch data
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -65,7 +65,7 @@ function PurchaseOrdersPage() {
 
   const { data: purchaseOrders = [], isLoading } = useQuery({
     queryKey: ['purchaseOrders'],
-    queryFn: () => base44.entities.PurchaseOrder.list('-order_date', 500),
+    queryFn: () => erp.entities.PurchaseOrder.list('-order_date', 500),
     staleTime: 3 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -74,7 +74,7 @@ function PurchaseOrdersPage() {
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.list(),
+    queryFn: () => erp.entities.Supplier.list(),
     staleTime: 15 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -83,14 +83,14 @@ function PurchaseOrdersPage() {
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-purchase'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 1000),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 1000),
     staleTime: 5 * 60 * 1000,
   });
 
   // Fetch Packaging Expenses
   const { data: packagingExpenses = [] } = useQuery({
     queryKey: ['packagingExpenses'],
-    queryFn: () => base44.entities.PackagingExpense.list('-expense_date', 500),
+    queryFn: () => erp.entities.PackagingExpense.list('-expense_date', 500),
     staleTime: 3 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -100,10 +100,10 @@ function PurchaseOrdersPage() {
   // Create purchase order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
-      const order = await base44.entities.PurchaseOrder.create(orderData);
+      const order = await erp.entities.PurchaseOrder.create(orderData);
 
       // Create notification for admin
-      await base44.entities.Notification.create({
+      await erp.entities.Notification.create({
         user_id: 'admin',
         title: '🛒 New Purchase Order Pending Approval',
         message: `PO ${orderData.po_number} worth ৳${orderData.total_amount?.toLocaleString()} from ${orderData.supplier_name} submitted by ${orderData.created_by_name}`,
@@ -130,7 +130,7 @@ function PurchaseOrdersPage() {
   // Update purchase order mutation
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const updatedOrder = await base44.entities.PurchaseOrder.update(id, data);
+      const updatedOrder = await erp.entities.PurchaseOrder.update(id, data);
       return updatedOrder;
     },
     onSuccess: () => {
@@ -147,7 +147,7 @@ function PurchaseOrdersPage() {
   // Approve order mutation
   const approveOrderMutation = useMutation({
     mutationFn: async (order) => {
-      await base44.entities.PurchaseOrder.update(order.id, {
+      await erp.entities.PurchaseOrder.update(order.id, {
         order_status: 'approved',
         approval_status: 'approved',
         approved_by_id: currentUser?.id,
@@ -157,7 +157,7 @@ function PurchaseOrdersPage() {
 
       // Notify creator
       if (order.created_by_id) {
-        await base44.entities.Notification.create({
+        await erp.entities.Notification.create({
           user_id: order.created_by_id,
           title: '✅ Purchase Order Approved',
           message: `Your PO ${order.po_number} has been approved by ${currentUser?.full_name}`,
@@ -169,7 +169,7 @@ function PurchaseOrdersPage() {
       }
 
       // Create audit log
-      await base44.entities.AuditLog.create({
+      await erp.entities.AuditLog.create({
         user_id: currentUser?.id,
         user_name: currentUser?.full_name,
         action: 'update',
@@ -196,7 +196,7 @@ function PurchaseOrdersPage() {
   // Reject order mutation
   const rejectOrderMutation = useMutation({
     mutationFn: async ({ order, reason }) => {
-      await base44.entities.PurchaseOrder.update(order.id, {
+      await erp.entities.PurchaseOrder.update(order.id, {
         order_status: 'rejected',
         approval_status: 'rejected',
         rejection_reason: reason,
@@ -207,7 +207,7 @@ function PurchaseOrdersPage() {
 
       // Notify creator
       if (order.created_by_id) {
-        await base44.entities.Notification.create({
+        await erp.entities.Notification.create({
           user_id: order.created_by_id,
           title: '❌ Purchase Order Rejected',
           message: `Your PO ${order.po_number} has been rejected. Reason: ${reason}`,
@@ -219,7 +219,7 @@ function PurchaseOrdersPage() {
       }
 
       // Create audit log
-      await base44.entities.AuditLog.create({
+      await erp.entities.AuditLog.create({
         user_id: currentUser?.id,
         user_name: currentUser?.full_name,
         action: 'update',
@@ -248,7 +248,7 @@ function PurchaseOrdersPage() {
   const receiveOrderMutation = useMutation({
     mutationFn: async (order) => {
       // Update order status with receiver info
-      await base44.entities.PurchaseOrder.update(order.id, {
+      await erp.entities.PurchaseOrder.update(order.id, {
         order_status: 'received',
         actual_delivery_date: new Date().toISOString().split('T')[0],
         received_by_id: currentUser?.id,
@@ -257,7 +257,7 @@ function PurchaseOrdersPage() {
       });
 
       // Create audit log
-      await base44.entities.AuditLog.create({
+      await erp.entities.AuditLog.create({
         user_id: currentUser?.id,
         user_name: currentUser?.full_name,
         action: 'update',
@@ -283,10 +283,10 @@ function PurchaseOrdersPage() {
   // Create packaging expense mutation
   const createPackagingExpenseMutation = useMutation({
     mutationFn: async (expenseData) => {
-      const expense = await base44.entities.PackagingExpense.create(expenseData);
+      const expense = await erp.entities.PackagingExpense.create(expenseData);
 
       // Create notification for admin
-      await base44.entities.Notification.create({
+      await erp.entities.Notification.create({
         user_id: 'admin',
         title: '📦 New Packaging Expense Pending Approval',
         message: `Packaging expense ${expenseData.expense_number} worth ৳${expenseData.total_amount?.toLocaleString()} submitted by ${expenseData.created_by_name}`,
@@ -313,7 +313,7 @@ function PurchaseOrdersPage() {
   // Update packaging expense mutation
   const updatePackagingExpenseMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const expense = await base44.entities.PackagingExpense.update(id, data);
+      const expense = await erp.entities.PackagingExpense.update(id, data);
       return expense;
     },
     onSuccess: () => {
@@ -330,7 +330,7 @@ function PurchaseOrdersPage() {
   // Approve packaging expense mutation
   const approvePackagingExpenseMutation = useMutation({
     mutationFn: async (expense) => {
-      await base44.entities.PackagingExpense.update(expense.id, {
+      await erp.entities.PackagingExpense.update(expense.id, {
         status: 'approved',
         approved_by_id: currentUser?.id,
         approved_by_name: currentUser?.display_name || currentUser?.full_name,
@@ -339,7 +339,7 @@ function PurchaseOrdersPage() {
 
       // Notify creator
       if (expense.created_by_id) {
-        await base44.entities.Notification.create({
+        await erp.entities.Notification.create({
           user_id: expense.created_by_id,
           title: '✅ Packaging Expense Approved',
           message: `Your packaging expense ${expense.expense_number} has been approved by ${currentUser?.full_name}`,
@@ -363,13 +363,13 @@ function PurchaseOrdersPage() {
   // Reject packaging expense mutation
   const rejectPackagingExpenseMutation = useMutation({
     mutationFn: async ({ expense, reason }) => {
-      await base44.entities.PackagingExpense.update(expense.id, {
+      await erp.entities.PackagingExpense.update(expense.id, {
         status: 'rejected', rejection_reason: reason,
         approved_by_id: currentUser?.id, approved_by_name: currentUser?.display_name || currentUser?.full_name,
         approval_date: new Date().toISOString()
       });
       if (expense.created_by_id) {
-        await base44.entities.Notification.create({
+        await erp.entities.Notification.create({
           user_id: expense.created_by_id, title: '❌ Packaging Expense Rejected',
           message: `Your packaging expense ${expense.expense_number} has been rejected. Reason: ${reason}`,
           category: 'inventory', priority: 'high'
@@ -384,8 +384,8 @@ function PurchaseOrdersPage() {
   // Delete PO mutation (admin only)
   const deleteOrderMutation = useMutation({
     mutationFn: async (order) => {
-      await base44.entities.PurchaseOrder.delete(order.id);
-      await base44.entities.AuditLog.create({ user_id: currentUser?.id, user_name: currentUser?.full_name, action: 'delete', entity_type: 'PurchaseOrder', entity_id: order.id, module: 'purchase_orders', description: `Deleted PO ${order.po_number}`, timestamp: new Date().toISOString() });
+      await erp.entities.PurchaseOrder.delete(order.id);
+      await erp.entities.AuditLog.create({ user_id: currentUser?.id, user_name: currentUser?.full_name, action: 'delete', entity_type: 'PurchaseOrder', entity_id: order.id, module: 'purchase_orders', description: `Deleted PO ${order.po_number}`, timestamp: new Date().toISOString() });
       return order;
     },
     onSuccess: (order) => { queryClient.invalidateQueries(['purchaseOrders']); toast.success(`PO ${order.po_number} deleted`); setDeleteDialog(null); },
@@ -395,8 +395,8 @@ function PurchaseOrdersPage() {
   // Delete packaging expense mutation (admin only)
   const deletePackagingMutation = useMutation({
     mutationFn: async (expense) => {
-      await base44.entities.PackagingExpense.delete(expense.id);
-      await base44.entities.AuditLog.create({ user_id: currentUser?.id, user_name: currentUser?.full_name, action: 'delete', entity_type: 'PackagingExpense', entity_id: expense.id, module: 'purchase_orders', description: `Deleted expense ${expense.expense_number}`, timestamp: new Date().toISOString() });
+      await erp.entities.PackagingExpense.delete(expense.id);
+      await erp.entities.AuditLog.create({ user_id: currentUser?.id, user_name: currentUser?.full_name, action: 'delete', entity_type: 'PackagingExpense', entity_id: expense.id, module: 'purchase_orders', description: `Deleted expense ${expense.expense_number}`, timestamp: new Date().toISOString() });
       return expense;
     },
     onSuccess: (expense) => { queryClient.invalidateQueries(['packagingExpenses']); toast.success(`Expense ${expense.expense_number} deleted`); setDeleteDialog(null); },

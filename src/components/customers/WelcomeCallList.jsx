@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,9 +28,9 @@ export default function WelcomeCallList() {
     queryKey: ['orders-welcome-calls-all'],
     queryFn: async () => {
       const [shipped, outForDelivery, delivered] = await Promise.all([
-        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 2000),
-        base44.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 2000),
-        base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 2000),
+        erp.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 2000),
+        erp.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 2000),
+        erp.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 2000),
       ]);
       return [...shipped, ...outForDelivery, ...delivered];
     },
@@ -43,7 +43,7 @@ export default function WelcomeCallList() {
   // Fetch welcome call statuses
   const { data: welcomeStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['welcome-call-statuses'],
-    queryFn: () => base44.entities.WelcomeCall.list('-created_date', 5000),
+    queryFn: () => erp.entities.WelcomeCall.list('-created_date', 5000),
     staleTime: 3 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -52,7 +52,7 @@ export default function WelcomeCallList() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -153,9 +153,9 @@ export default function WelcomeCallList() {
       
       if (notes) data.notes = notes;
       if (order.welcome_call_id) {
-        return base44.entities.WelcomeCall.update(order.welcome_call_id, data);
+        return erp.entities.WelcomeCall.update(order.welcome_call_id, data);
       } else {
-        return base44.entities.WelcomeCall.create(data);
+        return erp.entities.WelcomeCall.create(data);
       }
     },
     onSuccess: () => {

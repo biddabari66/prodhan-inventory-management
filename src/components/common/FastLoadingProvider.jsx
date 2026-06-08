@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, memo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 /**
  * EXPERT FAST LOADING PROVIDER V2
@@ -12,35 +12,35 @@ import { base44 } from '@/api/base44Client';
 const PREFETCH_CONFIG = {
   '/Dashboard': [
     { key: ['dashboard-stats'], fn: () => Promise.all([
-      base44.entities.Admission.list('-admission_date', 100),
-      base44.entities.Lead.list('-created_date', 100),
+      erp.entities.Admission.list('-admission_date', 100),
+      erp.entities.Lead.list('-created_date', 100),
     ])},
   ],
   '/Attendance': [
-    { key: ['attendance'], fn: () => base44.entities.Attendance.list('-date', 50) },
+    { key: ['attendance'], fn: () => erp.entities.Attendance.list('-date', 50) },
   ],
   '/CRM': [
-    { key: ['leads'], fn: () => base44.entities.Lead.list('-created_date', 200) },
+    { key: ['leads'], fn: () => erp.entities.Lead.list('-created_date', 200) },
   ],
   '/InventoryOverview': [
-    { key: ['inventory'], fn: () => base44.entities.Inventory.list() },
+    { key: ['inventory'], fn: () => erp.entities.Inventory.list() },
   ],
   '/Sales': [
-    { key: ['orders'], fn: () => base44.entities.Order.list('-order_date', 100) },
-    { key: ['customers'], fn: () => base44.entities.Customer.list() },
+    { key: ['orders'], fn: () => erp.entities.Order.list('-order_date', 100) },
+    { key: ['customers'], fn: () => erp.entities.Customer.list() },
   ],
   '/PurchaseOrders': [
-    { key: ['purchaseOrders'], fn: () => base44.entities.PurchaseOrder.list('-created_date', 100) },
-    { key: ['inventory'], fn: () => base44.entities.Inventory.list() },
+    { key: ['purchaseOrders'], fn: () => erp.entities.PurchaseOrder.list('-created_date', 100) },
+    { key: ['inventory'], fn: () => erp.entities.Inventory.list() },
   ],
   '/Admissions': [
-    { key: ['admissions'], fn: () => base44.entities.Admission.list('-admission_date', 200) },
+    { key: ['admissions'], fn: () => erp.entities.Admission.list('-admission_date', 200) },
   ],
   '/Expenses': [
-    { key: ['expenses'], fn: () => base44.entities.Expense.list('-expense_date', 100) },
+    { key: ['expenses'], fn: () => erp.entities.Expense.list('-expense_date', 100) },
   ],
   '/Income': [
-    { key: ['incomes'], fn: () => base44.entities.Income.list('-income_date', 100) },
+    { key: ['incomes'], fn: () => erp.entities.Income.list('-income_date', 100) },
   ],
 };
 

@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Loader2, Send, Upload, FileText, X } from 'lucide-react';
 import SearchableUserSelect from '../common/SearchableUserSelect';
 import { useQuery } from '@tanstack/react-query';
@@ -58,7 +58,7 @@ export default function SendNotificationDialog({ open, onOpenChange }) {
 
     setIsUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await erp.integrations.Core.UploadFile({ file });
       setUploadedFileUrl(result.file_url);
       setUploadedFile(file);
       toast.success('File uploaded successfully!');
@@ -93,7 +93,7 @@ export default function SendNotificationDialog({ open, onOpenChange }) {
         is_read: false
       }));
 
-      await base44.entities.Notification.bulkCreate(notifications);
+      await erp.entities.Notification.bulkCreate(notifications);
       
       toast.success(`✅ Notification sent to ${selectedUserIds.length} employee(s)`);
       

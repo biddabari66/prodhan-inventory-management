@@ -25,7 +25,7 @@ import {
   Settings,
   Smile
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -571,7 +571,7 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
   useEffect(() => {
     const loadSuccessfulInteractions = async () => {
       try {
-        const feedback = await base44.entities.FeludaFeedback.filter({
+        const feedback = await erp.entities.FeludaFeedback.filter({
           was_helpful: true,
           language: currentLanguage
         }, '-created_date', 50);
@@ -636,33 +636,33 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
       const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
 
       const [tasks, expenses, attendance, leads, recentOrders, inventory, lowStockItems] = await Promise.all([
-        base44.entities.Task.filter({ 
+        erp.entities.Task.filter({ 
           assigned_to: { $contains: currentUser.id },
           status: { $in: ['pending', 'in_progress'] }
         }).catch(() => []),
         
-        base44.entities.Expense.filter({ 
+        erp.entities.Expense.filter({ 
           $or: [
             { submitted_by: currentUser.id, status: { $in: ['pending_manager_approval', 'pending_finance_approval'] } },
             { status: 'pending_manager_approval' }
           ]
         }).catch(() => []),
         
-        base44.entities.Attendance.filter({
+        erp.entities.Attendance.filter({
           employee_id: currentUser.id,
           date: todayBDT
         }).catch(() => []),
         
         (currentUser.job_role === 'admin' || currentUser.job_role === 'manager')
-          ? base44.entities.Lead.filter({ 
+          ? erp.entities.Lead.filter({ 
               assigned_to: currentUser.id,
               lead_status: { $in: ['new', 'contacted'] }
             }).catch(() => [])
           : [],
 
-        base44.entities.Order.list('-order_date', 200).catch(() => []),
-        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500).catch(() => []),
-        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }).catch(() => [])
+        erp.entities.Order.list('-order_date', 200).catch(() => []),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500).catch(() => []),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }).catch(() => [])
       ]);
 
       // Calculate today's sales stats
@@ -820,7 +820,7 @@ export default function Chatbot({ currentUser, currentPageName, currentLanguage:
 
       const responseTime = message.responseTime || 0;
 
-      await base44.entities.FeludaFeedback.create({
+      await erp.entities.FeludaFeedback.create({
         user_id: currentUser.id,
         user_name: currentUser.full_name,
         user_question: previousUserMessage.content,
@@ -1044,7 +1044,7 @@ ${learningContext}
 
 Investigate now! 🔍`;
       
-      const response = await base44.functions.invoke('askChatbot', {
+      const response = await erp.functions.invoke('askChatbot', {
         message: detectiveContext
       });
 

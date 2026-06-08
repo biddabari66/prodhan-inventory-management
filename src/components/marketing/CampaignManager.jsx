@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,7 @@ export default function CampaignManager({ onCampaignCreated }) {
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['campaign-inventory'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
     staleTime: 5 * 60 * 1000
   });
 
@@ -66,7 +66,7 @@ export default function CampaignManager({ onCampaignCreated }) {
         };
       });
       
-      return base44.entities.AdSpend.create({
+      return erp.entities.AdSpend.create({
         ad_type: data.ad_type === 'multiple_products' ? 'multiple_products' : adType,
         period_type: data.period_type || 'daily',
         spend_date: data.spend_date,

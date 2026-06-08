@@ -3,7 +3,7 @@ import { Bell, Check, X, AlertTriangle, Info, CheckCircle, ExternalLink, Loader2
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { createPageUrl } from '@/utils';
@@ -118,7 +118,7 @@ export default function NotificationCenter({ currentUser }) {
     const loadUser = async () => {
       if (!currentUser) {
         try {
-          const u = await base44.auth.me();
+          const u = await erp.auth.me();
           setUser(u);
         } catch (err) {
           console.error('Failed to load user:', err);
@@ -141,7 +141,7 @@ export default function NotificationCenter({ currentUser }) {
     setIsLoading(true);
     setError(null);
     try {
-      const userNotifications = await base44.entities.Notification.filter(
+      const userNotifications = await erp.entities.Notification.filter(
         { user_id: activeUser.id },
         '-created_date',
         50
@@ -164,7 +164,7 @@ export default function NotificationCenter({ currentUser }) {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await base44.entities.Notification.update(notificationId, { is_read: true });
+      await erp.entities.Notification.update(notificationId, { is_read: true });
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
@@ -180,7 +180,7 @@ export default function NotificationCenter({ currentUser }) {
       if (unreadNotifications.length === 0) return;
 
       const promises = unreadNotifications.map(n =>
-        base44.entities.Notification.update(n.id, { is_read: true })
+        erp.entities.Notification.update(n.id, { is_read: true })
       );
 
       await Promise.all(promises);

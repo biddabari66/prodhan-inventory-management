@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import CategoryManagement from '@/components/inventory/CategoryManagement';
 import { withPermission } from '@/components/common/PermissionGuard';
 import { Loader2, Package } from 'lucide-react';
@@ -12,7 +12,7 @@ function CategorySettingsPage() {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const user = await base44.auth.me();
+        const user = await erp.auth.me();
         setCurrentUser(user);
       } catch (error) {
         console.error('Error loading user:', error);

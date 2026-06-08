@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client'; 
+import { erp } from '@/api/erpClient'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -58,7 +58,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const { data: recentMovements = [], isLoading: recentLoading } = useQuery({
     queryKey: ['movements-returns-recent'],
     queryFn: async () => {
-      const batch = await base44.entities.InventoryMovement.list('-movement_date', 500);
+      const batch = await erp.entities.InventoryMovement.list('-movement_date', 500);
       return batch.filter(m => 
         m.reference_type === 'return' || m.reference_type === 'damage' || m.reference_type === 'expired'
       );
@@ -79,7 +79,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       let offset = 0;
       let hasMore = true;
       while (hasMore) {
-        const batch = await base44.entities.InventoryMovement.list('-movement_date', batchSize, offset);
+        const batch = await erp.entities.InventoryMovement.list('-movement_date', batchSize, offset);
         const relevant = batch.filter(m => 
           m.reference_type === 'return' || m.reference_type === 'damage' || m.reference_type === 'expired'
         );
@@ -106,7 +106,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   // ⚡ Inventory with aggressive cache
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
-    queryFn: () => base44.entities.Inventory.list('-updated_date', 1000),
+    queryFn: () => erp.entities.Inventory.list('-updated_date', 1000),
     staleTime: 10 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -117,7 +117,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-for-export'],
     queryFn: async () => {
-      const batch1 = await base44.entities.Order.list('-order_date', 1000);
+      const batch1 = await erp.entities.Order.list('-order_date', 1000);
       return batch1;
     },
     staleTime: 15 * 60 * 1000,
@@ -136,7 +136,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -366,14 +366,14 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
     const stockChange = isRestock ? qty : 0;
     const newStock = inventoryItem.current_stock + stockChange;
 
-    await base44.entities.Inventory.update(inventoryItemId, { current_stock: newStock });
+    await erp.entities.Inventory.update(inventoryItemId, { current_stock: newStock });
 
     // For write-offs (damages), ensure financial impact uses purchase_price if not provided
     const effectiveFinancialImpact = (referenceType === 'damage' && action === 'write_off' && (!financialImpact || financialImpact === 0))
       ? (inventoryItem.purchase_price || 0) * qty
       : financialImpact;
 
-    await base44.entities.InventoryMovement.create({
+    await erp.entities.InventoryMovement.create({
       inventory_item_id: inventoryItemId,
       movement_type: isRestock ? 'in' : 'adjustment',
       quantity: qty,
@@ -428,11 +428,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const newStock = Math.max(0, (item.current_stock || 0) + diff);
 
       // Update inventory stock
-      await base44.entities.Inventory.update(itemId, { current_stock: newStock });
+      await erp.entities.Inventory.update(itemId, { current_stock: newStock });
 
       // Merge metadata preserving existing fields
       const oldMeta = cachedMovement.metadata || {};
-      await base44.entities.InventoryMovement.update(movementId, {
+      await erp.entities.InventoryMovement.update(movementId, {
         inventory_item_id: itemId,
         movement_type: newQty > 0 ? 'in' : 'adjustment',
         quantity: newQty,
@@ -488,8 +488,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
       const quantityToReverse = movement.quantity || 0;
       const newStock = Math.max(0, (item.current_stock || 0) - quantityToReverse);
 
-      await base44.entities.Inventory.update(movement.inventory_item_id, { current_stock: newStock });
-      await base44.entities.InventoryMovement.delete(movementId);
+      await erp.entities.Inventory.update(movement.inventory_item_id, { current_stock: newStock });
+      await erp.entities.InventoryMovement.delete(movementId);
 
       return { item, newStock };
     },
@@ -664,7 +664,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           });
 
           // Refresh invItem stock after first update
-          const updatedInv = await base44.entities.Inventory.filter({}, '-updated_date', 1);
+          const updatedInv = await erp.entities.Inventory.filter({}, '-updated_date', 1);
           const refreshedItem = updatedInv.find(i => i.id === formItem.inventory_item_id) || invItem;
 
           // Damaged portion → damage tab

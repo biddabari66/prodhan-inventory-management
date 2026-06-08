@@ -13,7 +13,7 @@ import { ProductCategory } from '@/entities/ProductCategory';
 import { toast } from 'sonner';
 import { ProdhanCategorySelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import AdvancedVariantManager from './AdvancedVariantManager';
 import { generateProductBarcode } from '../common/BarcodeGenerator';
@@ -89,7 +89,7 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     
     setIsTranslating(true);
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await erp.integrations.Core.InvokeLLM({
         prompt: `Translate this Bengali product name to English. Only provide the English translation, nothing else. If it's already in English or a proper noun, keep it as is. Text: "${bengaliText}"`,
         response_json_schema: {
           type: "object",
@@ -304,7 +304,7 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
     const loadingToast = toast.loading('🔍 Analyzing product page...');
     
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await erp.integrations.Core.InvokeLLM({
         prompt: `Analyze this product page URL: ${productUrl}
 
 Extract the following product information:

@@ -13,7 +13,7 @@ import {
   ShoppingCart, CreditCard, Wallet, ArrowUpRight, ArrowDownRight, RefreshCw,
   Filter, ChevronDown, Megaphone
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, subWeeks } from 'date-fns';
 import { withPermission } from '../components/common/PermissionGuard';
@@ -75,7 +75,7 @@ function FinanceDashboardPage() {
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['finance-orders', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allOrders = await base44.entities.Order.filter({ 
+      const allOrders = await erp.entities.Order.filter({ 
         department: 'prodhan_com_e_commerce'
       }, '-order_date', 10000);
       // Filter by date range
@@ -91,7 +91,7 @@ function FinanceDashboardPage() {
   const { data: purchaseOrders = [], isLoading: purchasesLoading } = useQuery({
     queryKey: ['finance-purchases', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allPO = await base44.entities.PurchaseOrder.filter({ 
+      const allPO = await erp.entities.PurchaseOrder.filter({ 
         department: 'prodhan_com_e_commerce'
       }, '-order_date', 5000);
       return allPO.filter(p => {
@@ -106,7 +106,7 @@ function FinanceDashboardPage() {
   const { data: packagingExpenses = [] } = useQuery({
     queryKey: ['finance-packaging', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allExpenses = await base44.entities.PackagingExpense.filter({ 
+      const allExpenses = await erp.entities.PackagingExpense.filter({ 
         department: 'prodhan_com_e_commerce'
       });
       return allExpenses.filter(e => {
@@ -121,7 +121,7 @@ function FinanceDashboardPage() {
   const { data: returns = [] } = useQuery({
     queryKey: ['finance-returns', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allMovements = await base44.entities.InventoryMovement.list('-movement_date', 10000);
+      const allMovements = await erp.entities.InventoryMovement.list('-movement_date', 10000);
       return allMovements.filter(m => {
         const mDate = m.movement_date?.split('T')[0];
         const isReturnOrDamage = m.reference_type === 'damage' || m.reference_type === 'return' || m.reference_type === 'expired';
@@ -134,7 +134,7 @@ function FinanceDashboardPage() {
   // Fetch inventory for actual pricing
   const { data: inventoryData = [] } = useQuery({
     queryKey: ['finance-inventory'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
     staleTime: 10 * 60 * 1000
   });
 
@@ -142,7 +142,7 @@ function FinanceDashboardPage() {
   const { data: generalExpenses = [] } = useQuery({
     queryKey: ['finance-general-expenses', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allExpenses = await base44.entities.Expense.filter({ 
+      const allExpenses = await erp.entities.Expense.filter({ 
         department: 'prodhan_com_e_commerce',
         status: 'approved'
       }, '-expense_date', 1000);
@@ -159,7 +159,7 @@ function FinanceDashboardPage() {
   const { data: adSpends = [] } = useQuery({
     queryKey: ['finance-adspends', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allSpends = await base44.entities.AdSpend.list('-spend_date', 1000);
+      const allSpends = await erp.entities.AdSpend.list('-spend_date', 1000);
       return allSpends.filter(s => {
         const spendDate = s.spend_date?.split('T')[0];
         return spendDate >= dateRange.start && spendDate <= dateRange.end;
@@ -172,7 +172,7 @@ function FinanceDashboardPage() {
   const { data: payrollRecords = [] } = useQuery({
     queryKey: ['finance-payroll', dateRange.start, dateRange.end],
     queryFn: async () => {
-      const allPayroll = await base44.entities.PayrollRecord.list('-created_date', 500);
+      const allPayroll = await erp.entities.PayrollRecord.list('-created_date', 500);
       // Filter by month range (YYYY-MM format)
       const startMonth = dateRange.start.slice(0, 7);
       const endMonth = dateRange.end.slice(0, 7);

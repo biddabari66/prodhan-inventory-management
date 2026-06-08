@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Upload, X, File, FileText, Image, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Document } from '@/entities/Document';
 import { User } from '@/entities/User';
 
@@ -86,7 +86,7 @@ export default function DocumentUploader({
 
       for (const file of selectedFiles) {
         // Upload file to storage
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await erp.integrations.Core.UploadFile({ file });
 
         // Create Document entity record
         const docData = {

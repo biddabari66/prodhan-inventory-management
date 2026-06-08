@@ -1,24 +1,9 @@
-import { base44 } from './base44Client';
+import { erp } from './erpClient';
 
-
-
-
-export const Core = base44.integrations.Core;
-
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
-
-export const SendEmail = base44.integrations.Core.SendEmail;
-
-export const SendSMS = base44.integrations.Core.SendSMS;
-
-export const UploadFile = base44.integrations.Core.UploadFile;
-
-export const GenerateImage = base44.integrations.Core.GenerateImage;
-
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
-
-
-
-
-
-
+export const Core = erp.integrations.Core;
+export const InvokeLLM = erp.integrations.Core.InvokeLLM;
+export const SendEmail = erp.integrations.Core.SendEmail;
+export const SendSMS = erp.integrations.Core.SendSMS;
+export const UploadFile = erp.integrations.Core.UploadFile;
+export const GenerateImage = erp.integrations.Core.GenerateImage;
+export const ExtractDataFromUploadedFile = erp.integrations.Core.ExtractDataFromUploadedFile;

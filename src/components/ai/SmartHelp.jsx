@@ -14,7 +14,7 @@ import {
   Languages,
   Globe
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -459,7 +459,7 @@ export default function SmartHelp({ currentPage, currentLanguage: propLanguage =
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const user = await base44.auth.me();
+        const user = await erp.auth.me();
         setCurrentUser(user);
       } catch (error) {
         console.error('Failed to load user:', error);
@@ -528,7 +528,7 @@ export default function SmartHelp({ currentPage, currentLanguage: propLanguage =
 
   const handleFeedback = async (helpful) => {
     try {
-      await base44.entities.FeludaFeedback.create({
+      await erp.entities.FeludaFeedback.create({
         user_id: currentUser.id,
         user_name: currentUser.full_name,
         user_question: `Smart Help: ${currentPage}`,

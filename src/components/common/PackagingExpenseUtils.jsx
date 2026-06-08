@@ -147,11 +147,11 @@ export function getPackagingCostPerUnit(productId, packagingExpenses, orders, al
  * Fetch and calculate real-time packaging expenses for reporting
  * Use this in report generators to get accurate packaging data
  */
-export async function fetchRealTimePackagingExpenses(base44, options = {}) {
+export async function fetchRealTimePackagingExpenses(erp, options = {}) {
   const { dateFrom, dateTo } = options;
   
   // Fetch approved packaging expenses
-  const expenses = await base44.entities.PackagingExpense.filter(
+  const expenses = await erp.entities.PackagingExpense.filter(
     { status: 'approved' },
     '-expense_date',
     5000

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Mail, Clock, Plus, X, CheckCircle, AlertCircle, Loader2, Calendar, Send, TrendingUp, Package, BarChart3, Play, Pause } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { withPermission } from '../components/common/PermissionGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,7 +40,7 @@ function AutoReportSettingsPage() {
   const loadScheduledTasks = async () => {
     setIsLoading(true);
     try {
-      const response = await base44.functions.invoke('manageScheduledReports', { action: 'list' });
+      const response = await erp.functions.invoke('manageScheduledReports', { action: 'list' });
       setScheduledTasks(response.data?.tasks || []);
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -135,7 +135,7 @@ function AutoReportSettingsPage() {
 
     setIsCreating(true);
     try {
-      const response = await base44.functions.invoke('manageScheduledReports', {
+      const response = await erp.functions.invoke('manageScheduledReports', {
         action: 'create',
         task_data: {
           name: `${config.name} - ${frequency}`,
@@ -165,7 +165,7 @@ function AutoReportSettingsPage() {
 
   const toggleTask = async (taskId) => {
     try {
-      await base44.functions.invoke('manageScheduledReports', { action: 'toggle', task_id: taskId });
+      await erp.functions.invoke('manageScheduledReports', { action: 'toggle', task_id: taskId });
       toast.success('Task status updated');
       loadScheduledTasks();
     } catch (error) {
@@ -177,7 +177,7 @@ function AutoReportSettingsPage() {
     if (!confirm('Delete this scheduled report? This cannot be undone.')) return;
     
     try {
-      await base44.functions.invoke('manageScheduledReports', { action: 'delete', task_id: taskId });
+      await erp.functions.invoke('manageScheduledReports', { action: 'delete', task_id: taskId });
       toast.success('Scheduled report deleted');
       loadScheduledTasks();
     } catch (error) {
@@ -196,7 +196,7 @@ function AutoReportSettingsPage() {
     const loadingToast = toast.loading('📧 Sending test report...');
     
     try {
-      const response = await base44.functions.invoke(config.function, {
+      const response = await erp.functions.invoke(config.function, {
         recipient_emails: recipients
       });
       

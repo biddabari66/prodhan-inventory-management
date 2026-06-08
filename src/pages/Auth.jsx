@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { LogIn, Loader2, Mail, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 
-const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
+const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
 export default function AuthPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);

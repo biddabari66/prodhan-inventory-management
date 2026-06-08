@@ -14,7 +14,7 @@ import {
   Calendar, Filter, Image, FileDown, Loader2, Check, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { withPermission } from '../components/common/PermissionGuard';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import ComprehensiveReportGenerator from '../components/reports/ComprehensiveReportGenerator';
@@ -64,12 +64,12 @@ function InventoryReportsPage() {
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['productCategories'],
-    queryFn: () => base44.entities.ProductCategory.list(),
+    queryFn: () => erp.entities.ProductCategory.list(),
   });
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.list(),
+    queryFn: () => erp.entities.Supplier.list(),
   });
 
   const filteredCategories = useMemo(() => {
@@ -178,13 +178,13 @@ function InventoryReportsPage() {
       toast.info('Generating report...');
       
       const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses, adSpends] = await Promise.all([
-        base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
-        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
-        base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
-        base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        base44.entities.AdSpend.list('-spend_date', 1000)
+        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
+        erp.entities.InventoryMovement.list('-movement_date', 10000),
+        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
+        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        erp.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        erp.entities.AdSpend.list('-spend_date', 1000)
       ]);
 
       // Filter data by selected date/time range
@@ -1328,13 +1328,13 @@ function InventoryReportsPage() {
       setReportGenerating(customReport.reportType);
       
       const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses, adSpends] = await Promise.all([
-        base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
-        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
-        base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
-        base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        base44.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        base44.entities.AdSpend.list('-spend_date', 1000)
+        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
+        erp.entities.InventoryMovement.list('-movement_date', 10000),
+        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
+        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        erp.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
+        erp.entities.AdSpend.list('-spend_date', 1000)
       ]);
 
       const getBDTDateTime = (dateStr) => {

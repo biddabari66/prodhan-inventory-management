@@ -9,7 +9,7 @@ import {
   Search, CheckCircle, RotateCcw, History, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { QRCodeCanvas, getQRValue, extractCodeFromScan } from './QRCodeGenerator';
 import jsQR from 'jsqr';
 
@@ -161,8 +161,8 @@ export default function QRStockScanner({ inventory, currentUser, onStockUpdated,
       const newStock = isIn
         ? matchedProduct.current_stock + quantity
         : Math.max(0, matchedProduct.current_stock - quantity);
-      await base44.entities.Inventory.update(matchedProduct.id, { current_stock: newStock });
-      await base44.entities.InventoryMovement.create({
+      await erp.entities.Inventory.update(matchedProduct.id, { current_stock: newStock });
+      await erp.entities.InventoryMovement.create({
         inventory_item_id: matchedProduct.id,
         movement_type: isIn ? 'in' : 'out',
         quantity: isIn ? quantity : -quantity,

@@ -26,7 +26,7 @@ import { Attendance as AttendanceEntity } from '@/entities/Attendance';
 import { AttendanceSetting } from '@/entities/AttendanceSetting';
 import { User } from '@/entities/User';
 import { markAttendance } from '@/functions/markAttendance';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { useDebounce, useThrottle, CacheManager, usePerformanceMonitor } from '../components/common/PerformanceOptimizer';
 import { useOptimisticActions } from '../components/common/OptimisticActions';
 
@@ -528,8 +528,8 @@ export default function AttendancePage() {
                     
                     // 🔥 TRIGGER AUTO-EMAIL for attendance
                     try {
-                        // Assuming `base44` is globally available or imported from a context
-                        await (window.base44 || base44).functions.invoke('triggerAutoEmails', {
+                        // Assuming `erp` is globally available or imported from a context
+                        await (window.erp || erp).functions.invoke('triggerAutoEmails', {
                             event_type: action === 'check_in' ? 'attendance_checked_in' : 'attendance_checked_out',
                             event_data: {
                                 employee_name: currentUser.full_name,

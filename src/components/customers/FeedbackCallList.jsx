@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,9 +31,9 @@ export default function FeedbackCallList() {
     queryKey: ['orders-feedback-calls-all'],
     queryFn: async () => {
       const [delivered, shipped, outForDelivery] = await Promise.all([
-        base44.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 2000),
-        base44.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 2000),
-        base44.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 2000),
+        erp.entities.Order.filter({ order_status: 'delivered' }, '-order_date', 2000),
+        erp.entities.Order.filter({ order_status: 'shipped' }, '-order_date', 2000),
+        erp.entities.Order.filter({ order_status: 'out_for_delivery' }, '-order_date', 2000),
       ]);
       const allOrd = [...delivered, ...shipped, ...outForDelivery];
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -51,7 +51,7 @@ export default function FeedbackCallList() {
   // Fetch feedback call statuses
   const { data: feedbackStatuses = [], isLoading: statusLoading } = useQuery({
     queryKey: ['feedback-call-statuses'],
-    queryFn: () => base44.entities.FeedbackCall.list('-created_date', 5000),
+    queryFn: () => erp.entities.FeedbackCall.list('-created_date', 5000),
     staleTime: 3 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -60,7 +60,7 @@ export default function FeedbackCallList() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -183,7 +183,7 @@ export default function FeedbackCallList() {
   // Mark order as delivered mutation
   const markDeliveredMutation = useMutation({
     mutationFn: async (order) => {
-      await base44.entities.Order.update(order.id, { order_status: 'delivered' });
+      await erp.entities.Order.update(order.id, { order_status: 'delivered' });
       return order;
     },
     onSuccess: (order) => {
@@ -212,9 +212,9 @@ export default function FeedbackCallList() {
       sendReviewToWebhook(order, status, notes);
       
       if (order.feedback_call_id) {
-        return base44.entities.FeedbackCall.update(order.feedback_call_id, data);
+        return erp.entities.FeedbackCall.update(order.feedback_call_id, data);
       } else {
-        return base44.entities.FeedbackCall.create(data);
+        return erp.entities.FeedbackCall.create(data);
       }
     },
     onSuccess: () => {

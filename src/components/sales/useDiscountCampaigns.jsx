@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { format } from 'date-fns';
 
 /**
@@ -15,7 +15,7 @@ export function useDiscountCampaigns() {
 
   const { data: allCampaigns = [] } = useQuery({
     queryKey: ['discount-campaigns-active'],
-    queryFn: () => base44.entities.DiscountCampaign.filter({ is_active: true }, '-priority', 50),
+    queryFn: () => erp.entities.DiscountCampaign.filter({ is_active: true }, '-priority', 50),
     staleTime: 60000,
   });
 

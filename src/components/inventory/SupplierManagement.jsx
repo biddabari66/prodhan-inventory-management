@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,17 +43,17 @@ export default function SupplierManagement({ selectedDepartment }) {
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.list(),
+    queryFn: () => erp.entities.Supplier.list(),
   });
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-for-suppliers'],
-    queryFn: () => base44.entities.Inventory.list('-created_date', 2000),
+    queryFn: () => erp.entities.Inventory.list('-created_date', 2000),
   });
 
   const { data: purchaseOrders = [] } = useQuery({
     queryKey: ['purchase-orders-for-suppliers'],
-    queryFn: () => base44.entities.PurchaseOrder.list('-created_date', 2000),
+    queryFn: () => erp.entities.PurchaseOrder.list('-created_date', 2000),
   });
 
   // Build supplier stats from BOTH inventory.supplier_id AND purchase order supplier matching
@@ -146,7 +146,7 @@ export default function SupplierManagement({ selectedDepartment }) {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Supplier.create({
+    mutationFn: (data) => erp.entities.Supplier.create({
       ...data, supplier_code: data.supplier_code || `SUP-${Date.now()}`,
       total_orders: 0, total_value: 0, current_balance: 0
     }),
@@ -154,12 +154,12 @@ export default function SupplierManagement({ selectedDepartment }) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Supplier.update(id, data),
+    mutationFn: ({ id, data }) => erp.entities.Supplier.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(['suppliers']); toast.success('Supplier updated!'); setIsFormOpen(false); setEditingSupplier(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Supplier.delete(id),
+    mutationFn: (id) => erp.entities.Supplier.delete(id),
     onSuccess: () => { queryClient.invalidateQueries(['suppliers']); toast.success('Supplier deleted!'); },
   });
 
@@ -261,7 +261,7 @@ export default function SupplierManagement({ selectedDepartment }) {
         const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         const row = {}; headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
         try {
-          await base44.entities.Supplier.create({
+          await erp.entities.Supplier.create({
             supplier_name: row.supplier_name, supplier_code: row.supplier_code || `SUP-${Date.now()}-${i}`,
             contact_person: row.contact_person, contact_phone: row.contact_phone,
             contact_email: row.contact_email || '', supplier_type: row.supplier_type || 'distributor',

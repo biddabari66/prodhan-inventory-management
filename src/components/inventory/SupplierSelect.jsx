@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ export default function SupplierSelect({
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['suppliers', department],
     queryFn: async () => {
-      const allSuppliers = await base44.entities.Supplier.list();
+      const allSuppliers = await erp.entities.Supplier.list();
       return allSuppliers.filter(s => 
         s.status === 'active' &&
         (s.department === department || s.department === 'both')
@@ -145,7 +145,7 @@ export function AlternateSuppliersManager({
   const { data: allSuppliers = [] } = useQuery({
     queryKey: ['suppliers', department],
     queryFn: async () => {
-      const result = await base44.entities.Supplier.list();
+      const result = await erp.entities.Supplier.list();
       return result.filter(s => 
         s.status === 'active' &&
         (s.department === department || s.department === 'both')

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,12 +33,12 @@ export default function ROIGenerator() {
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' })
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' })
   });
 
   const { data: adSpends = [] } = useQuery({
     queryKey: ['adSpends'],
-    queryFn: () => base44.entities.AdSpend.list('-spend_date', 500)
+    queryFn: () => erp.entities.AdSpend.list('-spend_date', 500)
   });
 
   // Load product data when single product selected

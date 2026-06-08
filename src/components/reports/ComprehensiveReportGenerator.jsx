@@ -11,7 +11,7 @@ import {
   DollarSign, RotateCcw, Target, Megaphone, Loader2, FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 const toBDTDate = (date = new Date()) => {
@@ -54,14 +54,14 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     try {
       // Fetch all required data in parallel (including production waste)
       const [orders, inventory, movements, adSpends, purchaseOrders, packagingExpenses, customers, productionWaste] = await Promise.all([
-        base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 10000),
-        base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
-        base44.entities.InventoryMovement.list('-movement_date', 10000),
-        base44.entities.AdSpend.list('-spend_date', 1000),
-        base44.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
-        base44.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }),
-        base44.entities.Customer.list('-total_spent', 5000),
-        base44.entities.ProductionWasteLog.list('-waste_date', 5000)
+        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 10000),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+        erp.entities.InventoryMovement.list('-movement_date', 10000),
+        erp.entities.AdSpend.list('-spend_date', 1000),
+        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }),
+        erp.entities.Customer.list('-total_spent', 5000),
+        erp.entities.ProductionWasteLog.list('-waste_date', 5000)
       ]);
 
       // Filter by date range (BDT) - only completed orders for revenue

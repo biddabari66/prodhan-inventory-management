@@ -287,8 +287,8 @@ export const ProductionReadinessChecker = ({ entities, currentUser }) => {
     checks.push({
       category: 'Integrations',
       name: 'Core Integrations',
-      status: 'pass', // Assuming base44 integrations work
-      message: 'Base44 platform integration active',
+      status: 'pass', // Assuming erp integrations work
+      message: 'erp platform integration active',
       priority: 'medium',
       icon: Zap
     });
@@ -326,12 +326,12 @@ export const ProductionReadinessChecker = ({ entities, currentUser }) => {
   const checkBackupSystems = async () => {
     const checks = [];
     
-    // Assume Base44 handles backups
+    // Assume erp handles backups
     checks.push({
       category: 'Backup & Recovery',
       name: 'Data Backup',
       status: 'pass',
-      message: 'Base44 platform automatic backups enabled',
+      message: 'erp platform automatic backups enabled',
       priority: 'high',
       icon: Database
     });

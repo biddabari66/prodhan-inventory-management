@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,7 @@ function ProductAnalyticsDashboard() {
 
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ['inventory-analytics'],
-    queryFn: () => base44.entities.Inventory.list('-updated_date', 2000),
+    queryFn: () => erp.entities.Inventory.list('-updated_date', 2000),
     staleTime: 3 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -47,13 +47,13 @@ function ProductAnalyticsDashboard() {
 
   const { data: allOrders = [] } = useQuery({
     queryKey: ['all-orders-analytics'],
-    queryFn: () => base44.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
+    queryFn: () => erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
     staleTime: 5 * 60 * 1000
   });
 
   const { data: allMovements = [] } = useQuery({
     queryKey: ['all-movements-analytics'],
-    queryFn: () => base44.entities.InventoryMovement.list('-movement_date', 5000),
+    queryFn: () => erp.entities.InventoryMovement.list('-movement_date', 5000),
     staleTime: 5 * 60 * 1000
   });
 
@@ -62,7 +62,7 @@ function ProductAnalyticsDashboard() {
     queryFn: async () => {
       if (!selectedProductIds || selectedProductIds.length === 0) return { success: true, data: [] };
       try {
-        const response = await base44.functions.invoke('getProductMovementAnalytics', {
+        const response = await erp.functions.invoke('getProductMovementAnalytics', {
           productIds: selectedProductIds,
           startDate: new Date(startDate).toISOString(),
           endDate: new Date(endDate).toISOString(),
@@ -120,7 +120,7 @@ function ProductAnalyticsDashboard() {
     if (safeAnalyticsData.length === 0) { toast.error('Select products first'); return; }
     setIsExporting(true);
     try {
-      const { data } = await base44.functions.invoke('generateProductAnalyticsReport', {
+      const { data } = await erp.functions.invoke('generateProductAnalyticsReport', {
         productMetrics: safeAnalyticsData,
         dateRange: `${startDate} to ${endDate}`,
         department: selectedDepartment

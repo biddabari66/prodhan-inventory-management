@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScanLine, Truck, Package, Loader2 } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function LogisticsScan() {
       // Load all order statuses that logistics may encounter
       const statuses = ['pending', 'on_hold', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'call_not_received', 'follow_up', 'callback_requested'];
       const results = await Promise.all(
-        statuses.map(s => base44.entities.Order.filter({ order_status: s }, '-order_date', 500).catch(() => []))
+        statuses.map(s => erp.entities.Order.filter({ order_status: s }, '-order_date', 500).catch(() => []))
       );
       return results.flat();
     },
@@ -29,7 +29,7 @@ export default function LogisticsScan() {
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-logistics'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 1000),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 1000),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -37,7 +37,7 @@ export default function LogisticsScan() {
   });
 
   const handleOrderShipped = async (order) => {
-    await base44.entities.Order.update(order.id, { order_status: 'shipped' });
+    await erp.entities.Order.update(order.id, { order_status: 'shipped' });
     // The existing automation `deductInventoryOnShip` handles inventory deduction
     // Invalidate caches after a delay to let automation finish
     queryClient.invalidateQueries({ queryKey: ['orders-logistics'] });

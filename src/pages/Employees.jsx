@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,14 +93,14 @@ function EmployeesPage() {
   // Fetch current user
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 10 * 60 * 1000
   });
 
   // Fetch ALL employees (not just Prodhan.com)
   const { data: employees = [], isLoading, refetch } = useQuery({
     queryKey: ['all-employees'],
-    queryFn: () => base44.entities.User.list('-created_date', 1000),
+    queryFn: () => erp.entities.User.list('-created_date', 1000),
     staleTime: 5 * 60 * 1000
   });
 
@@ -133,7 +133,7 @@ function EmployeesPage() {
 
   // Update employee mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: ({ id, data }) => erp.entities.User.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['all-employees']);
       toast.success('Employee updated successfully');
@@ -146,7 +146,7 @@ function EmployeesPage() {
   // Bulk update mutation
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ ids, data }) => {
-      const promises = ids.map(id => base44.entities.User.update(id, data));
+      const promises = ids.map(id => erp.entities.User.update(id, data));
       return Promise.all(promises);
     },
     onSuccess: (_, variables) => {
@@ -163,10 +163,10 @@ function EmployeesPage() {
   const handleFormSubmit = async (data) => {
     try {
       if (editingEmployee) {
-        await base44.entities.User.update(editingEmployee.id, data);
+        await erp.entities.User.update(editingEmployee.id, data);
         toast.success(`${data.full_name} updated successfully!`);
       } else {
-        await base44.entities.User.create(data);
+        await erp.entities.User.create(data);
         toast.success(`${data.full_name} created successfully!`);
       }
       setIsFormOpen(false);
@@ -207,7 +207,7 @@ function EmployeesPage() {
   const handleDeleteConfirmed = async () => {
     if (!employeeToDelete) return;
     try {
-      await base44.entities.User.delete(employeeToDelete.id);
+      await erp.entities.User.delete(employeeToDelete.id);
       toast.success(`Employee "${employeeToDelete.full_name}" has been deleted.`);
       refetch();
     } catch (error) {
@@ -300,7 +300,7 @@ function EmployeesPage() {
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids) => {
-      const promises = ids.map(id => base44.entities.User.delete(id));
+      const promises = ids.map(id => erp.entities.User.delete(id));
       return Promise.all(promises);
     },
     onSuccess: (_, ids) => {

@@ -91,6 +91,83 @@ export const calculatePayroll = async (req: AuthenticatedRequest, res: Response)
   res.json(payroll);
 };
 
+// Compute a single employee's payroll figures (no DB write). Shared helper.
+async function computePayroll(tenantId: string, user: any, month: number, year: number, extras: { bonuses?: number; incentives?: number; otherDeductions?: number } = {}) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const totalWorkDays = endDate.getDate();
+
+  const attendance = await prisma.attendance.findMany({
+    where: { userId: user.id, tenantId, date: { gte: startDate, lte: endDate } },
+  });
+
+  const presentDays = attendance.filter(a => ['PRESENT', 'LATE'].includes(a.status)).length;
+  const absentDays = attendance.filter(a => a.status === 'ABSENT').length;
+  const lateDays = attendance.filter(a => a.status === 'LATE').length;
+
+  const base = user.baseSalary || 0;
+  const dailyRate = base / totalWorkDays;
+  const bonuses = extras.bonuses ?? 0;
+  const incentives = extras.incentives ?? 0;
+  const otherDeductions = extras.otherDeductions ?? 0;
+  const attendanceDeduction = absentDays * dailyRate * (user.attendanceDeductionRate || 1);
+  const lateDeduction = lateDays * (user.lateDeductionRate || 0);
+  const netSalary = Math.max(0, base - attendanceDeduction - lateDeduction - otherDeductions + bonuses + incentives);
+
+  return {
+    baseSalary: base, totalWorkDays, presentDays, absentDays, lateDays,
+    attendanceDeduction, lateDeduction, bonuses, incentives, otherDeductions, netSalary,
+  };
+}
+
+// Calculate (upsert DRAFT) payroll for every active employee for a month/year.
+export const calculateAllPayroll = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+  const month = parseInt(qs(req.body.month) || qs(req.query.month) || '0');
+  const year = parseInt(qs(req.body.year) || qs(req.query.year) || '0');
+  if (!month || !year) throw new AppError(400, 'month and year are required');
+
+  const users = await prisma.user.findMany({ where: { tenantId: req.user.tenantId, isActive: true } });
+  const results = [];
+  for (const user of users) {
+    const figures = await computePayroll(req.user.tenantId, user, month, year);
+    const record = await prisma.payroll.upsert({
+      where: { userId_month_year: { userId: user.id, month, year } },
+      create: { tenantId: req.user.tenantId, userId: user.id, month, year, ...figures, createdById: req.user.id },
+      update: { ...figures },
+    });
+    results.push(record);
+  }
+  res.json({ count: results.length, month, year, data: results });
+};
+
+// Aggregate payroll totals for a month/year.
+export const getPayrollSummary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+  const month = qs(req.query.month) ? parseInt(qs(req.query.month)!) : undefined;
+  const year = qs(req.query.year) ? parseInt(qs(req.query.year)!) : undefined;
+  const where: any = { tenantId: req.user.tenantId };
+  if (month) where.month = month;
+  if (year) where.year = year;
+
+  const [agg, paid, pending, headcount] = await Promise.all([
+    prisma.payroll.aggregate({ where, _sum: { netSalary: true, bonuses: true, incentives: true } }),
+    prisma.payroll.aggregate({ where: { ...where, status: 'PAID' }, _sum: { netSalary: true } }),
+    prisma.payroll.aggregate({ where: { ...where, status: { in: ['DRAFT', 'APPROVED'] } }, _sum: { netSalary: true } }),
+    prisma.payroll.count({ where }),
+  ]);
+
+  res.json({
+    totalNet: agg._sum.netSalary ?? 0,
+    totalBonuses: agg._sum.bonuses ?? 0,
+    totalIncentives: agg._sum.incentives ?? 0,
+    paidAmount: paid._sum.netSalary ?? 0,
+    pendingAmount: pending._sum.netSalary ?? 0,
+    headcount,
+    month, year,
+  });
+};
+
 export const approvePayroll = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
 
@@ -116,7 +193,30 @@ export const markPaid = async (req: AuthenticatedRequest, res: Response): Promis
   const updated = await prisma.payroll.update({
     where: { id: req.params.id },
     data: { status: 'PAID', paidAt: new Date() },
+    include: { user: { select: { displayName: true, employeeId: true, departmentId: true } } },
   });
+
+  // Accounting integration: record the salary payout as an approved expense.
+  try {
+    await prisma.expense.create({
+      data: {
+        tenantId: req.user.tenantId,
+        category: 'Payroll',
+        subCategory: 'Salary',
+        amount: updated.netSalary,
+        date: new Date(),
+        description: `Salary ${updated.month}/${updated.year} — ${updated.user?.displayName || updated.userId}`,
+        departmentId: updated.user?.departmentId || undefined,
+        status: 'APPROVED',
+        paidById: req.user.id,
+        approvedById: req.user.id,
+        tags: ['payroll', 'salary'],
+      },
+    });
+  } catch (e) {
+    // Non-fatal: payroll is paid even if expense logging fails.
+    console.error('Failed to log payroll expense:', e);
+  }
 
   res.json(updated);
 };

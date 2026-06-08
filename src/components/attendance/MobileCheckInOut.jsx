@@ -6,7 +6,7 @@ import { LogIn, LogOut, Loader2, MapPin, Shield, Clock, CheckCircle, AlertTriang
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { markAttendance } from '@/functions/markAttendance';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 const LiveClock = React.memo(() => {
   const [time, setTime] = useState(new Date());

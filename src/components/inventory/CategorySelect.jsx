@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ function QuickAddCategoryForm({ department, categoryType, onSuccess, onCancel })
   const [color, setColor] = useState('#3B82F6');
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ProductCategory.create(data),
+    mutationFn: (data) => erp.entities.ProductCategory.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['product-categories']);
       toast.success('Category created!');
@@ -114,7 +114,7 @@ export default function CategorySelect({
   const { data: categories = [], isLoading, refetch } = useQuery({
     queryKey: ['product-categories', department, categoryType],
     queryFn: async () => {
-      const allCategories = await base44.entities.ProductCategory.list('sort_order');
+      const allCategories = await erp.entities.ProductCategory.list('sort_order');
       return allCategories.filter(cat => 
         cat.is_active && 
         cat.category_type === categoryType &&

@@ -19,7 +19,7 @@ import {
   Download,
   Sparkles
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
 import { withPermission } from '../components/common/PermissionGuard';
@@ -39,7 +39,7 @@ function FeludaAnalyticsPage() {
   const loadAnalytics = async () => {
     setIsLoading(true);
     try {
-      const response = await base44.functions.invoke('feludaLearningAnalytics', {});
+      const response = await erp.functions.invoke('feludaLearningAnalytics', {});
       
       if (response.data.success) {
         setAnalytics(response.data.analytics);
@@ -57,7 +57,7 @@ function FeludaAnalyticsPage() {
 
   const loadRecentFeedback = async () => {
     try {
-      const feedback = await base44.entities.FeludaFeedback.list('-created_date', 50);
+      const feedback = await erp.entities.FeludaFeedback.list('-created_date', 50);
       setRecentFeedback(feedback);
     } catch (error) {
       console.error('Failed to load feedback:', error);

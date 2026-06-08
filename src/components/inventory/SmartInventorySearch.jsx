@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Clock, TrendingUp, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { useDebounce } from '../common/PerformanceOptimizer';
 
 /**
@@ -34,7 +34,7 @@ export default function SmartInventorySearch({
 
     setIsLoadingSuggestions(true);
     try {
-      const response = await base44.functions.invoke('getInventorySearchSuggestions', {
+      const response = await erp.functions.invoke('getInventorySearchSuggestions', {
         search_term: term,
         limit: 8
       });
@@ -81,7 +81,7 @@ export default function SmartInventorySearch({
     // Log the interaction for future learning
     if (currentUser && suggestion.item_id) {
       try {
-        await base44.entities.UserInventoryInteraction.create({
+        await erp.entities.UserInventoryInteraction.create({
           user_id: currentUser.id,
           user_name: currentUser.full_name,
           search_term: searchValue,

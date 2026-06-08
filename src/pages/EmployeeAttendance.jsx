@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInMinutes, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, isWeekend, isSameDay } from 'date-fns';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { User } from '@/entities/User';
 import { Attendance } from '@/entities/Attendance';
 import { withPermission } from '@/components/common/PermissionGuard';
@@ -577,7 +577,7 @@ function EmployeeAttendancePage() {
 const LocationTabContent = ({ currentLocation, locationAccuracy }) => {
   const [settings, setSettings] = useState({ office_latitude: null, office_longitude: null, radius_meters: 100, require_ip_verification: false });
   useEffect(() => {
-    base44.entities.AttendanceSetting.list().then(s => { if (s?.length) setSettings(s[0]); }).catch(() => {});
+    erp.entities.AttendanceSetting.list().then(s => { if (s?.length) setSettings(s[0]); }).catch(() => {});
   }, []);
   const loc = currentLocation ? { latitude: currentLocation.lat, longitude: currentLocation.lng, accuracy: locationAccuracy || 0 } : null;
   return <OfficeLocationPicker settings={settings} onSettingsChange={setSettings} currentLocation={loc} />;

@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 /**
  * 🚀 EXPERT OPTIMISTIC ACTIONS
@@ -217,7 +217,7 @@ export const useOptimisticActions = () => {
 // Helper: Trigger auto-email notifications
 async function triggerAutoEmail(eventType, eventData) {
   try {
-    await base44.functions.invoke('triggerAutoEmails', {
+    await erp.functions.invoke('triggerAutoEmails', {
       event_type: eventType,
       event_data: eventData
     });

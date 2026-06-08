@@ -10,7 +10,7 @@ import { Inventory } from '@/entities/Inventory';
 import { toast } from 'sonner';
 import CategorySelect, { BookSubjectSelect } from './CategorySelect';
 import SupplierSelect, { AlternateSuppliersManager } from './SupplierSelect';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 /**
  * BOOK-SPECIFIC METADATA MANAGER FOR BOIBARI.COM
@@ -62,7 +62,7 @@ export default function BookMetadataManager({ book, onUpdate, onClose }) {
     
     setIsTranslating(true);
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await erp.integrations.Core.InvokeLLM({
         prompt: `Translate this Bengali book/product name to English. Only provide the English translation, nothing else. If it's already in English or a proper noun, keep it as is. Text: "${bengaliText}"`,
         response_json_schema: {
           type: "object",

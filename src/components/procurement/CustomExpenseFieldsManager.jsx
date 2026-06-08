@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,11 +17,11 @@ export default function CustomExpenseFieldsManager({ category, onClose }) {
 
   const { data: fields = [], isLoading } = useQuery({
     queryKey: ['expense-fields', category],
-    queryFn: () => base44.entities.PurchaseExpenseField.filter({ category }),
+    queryFn: () => erp.entities.PurchaseExpenseField.filter({ category }),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PurchaseExpenseField.create(data),
+    mutationFn: (data) => erp.entities.PurchaseExpenseField.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['expense-fields', category]);
       setNewField({ field_name: '', field_type: 'amount', default_value: 0 });
@@ -30,7 +30,7 @@ export default function CustomExpenseFieldsManager({ category, onClose }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PurchaseExpenseField.delete(id),
+    mutationFn: (id) => erp.entities.PurchaseExpenseField.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['expense-fields', category]);
       toast.success('Field removed');
@@ -38,7 +38,7 @@ export default function CustomExpenseFieldsManager({ category, onClose }) {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, is_active }) => base44.entities.PurchaseExpenseField.update(id, { is_active }),
+    mutationFn: ({ id, is_active }) => erp.entities.PurchaseExpenseField.update(id, { is_active }),
     onSuccess: () => queryClient.invalidateQueries(['expense-fields', category]),
   });
 

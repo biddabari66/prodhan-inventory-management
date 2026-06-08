@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,7 +46,7 @@ export default function ReturnDamageForm({ inventory, onSubmit, onCancel, type =
   // Fetch orders for lookup
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-for-return-lookup'],
-    queryFn: () => base44.entities.Order.list('-order_date', 5000),
+    queryFn: () => erp.entities.Order.list('-order_date', 5000),
     staleTime: 5 * 60 * 1000
   });
 

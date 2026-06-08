@@ -230,11 +230,11 @@ function SendEmailPage() {
             <div>
               <p className="font-semibold text-blue-900">Email System Status</p>
               <p className="text-sm text-blue-700 mt-1">
-                Emails are sent via the Base44 Core email integration. Please ensure:
+                Emails are sent via the erp Core email integration. Please ensure:
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
                 <li>The recipient has a valid email address</li>
-                <li>The Base44 email service is properly configured</li>
+                <li>The erp email service is properly configured</li>
                 <li>Check the browser console for detailed logs</li>
               </ul>
             </div>

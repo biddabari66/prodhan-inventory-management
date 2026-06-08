@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Scissors } from 'lucide-react';
 export default function CustomExpenseInputs({ category, expenses = [], onChange }) {
   const { data: fields = [] } = useQuery({
     queryKey: ['expense-fields', category],
-    queryFn: () => base44.entities.PurchaseExpenseField.filter({ category }),
+    queryFn: () => erp.entities.PurchaseExpenseField.filter({ category }),
     enabled: !!category,
   });
 

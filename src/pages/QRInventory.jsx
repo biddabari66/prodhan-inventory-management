@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +26,13 @@ export default function QRInventory() {
 
   const { data: inventory = [], isLoading, refetch } = useQuery({
     queryKey: ['inventory-for-qr'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
   });
 
   if (isLoading) {

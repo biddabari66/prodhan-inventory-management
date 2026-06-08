@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,32 +141,32 @@ function ProductionHousePage() {
   // Fetch data
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
   });
 
   const isAdmin = currentUser?.job_role === 'admin' || currentUser?.role === 'admin';
 
   const { data: productionBatches = [], isLoading: batchesLoading } = useQuery({
     queryKey: ['productionBatches'],
-    queryFn: () => base44.entities.ProductionBatch.list('-batch_date', 500),
+    queryFn: () => erp.entities.ProductionBatch.list('-batch_date', 500),
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: purchaseOrders = [] } = useQuery({
     queryKey: ['purchaseOrdersForProduction'],
-    queryFn: () => base44.entities.PurchaseOrder.filter({ order_status: 'received' }, '-order_date', 100),
+    queryFn: () => erp.entities.PurchaseOrder.filter({ order_status: 'received' }, '-order_date', 100),
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory-production'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: wasteLog = [] } = useQuery({
     queryKey: ['wasteLog'],
-    queryFn: () => base44.entities.ProductionWasteLog.list('-waste_date', 100),
+    queryFn: () => erp.entities.ProductionWasteLog.list('-waste_date', 100),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -176,7 +176,7 @@ function ProductionHousePage() {
       const batchNumber = `BATCH-${Date.now()}`;
       
       // Create production batch from PO with tracking
-      const batch = await base44.entities.ProductionBatch.create({
+      const batch = await erp.entities.ProductionBatch.create({
         batch_number: batchNumber,
         purchase_order_id: po.id,
         po_number: po.po_number,
@@ -207,14 +207,14 @@ function ProductionHousePage() {
       });
 
       // Update PO status
-      await base44.entities.PurchaseOrder.update(po.id, {
+      await erp.entities.PurchaseOrder.update(po.id, {
         order_status: 'in_production',
         production_batch_id: batch.id,
         sent_to_production_date: new Date().toISOString()
       });
 
       // Create audit log
-      await base44.entities.AuditLog.create({
+      await erp.entities.AuditLog.create({
         user_id: currentUser?.id,
         user_name: currentUser?.full_name,
         action: 'create',
@@ -290,7 +290,7 @@ function ProductionHousePage() {
       const totalTransferred = updatedItems.reduce((sum, i) => sum + (i.quantity_transferred || 0), 0);
 
       // Update batch
-      await base44.entities.ProductionBatch.update(batch.id, {
+      await erp.entities.ProductionBatch.update(batch.id, {
         items: updatedItems,
         total_remaining_quantity: parseFloat(totalRemaining.toFixed(4)),
         total_transferred_quantity: parseFloat(totalTransferred.toFixed(4)),
@@ -303,7 +303,7 @@ function ProductionHousePage() {
         const invItem = inventory.find(i => i.id === inventoryId);
         if (invItem) {
           const newStock = (invItem.current_stock || 0) + inventoryStockAdd;
-          await base44.entities.Inventory.update(inventoryId, {
+          await erp.entities.Inventory.update(inventoryId, {
             current_stock: newStock,
             last_purchase_date: new Date().toISOString().split('T')[0]
           });
@@ -313,7 +313,7 @@ function ProductionHousePage() {
             ? `Production: ${_jarCount} × ${_packagingLabel} (${rawDeduction.toFixed(3)} ${unit} raw used). ${notes}`
             : `Production transfer: ${productType || itemName}. ${notes}`;
 
-          await base44.entities.InventoryMovement.create({
+          await erp.entities.InventoryMovement.create({
             inventory_item_id: inventoryId,
             movement_type: 'in',
             quantity: inventoryStockAdd,
@@ -341,7 +341,7 @@ function ProductionHousePage() {
         ? `Transferred ${_jarCount} × ${_packagingLabel} of ${itemName} (${rawDeduction.toFixed(3)} ${unit} raw) to main inventory`
         : `Transferred ${rawDeduction} ${unit} of ${itemName} to main inventory (${productType || 'N/A'})`;
 
-      await base44.entities.AuditLog.create({
+      await erp.entities.AuditLog.create({
         user_id: transferredById,
         user_name: transferredByName,
         action: 'update',
@@ -396,7 +396,7 @@ function ProductionHousePage() {
       const wastePercentage = totalReceived > 0 ? ((totalWaste / totalReceived) * 100).toFixed(2) : 0;
 
       // Update batch
-      await base44.entities.ProductionBatch.update(batch.id, {
+      await erp.entities.ProductionBatch.update(batch.id, {
         items: updatedItems,
         total_remaining_quantity: totalRemaining,
         total_waste_quantity: totalWaste,
@@ -405,7 +405,7 @@ function ProductionHousePage() {
       });
 
       // Create waste log entry
-      await base44.entities.ProductionWasteLog.create({
+      await erp.entities.ProductionWasteLog.create({
         batch_id: batch.id,
         batch_number: batch.batch_number,
         item_name: itemName,
@@ -421,7 +421,7 @@ function ProductionHousePage() {
       });
 
       // Create audit log
-      await base44.entities.AuditLog.create({
+      await erp.entities.AuditLog.create({
         user_id: recordedById,
         user_name: recordedByName,
         action: 'create',

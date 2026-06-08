@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Printer, FileImage, Share, CheckCircle, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
-const BiddabariLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
+const BiddabariLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
 export default function InvoiceGenerator({ 
   data, 

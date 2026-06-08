@@ -9,7 +9,7 @@ import {
   Zap, Loader2, RefreshCw, LineChart, Activity, Award
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { BarChart, Bar, LineChart as RechartsLine, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 /**
@@ -43,7 +43,7 @@ export default function EnhancedAIInsights({ inventoryItems = [], department }) 
         total_sold: item.total_sold || 0
       }));
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await erp.integrations.Core.InvokeLLM({
         prompt: `Analyze this inventory data and provide actionable insights:
 
 ${JSON.stringify(summary.slice(0, 50), null, 2)}

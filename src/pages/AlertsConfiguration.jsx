@@ -38,7 +38,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Bell, Plus, Edit, Trash2, Mail, Send, AlertTriangle, FileText, Package, DollarSign, Users, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { withPermission } from '../components/common/PermissionGuard';
 
 /**
@@ -318,7 +318,7 @@ function AlertsConfigurationPage() {
   const handleSendTestEmail = async () => {
     setIsSendingTest(true);
     try {
-      const response = await base44.functions.invoke('sendTestEmail', {
+      const response = await erp.functions.invoke('sendTestEmail', {
         recipient_email: currentUser.email
       });
       
@@ -339,7 +339,7 @@ function AlertsConfigurationPage() {
     try {
       toast.info(`📊 Generating ${department} report...`);
       
-      const response = await base44.functions.invoke('sendDepartmentReport', {
+      const response = await erp.functions.invoke('sendDepartmentReport', {
         department: department,
         include_pdf: true
       });

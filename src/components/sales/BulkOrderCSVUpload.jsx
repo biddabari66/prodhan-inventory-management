@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, CheckCircle, AlertCircle, Loader2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 export default function BulkOrderCSVUpload({ inventory, customers, onComplete }) {
   const [file, setFile] = useState(null);
@@ -134,7 +134,7 @@ export default function BulkOrderCSVUpload({ inventory, customers, onComplete })
             if (existingCustomer) {
               customerId = existingCustomer.id;
             } else if (orderData.customer_name && orderData.customer_phone) {
-              const newCustomer = await base44.entities.Customer.create({
+              const newCustomer = await erp.entities.Customer.create({
                 customer_name: orderData.customer_name,
                 customer_phone: orderData.customer_phone,
                 customer_email: orderData.customer_email || '',
@@ -145,7 +145,7 @@ export default function BulkOrderCSVUpload({ inventory, customers, onComplete })
               customerId = newCustomer.id;
             }
 
-            await base44.entities.Order.create({
+            await erp.entities.Order.create({
               order_number: orderNum,
               customer_id: customerId,
               customer_name: orderData.customer_name,

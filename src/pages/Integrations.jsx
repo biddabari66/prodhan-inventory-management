@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ function Integrations() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user-integrations'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -67,7 +67,7 @@ function Integrations() {
       status: 'connected',
       type: 'sync',
       actionLabel: 'View Dashboard',
-      externalUrl: 'https://prodhan-profitpulse.base44.app',
+      externalUrl: 'https://prodhan-profitpulse.erp.app',
       docsUrl: null,
       details: 'Syncs order items with SKU mapping when orders are confirmed. Tracks revenue, COGS, and margins per product.',
     },

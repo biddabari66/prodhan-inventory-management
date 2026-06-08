@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -146,12 +146,12 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['product-categories'],
-    queryFn: () => base44.entities.ProductCategory.list('sort_order'),
+    queryFn: () => erp.entities.ProductCategory.list('sort_order'),
   });
 
   const { data: inventoryItems = [] } = useQuery({
     queryKey: ['inventory-for-category-sync'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 5000),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 5000),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -171,7 +171,7 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
     for (const catName of missingCategories) {
       const slug = catName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '_').trim();
       const count = inventoryItems.filter(i => i.category === catName).length;
-      await base44.entities.ProductCategory.create({ name: catName, slug, department: 'prodhan_com_e_commerce', category_type: 'product_category', description: `Auto-synced from inventory (${count} products)`, color: '#8B5CF6', sort_order: 999, is_active: true, product_count: count });
+      await erp.entities.ProductCategory.create({ name: catName, slug, department: 'prodhan_com_e_commerce', category_type: 'product_category', description: `Auto-synced from inventory (${count} products)`, color: '#8B5CF6', sort_order: 999, is_active: true, product_count: count });
       created++;
     }
     queryClient.invalidateQueries(['product-categories']);
@@ -180,17 +180,17 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
   };
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ProductCategory.create(data),
+    mutationFn: (data) => erp.entities.ProductCategory.create(data),
     onSuccess: () => { queryClient.invalidateQueries(['product-categories']); toast.success('Category created!'); setIsFormOpen(false); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ProductCategory.update(id, data),
+    mutationFn: ({ id, data }) => erp.entities.ProductCategory.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(['product-categories']); toast.success('Category updated!'); setIsFormOpen(false); setEditingCategory(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ProductCategory.delete(id),
+    mutationFn: (id) => erp.entities.ProductCategory.delete(id),
     onSuccess: () => { queryClient.invalidateQueries(['product-categories']); toast.success('Category deleted!'); },
   });
 
@@ -220,19 +220,19 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
     for (const srcCat of sourceCategories) {
       const affected = inventoryItems.filter(item => item.category === srcCat.name);
       for (const item of affected) {
-        await base44.entities.Inventory.update(item.id, { category: targetName });
+        await erp.entities.Inventory.update(item.id, { category: targetName });
       }
       // Also reassign sub-categories
       const subCats = categories.filter(c => c.parent_category_id === srcCat.id);
       for (const sub of subCats) {
-        await base44.entities.ProductCategory.update(sub.id, { parent_category_id: targetId });
+        await erp.entities.ProductCategory.update(sub.id, { parent_category_id: targetId });
       }
       // Delete source category
-      await base44.entities.ProductCategory.delete(srcCat.id);
+      await erp.entities.ProductCategory.delete(srcCat.id);
     }
     // 2. Rename target if custom name
     if (targetName !== targetCat?.name) {
-      await base44.entities.ProductCategory.update(targetId, { name: targetName });
+      await erp.entities.ProductCategory.update(targetId, { name: targetName });
     }
     setSelectedIds([]);
     queryClient.invalidateQueries(['product-categories']);
@@ -248,9 +248,9 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
       // Move sub-categories to top level
       const subCats = categories.filter(c => c.parent_category_id === id);
       for (const sub of subCats) {
-        await base44.entities.ProductCategory.update(sub.id, { parent_category_id: '' });
+        await erp.entities.ProductCategory.update(sub.id, { parent_category_id: '' });
       }
-      await base44.entities.ProductCategory.delete(id);
+      await erp.entities.ProductCategory.delete(id);
     }
     setSelectedIds([]);
     queryClient.invalidateQueries(['product-categories']);
@@ -264,7 +264,7 @@ export default function CategoryManagement({ userDepartment, isAdmin = false }) 
   };
 
   const handleSubCategorySubmit = async (data) => {
-    await base44.entities.ProductCategory.create(data);
+    await erp.entities.ProductCategory.create(data);
     queryClient.invalidateQueries(['product-categories']);
     toast.success(`Sub-category "${data.name}" created!`);
   };

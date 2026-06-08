@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,7 +49,7 @@ function CustomerManagementPage() {
   // Single query to load current page of customers
   const { data: customers = [], isLoading: customersLoading, refetch: refetchCustomers } = useQuery({
     queryKey: ['customers-page', currentPage],
-    queryFn: () => base44.entities.Customer.list('-total_spent', pageSize, (currentPage - 1) * pageSize),
+    queryFn: () => erp.entities.Customer.list('-total_spent', pageSize, (currentPage - 1) * pageSize),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
@@ -85,7 +85,7 @@ function CustomerManagementPage() {
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     try {
-      await base44.entities.Customer.create({
+      await erp.entities.Customer.create({
         ...newCustomer,
         customer_since: new Date().toISOString().split('T')[0],
         total_orders: 0,
@@ -121,7 +121,7 @@ function CustomerManagementPage() {
       let allRecords = [];
       let offset = 0;
       while (true) {
-        const batch = await base44.entities.Customer.list('-total_spent', batchSize, offset);
+        const batch = await erp.entities.Customer.list('-total_spent', batchSize, offset);
         allRecords = allRecords.concat(batch);
         if (batch.length < batchSize) break;
         offset += batchSize;
@@ -581,13 +581,13 @@ function CustomerManagementPage() {
                   customer_since: new Date().toISOString().split('T')[0]
                 }));
                 try {
-                  await base44.entities.Customer.bulkCreate(preparedData);
+                  await erp.entities.Customer.bulkCreate(preparedData);
                   totalImported += preparedData.length;
                 } catch (error) {
                   // Fallback to individual creates if bulk fails
                   for (const entry of preparedData) {
                     try {
-                      await base44.entities.Customer.create(entry);
+                      await erp.entities.Customer.create(entry);
                       totalImported++;
                     } catch (e) {
                       console.warn('Failed to create customer:', e);
@@ -701,7 +701,7 @@ function CustomerDetails({ customer }) {
   // Use React Query for parallel fast loading
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['customer-orders', customer.customer_phone],
-    queryFn: () => base44.entities.Order.filter({ customer_phone: customer.customer_phone }),
+    queryFn: () => erp.entities.Order.filter({ customer_phone: customer.customer_phone }),
     staleTime: 30000,
     select: (data) => data.sort((a, b) => new Date(b.order_date) - new Date(a.order_date))
   });
@@ -709,7 +709,7 @@ function CustomerDetails({ customer }) {
   const { data: returns = [], isLoading: returnsLoading } = useQuery({
     queryKey: ['customer-returns', customer.customer_phone],
     queryFn: async () => {
-      const movements = await base44.entities.InventoryMovement.filter({ reference_type: 'return' }, '-movement_date', 100);
+      const movements = await erp.entities.InventoryMovement.filter({ reference_type: 'return' }, '-movement_date', 100);
       return movements.filter(m => m.metadata?.customer_phone === customer.customer_phone);
     },
     staleTime: 30000

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Box, Plus, Trash2, CheckCircle, Package, Image, Upload, Truck } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import SearchableProductSelect from '../common/SearchableProductSelect';
 import { toast } from 'sonner';
 
@@ -84,7 +84,7 @@ export default function PackagingExpenseForm({ expense, inventory, currentUser, 
 
     setIsUploadingInvoice(true);
     try {
-      const uploadPromises = files.map(file => base44.integrations.Core.UploadFile({ file }));
+      const uploadPromises = files.map(file => erp.integrations.Core.UploadFile({ file }));
       const results = await Promise.all(uploadPromises);
       const newUrls = results.map(r => r.file_url);
       

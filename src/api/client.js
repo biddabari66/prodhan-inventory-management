@@ -19,9 +19,9 @@ api.interceptors.request.use((config) => {
 
 // Auto-refresh on 401
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (v: any) => void; reject: (e: any) => void }> = [];
+let failedQueue = [];
 
-function processQueue(error: any, token: string | null = null) {
+function processQueue(error, token = null) {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) reject(error);
     else resolve(token);

@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 /**
  * EXPERT DATA PREFETCHER V2
@@ -11,62 +11,62 @@ import { base44 } from '@/api/base44Client';
 const PREFETCH_QUERIES = {
   users: {
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list('-created_date', 50),
+    queryFn: () => erp.entities.User.list('-created_date', 50),
     staleTime: 5 * 60 * 1000,
   },
   currentUser: {
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => erp.auth.me(),
     staleTime: 10 * 60 * 1000,
   },
   admissions: {
     queryKey: ['admissions'],
-    queryFn: () => base44.entities.Admission.list('-admission_date', 100),
+    queryFn: () => erp.entities.Admission.list('-admission_date', 100),
     staleTime: 3 * 60 * 1000,
   },
   leads: {
     queryKey: ['leads'],
-    queryFn: () => base44.entities.Lead.list('-created_date', 100),
+    queryFn: () => erp.entities.Lead.list('-created_date', 100),
     staleTime: 2 * 60 * 1000,
   },
   expenses: {
     queryKey: ['expenses'],
-    queryFn: () => base44.entities.Expense.list('-expense_date', 50),
+    queryFn: () => erp.entities.Expense.list('-expense_date', 50),
     staleTime: 3 * 60 * 1000,
   },
   incomes: {
     queryKey: ['incomes'],
-    queryFn: () => base44.entities.Income.list('-income_date', 50),
+    queryFn: () => erp.entities.Income.list('-income_date', 50),
     staleTime: 3 * 60 * 1000,
   },
   inventory: {
     queryKey: ['inventory'],
-    queryFn: () => base44.entities.Inventory.list('-updated_date', 200),
+    queryFn: () => erp.entities.Inventory.list('-updated_date', 200),
     staleTime: 5 * 60 * 1000,
   },
   attendance: {
     queryKey: ['attendance'],
-    queryFn: () => base44.entities.Attendance.list('-date', 50),
+    queryFn: () => erp.entities.Attendance.list('-date', 50),
     staleTime: 2 * 60 * 1000,
   },
   tasks: {
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list('-created_date', 50),
+    queryFn: () => erp.entities.Task.list('-created_date', 50),
     staleTime: 3 * 60 * 1000,
   },
   orders: {
     queryKey: ['orders'],
-    queryFn: () => base44.entities.Order.list('-order_date', 100),
+    queryFn: () => erp.entities.Order.list('-order_date', 100),
     staleTime: 2 * 60 * 1000,
   },
   customers: {
     queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list('-created_date', 100),
+    queryFn: () => erp.entities.Customer.list('-created_date', 100),
     staleTime: 5 * 60 * 1000,
   },
   suppliers: {
     queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.list(),
+    queryFn: () => erp.entities.Supplier.list(),
     staleTime: 10 * 60 * 1000,
   },
 };

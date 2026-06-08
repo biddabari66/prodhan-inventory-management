@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { toast } from 'sonner';
 import { CheckCircle, Loader2, CalendarCheck, Lock, AlertTriangle } from 'lucide-react';
 import {
@@ -59,7 +59,7 @@ export default function DailySalesFinalizer({ orders = [], hasPermission, onComp
       const results = await Promise.allSettled(
         chunk.map(order => {
           const bdtDateStr = bdtFmt.format(new Date(order.order_date));
-          return base44.entities.Order.update(order.id, { sales_day_date: bdtDateStr });
+          return erp.entities.Order.update(order.id, { sales_day_date: bdtDateStr });
         })
       );
 

@@ -79,24 +79,24 @@ import {
 "lucide-react";
 import { toast, Toaster } from "sonner";
 import { AuditLog } from "@/entities/AuditLog";
-import UserProfile from "../components/user/UserProfile";
-import NotificationCenter from "../components/notifications/NotificationCenter";
-import ErrorBoundary from "../components/common/ErrorBoundary";
+import UserProfile from "@/components/user/UserProfile";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 import Chatbot from "@/components/common/Chatbot";
-import SessionProvider from '../components/common/EnhancedSessionManager';
-import UniversalSearch from '../components/common/UniversalSearch';
-import { base44 } from '@/api/base44Client';
-import FastLoadingProvider from '../components/common/FastLoadingProvider';
-import { ShimmerStyles } from '../components/common/SkeletonLoaders';
-import { registerServiceWorker } from '../components/common/PerformanceOptimizer';
-import { usePrefetchOnHover } from '../components/common/DataPrefetcher';
-import SmartOnboarding from '../components/onboarding/SmartOnboarding';
-import SmartHelp from '../components/ai/SmartHelp';
-import MobileBottomNav from '../components/common/MobileBottomNav';
-import PWAInstaller from '../components/common/PWAInstaller';
-import PullToRefresh from '../components/common/PullToRefresh';
+import SessionProvider from '@/components/common/EnhancedSessionManager';
+import UniversalSearch from '@/components/common/UniversalSearch';
+import { erp } from '@/api/erpClient';
+import FastLoadingProvider from '@/components/common/FastLoadingProvider';
+import { ShimmerStyles } from '@/components/common/SkeletonLoaders';
+import { registerServiceWorker } from '@/components/common/PerformanceOptimizer';
+import { usePrefetchOnHover } from '@/components/common/DataPrefetcher';
+import SmartOnboarding from '@/components/onboarding/SmartOnboarding';
+import SmartHelp from '@/components/ai/SmartHelp';
+import MobileBottomNav from '@/components/common/MobileBottomNav';
+import PWAInstaller from '@/components/common/PWAInstaller';
+import PullToRefresh from '@/components/common/PullToRefresh';
 
-const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
+const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
 // Enhanced translations with mobile-friendly labels
 const translations = {
@@ -497,7 +497,7 @@ export default function Layout({ children, currentPageName }) {
       if (user && !user.employee_id) {
         try {
           console.log("Employee ID missing, attempting to generate...");
-          const response = await base44.functions.invoke('generateEmployeeId', {});
+          const response = await erp.functions.invoke('generateEmployeeId', {});
 
           if (response.data && response.data.employee_id) {
             toast.success(`Employee ID generated: ${response.data.employee_id}`);

@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 const DEPARTMENT_BRANDING = {
   prodhan_com_e_commerce: {
     name: 'Prodhan.com',
-    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/85b255904_LOGO_PRODHAN-removebg-preview1.png',
+    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/686aeb57b62314958e21fd12/85b255904_LOGO_PRODHAN-removebg-preview1.png',
     primaryColor: '#DC2626', // Red
     secondaryColor: '#FEE2E2',
     phone: '+8809643330000',
@@ -29,7 +29,7 @@ const DEPARTMENT_BRANDING = {
   },
   boibari: {
     name: 'Boibari.com',
-    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/686aeb57b62314958e21fd12/391b002f2_image.png',
+    logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/686aeb57b62314958e21fd12/391b002f2_image.png',
     primaryColor: '#F59E0B', // Amber/Yellow
     secondaryColor: '#FEF3C7',
     phone: '8801896060865',

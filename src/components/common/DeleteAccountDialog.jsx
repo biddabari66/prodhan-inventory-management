@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 export default function DeleteAccountDialog() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,13 +28,13 @@ export default function DeleteAccountDialog() {
       toast.info('Processing account deletion request...');
       // Log the user out - actual account deletion would need admin approval
       // For now, deactivate and log out
-      const user = await base44.auth.me();
+      const user = await erp.auth.me();
       if (user) {
-        await base44.auth.updateMe({ is_active: false, deletion_requested: true, deletion_requested_date: new Date().toISOString() });
+        await erp.auth.updateMe({ is_active: false, deletion_requested: true, deletion_requested_date: new Date().toISOString() });
       }
       toast.success('Account deletion request submitted. You will be logged out.');
       setTimeout(() => {
-        base44.auth.logout('/');
+        erp.auth.logout('/');
       }, 2000);
     } catch (error) {
       toast.error('Failed to process request: ' + error.message);

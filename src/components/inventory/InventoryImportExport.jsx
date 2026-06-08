@@ -11,7 +11,7 @@ import { Inventory } from '@/entities/Inventory';
 import { Income as IncomeApi } from '@/entities/Income';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 
 // Department-specific field configurations
 const DEPARTMENT_CONFIG = {
@@ -399,7 +399,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
 
                 // Auto-sync categories: detect new categories and create ProductCategory records
                 try {
-                  const allCategories = await base44.entities.ProductCategory.filter({ department: selectedDepartment });
+                  const allCategories = await erp.entities.ProductCategory.filter({ department: selectedDepartment });
                   const existingCatNames = new Set(allCategories.map(c => c.name?.toLowerCase()));
                   
                   // Collect unique categories from imported data
@@ -420,7 +420,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                   for (const catName of importedCategories) {
                     if (!existingCatNames.has(catName.toLowerCase())) {
                       const slug = catName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '_').replace(/-+/g, '_').trim();
-                      await base44.entities.ProductCategory.create({
+                      await erp.entities.ProductCategory.create({
                         name: catName,
                         slug: slug,
                         department: selectedDepartment,

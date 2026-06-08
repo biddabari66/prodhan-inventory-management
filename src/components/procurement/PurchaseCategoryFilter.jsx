@@ -1,19 +1,19 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { erp } from '@/api/erpClient';
 import { Layers } from 'lucide-react';
 
 export default function PurchaseCategoryFilter({ selected, onSelect }) {
   const { data: categories = [] } = useQuery({
     queryKey: ['product-categories'],
-    queryFn: () => base44.entities.ProductCategory.filter({ department: 'prodhan_com_e_commerce', is_active: true }),
+    queryFn: () => erp.entities.ProductCategory.filter({ department: 'prodhan_com_e_commerce', is_active: true }),
     staleTime: 10 * 60 * 1000,
   });
 
   // Also fetch unique categories from inventory to include unregistered ones
   const { data: inventoryItems = [] } = useQuery({
     queryKey: ['inventory-categories-filter'],
-    queryFn: () => base44.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 5000),
+    queryFn: () => erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 5000),
     staleTime: 5 * 60 * 1000,
   });
 
