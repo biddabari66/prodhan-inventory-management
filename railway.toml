@@ -22,6 +22,11 @@ restartPolicyMaxRetries = 5
 [services.variables]
 PORT = "3000"
 NODE_ENV = "production"
+# The backend will automatically receive the environment variables from Railway if they are linked in the UI,
+# but we can explicitly define standard references here (Railway will prompt to link them):
+DATABASE_URL = "${{Postgres.DATABASE_URL}}"
+REDIS_URL = "${{Redis.REDIS_URL}}"
+FRONTEND_URL = "https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}"
 
 # ─── Frontend ─────────────────────────────────────────────────────────────────
 [[services]]
@@ -33,17 +38,10 @@ source.branch = "main"
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.frontend"
 
+[services.variables]
+# The frontend needs to know where the backend API is located to make requests
+VITE_API_URL = "https://${{backend.RAILWAY_PUBLIC_DOMAIN}}/api"
+
 [services.deploy]
 healthcheckPath = "/"
 healthcheckTimeout = 20
-
-# ─── n8n Automation ───────────────────────────────────────────────────────────
-[[services]]
-name = "n8n"
-
-[services.source]
-image = "n8nio/n8n:latest"
-
-[services.deploy]
-healthcheckPath = "/healthz"
-healthcheckTimeout = 60

@@ -96,14 +96,18 @@ export default function Home() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back{user?.display_name ? `, ${user.display_name}` : ''} 👋
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Here's what's happening across your business today.
-        </p>
+      {/* Greeting banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 p-6 text-white shadow-lg shadow-orange-500/20">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-12 right-24 h-32 w-32 rounded-full bg-amber-300/20 blur-2xl" />
+        <div className="relative">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Welcome back{user?.display_name ? `, ${user.display_name}` : ''} 👋
+          </h1>
+          <p className="mt-1 text-sm text-white/90">
+            Here's what's happening across your business today.
+          </p>
+        </div>
       </div>
 
       {/* KPI cards */}
@@ -113,7 +117,7 @@ export default function Home() {
           value={bdt(stats?.todayRevenue)}
           sub={`${stats?.todayOrders ?? 0} orders today`}
           icon={DollarSign}
-          accent="bg-emerald-500"
+          accent="bg-gradient-to-br from-emerald-400 to-emerald-600"
           to="/Sales"
         />
         <StatCard
@@ -121,7 +125,7 @@ export default function Home() {
           value={bdt(finance?.revenue)}
           sub={`Profit ${bdt(finance?.profit)}`}
           icon={BarChart3}
-          accent="bg-orange-500"
+          accent="bg-gradient-to-br from-amber-400 to-orange-600"
           to="/FinanceDashboard"
         />
         <StatCard
@@ -129,7 +133,7 @@ export default function Home() {
           value={bdt(finance?.expenses)}
           sub={`${finance?.pendingExpenses ?? 0} pending approval`}
           icon={TrendingDown}
-          accent="bg-rose-500"
+          accent="bg-gradient-to-br from-rose-400 to-rose-600"
           to="/ExpenseApprovals"
         />
         <StatCard
@@ -137,7 +141,7 @@ export default function Home() {
           value={stats?.newLeads ?? leadStats?.byStatus?.NEW ?? 0}
           sub={`${leadStats?.conversionRate ?? 0}% conversion`}
           icon={UserPlus}
-          accent="bg-sky-500"
+          accent="bg-gradient-to-br from-sky-400 to-blue-600"
           to="/CRM"
         />
       </div>
