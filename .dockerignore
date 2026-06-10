@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.env
+**/.env
+backend/.env
+*.log
+.vscode
+.idea
+.claude
+bridge/node_modules

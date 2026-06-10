@@ -19,7 +19,12 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", env.FRONTEND_URL],
+      connectSrc: [
+        "'self'",
+        env.FRONTEND_URL,
+        'https://api.groq.com',
+        ...(process.env.AI_BASE_URL ? [(() => { try { return new URL(process.env.AI_BASE_URL).origin; } catch { return ''; } })()] : []),
+      ].filter((s): s is string => Boolean(s)),
     },
   },
   crossOriginEmbedderPolicy: false,

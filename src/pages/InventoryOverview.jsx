@@ -1054,7 +1054,7 @@ function InventoryOverviewPage() {
                   <Button
                     variant={categoryFilter === 'all' ? 'default' : 'outline'} size="sm"
                     onClick={() => setCategoryFilter('all')}
-                    className={categoryFilter === 'all' ? 'bg-violet-600' : ''}>
+                    className={categoryFilter === 'all' ? 'bg-amber-500 hover:bg-amber-600' : ''}>
                     All
                   </Button>
                   {categories.map(cat => (
@@ -1091,7 +1091,7 @@ function InventoryOverviewPage() {
                     variant={variantFilter === opt.v ? 'default' : 'outline'} size="sm"
                     onClick={() => setVariantFilter(opt.v)}
                     className={variantFilter === opt.v
-                      ? 'bg-indigo-600 hover:bg-indigo-700'
+                      ? 'bg-amber-500 hover:bg-amber-600'
                       : 'text-slate-600'}>
                     {opt.l}
                   </Button>

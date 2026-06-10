@@ -1108,7 +1108,7 @@ const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, cur
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-violet-600 hover:bg-violet-700">
+        <Button type="submit" className="bg-amber-500 hover:bg-amber-600">
           <CheckCircle className="w-4 h-4 mr-2" />
           {order ? 'Update Order' : 'Create Order'}
         </Button>
@@ -1869,7 +1869,7 @@ function ProcurementPage() {
               setEditingOrder(null);
               setIsOrderFormOpen(true);
             }}
-            className="bg-violet-600 hover:bg-violet-700"
+            className="bg-amber-500 hover:bg-amber-600"
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Order

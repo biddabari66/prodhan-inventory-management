@@ -177,8 +177,10 @@ router.post('/webhooks/biometric', webhookLimiter, attendanceCtrl.biometricScan)
 // ─── Notifications ────────────────────────────────────────────────────────────
 router.get('/notifications', authenticate, apiLimiter, async (req: any, res) => {
   const { default: prisma } = await import('../config/db');
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) { res.json({ notifications: [], unreadCount: 0 }); return; }
   const notifications = await prisma.notification.findMany({
-    where: { OR: [{ userId: req.user.id }, { userId: null }] },
+    where: { tenantId, OR: [{ userId: req.user.id }, { userId: null }] },
     orderBy: { createdAt: 'desc' },
     take: 50,
   });
@@ -188,7 +190,14 @@ router.get('/notifications', authenticate, apiLimiter, async (req: any, res) => 
 
 router.patch('/notifications/:id/read', authenticate, async (req: any, res) => {
   const { default: prisma } = await import('../config/db');
-  await prisma.notification.update({ where: { id: req.params.id }, data: { isRead: true } });
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) { res.status(401).json({ error: 'Unauthenticated' }); return; }
+  // Tenant- and recipient-scoped: only own user notifications or tenant broadcasts.
+  const result = await prisma.notification.updateMany({
+    where: { id: req.params.id, tenantId, OR: [{ userId: req.user.id }, { userId: null }] },
+    data: { isRead: true },
+  });
+  if (result.count === 0) { res.status(404).json({ error: 'Notification not found' }); return; }
   res.json({ success: true });
 });
 

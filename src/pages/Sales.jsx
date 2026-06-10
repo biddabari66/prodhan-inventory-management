@@ -760,8 +760,8 @@ function SalesPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto animate-pulse">
-            <ShoppingCart className="w-6 h-6 text-red-600" />
+          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mx-auto animate-pulse">
+            <ShoppingCart className="w-6 h-6 text-amber-600" />
           </div>
           <p className="text-slate-600 font-medium">Loading sales data...</p>
         </div>
@@ -795,7 +795,7 @@ function SalesPage() {
                 placeholder="Search orders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 h-10 sm:h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                className="pl-11 h-10 sm:h-11 bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
             <Popover>
@@ -804,7 +804,7 @@ function SalesPage() {
                   <Filter className="w-4 h-4 text-slate-600" />
                   <span className="hidden sm:inline text-slate-700">Filters</span>
                   {(dateRange.from || statusFilter !== 'all' || paymentFilter !== 'all') && (
-                    <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-600 text-white text-xs">
+                    <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-amber-500 text-white text-xs">
                       {[dateRange.from, statusFilter !== 'all', paymentFilter !== 'all'].filter(Boolean).length}
                     </Badge>
                   )}
@@ -1226,7 +1226,7 @@ function SalesPage() {
               <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredOrders.length}</Badge>
             </div>
             {filteredOrders.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={toggleSelectAll} className="text-xs text-red-600 h-7">
+              <Button variant="ghost" size="sm" onClick={toggleSelectAll} className="text-xs text-amber-600 h-7">
                 {selectedOrderIds.length === filteredOrders.length ? 'Deselect' : 'Select All'}
               </Button>
             )}
@@ -1370,7 +1370,7 @@ function SalesPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-red-100 text-red-700 text-xs">
+                              <AvatarFallback className="bg-amber-100 text-amber-700 text-xs">
                                 {order.customer_name?.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>

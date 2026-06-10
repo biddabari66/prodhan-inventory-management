@@ -127,17 +127,17 @@ export default function MobileBottomNav() {
             <SheetTrigger asChild>
               <button
                 className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-xl transition-all touch-manipulation min-w-[60px] ${
-                  isInMoreMenu 
-                    ? 'bg-indigo-50 dark:bg-indigo-900/20 scale-105' 
+                  isInMoreMenu
+                    ? 'bg-amber-50 dark:bg-amber-900/20 scale-105'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                <MoreHorizontal className={`w-5 h-5 ${isInMoreMenu ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`} />
-                <span className={`text-[10px] font-semibold leading-tight ${isInMoreMenu ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                <MoreHorizontal className={`w-5 h-5 ${isInMoreMenu ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                <span className={`text-[10px] font-semibold leading-tight ${isInMoreMenu ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
                   More
                 </span>
                 {isInMoreMenu && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
                 )}
               </button>
             </SheetTrigger>
@@ -179,27 +179,27 @@ export default function MobileBottomNav() {
                               to={item.url}
                               onClick={() => setIsMoreOpen(false)}
                               className={`flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all touch-manipulation min-h-[100px] ${
-                                active 
-                                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 shadow-sm' 
+                                active
+                                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 shadow-sm'
                                   : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md'
                               }`}
                             >
                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                                active 
-                                  ? 'bg-indigo-100 dark:bg-indigo-900/40' 
+                                active
+                                  ? 'bg-amber-100 dark:bg-amber-900/40'
                                   : 'bg-slate-100 dark:bg-slate-700'
                               }`}>
-                                <Icon className={`w-6 h-6 ${active ? 'text-indigo-600 dark:text-indigo-400' : item.color}`} />
+                                <Icon className={`w-6 h-6 ${active ? 'text-amber-600 dark:text-amber-400' : item.color}`} />
                               </div>
                               <span className={`text-xs font-semibold text-center leading-tight ${
-                                active 
-                                  ? 'text-indigo-600 dark:text-indigo-400' 
+                                active
+                                  ? 'text-amber-600 dark:text-amber-400'
                                   : 'text-slate-700 dark:text-slate-300'
                               }`}>
                                 {item.label}
                               </span>
                               {active && (
-                                <Badge className="bg-indigo-600 text-white text-[10px] px-2 py-0">
+                                <Badge className="bg-amber-600 text-white text-[10px] px-2 py-0">
                                   Active
                                 </Badge>
                               )}

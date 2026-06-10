@@ -205,11 +205,11 @@ function CRMPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
               <Target className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -221,7 +221,7 @@ function CRMPage() {
             <LeadExcelUpload onComplete={() => queryClient.invalidateQueries({ queryKey: ['crm-leads'] })} />
             <Button
               onClick={() => setIsAddLeadOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-amber-500 hover:bg-amber-600"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Lead
@@ -295,19 +295,19 @@ function CRMPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-white border shadow-sm h-12 p-1 rounded-xl">
-            <TabsTrigger value="pipeline" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="pipeline" className="gap-2 rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4" />
               Pipeline
             </TabsTrigger>
-            <TabsTrigger value="leads" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="leads" className="gap-2 rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <Users className="w-4 h-4" />
               All Leads
             </TabsTrigger>
-            <TabsTrigger value="conversion" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="conversion" className="gap-2 rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <ArrowRight className="w-4 h-4" />
               Conversion
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2 rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="analytics" className="gap-2 rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <PieChart className="w-4 h-4" />
               Analytics
             </TabsTrigger>
@@ -762,7 +762,7 @@ function CRMPage() {
             </div>
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => setIsAddLeadOpen(false)}>Cancel</Button>
-              <Button type="submit" className="bg-purple-600 hover:bg-purple-700">Add Lead</Button>
+              <Button type="submit" className="bg-amber-500 hover:bg-amber-600">Add Lead</Button>
             </div>
           </form>
         </DialogContent>

@@ -932,12 +932,12 @@ export default function Layout({ children, currentPageName }) {
             @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
             :root {
-              /* Professional Color Palette - RED & WHITE Theme */
-                --primary-red: #DC2626;
-                --primary-red-dark: #B91C1C;
-                --primary-red-light: #EF4444;
-                --primary-violet: #DC2626;
-                --primary-indigo: #B91C1C;
+              /* Professional Color Palette - AMBER/ORANGE Brand Theme */
+                --primary-red: #F59E0B;
+                --primary-red-dark: #EA580C;
+                --primary-red-light: #FBBF24;
+                --primary-violet: #F59E0B;
+                --primary-indigo: #EA580C;
               --accent-emerald: #10B981;
               --accent-cyan: #0891B2;
               --accent-orange: #EA580C;
@@ -1018,7 +1018,7 @@ export default function Layout({ children, currentPageName }) {
 
             /* Modern Text Gradient - RED Theme */
             .text-gradient {
-              background: linear-gradient(135deg, #B91C1C 0%, #DC2626 50%, #EF4444 100%);
+              background: linear-gradient(135deg, #EA580C 0%, #F59E0B 50%, #FBBF24 100%);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
               background-clip: text;
@@ -1041,7 +1041,7 @@ export default function Layout({ children, currentPageName }) {
             /* MOBILE-FIRST TOUCH OPTIMIZATIONS */
             * {
               touch-action: manipulation;
-              -webkit-tap-highlight-color: rgba(124, 58, 237, 0.1);
+              -webkit-tap-highlight-color: rgba(245, 158, 11, 0.1);
             }
 
             /* Enhanced scrollbars - mobile optimized */
@@ -1050,7 +1050,7 @@ export default function Layout({ children, currentPageName }) {
             .overflow-y-auto,
             .overflow-auto {
               scrollbar-width: thin;
-              scrollbar-color: rgba(124, 58, 237, 0.3) transparent;
+              scrollbar-color: rgba(245, 158, 11, 0.3) transparent;
             }
 
             .sidebar::-webkit-scrollbar,
@@ -1083,7 +1083,7 @@ export default function Layout({ children, currentPageName }) {
             main::-webkit-scrollbar-thumb,
             .overflow-y-auto::-webkit-scrollbar-thumb,
             .overflow-auto::-webkit-scrollbar-thumb {
-              background: rgba(124, 58, 237, 0.3);
+              background: rgba(245, 158, 11, 0.3);
               border-radius: 3px;
               transition: background 0.3s ease;
             }
@@ -1092,7 +1092,7 @@ export default function Layout({ children, currentPageName }) {
             main::-webkit-scrollbar-thumb:hover,
             .overflow-y-auto::-webkit-scrollbar-thumb:hover,
             .overflow-auto::-webkit-scrollbar-thumb:hover {
-              background: rgba(124, 58, 237, 0.5);
+              background: rgba(245, 158, 11, 0.5);
             }
 
             /* PROFESSIONAL FIXED SIDEBAR NAVIGATION - Clean & Enterprise */
@@ -1127,21 +1127,21 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .nav-item.active {
-              background: rgba(220, 38, 38, 0.1);
+              background: rgba(245, 158, 11, 0.12);
               font-weight: 600;
-              border-color: rgba(220, 38, 38, 0.3);
-              box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
+              border-color: rgba(245, 158, 11, 0.35);
+              box-shadow: 0 1px 3px rgba(245, 158, 11, 0.12);
             }
 
             .dark .nav-item:hover {
-              background: rgba(220, 38, 38, 0.08);
-              border-color: rgba(220, 38, 38, 0.15);
+              background: rgba(245, 158, 11, 0.08);
+              border-color: rgba(245, 158, 11, 0.15);
             }
 
             .dark .nav-item.active {
-              background: rgba(220, 38, 38, 0.15);
-              border-color: rgba(220, 38, 38, 0.35);
-              box-shadow: 0 1px 4px rgba(220, 38, 38, 0.15);
+              background: rgba(245, 158, 11, 0.15);
+              border-color: rgba(245, 158, 11, 0.35);
+              box-shadow: 0 1px 4px rgba(245, 158, 11, 0.15);
             }
 
             .nav-item.active::before {
@@ -1152,12 +1152,12 @@ export default function Layout({ children, currentPageName }) {
               transform: translateY(-50%);
               width: 3px;
               height: 24px;
-              background: #DC2626;
+              background: #F59E0B;
               border-radius: 0 4px 4px 0;
             }
 
             .dark .nav-item.active::before {
-              background: #EF4444;
+              background: #FBBF24;
             }
 
             /* Sub-navigation box styling */
@@ -1336,7 +1336,7 @@ export default function Layout({ children, currentPageName }) {
             /* ACCESSIBILITY & FOCUS STATES */
             @media (max-width: 1024px) {
               *:focus-visible {
-                outline: 2px solid #7C3AED;
+                outline: 2px solid #F59E0B;
                 outline-offset: 2px;
                 border-radius: 4px;
               }
@@ -1346,7 +1346,7 @@ export default function Layout({ children, currentPageName }) {
               input:focus-visible,
               select:focus-visible,
               textarea:focus-visible {
-                outline: 3px solid #7C3AED;
+                outline: 3px solid #F59E0B;
                 outline-offset: 2px;
               }
             }
@@ -1458,27 +1458,27 @@ export default function Layout({ children, currentPageName }) {
               animation: smoothFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Professional Button Styles - RED Theme */
+            /* Professional Button Styles - AMBER/ORANGE Theme */
             .btn-primary {
-              background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
+              background: linear-gradient(135deg, #F59E0B 0%, #EA580C 100%);
               color: white;
               font-weight: 600;
-              box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+              box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
               transition: all 0.08s ease;
             }
 
             .btn-primary:hover {
-              box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+              box-shadow: 0 6px 20px rgba(234, 88, 12, 0.4);
               transform: translateY(-1px);
             }
 
-            /* Premium Card RED Border */
+            /* Premium Card AMBER Border */
             .premium-card {
-              border-left: 3px solid #DC2626;
+              border-left: 3px solid #F59E0B;
             }
 
             .dark .premium-card {
-              border-left: 3px solid #EF4444;
+              border-left: 3px solid #FBBF24;
               background: hsl(225 25% 11%);
               border-color: hsl(225 15% 18%);
               box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -1507,18 +1507,18 @@ export default function Layout({ children, currentPageName }) {
             }
 
             ::-webkit-scrollbar-track {
-              background: #FEF2F2;
+              background: #FFF7ED;
               border-radius: 6px;
             }
 
             ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #B91C1C, #DC2626);
+              background: linear-gradient(180deg, #EA580C, #F59E0B);
               border-radius: 6px;
-              border: 1px solid #FEF2F2;
+              border: 1px solid #FFF7ED;
             }
 
             ::-webkit-scrollbar-thumb:hover {
-              background: linear-gradient(180deg, #991B1B, #B91C1C);
+              background: linear-gradient(180deg, #C2410C, #EA580C);
             }
 
             .dark ::-webkit-scrollbar-track {
@@ -1526,7 +1526,7 @@ export default function Layout({ children, currentPageName }) {
             }
 
             .dark ::-webkit-scrollbar-thumb {
-              background: linear-gradient(180deg, #DC2626, #EF4444);
+              background: linear-gradient(180deg, #EA580C, #FBBF24);
               border: 1px solid hsl(225 25% 8%);
             }
 
@@ -1633,7 +1633,7 @@ export default function Layout({ children, currentPageName }) {
             <div className={`border-t border-slate-200 dark:border-[hsl(225,15%,14%)] p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
               {isSidebarOpen ?
               <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
                         {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                       </div>
                   <div className="min-w-0 flex-1">
@@ -1670,7 +1670,7 @@ export default function Layout({ children, currentPageName }) {
                 </div> :
 
               <div className="relative group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-red-300 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-amber-300 transition-all">
                     {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
                   </div>
                   <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
@@ -1778,9 +1778,9 @@ export default function Layout({ children, currentPageName }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-7 w-7 sm:h-9 sm:w-9 rounded-2xl p-0 hover:bg-white/10 transition-all touch-manipulation">
-                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-red-500/30">
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-amber-500/30">
                         <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                        <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm lg:text-xs">
+                        <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold text-sm lg:text-xs">
                           {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -1791,21 +1791,21 @@ export default function Layout({ children, currentPageName }) {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12 lg:h-10 lg:w-10">
                           <AvatarImage src={currentUser?.profile_picture_url || ''} />
-                          <AvatarFallback className="bg-gradient-to-br from-red-600 to-red-500 text-white font-bold text-sm">
+                          <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold text-sm">
                               {((currentUser?.display_name || currentUser?.full_name)?.charAt(0) || 'U').toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary truncate">{currentUser?.display_name || currentUser?.full_name}</p>
                           <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
-                          <p className="text-xs text-red-600 font-medium mt-1 truncate">{currentUser?.designation}</p>
+                          <p className="text-xs text-orange-600 font-medium mt-1 truncate">{currentUser?.designation}</p>
                         </div>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-white/10" />
                     <DropdownMenuItem
                       onClick={() => setIsProfileOpen(true)}
-                      className="text-muted-foreground hover:bg-red-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
+                      className="text-muted-foreground hover:bg-amber-500/10 hover:text-primary m-2 rounded-lg cursor-pointer min-h-[52px] lg:min-h-[48px] touch-manipulation">
 
                       <UserIcon className="mr-3 h-4 w-4" />
                       My Profile
@@ -1813,7 +1813,7 @@ export default function Layout({ children, currentPageName }) {
                     <DropdownMenuItem asChild>
                       <Link
                         to={createPageUrl("Settings")}
-                        className="flex items-center w-full text-muted-foreground hover:bg-red-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
+                        className="flex items-center w-full text-muted-foreground hover:bg-amber-500/10 hover:text-primary m-2 rounded-lg min-h-[52px] lg:min-h-[48px] touch-manipulation">
 
                         <Settings className="mr-3 h-4 w-4" />
                         Settings
@@ -1837,7 +1837,7 @@ export default function Layout({ children, currentPageName }) {
               <ErrorBoundary>
                 <Suspense fallback={
                 <div className="text-center p-20 text-muted-foreground">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
                     <p>Loading page...</p>
                   </div>
                 }>

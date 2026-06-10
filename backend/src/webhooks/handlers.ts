@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import prisma from '../config/db';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
+import { safeEqual } from '../utils/crypto';
 
 // ─── Facebook Leads Webhook ──────────────────────────────────────────────────
 
@@ -32,7 +33,8 @@ export const facebookWebhook = async (req: Request, res: Response): Promise<void
     .update(JSON.stringify(req.body))
     .digest('hex')}`;
 
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+  // safeEqual guards against length mismatch (timingSafeEqual throws otherwise → 500).
+  if (!safeEqual(signature, expectedSig)) {
     res.status(401).json({ error: 'Invalid signature' });
     return;
   }

@@ -5,6 +5,10 @@ WORKDIR /app
 COPY package*.json ./
 COPY . .
 
+# Build-time API URL — Railway injects service variables as build args.
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build the Vite app
 RUN npm ci && npm run build
 
