@@ -70,7 +70,15 @@ export default function UserProfile({ user, onUpdate, onClose }) {
       setWorkData({
         department: user.department || '',
         designation: user.designation || '',
-        joining_date: user.joining_date ? new Date(user.joining_date).toISOString().split('T')[0] : '',
+        joining_date: (() => {
+          if (!user.joining_date) return '';
+          try {
+            const d = new Date(user.joining_date);
+            return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+          } catch {
+            return '';
+          }
+        })(),
         base_salary: user.base_salary?.toString() || '',
         job_role: user.job_role || 'employee'
       });

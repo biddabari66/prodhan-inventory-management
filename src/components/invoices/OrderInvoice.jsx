@@ -173,7 +173,22 @@ export default function OrderInvoice({ order }) {
 
           <Separator className="my-6" />
 
-          {branding.invoice_template === 'design_2_classic' ? (
+          {branding.invoice_template === 'design_3_minimal' ? (
+            // MINIMAL DESIGN
+            <div className="mb-8">
+              <div className="flex justify-between items-end border-b pb-4 mb-4">
+                <div>
+                  <p className="text-sm text-muted-foreground uppercase tracking-widest mb-1">Billed To</p>
+                  <p className="font-medium text-lg">{order.customer_name}</p>
+                  <p className="text-sm text-muted-foreground">{order.customer_phone}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground uppercase tracking-widest mb-1">From</p>
+                  <p className="font-medium">{branding.name}</p>
+                </div>
+              </div>
+            </div>
+          ) : branding.invoice_template === 'design_2_classic' ? (
             // CLASSIC TABULAR DESIGN
             <div className="mb-8 border border-slate-300 rounded p-4 text-sm">
               <table className="w-full">

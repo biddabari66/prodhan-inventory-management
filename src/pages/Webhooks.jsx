@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Webhook, Link as LinkIcon, Copy, Plus, Trash2, Send, Save, ArrowRightLeft, Shield, CheckCircle2, Box, Truck, UserPlus } from "lucide-react";
+import { Webhook, Link as LinkIcon, Copy, Plus, Trash2, Send, Save, ArrowRightLeft, Shield, CheckCircle2, Box, Truck, UserPlus, RefreshCw, Bell, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast, Toaster } from 'sonner';
+import SplitText from '../components/animations/SplitText';
 
 export default function Webhooks() {
   const [outboundHooks, setOutboundHooks] = useState([]);
@@ -103,8 +104,31 @@ export default function Webhooks() {
       description: "Push leads captured from Facebook or AI Chatbots via n8n into the ERP CRM.",
       method: "POST",
       endpoint: "/api/crm/leads",
-      payload: '{\n  "name": "John Doe",\n  "phone": "01700000000",\n  "source": "AI_Agent"\n}',
       icon: UserPlus
+    },
+    {
+      title: "Sync Google Sheets to Inventory",
+      description: "Pull updated stock levels from Google Sheets directly into ERP inventory.",
+      method: "PUT",
+      endpoint: "/api/inventory/sync-batch",
+      payload: '{\n  "items": [\n    {"sku": "PRD-01", "quantity": 150}\n  ]\n}',
+      icon: RefreshCw
+    },
+    {
+      title: "Slack / Discord Notification Alert",
+      description: "Trigger a custom message alert inside the ERP from your external AI monitors.",
+      method: "POST",
+      endpoint: "/api/notifications/system",
+      payload: '{\n  "title": "Unusual Traffic Spike",\n  "level": "warning",\n  "message": "AI agent detected 300% increase in bot traffic."\n}',
+      icon: Bell
+    },
+    {
+      title: "Customer Support Ticket Generation",
+      description: "Allow your AI Support Agent (n8n) to open support tickets for customers.",
+      method: "POST",
+      endpoint: "/api/crm/tickets",
+      payload: '{\n  "customer_id": "89211",\n  "issue_type": "refund",\n  "description": "Customer requested refund due to damage."\n}',
+      icon: MessageSquare
     }
   ];
 
@@ -118,7 +142,7 @@ export default function Webhooks() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <Webhook className="w-8 h-8 text-orange-500" />
-              Automation & n8n Integrations
+              <SplitText text="Automation & n8n Integrations" delay={30} />
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
               Connect your ERP with n8n, AI Agents, and external services to automate your workflows.
@@ -183,6 +207,8 @@ export default function Webhooks() {
                             <SelectItem value="order.updated">Order Status Changed</SelectItem>
                             <SelectItem value="inventory.low">Low Stock Alert</SelectItem>
                             <SelectItem value="lead.captured">New Lead Captured</SelectItem>
+                            <SelectItem value="customer.registered">Customer Registered</SelectItem>
+                            <SelectItem value="daily.report.generated">Daily Sales Report Generated</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

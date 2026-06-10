@@ -11,6 +11,8 @@ import {
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
+import SpotlightCard from '../components/animations/SpotlightCard';
+import ShinyText from '../components/animations/ShinyText';
 
 const bdt = (n) => '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 0 });
 
@@ -41,28 +43,28 @@ function KpiCard({ title, value, rawValue, sub, icon: Icon, gradient, bgLight, t
   const displayValue = rawValue !== undefined ? bdt(counted) : value;
 
   const body = (
-    <div
-      className="erp-card p-5 group cursor-pointer overflow-hidden relative"
+    <SpotlightCard
+      className="p-5 group cursor-pointer bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-none hover:shadow-[0_15px_40px_rgb(0,0,0,0.12)] rounded-2xl"
       style={{ animationDelay: `${delay}ms` }}
     >
       {/* Subtle top gradient bar */}
-      <div className={`absolute top-0 left-0 right-0 h-0.5 ${gradient}`} />
+      <div className={`absolute top-0 left-0 right-0 h-1 ${gradient}`} />
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white animate-count-up">{displayValue}</p>
-          {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
+          <p className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{title}</p>
+          <p className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white animate-count-up drop-shadow-sm">{displayValue}</p>
+          {sub && <p className="mt-1.5 text-xs font-semibold text-slate-500">{sub}</p>}
         </div>
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${bgLight} flex-shrink-0 group-hover:scale-110 transition-transform`}>
-          <Icon className={`w-5 h-5 ${textColor}`} />
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bgLight} flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm`}>
+          <Icon className={`w-6 h-6 ${textColor}`} />
         </div>
       </div>
       {to && (
-        <div className={`mt-3 flex items-center text-xs font-semibold ${textColor} opacity-0 group-hover:opacity-100 transition-opacity`}>
-          View details <ArrowUpRight className="ml-1 w-3 h-3" />
+        <div className={`mt-4 flex items-center text-sm font-bold ${textColor} opacity-0 group-hover:opacity-100 transition-opacity`}>
+          View details <ArrowUpRight className="ml-1 w-4 h-4" />
         </div>
       )}
-    </div>
+    </SpotlightCard>
   );
   return to ? <Link to={to}>{body}</Link> : body;
 }
@@ -176,23 +178,19 @@ export default function Home() {
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
         <div className="absolute right-24 -bottom-10 w-24 h-24 bg-amber-300/20 rounded-full blur-2xl" />
         <div className="absolute left-1/2 top-0 w-16 h-16 bg-orange-300/15 rounded-full blur-xl" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-orange-100 text-sm font-medium">{today}</p>
-            <h1 className="text-2xl font-bold mt-1 tracking-tight">
-              {greeting}, {displayName.split(' ')[0]} 👋
-            </h1>
-            <p className="mt-1 text-sm text-orange-100">
-              Here's everything happening at Prodhan today.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link to="/Sales">
-              <button className="bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 transition-all border border-white/20">
-                <ShoppingCart className="w-4 h-4" /> New Sale
-              </button>
-            </Link>
-          </div>
+        <div className="relative z-10">
+          <p className="text-orange-100 font-medium">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <h1 className="text-3xl font-bold mt-1 mb-2">
+            <ShinyText text={`${greeting}, ${displayName.split(' ')[0] || 'User'}`} speed={3} className="text-white" /> 👋
+          </h1>
+          <p className="text-orange-50 opacity-90">Here's everything happening at Prodhan today.</p>
+        </div>
+        <div className="absolute right-6 top-6 z-10 hidden sm:block">
+          <Link to="/Sales">
+            <button className="bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 transition-all border border-white/20">
+              <ShoppingCart className="w-4 h-4" /> New Sale
+            </button>
+          </Link>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { safeFormatDate } from '@/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   FileText, Download, Search, Eye, Calendar, 
@@ -733,11 +734,11 @@ export default function SubmittedReports() {
                           </p>
                           <p className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            Report Date: {format(new Date(report.report_date), 'PPP')}
+                            Report Date: {safeFormatDate(report.report_date, 'PPP')}
                           </p>
                           <p className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
-                            Submitted: {format(new Date(report.created_date), 'PPP')}
+                            Submitted: {safeFormatDate(report.created_date, 'PPP')}
                           </p>
                         </div>
 
@@ -820,7 +821,7 @@ export default function SubmittedReports() {
                     </div>
                     <div>
                       <span className="font-medium">Report Date:</span>
-                      <p className="text-muted-foreground">{format(new Date(selectedReport.report_date), 'PPP')}</p>
+                      <p className="text-muted-foreground">{safeFormatDate(selectedReport.report_date, 'PPP')}</p>
                     </div>
                     <div>
                       <span className="font-medium">Status:</span>

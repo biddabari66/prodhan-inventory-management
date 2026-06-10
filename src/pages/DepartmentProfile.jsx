@@ -240,6 +240,7 @@ export default function DepartmentProfile() {
                     <SelectContent>
                       <SelectItem value="design_1_modern">Design 1: Modern & Clean</SelectItem>
                       <SelectItem value="design_2_classic">Design 2: Classic Tabular</SelectItem>
+                      <SelectItem value="design_3_minimal">Design 3: Minimal</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-slate-500 mt-2">

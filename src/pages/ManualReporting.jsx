@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { safeFormatDate } from '@/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -653,7 +654,7 @@ const exportToPDF = (report, template, reportRef) => {
         <div class="report-header">
           <h1 class="report-title">${report.template_name}</h1>
           <p class="report-meta">Submitted by: ${report.submitted_by_name}</p>
-          <p class="report-meta">Report Date: ${format(new Date(report.report_date), 'PPP')}</p>
+          <p class="report-meta">Report Date: ${safeFormatDate(report.report_date, 'PPP')}</p>
           <p class="report-meta">Department: ${report.department || 'N/A'}</p>
           <p class="report-meta">Status: ${report.status?.toUpperCase() || 'SUBMITTED'}</p>
         </div>
@@ -948,7 +949,7 @@ export default function ManualReportingPage() {
                 type: 'system_notification',
                 data: {
                   title: 'New Manual Report Submitted',
-                  message: `${currentUser.display_name || currentUser.full_name} has submitted a new manual report titled "${selectedTemplate.template_name}" for ${format(new Date(reportDate), 'PPP')}. You can review it in the ZYPRA ERP system.`,
+                  message: `${currentUser.display_name || currentUser.full_name} has submitted a new manual report titled "${selectedTemplate.template_name}" for ${safeFormatDate(reportDate, 'PPP')}. You can review it in the ZYPRA ERP system.`,
                   actionUrl: `${window.location.origin}/ManualReporting`
                 }
               }

@@ -18,6 +18,8 @@ import { erp } from '@/api/erpClient';
 import { withPermission } from '../components/common/PermissionGuard';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import ComprehensiveReportGenerator from '../components/reports/ComprehensiveReportGenerator';
+import SplitText from '../components/animations/SplitText';
+import SpotlightCard from '../components/animations/SpotlightCard';
 
 // BDT timezone helpers
 const toBDTDate = (date = new Date()) => {
@@ -178,13 +180,13 @@ function InventoryReportsPage() {
       toast.info('Generating report...');
       
       const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses, adSpends] = await Promise.all([
-        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
-        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
-        erp.entities.InventoryMovement.list('-movement_date', 10000),
-        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
-        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        erp.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        erp.entities.AdSpend.list('-spend_date', 1000)
+        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000).catch(() => []),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000).catch(() => []),
+        erp.entities.InventoryMovement.list('-movement_date', 10000).catch(() => []),
+        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000).catch(() => []),
+        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000).catch(() => []),
+        erp.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000).catch(() => []),
+        erp.entities.AdSpend.list('-spend_date', 1000).catch(() => [])
       ]);
 
       // Filter data by selected date/time range
@@ -1328,13 +1330,13 @@ function InventoryReportsPage() {
       setReportGenerating(customReport.reportType);
       
       const [orders, inventory, movements, purchaseOrders, packagingExpenses, expenses, adSpends] = await Promise.all([
-        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
-        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000),
-        erp.entities.InventoryMovement.list('-movement_date', 10000),
-        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000),
-        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        erp.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000),
-        erp.entities.AdSpend.list('-spend_date', 1000)
+        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000).catch(() => []),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 2000).catch(() => []),
+        erp.entities.InventoryMovement.list('-movement_date', 10000).catch(() => []),
+        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 2000).catch(() => []),
+        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000).catch(() => []),
+        erp.entities.Expense.filter({ department: 'prodhan_com_e_commerce' }, '-expense_date', 1000).catch(() => []),
+        erp.entities.AdSpend.list('-spend_date', 1000).catch(() => [])
       ]);
 
       const getBDTDateTime = (dateStr) => {
@@ -1425,8 +1427,9 @@ function InventoryReportsPage() {
     <button
       onClick={() => handleQuickReport(type)}
       disabled={!!reportGenerating}
-      className={`group h-24 sm:h-32 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`group w-full disabled:opacity-50 disabled:cursor-not-allowed`}
     >
+      <SpotlightCard className="h-24 sm:h-32 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all">
       {reportGenerating === type ? (
         <div className="flex flex-col items-center justify-center h-full">
           <RefreshCw className={`w-6 h-6 sm:w-8 sm:h-8 animate-spin ${color}`} />
@@ -1440,6 +1443,7 @@ function InventoryReportsPage() {
           <p className="font-semibold text-slate-800 text-[11px] sm:text-sm text-center leading-tight">{title}</p>
         </div>
       )}
+      </SpotlightCard>
     </button>
   );
 
@@ -1459,7 +1463,11 @@ function InventoryReportsPage() {
             <FileText className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-2xl font-bold text-slate-900">Report Center</h1>
+            <SplitText 
+               text="Report Center" 
+               className="text-lg sm:text-2xl font-bold text-slate-900"
+               delay={30}
+            />
             <p className="text-slate-500 text-xs sm:text-sm">Generate & download reports</p>
           </div>
         </div>

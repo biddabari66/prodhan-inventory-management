@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { withPermission } from '../components/common/PermissionGuard';
 import LeadExcelUpload from '../components/crm/LeadExcelUpload';
+import KanbanBoard from '../components/crm/KanbanBoard';
 import { format, subDays, differenceInDays } from 'date-fns';
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -348,47 +349,13 @@ function CRMPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Pipeline View */}
+          {/* Pipeline View (Kanban) */}
           <TabsContent value="pipeline" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {['new', 'contacted', 'qualified', 'negotiation', 'converted'].map((status, idx) => {
-                const statusLeads = leads.filter(l => l.lead_status === status);
-                const colors = ['bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-orange-500', 'bg-green-500'];
-                const labels = ['New', 'Contacted', 'Qualified', 'Negotiation', 'Converted'];
-                
-                return (
-                  <Card key={status} className="bg-white border-0 shadow-sm">
-                    <CardHeader className={`py-3 ${colors[idx]} rounded-t-lg`}>
-                      <CardTitle className="text-sm text-white flex justify-between items-center">
-                        {labels[idx]}
-                        <Badge className="bg-white/20 text-white">{statusLeads.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-3 max-h-96 overflow-y-auto space-y-2">
-                      {statusLeads.slice(0, 10).map(lead => (
-                        <div 
-                          key={lead.id}
-                          onClick={() => { setSelectedLead(lead); setIsLeadDetailsOpen(true); }}
-                          className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
-                        >
-                          <p className="font-medium text-sm text-slate-900 truncate">{lead.student_name}</p>
-                          <p className="text-xs text-slate-500">{lead.phone}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <Badge variant="outline" className="text-xs">{lead.lead_source}</Badge>
-                            {lead.lead_score && (
-                              <span className="text-xs text-purple-600 font-medium">{lead.lead_score}%</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {statusLeads.length === 0 && (
-                        <p className="text-center text-slate-400 text-sm py-4">No leads</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            <KanbanBoard 
+              leads={filteredLeads} 
+              onStatusChange={(lead, newStatus) => handleStatusChange(lead, newStatus)}
+              onLeadClick={(lead) => { setSelectedLead(lead); setIsLeadDetailsOpen(true); }}
+            />
           </TabsContent>
 
           {/* All Leads View */}

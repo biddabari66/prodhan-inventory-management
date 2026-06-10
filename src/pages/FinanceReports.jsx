@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, TrendingUp, DollarSign, FileDown, Calendar, Target } from 'lucide-react'; // Removed Printer icon
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, ComposedChart, Area, AreaChart } from 'recharts';
-import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { generateFinancePDF } from '@/functions/generateFinancePDF'; // New import
+import { safeFormatDate } from '@/utils';
 import { toast } from 'sonner'; // Use sonner instead of react-hot-toast
 
 const COLORS = ['#7C3AED', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6'];
@@ -158,7 +159,7 @@ export default function FinanceReports() {
       const dayExpense = dayExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
       
       data.push({
-        date: period === 'year' ? format(currentDate, 'MMM') : format(currentDate, 'MMM dd'),
+        date: period === 'year' ? safeFormatDate(currentDate, 'MMM') : safeFormatDate(currentDate, 'MMM dd'),
         income: dayIncome,
         expense: dayExpense,
         profit: dayIncome - dayExpense
@@ -169,7 +170,7 @@ export default function FinanceReports() {
   };
 
   const calculateBudgetComparison = (budgets, expenses, period) => {
-    const currentMonth = format(new Date(), 'yyyy-MM');
+    const currentMonth = safeFormatDate(new Date(), 'yyyy-MM');
     const monthBudgets = budgets.filter(budget => budget.month === currentMonth);
     
     return monthBudgets.map(budget => {
@@ -199,7 +200,7 @@ export default function FinanceReports() {
     const csvData = [
       ['Finance Report Summary'],
       ['Period', selectedPeriod],
-      ['Date Range', `${format(reportData.dateRange.startDate, 'yyyy-MM-dd')} to ${format(reportData.dateRange.endDate, 'yyyy-MM-dd')}`],
+      ['Date Range', `${safeFormatDate(reportData.dateRange.startDate, 'yyyy-MM-dd')} to ${safeFormatDate(reportData.dateRange.endDate, 'yyyy-MM-dd')}`],
       [''],
       ['Summary'],
       ['Total Income', reportData.summary.totalIncome],
@@ -219,7 +220,7 @@ export default function FinanceReports() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `finance_report_${selectedPeriod}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `finance_report_${selectedPeriod}_${safeFormatDate(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
     toast.success('CSV report downloaded successfully!');
@@ -240,8 +241,8 @@ export default function FinanceReports() {
         reportData,
         period: selectedPeriod,
         dateRange: {
-          startDate: format(reportData.dateRange.startDate, 'yyyy-MM-dd'),
-          endDate: format(reportData.dateRange.endDate, 'yyyy-MM-dd')
+          startDate: safeFormatDate(reportData.dateRange.startDate, 'yyyy-MM-dd'),
+          endDate: safeFormatDate(reportData.dateRange.endDate, 'yyyy-MM-dd')
         }
       });
 
@@ -250,7 +251,7 @@ export default function FinanceReports() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `finance_report_${selectedPeriod}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+        a.download = `finance_report_${selectedPeriod}_${safeFormatDate(new Date(), 'yyyy-MM-dd')}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
