@@ -33,7 +33,7 @@ export default function IntegrationActionCard({ integration, isAdmin }) {
       setIsRunning(true);
       setLastResult(null);
       try {
-        const fn = (await import(`@/functions/${integration.functionName}`))[integration.functionName];
+        const fn = (await import(`@/functions/${integration.functionName}.js`))[integration.functionName];
         const response = await fn({});
         const data = response?.data;
 

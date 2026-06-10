@@ -253,6 +253,7 @@ export default function OrderInvoice({ order }) {
                 )}
               </div>
             </div>
+          </div>
           )}
 
           <Separator className="my-6" />
