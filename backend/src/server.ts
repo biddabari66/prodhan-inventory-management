@@ -11,6 +11,9 @@ import { startCronJobs } from './jobs/cron';
 
 const app = express();
 
+// Trust Railway's reverse proxy (required for rate-limiting & HTTPS detection)
+app.set('trust proxy', 1);
+
 // ─── Security Headers ─────────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
@@ -76,7 +79,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
-const PORT = parseInt(env.PORT);
+const PORT = parseInt(process.env.PORT || env.PORT || '3000', 10);
 
 async function bootstrap() {
   try {

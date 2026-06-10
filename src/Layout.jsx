@@ -179,6 +179,94 @@ const translations = {
   }
 };
 
+// ─── ERP Category Navigation Component ────────────────────────────────────────
+const CategoryNav = ({ categories, currentUser }) => {
+  const location = useLocation();
+  const [openCategory, setOpenCategory] = useState(null);
+
+  const isSubActive = useCallback((url) => location.pathname === url, [location.pathname]);
+
+  const isCategoryActive = useCallback((cat) => {
+    return cat.items.some(item => location.pathname === item.url);
+  }, [location.pathname]);
+
+  // Auto-open active category on mount and route change
+  useEffect(() => {
+    for (const cat of categories) {
+      if (cat.items.some(item => location.pathname === item.url)) {
+        setOpenCategory(cat.id);
+        return;
+      }
+    }
+  }, [location.pathname, categories]);
+
+  return (
+    <nav className="space-y-0.5 px-2">
+      {categories.map((cat) => {
+        const isOpen = openCategory === cat.id;
+        const isActive = isCategoryActive(cat);
+        return (
+          <div key={cat.id} className="mb-0.5">
+            {/* Category header button */}
+            <button
+              onClick={() => setOpenCategory(isOpen ? null : cat.id)}
+              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
+                isActive
+                  ? 'bg-orange-50 dark:bg-orange-900/20'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
+                  isActive ? `${cat.bg} shadow-sm` : 'bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-150'
+                }`}>
+                  <cat.icon className={`w-4 h-4 ${isActive ? cat.iconColor : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300'}`} />
+                </div>
+                <span className={`text-sm font-semibold truncate ${
+                  isActive ? 'text-orange-700 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'
+                }`}>{cat.label}</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {isActive && <span className={`w-1.5 h-1.5 rounded-full ${cat.dotColor} animate-pulse-dot`} />}
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  isOpen ? 'rotate-90' : ''
+                } ${isActive ? 'text-orange-500' : 'text-slate-400'}`} />
+              </div>
+            </button>
+
+            {/* Sub-items */}
+            {isOpen && (
+              <div className="mt-0.5 ml-3 pl-4 border-l-2 border-slate-100 dark:border-slate-800 space-y-0.5 animate-fade-in">
+                {cat.items.map((item) => {
+                  const active = isSubActive(item.url);
+                  return (
+                    <Link
+                      key={item.url}
+                      to={item.url}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                        active
+                          ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 font-semibold'
+                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-orange-600 dark:text-orange-400' : item.color}`} />
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <span className="ml-auto text-[10px] font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded-full">{item.badge}</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+};
+
+// Legacy NavItem kept for compatibility
 const NavItem = ({ module, isMobile = false, isCollapsed = false }) => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -738,7 +826,138 @@ export default function Layout({ children, currentPageName }) {
     return mapping[pageName] || pageName.toLowerCase();
   };
 
-  // PRODUCTION: Optimized navigation with memoization
+  // ─── ERP Grouped Navigation Categories ──────────────────────────────────────
+  const getNavigationCategories = useCallback(() => {
+    if (!currentUser) return [];
+    const hp = (key) => hasPermission(key);
+
+    const categories = [
+      {
+        id: 'dashboard',
+        label: 'Overview',
+        icon: LayoutDashboard,
+        bg: 'bg-orange-100 dark:bg-orange-900/30',
+        iconColor: 'text-orange-600 dark:text-orange-400',
+        dotColor: 'bg-orange-500',
+        items: [
+          { label: 'Dashboard', url: createPageUrl('Home'), icon: LayoutDashboard, color: 'text-orange-500' },
+          { label: 'AI Copilot', url: createPageUrl('AICopilot'), icon: Sparkles, color: 'text-violet-500' },
+        ].filter(() => hp('inventory_overview')),
+      },
+      {
+        id: 'sales',
+        label: 'Sales & CRM',
+        icon: ShoppingCart,
+        bg: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400',
+        dotColor: 'bg-green-500',
+        items: [
+          hp('sales') && { label: 'Sales Orders', url: createPageUrl('Sales'), icon: ShoppingCart, color: 'text-green-600' },
+          hp('customer_management') && { label: 'CRM & Leads', url: createPageUrl('CRM'), icon: Target, color: 'text-purple-500' },
+          hp('customer_management') && { label: 'Customers', url: createPageUrl('CustomerManagement'), icon: Users, color: 'text-blue-500' },
+          hp('discount_campaigns') && { label: 'Discount Offers', url: createPageUrl('DiscountCampaigns'), icon: Sparkles, color: 'text-amber-500' },
+          hp('marketing_roi') && { label: 'Marketing ROI', url: createPageUrl('MarketingROI'), icon: TrendingUp, color: 'text-pink-500' },
+        ].filter(Boolean),
+      },
+      {
+        id: 'inventory',
+        label: 'Inventory',
+        icon: Package,
+        bg: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-600 dark:text-blue-400',
+        dotColor: 'bg-blue-500',
+        items: [
+          hp('inventory_overview') && { label: 'All Products', url: createPageUrl('InventoryOverview'), icon: Package, color: 'text-blue-500' },
+          hp('sales') && { label: 'Barcode Scan', url: createPageUrl('BarcodeScan'), icon: ScanLine, color: 'text-emerald-500' },
+          hp('purchase_orders') && { label: 'Purchase Orders', url: createPageUrl('PurchaseOrders'), icon: FileText, color: 'text-orange-500' },
+          hp('production_house') && { label: 'Production', url: createPageUrl('ProductionHouse'), icon: Briefcase, color: 'text-purple-500' },
+          hp('inventory_movements') && { label: 'Stock Movements', url: createPageUrl('InventoryMovements'), icon: RotateCcw, color: 'text-cyan-500' },
+          hp('inventory_returns') && { label: 'Returns & Damages', url: createPageUrl('InventoryReturns'), icon: PackageX, color: 'text-rose-500' },
+          hp('inventory_suppliers') && { label: 'Suppliers', url: createPageUrl('InventorySuppliers'), icon: Building2, color: 'text-slate-500' },
+          hp('inventory_categories') && { label: 'Categories', url: createPageUrl('CategorySettings'), icon: Layers, color: 'text-teal-500' },
+        ].filter(Boolean),
+      },
+      {
+        id: 'hr',
+        label: 'People & HR',
+        icon: Users,
+        bg: 'bg-violet-100 dark:bg-violet-900/30',
+        iconColor: 'text-violet-600 dark:text-violet-400',
+        dotColor: 'bg-violet-500',
+        items: [
+          hp('attendance') && { label: 'Employees', url: createPageUrl('Employees'), icon: Users, color: 'text-violet-500' },
+          hp('attendance') && { label: 'Attendance', url: createPageUrl('EmployeeAttendance'), icon: Clock, color: 'text-rose-500' },
+          hp('payroll') && { label: 'Payroll', url: createPageUrl('Payroll'), icon: Calculator, color: 'text-green-500' },
+          hp('expenses') && { label: 'Expenses', url: createPageUrl('Expenses'), icon: Wallet, color: 'text-amber-500' },
+        ].filter(Boolean),
+      },
+      {
+        id: 'finance',
+        label: 'Finance',
+        icon: DollarSign,
+        bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+        iconColor: 'text-emerald-600 dark:text-emerald-400',
+        dotColor: 'bg-emerald-500',
+        items: [
+          hp('finance_dashboard') && { label: 'Finance Overview', url: createPageUrl('FinanceDashboard'), icon: DollarSign, color: 'text-emerald-500' },
+          hp('finance_dashboard') && { label: 'Accounting', url: createPageUrl('Accounting'), icon: Calculator, color: 'text-teal-500' },
+          hp('financial_analytics') && { label: 'Finance Reports', url: createPageUrl('FinanceReports'), icon: FileText, color: 'text-slate-500' },
+        ].filter(Boolean),
+      },
+      {
+        id: 'reports',
+        label: 'Reports & Analytics',
+        icon: BarChart3,
+        bg: 'bg-rose-100 dark:bg-rose-900/30',
+        iconColor: 'text-rose-600 dark:text-rose-400',
+        dotColor: 'bg-rose-500',
+        items: [
+          hp('product_analytics') && { label: 'Analytics', url: createPageUrl('ProductAnalytics'), icon: BarChart3, color: 'text-rose-500' },
+          hp('inventory_reports') && { label: 'Inventory Reports', url: createPageUrl('InventoryReports'), icon: FileText, color: 'text-blue-500' },
+          hp('inventory_ai_insights') && { label: 'AI Insights', url: createPageUrl('InventoryAIInsights'), icon: Sparkles, color: 'text-violet-500' },
+          hp('auto_reports') && { label: 'Auto Reports', url: createPageUrl('AutoReportSettings'), icon: Mail, color: 'text-amber-500' },
+          hp('reports') && { label: 'Report Builder', url: createPageUrl('ManualReporting'), icon: PieChart, color: 'text-slate-500' },
+        ].filter(Boolean),
+      },
+      {
+        id: 'system',
+        label: 'System',
+        icon: Settings,
+        bg: 'bg-slate-100 dark:bg-slate-800',
+        iconColor: 'text-slate-600 dark:text-slate-400',
+        dotColor: 'bg-slate-500',
+        items: [
+          hp('user_access_manager') && { label: 'User & Roles', url: createPageUrl('UserAccessManager'), icon: Shield, color: 'text-slate-500' },
+          hp('integrations') && { label: 'Automation Hub', url: createPageUrl('Automation'), icon: Zap, color: 'text-amber-500' },
+          hp('integrations') && { label: 'Billing', url: createPageUrl('Billing'), icon: CreditCard, color: 'text-emerald-500' },
+          hp('audit_trail') && { label: 'Audit Trail', url: createPageUrl('AuditTrailViewer'), icon: FileText, color: 'text-slate-400' },
+          hp('system_alerts') && { label: 'System Alerts', url: createPageUrl('AlertsConfiguration'), icon: Bell, color: 'text-rose-400' },
+        ].filter(Boolean),
+      },
+    ];
+
+    // Remove empty categories
+    const visible = categories.filter(cat => cat.items.length > 0);
+
+    // Super Admin extras
+    if ((currentUser?.job_role || '').toUpperCase() === 'SUPER_ADMIN') {
+      visible.push({
+        id: 'superadmin',
+        label: 'Platform Admin',
+        icon: Shield,
+        bg: 'bg-fuchsia-100 dark:bg-fuchsia-900/30',
+        iconColor: 'text-fuchsia-600',
+        dotColor: 'bg-fuchsia-500',
+        items: [
+          { label: 'Platform Dashboard', url: createPageUrl('SuperAdmin'), icon: Shield, color: 'text-fuchsia-500' },
+          { label: 'Payment Approvals', url: createPageUrl('BillingAdmin'), icon: CreditCard, color: 'text-fuchsia-400' },
+        ],
+      });
+    }
+    return visible;
+  }, [currentUser, userPermissions, currentLanguage]);
+
+  // PRODUCTION: Flat modules kept for compatibility (mobile bottom nav etc)
   const getNavigationModules = useCallback(() => {
     if (!currentUser) return [];
     const isMobile = window.innerWidth < 1024;
@@ -1590,117 +1809,63 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          {/* Professional Fixed Sidebar - Clean Enterprise Design */}
-          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-200 dark:border-[hsl(225,15%,14%)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] md:w-[260px] md:max-w-[260px]
+          {/* ── Premium Sidebar — White/Off-White ERP Style ── */}
+          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-100 dark:border-[hsl(225,15%,14%)] shadow-[2px_0_12px_rgba(0,0,0,0.04)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] md:w-[268px] md:max-w-[268px]
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             onClick={(e) => e.stopPropagation()}>
-            
-            {/* Premium Sidebar Header */}
-            <div className="flex items-center justify-between h-[60px] lg:h-[72px] px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-[hsl(225,30%,7%)]">
-              <Link to={createPageUrl('InventoryOverview')} className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                            <Zap className="w-6 h-6 text-white" fill="white" />
-                </div>
-                {isSidebarOpen &&
-                <div className="min-w-0">
-                    <span className="text-[18px] font-bold text-slate-900 dark:text-white whitespace-nowrap block truncate" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                      ZYPRA ERP
-                    </span>
-                    <span className="text-slate-500 text-sm font-medium tracking-wide dark:text-slate-400">Business Suite
 
-                  </span>
-                  </div>
-                }
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100 dark:border-[hsl(225,15%,14%)] flex-shrink-0">
+              <Link to={createPageUrl('Home')} className="flex items-center gap-2.5 overflow-hidden min-w-0">
+                <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl w-9 h-9 flex items-center justify-center shadow-md shadow-orange-500/25 flex-shrink-0">
+                  <Zap className="w-5 h-5 text-white" fill="white" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[16px] font-bold text-slate-900 dark:text-white block" style={{ letterSpacing: '-0.03em' }}>ZYPRA ERP</span>
+                  <span className="text-[11px] text-slate-400 font-medium tracking-wide">Business Suite</span>
+                </div>
               </Link>
               <button
                 data-sidebar-close
                 onClick={() => setIsSidebarOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden h-10 w-10 p-0 rounded-lg flex items-center justify-center flex-shrink-0"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ WebkitTapHighlightColor: 'transparent' }}>
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Navigation Content */}
-            <div className="flex-1 overflow-y-auto py-4 px-3">
-              <nav className="space-y-1">
-                {getNavigationModules().map((mod) =>
-                <SimpleNavLink key={mod.url} module={mod} />
-                )}
-              </nav>
+            {/* User quick info */}
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  {currentUser ? (currentUser.display_name || currentUser.full_name || 'U').charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200 truncate">{currentUser?.display_name || currentUser?.full_name}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{currentUser?.designation || currentUser?.job_role}</p>
+                </div>
+              </div>
             </div>
 
-            {/* User Footer */}
-            <div className={`border-t border-slate-200 dark:border-[hsl(225,15%,14%)] p-3 flex-shrink-0 ${!isSidebarOpen ? 'flex justify-center' : ''}`}>
-              {isSidebarOpen ?
-              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                        {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                      </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                      {currentUser?.display_name || currentUser?.full_name}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                      {currentUser?.designation || currentUser?.email}
-                    </p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* ERP Category Navigation */}
+            <div className="flex-1 overflow-y-auto py-3">
+              <CategoryNav categories={getNavigationCategories()} currentUser={currentUser} />
+            </div>
 
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-xl">
-                      <DropdownMenuLabel className="text-slate-700 dark:text-slate-300">My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-slate-200 dark:bg-slate-700" />
-                      <DropdownMenuItem onSelect={() => setIsProfileOpen(true)} className="cursor-pointer">
-                        <UserIcon className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleLogout} className="cursor-pointer text-red-600 dark:text-red-400">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div> :
-
-              <div className="relative group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-amber-300 transition-all">
-                    {currentUser ? (currentUser.display_name || currentUser.full_name).charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <div className="absolute left-full ml-3 bottom-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] min-w-[200px] py-2">
-                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-                      <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{currentUser?.display_name || currentUser?.full_name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
-                    </div>
-                    <button
-                    onClick={() => setIsProfileOpen(true)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 w-full text-left">
-
-                      <UserIcon className="w-4 h-4" />
-                      <span>Profile</span>
-                    </button>
-                    <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left">
-
-                      <LogOut className="w-4 h-4" />
-                      <span>Log out</span>
-                    </button>
-                  </div>
-                </div>
-              }
+            {/* Sidebar Footer — Logout */}
+            <div className="border-t border-slate-100 dark:border-slate-800 p-3 flex-shrink-0">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-150 font-medium"
+              >
+                <LogOut className="w-4 h-4 flex-shrink-0" />
+                <span>Sign Out</span>
+              </button>
             </div>
           </aside>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 md:pb-0 bg-slate-50 dark:bg-[hsl(225,25%,8%)] md:ml-[260px]">
+          <div className="flex-1 flex flex-col transition-all duration-300 ease-out overflow-hidden pb-16 md:pb-0 bg-[hsl(210,20%,98%)] dark:bg-[hsl(225,25%,8%)] md:ml-[268px]">
             
             {/* Professional Header */}
             <header className="header h-12 sm:h-14 lg:h-16 px-2 sm:px-4 lg:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">

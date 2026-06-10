@@ -25,6 +25,7 @@ import { withPermission, usePermission, useConfidentialPermission } from '../com
 import { usePurchasePriceResolver } from '../components/sales/useDiscountCampaigns';
 import { Lock } from 'lucide-react';
 import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
+import ExcelImport from '../components/common/ExcelImport';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VARIANT UTILITIES
@@ -970,16 +971,37 @@ function InventoryOverviewPage() {
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Inventory Overview</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Manage all products and stock</p>
           </div>
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto flex-wrap">
             <Button variant="outline"
-              className="border-slate-300 h-10 sm:h-11 px-3 sm:px-4 rounded-xl font-semibold gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
+              className="border-slate-300 h-10 sm:h-11 px-3 sm:px-4 rounded-xl font-semibold gap-2 text-xs sm:text-sm"
               onClick={() => setIsScannerOpen(true)}>
               <ScanLine className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               <span className="hidden sm:inline">Scan</span> QR
             </Button>
             {canCreate && (
+              <ExcelImport
+                type="products"
+                onImport={async (rows) => {
+                  for (const row of rows) {
+                    await erp.entities.Inventory.create({
+                      item_name: row.name,
+                      barcode: row.sku,
+                      subject: row.category,
+                      purchase_price: row.buy_price,
+                      selling_price: row.sell_price,
+                      current_stock: row.stock,
+                      minimum_stock: row.min_stock,
+                      unit: row.unit,
+                      description: row.description,
+                    });
+                  }
+                  await loadUserAndInventory();
+                }}
+              />
+            )}
+            {canCreate && (
               <Button
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-4 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl text-xs sm:text-sm flex-1 sm:flex-none"
+                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-4 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl text-xs sm:text-sm"
                 onClick={() => { setEditingItem(null); setIsFormOpen(true); }}>
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> Add Item
               </Button>

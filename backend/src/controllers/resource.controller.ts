@@ -78,7 +78,11 @@ export function makeResource({ model, defaultSort = '-createdAt' }: ResourceOpti
 
   const tenantWhere = (req: AuthenticatedRequest, extra: Record<string, any> = {}) => {
     const where: Record<string, any> = { ...extra };
-    if (req.user?.tenantId) where.tenantId = req.user.tenantId;
+    // Only inject tenantId if the model actually has that field in the schema
+    const modelInfo = MODEL_FIELDS[model];
+    if (req.user?.tenantId && modelInfo?.set.has('tenantId')) {
+      where.tenantId = req.user.tenantId;
+    }
     return where;
   };
 
@@ -139,7 +143,8 @@ export function makeResource({ model, defaultSort = '-createdAt' }: ResourceOpti
         return res.status(405).json({ error: 'Read-only resource' });
       }
       const data: Record<string, any> = sanitizeWrite(model, req.body);
-      if (req.user?.tenantId) data.tenantId = req.user.tenantId;
+      const modelInfo = MODEL_FIELDS[model];
+      if (req.user?.tenantId && modelInfo?.set.has('tenantId')) data.tenantId = req.user.tenantId;
 
       const row = await delegate().create({ data });
       res.status(201).json({ data: row });

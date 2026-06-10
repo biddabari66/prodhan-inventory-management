@@ -41,7 +41,15 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
 });
 
-const parsed = envSchema.safeParse(process.env);
+// Pre-process env to trim secrets that may have whitespace injected by Railway
+const rawEnv = {
+  ...process.env,
+  ENCRYPTION_KEY: (process.env.ENCRYPTION_KEY || '').trim(),
+  JWT_SECRET: (process.env.JWT_SECRET || '').trim(),
+  JWT_REFRESH_SECRET: (process.env.JWT_REFRESH_SECRET || '').trim(),
+};
+
+const parsed = envSchema.safeParse(rawEnv);
 
 if (!parsed.success) {
   console.error('❌ Invalid environment variables:');
