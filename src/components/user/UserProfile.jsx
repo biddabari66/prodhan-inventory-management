@@ -112,6 +112,17 @@ export default function UserProfile({ user, onUpdate, onClose }) {
     setIsSaving(true);
     
     try {
+      if (!personalData.full_name?.trim()) {
+        toast.error("Full name is required.");
+        setIsSaving(false);
+        return;
+      }
+      if (personalData.email && !/^\S+@\S+\.\S+$/.test(personalData.email)) {
+        toast.error("Please enter a valid email address.");
+        setIsSaving(false);
+        return;
+      }
+
       console.log('🔄 Starting profile update process...');
       
       const updateData = {
@@ -183,6 +194,12 @@ export default function UserProfile({ user, onUpdate, onClose }) {
     }
     setIsSaving(true);
     try {
+      if (workData.base_salary && isNaN(parseFloat(workData.base_salary))) {
+        toast.error("Base salary must be a valid number.");
+        setIsSaving(false);
+        return;
+      }
+
       const updateData = {
         department: workData.department,
         designation: workData.designation,
@@ -210,6 +227,17 @@ export default function UserProfile({ user, onUpdate, onClose }) {
     }
     setIsSaving(true);
     try {
+      if (settingsData.admission_target && isNaN(parseFloat(settingsData.admission_target))) {
+        toast.error("Admission target must be a valid number.");
+        setIsSaving(false);
+        return;
+      }
+      if (settingsData.incentive_rate && isNaN(parseFloat(settingsData.incentive_rate))) {
+        toast.error("Incentive rate must be a valid number.");
+        setIsSaving(false);
+        return;
+      }
+
       const updateData = {
         admission_target: parseFloat(settingsData.admission_target) || 0,
         incentive_rate: parseFloat(settingsData.incentive_rate) || 0,
@@ -284,7 +312,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 md:p-6">
         <div className="flex justify-center items-center h-full w-full max-w-4xl min-h-[400px] bg-white dark:bg-slate-900 rounded-lg shadow-xl">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
         </div>
       </div>
     );
@@ -310,9 +338,9 @@ export default function UserProfile({ user, onUpdate, onClose }) {
           <div className="p-4 md:p-6 pr-16">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="relative">
-                <Avatar className="w-16 h-16 md:w-20 md:h-20 border-2 border-violet-200 dark:border-violet-800">
+                <Avatar className="w-16 h-16 md:w-20 md:h-20 border-2 border-orange-200 dark:border-orange-800">
                   <AvatarImage src={personalData.profile_picture_url} alt={personalData.full_name} />
-                  <AvatarFallback className="text-xl md:text-2xl font-bold bg-gradient-to-r from-violet-500 to-pink-500 text-white">
+                  <AvatarFallback className="text-xl md:text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 text-white">
                     {personalData.full_name?.charAt(0)?.toUpperCase() || user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
@@ -357,28 +385,28 @@ export default function UserProfile({ user, onUpdate, onClose }) {
             <TabsList className="grid w-full grid-cols-4 h-auto p-1 mb-6">
               <TabsTrigger 
                 value="personal" 
-                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-700 dark:data-[state=active]:bg-violet-900/30 dark:data-[state=active]:text-violet-300"
+                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/30 dark:data-[state=active]:text-orange-300"
               >
                 <span className="hidden sm:inline">Personal Info</span>
                 <span className="sm:hidden">Personal</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="work" 
-                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-700 dark:data-[state=active]:bg-violet-900/30 dark:data-[state=active]:text-violet-300"
+                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/30 dark:data-[state=active]:text-orange-300"
               >
                 <span className="hidden sm:inline">Work & Attendance</span>
                 <span className="sm:hidden">Work</span>
               </TabsTrigger>
               <TabsTrigger
                 value="security"
-                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-700 dark:data-[state=active]:bg-violet-900/30 dark:data-[state=active]:text-violet-300"
+                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/30 dark:data-[state=active]:text-orange-300"
               >
                 <span className="hidden sm:inline">Security</span>
                 <span className="sm:hidden">Security</span>
               </TabsTrigger>
               <TabsTrigger
                 value="preferences"
-                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-700 dark:data-[state=active]:bg-violet-900/30 dark:data-[state=active]:text-violet-300"
+                className="text-xs md:text-sm px-2 py-3 md:px-4 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/30 dark:data-[state=active]:text-orange-300"
               >
                 <span className="hidden sm:inline">Preferences</span>
                 <span className="sm:hidden">Prefs</span>
@@ -390,7 +418,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
               <Card className="border border-gray-200 dark:border-gray-700">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 md:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                    <UserIcon className="w-5 h-5 text-violet-600" />
+                    <UserIcon className="w-5 h-5 text-orange-600" />
                     Personal Information
                   </CardTitle>
                   {(isTargetUser() || isAdmin()) && (
@@ -414,7 +442,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                         <div className="relative">
                           <Avatar className="w-24 h-24 border-4 border-white dark:border-slate-800 shadow-md">
                             <AvatarImage src={personalData.profile_picture_url} />
-                            <AvatarFallback className="bg-gradient-to-br from-violet-500 to-pink-500 text-white font-bold text-3xl">
+                            <AvatarFallback className="bg-gradient-to-br from-orange-500 to-amber-500 text-white font-bold text-3xl">
                               {(personalData.display_name?.charAt(0) || personalData.full_name?.charAt(0) || 'U').toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -514,7 +542,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                         </Button>
                         <Button
                           onClick={handlePersonalSave}
-                          className="w-full sm:w-auto min-h-[44px] order-1 sm:order-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700"
+                          className="w-full sm:w-auto min-h-[44px] order-1 sm:order-2 bg-orange-600 hover:bg-orange-700 text-white"
                           disabled={isSaving || isUploading}
                         >
                           {isSaving ? (
@@ -564,7 +592,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
               <Card className="premium-card">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 md:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                    <Briefcase className="w-5 h-5 text-violet-600" />
+                    <Briefcase className="w-5 h-5 text-orange-600" />
                     Work Information
                   </CardTitle>
                   {(isTargetUser() || isAdmin()) && (
@@ -678,7 +706,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                         </Button>
                         <Button
                           onClick={handleWorkSave}
-                          className="w-full sm:w-auto min-h-[44px] order-1 sm:order-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700"
+                          className="w-full sm:w-auto min-h-[44px] order-1 sm:order-2 bg-orange-600 hover:bg-orange-700 text-white"
                           disabled={isSaving}
                         >
                           {isSaving ? (
@@ -702,7 +730,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                         { label: 'Department', value: getDepartmentDisplayName(workData.department) },
                         { label: 'Designation', value: workData.designation },
                         { label: 'Job Role', value: JOB_ROLES.find(r => r.value === workData.job_role)?.label || workData.job_role },
-                        { label: 'Joining Date', value: workData.joining_date ? format(new Date(workData.joining_date), 'PPP') : null },
+                        { label: 'Joining Date', value: workData.joining_date && !isNaN(new Date(workData.joining_date)) ? format(new Date(workData.joining_date), 'PPP') : null },
                         { label: 'Base Salary', value: workData.base_salary ? `৳${parseFloat(workData.base_salary).toLocaleString()}` : null }
                       ].map((item, index) => (
                         <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -808,7 +836,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 md:p-6">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                      <DollarSign className="w-5 h-5 text-violet-600" />
+                      <DollarSign className="w-5 h-5 text-orange-600" />
                       Performance & Financial Settings
                     </CardTitle>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -921,7 +949,7 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                         </Button>
                         <Button
                           onClick={handleSettingsSave}
-                          className="w-full sm:w-auto min-h-[44px] order-1 sm:order-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700"
+                          className="w-full sm:w-auto min-h-[44px] order-1 sm:order-2 bg-orange-600 hover:bg-orange-700 text-white"
                           disabled={isSaving}
                         >
                           {isSaving ? (

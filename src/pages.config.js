@@ -59,6 +59,7 @@ import CRM from './pages/CRM';
 import CategorySettings from './pages/CategorySettings';
 import CustomerManagement from './pages/CustomerManagement';
 import DailyExpenseReport from './pages/DailyExpenseReport';
+import DepartmentProfile from './pages/DepartmentProfile';
 import DiscountCampaigns from './pages/DiscountCampaigns';
 import DocumentCenter from './pages/DocumentCenter';
 import Documentation from './pages/Documentation';
@@ -133,6 +134,7 @@ export const PAGES = {
     "CategorySettings": CategorySettings,
     "CustomerManagement": CustomerManagement,
     "DailyExpenseReport": DailyExpenseReport,
+    "DepartmentProfile": DepartmentProfile,
     "DiscountCampaigns": DiscountCampaigns,
     "DocumentCenter": DocumentCenter,
     "Documentation": Documentation,

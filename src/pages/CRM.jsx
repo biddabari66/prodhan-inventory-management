@@ -33,6 +33,8 @@ function CRMPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [assignedFilter, setAssignedFilter] = useState('all');
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isLeadDetailsOpen, setIsLeadDetailsOpen] = useState(false);
@@ -46,6 +48,7 @@ function CRMPage() {
     course_interest: '',
     department: 'prodhan_com_e_commerce',
     lead_status: 'new',
+    assigned_to: '',
     notes: ''
   });
 
@@ -70,6 +73,13 @@ function CRMPage() {
     staleTime: 5 * 60 * 1000
   });
 
+  // Fetch employees for assignment
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => erp.entities.Employee.list(),
+    staleTime: 5 * 60 * 1000
+  });
+
   // Create lead mutation
   const createLeadMutation = useMutation({
     mutationFn: (data) => erp.entities.Lead.create(data),
@@ -85,6 +95,7 @@ function CRMPage() {
         course_interest: '',
         department: 'prodhan_com_e_commerce',
         lead_status: 'new',
+        assigned_to: '',
         notes: ''
       });
     }
@@ -178,8 +189,32 @@ function CRMPage() {
       filtered = filtered.filter(l => l.lead_source === sourceFilter);
     }
     
+    if (assignedFilter !== 'all') {
+      if (assignedFilter === 'unassigned') {
+        filtered = filtered.filter(l => !l.assigned_to);
+      } else {
+        filtered = filtered.filter(l => l.assigned_to === assignedFilter);
+      }
+    }
+    
+    if (dateFilter !== 'all') {
+      const today = toBDTDate();
+      const last7Days = toBDTDate(subDays(new Date(), 7));
+      const last30Days = toBDTDate(subDays(new Date(), 30));
+      
+      filtered = filtered.filter(l => {
+        const leadDate = l.created_date?.split('T')[0];
+        if (!leadDate) return false;
+        
+        if (dateFilter === 'today') return leadDate === today;
+        if (dateFilter === 'week') return leadDate >= last7Days;
+        if (dateFilter === 'month') return leadDate >= last30Days;
+        return true;
+      });
+    }
+    
     return filtered;
-  }, [leads, searchTerm, statusFilter, sourceFilter]);
+  }, [leads, searchTerm, statusFilter, sourceFilter, assignedFilter, dateFilter]);
 
   const handleStatusChange = (lead, newStatus) => {
     updateLeadMutation.mutate({
@@ -399,6 +434,29 @@ function CRMPage() {
                       <SelectItem value="phone">Phone</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Assignee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Assignees</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {employees.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Date" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">Last 7 Days</SelectItem>
+                      <SelectItem value="month">Last 30 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -411,6 +469,7 @@ function CRMPage() {
                     <TableHead>Lead</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Source</TableHead>
+                    <TableHead>Assignee</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Score</TableHead>
                     <TableHead>Created</TableHead>
@@ -442,6 +501,22 @@ function CRMPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{lead.lead_source}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.assigned_to || 'unassigned'}
+                          onValueChange={(val) => updateLeadMutation.mutate({ id: lead.id, data: { assigned_to: val === 'unassigned' ? null : val } })}
+                        >
+                          <SelectTrigger className="w-32 h-8 text-xs">
+                            <SelectValue placeholder="Assign To..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {employees.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Select
@@ -750,6 +825,18 @@ function CRMPage() {
                   placeholder="Product/Category interest"
                 />
               </div>
+            </div>
+            <div>
+              <Label>Assign To (Optional)</Label>
+              <Select value={newLead.assigned_to} onValueChange={(val) => setNewLead({...newLead, assigned_to: val})}>
+                <SelectTrigger><SelectValue placeholder="Select Employee" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Notes</Label>

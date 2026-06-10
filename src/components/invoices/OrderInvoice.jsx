@@ -15,8 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
  * Separate branding for Prodhan.com and Boibari.com
  */
 
-// Department branding configuration
-const DEPARTMENT_BRANDING = {
+// Default fallback branding configuration
+const DEFAULT_BRANDING = {
   prodhan_com_e_commerce: {
     name: 'Prodhan.com',
     logo: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/686aeb57b62314958e21fd12/85b255904_LOGO_PRODHAN-removebg-preview1.png',
@@ -25,7 +25,8 @@ const DEPARTMENT_BRANDING = {
     phone: '+8809643330000',
     email: 'support@prodhan.com',
     address: 'Head Office: 1st-4th-5th-6th Floor, Jashore Malik Shamiti Vobon, Gausul Azam Super Market, Nilkhet, Kataban Rd 1205 Dhaka',
-    tagline: 'Your Trusted E-Commerce Partner'
+    tagline: 'Your Trusted E-Commerce Partner',
+    invoice_template: 'design_1_modern'
   },
   boibari: {
     name: 'Boibari.com',
@@ -35,15 +36,31 @@ const DEPARTMENT_BRANDING = {
     phone: '8801896060865',
     email: 'boibari.biddabari@gmail.com',
     address: 'Head Office: 1st-4th-5th-6th Floor, Jashore Malik Shamiti Vobon, Gausul Azam Super Market, Nilkhet, Kataban Rd 1205 Dhaka',
-    tagline: 'Your Gateway to Knowledge'
+    tagline: 'Your Gateway to Knowledge',
+    invoice_template: 'design_1_modern'
   }
 };
 
 export default function OrderInvoice({ order }) {
   const invoiceRef = useRef(null);
-  
-  // Get branding based on department
-  const branding = DEPARTMENT_BRANDING[order.department] || DEPARTMENT_BRANDING.boibari;
+  const [branding, setBranding] = useState(DEFAULT_BRANDING.prodhan_com_e_commerce);
+
+  // Load dynamic branding
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem('department_branding');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const deptBranding = parsed[order.department] || parsed.boibari || DEFAULT_BRANDING.prodhan_com_e_commerce;
+        setBranding(deptBranding);
+      } else {
+        setBranding(DEFAULT_BRANDING[order.department] || DEFAULT_BRANDING.boibari);
+      }
+    } catch (e) {
+      console.error(e);
+      setBranding(DEFAULT_BRANDING[order.department] || DEFAULT_BRANDING.boibari);
+    }
+  }, [order.department]);
 
   // Download as PDF
   const downloadPDF = async () => {
@@ -156,13 +173,38 @@ export default function OrderInvoice({ order }) {
 
           <Separator className="my-6" />
 
-          {/* Company & Customer Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
-            {/* From */}
-            <div>
-              <h3 className="font-semibold text-lg mb-3" style={{ color: branding.primaryColor }}>
-                From:
-              </h3>
+          {branding.invoice_template === 'design_2_classic' ? (
+            // CLASSIC TABULAR DESIGN
+            <div className="mb-8 border border-slate-300 rounded p-4 text-sm">
+              <table className="w-full">
+                <tbody>
+                  <tr>
+                    <td className="w-1/2 align-top pr-4">
+                      <h3 className="font-bold border-b border-slate-300 pb-1 mb-2">From: {branding.name}</h3>
+                      <p>{branding.address}</p>
+                      <p>Phone: {branding.phone}</p>
+                      <p>Email: {branding.email}</p>
+                    </td>
+                    <td className="w-1/2 align-top pl-4 border-l border-slate-300">
+                      <h3 className="font-bold border-b border-slate-300 pb-1 mb-2">Bill To: {order.customer_name}</h3>
+                      {order.shipping_address && (
+                        <p>{order.shipping_address.address_line}, {order.shipping_address.city}, {order.shipping_address.district}</p>
+                      )}
+                      <p>Phone: {order.customer_phone}</p>
+                      <p>Email: {order.customer_email}</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            // MODERN CLEAN DESIGN (DEFAULT)
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
+              {/* From */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3" style={{ color: branding.primaryColor }}>
+                  From:
+                </h3>
               <div className="space-y-2 text-sm">
                 <p className="font-bold text-base">{branding.name}</p>
                 <div className="flex items-start gap-2">
@@ -211,7 +253,7 @@ export default function OrderInvoice({ order }) {
                 )}
               </div>
             </div>
-          </div>
+          )}
 
           <Separator className="my-6" />
 
@@ -220,29 +262,29 @@ export default function OrderInvoice({ order }) {
             <h3 className="font-semibold text-lg mb-4" style={{ color: branding.primaryColor }}>
               Order Details
             </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b-2" style={{ borderColor: branding.primaryColor }}>
-                    <th className="text-left py-3 px-2 font-semibold">Item</th>
-                    <th className="text-center py-3 px-2 font-semibold">Qty</th>
-                    <th className="text-right py-3 px-2 font-semibold">Unit Price</th>
-                    <th className="text-right py-3 px-2 font-semibold">Item Discount</th>
-                    <th className="text-right py-3 px-2 font-semibold">Subtotal</th>
+            <div className={`overflow-x-auto ${branding.invoice_template === 'design_2_classic' ? 'border border-slate-300' : ''}`}>
+              <table className="w-full text-sm">
+                <thead className={branding.invoice_template === 'design_2_classic' ? 'bg-slate-100' : ''}>
+                  <tr className="border-b-2" style={{ borderColor: branding.invoice_template === 'design_2_classic' ? '#cbd5e1' : branding.primaryColor }}>
+                    <th className="text-left py-3 px-3 font-semibold">Item</th>
+                    <th className="text-center py-3 px-3 font-semibold border-l border-slate-200">Qty</th>
+                    <th className="text-right py-3 px-3 font-semibold border-l border-slate-200">Unit Price</th>
+                    <th className="text-right py-3 px-3 font-semibold border-l border-slate-200">Item Discount</th>
+                    <th className="text-right py-3 px-3 font-semibold border-l border-slate-200">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {order.order_items?.map((item, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-2">
+                    <tr key={index} className="border-b hover:bg-gray-50 border-slate-200">
+                      <td className="py-3 px-3">
                         <p className="font-medium">{item.item_name}</p>
                       </td>
-                      <td className="py-3 px-2 text-center">{item.quantity}</td>
-                      <td className="py-3 px-2 text-right">৳{item.unit_price?.toLocaleString()}</td>
-                      <td className="py-3 px-2 text-right text-red-600">
+                      <td className="py-3 px-3 text-center border-l border-slate-200">{item.quantity}</td>
+                      <td className="py-3 px-3 text-right border-l border-slate-200">৳{item.unit_price?.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right text-red-600 border-l border-slate-200">
                         {item.discount > 0 ? `-৳${item.discount?.toLocaleString()}` : '৳0'}
                       </td>
-                      <td className="py-3 px-2 text-right font-semibold">
+                      <td className="py-3 px-3 text-right font-semibold border-l border-slate-200">
                         ৳{item.subtotal?.toLocaleString()}
                       </td>
                     </tr>

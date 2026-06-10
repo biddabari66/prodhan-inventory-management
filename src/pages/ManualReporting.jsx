@@ -138,7 +138,7 @@ const LoadingScreen = ({ message = "Loading..." }) => (
 
 const AccessDeniedScreen = ({ message }) => (
   <div className="flex items-center justify-center p-8 min-h-[400px]">
-    <Card className="premium-card w-full max-w-lg text-center">
+    <Card className="erp-card w-full max-w-lg text-center">
       <CardContent className="pt-6">
         <div className="w-16 h-16 mx-auto rounded-2xl bg-red-100 flex items-center justify-center mb-4">
           <Shield className="w-8 h-8 text-red-600" />
@@ -235,11 +235,11 @@ const ExcelTableEditor = ({ data, columns, rows, onChange, readOnly = false }) =
       <Table className="excel-table">
         <TableHeader>
           <TableRow className="bg-blue-600 text-white">
-            <TableHead className="text-white font-bold border-r border-blue-500 text-center w-12">#</TableHead>
+            <TableHead className="text-white font-bold border-r border-orange-500 text-center w-12">#</TableHead>
             {columns.map((col, colIndex) => (
               <TableHead
                 key={colIndex}
-                className="text-white font-bold border-r border-blue-500 text-center min-w-32 px-4"
+                className="text-white font-bold border-r border-orange-500 text-center min-w-32 px-4"
               >
                 {col}
               </TableHead>
@@ -463,7 +463,7 @@ const TemplateCreationForm = ({ onSubmit, onCancel, editingTemplate = null }) =>
       <div>
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-lg font-semibold">Row Items</h4>
-          <Button onClick={addRow} size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={addRow} size="sm" className="bg-orange-500 hover:bg-orange-600">
             <Plus className="w-4 h-4 mr-1" /> Add Row
           </Button>
         </div>
@@ -505,7 +505,7 @@ const TemplateCreationForm = ({ onSubmit, onCancel, editingTemplate = null }) =>
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={handleSubmit} className="bg-orange-500 hover:bg-orange-600">
           <Save className="w-4 h-4 mr-2" />
           {editingTemplate ? 'Update Template' : 'Save Template'}
         </Button>
@@ -545,50 +545,54 @@ const exportToPDF = (report, template, reportRef) => {
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            color: #333;
-            line-height: 1.4;
+            color: #111827;
+            line-height: 1.5;
           }
 
           .report-header {
             text-align: center;
             margin-bottom: 30px;
-            border-bottom: 3px solid #3b82f6;
+            border-bottom: 3px solid #f97316;
             padding-bottom: 15px;
           }
 
           .report-title {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            color: #1e40af;
+            color: #c2410c;
             margin: 0 0 10px 0;
           }
 
           .report-meta {
-            font-size: 14px;
-            color: #6b7280;
+            font-size: 16px;
+            color: #4b5563;
             margin: 5px 0;
+            font-weight: 500;
           }
 
           .excel-table {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            font-size: 12px;
+            font-size: 14px;
           }
 
           .excel-table th {
-            background-color: #3b82f6;
+            background-color: #f97316;
             color: white;
-            padding: 12px 8px;
+            padding: 16px 12px;
             text-align: center;
             font-weight: bold;
-            border: 1px solid #2563eb;
+            border: 1px solid #c2410c;
+            font-size: 15px;
           }
 
           .excel-table td {
-            padding: 10px 8px;
+            padding: 14px 12px;
             text-align: center;
-            border: 1px solid #d1d5db;
+            border: 1px solid #9ca3af;
+            color: #1f2937;
+            font-weight: 500;
           }
 
           .excel-table tr:nth-child(even) {
@@ -620,14 +624,14 @@ const exportToPDF = (report, template, reportRef) => {
             padding: 20px;
             background-color: #f8fafc;
             border-radius: 8px;
-            border-left: 5px solid #3b82f6;
+            border-left: 5px solid #f97316;
           }
 
           .comments-title {
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 10px;
-            color: #1e40af;
+            color: #c2410c;
           }
 
           .footer {
@@ -1116,7 +1120,7 @@ export default function ManualReportingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className="bg-blue-100 text-blue-800 w-fit">
+          <Badge className="bg-orange-100 text-orange-600 w-fit">
             Department: {currentUser?.department?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || 'Unassigned'}
           </Badge>
           {permissions.canView && (
@@ -1142,7 +1146,7 @@ export default function ManualReportingPage() {
           {/* Report Templates Section */}
           <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
             {/* Report Templates Card */}
-            <Card className="premium-card">
+            <Card className="erp-card">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <CardTitle className="flex items-center gap-2 text-xl">
@@ -1202,7 +1206,7 @@ export default function ManualReportingPage() {
                             {permissions.canCreate ? (
                               <Button
                                 onClick={() => handleTemplateSelect(template)}
-                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                className="w-full bg-orange-500 hover:bg-orange-600"
                                 size="sm"
                                 disabled={selectedTemplate?.id === template.id}
                               >
@@ -1228,7 +1232,7 @@ export default function ManualReportingPage() {
 
           {/* Report Form */}
           {selectedTemplate && permissions.canCreate && (
-            <Card className="premium-card mt-6">
+            <Card className="erp-card mt-6">
               <CardHeader>
                 <div className="flex justify-between items-center flex-wrap gap-2">
                   <CardTitle className="flex items-center gap-2">
@@ -1324,7 +1328,7 @@ export default function ManualReportingPage() {
                     <Button
                       onClick={handleSubmit}
                       disabled={isSubmitting}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-orange-500 hover:bg-orange-600"
                     >
                       {isSubmitting ? (
                         <>
@@ -1349,7 +1353,7 @@ export default function ManualReportingPage() {
           <TabsContent value="templates" className="space-y-6">
             {/* Create Template Form (Inline) */}
             {showCreateForm && (
-              <Card className="premium-card">
+              <Card className="erp-card">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1432,7 +1436,7 @@ export default function ManualReportingPage() {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-lg font-semibold">Row Items</h4>
-                      <Button onClick={addNewRow} size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      <Button onClick={addNewRow} size="sm" className="bg-orange-500 hover:bg-orange-600">
                         <Plus className="w-4 h-4 mr-1" /> Add Row
                       </Button>
                     </div>
@@ -1474,7 +1478,7 @@ export default function ManualReportingPage() {
 
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
-                    <Button onClick={handleCreateInlineTemplate} className="bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={handleCreateInlineTemplate} className="bg-orange-500 hover:bg-orange-600">
                       <Save className="w-4 h-4 mr-2" />
                       Save Template
                     </Button>
@@ -1483,7 +1487,7 @@ export default function ManualReportingPage() {
               </Card>
             )}
 
-            <Card className="premium-card">
+            <Card className="erp-card">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>

@@ -259,38 +259,46 @@ export default function SubmittedReports() {
       filtered = filtered.filter(r => r.status === statusFilter);
     }
 
+    // Helper to get BDT date string from any date
+    const getBDTDateStr = (dateVal) => {
+      if (!dateVal) return '';
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '';
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
+    };
+
     // Date filter
     if (dateFilter === 'custom' && customDateRange.from) {
-      const fromDate = startOfDay(new Date(customDateRange.from));
-      const toDate = customDateRange.to ? endOfDay(new Date(customDateRange.to)) : endOfDay(new Date());
+      const fromStr = getBDTDateStr(customDateRange.from);
+      const toStr = customDateRange.to ? getBDTDateStr(customDateRange.to) : getBDTDateStr(new Date());
 
       filtered = filtered.filter(report => {
-        const reportDate = new Date(report.created_date);
-        return reportDate >= fromDate && reportDate <= toDate;
+        const reportDateStr = getBDTDateStr(report.created_date);
+        return reportDateStr >= fromStr && reportDateStr <= toStr;
       });
     } else if (dateFilter !== 'all') {
       const now = new Date();
-      let filterDate;
+      let filterDateStr;
 
       switch (dateFilter) {
         case 'today':
-          filterDate = startOfDay(now);
+          filterDateStr = getBDTDateStr(now);
           break;
         case 'week':
-          filterDate = startOfWeek(now);
+          filterDateStr = getBDTDateStr(startOfWeek(now));
           break;
         case 'month':
-          filterDate = startOfMonth(now);
+          filterDateStr = getBDTDateStr(startOfMonth(now));
           break;
         case '30days':
-          filterDate = subDays(now, 30);
+          filterDateStr = getBDTDateStr(subDays(now, 30));
           break;
         default:
-          filterDate = null;
+          filterDateStr = null;
       }
 
-      if (filterDate) {
-        filtered = filtered.filter(report => new Date(report.created_date) >= filterDate);
+      if (filterDateStr) {
+        filtered = filtered.filter(report => getBDTDateStr(report.created_date) >= filterDateStr);
       }
     }
 

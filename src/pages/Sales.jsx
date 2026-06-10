@@ -840,6 +840,36 @@ function SalesPage() {
                       >
                         Yesterday
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          const bdtNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+                          const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
+                          bdtNow.setDate(bdtNow.getDate() - 6);
+                          const last7BDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
+                          setDateRange({ from: last7BDT, to: todayBDT });
+                        }}
+                        className="text-sm"
+                      >
+                        Last 7 Days
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          const bdtNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+                          const todayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
+                          bdtNow.setDate(1); // First day of current month
+                          const firstDayBDT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(bdtNow);
+                          setDateRange({ from: firstDayBDT, to: todayBDT });
+                        }}
+                        className="text-sm"
+                      >
+                        This Month
+                      </Button>
                     </div>
                   </div>
 

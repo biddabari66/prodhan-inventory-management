@@ -69,15 +69,26 @@ export default function FinanceReports() {
         endDate = endOfMonth(now);
     }
 
-    // Filter data by period
+    // Helper to get BDT date string from any date or string
+    const getBDTDateStr = (dateVal) => {
+      if (!dateVal) return '';
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '';
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(d);
+    };
+
+    const startStr = getBDTDateStr(startDate);
+    const endStr = getBDTDateStr(endDate);
+
+    // Filter data by period using BDT date strings
     const filteredIncomes = incomes.filter(income => {
-      const date = new Date(income.income_date);
-      return date >= startDate && date <= endDate;
+      const incDateStr = getBDTDateStr(income.income_date);
+      return incDateStr >= startStr && incDateStr <= endStr;
     });
 
     const filteredExpenses = expenses.filter(expense => {
-      const date = new Date(expense.expense_date);
-      return date >= startDate && date <= endDate && expense.status === 'approved';
+      const expDateStr = getBDTDateStr(expense.expense_date);
+      return expDateStr >= startStr && expDateStr <= endStr && expense.status === 'approved';
     });
 
     // Calculate totals
@@ -138,10 +149,10 @@ export default function FinanceReports() {
     for (let i = 0; i <= daysDiff; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
-      const dateStr = currentDate.toISOString().split('T')[0];
+      const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(currentDate);
       
-      const dayIncomes = incomes.filter(income => income.income_date === dateStr);
-      const dayExpenses = expenses.filter(expense => expense.expense_date === dateStr);
+      const dayIncomes = incomes.filter(income => income.income_date && income.income_date.startsWith(dateStr));
+      const dayExpenses = expenses.filter(expense => expense.expense_date && expense.expense_date.startsWith(dateStr));
       
       const dayIncome = dayIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
       const dayExpense = dayExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);

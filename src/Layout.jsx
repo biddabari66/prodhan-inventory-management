@@ -928,6 +928,7 @@ export default function Layout({ children, currentPageName }) {
         dotColor: 'bg-slate-500',
         items: [
           hp('user_access_manager') && { label: 'User & Roles', url: createPageUrl('UserAccessManager'), icon: Shield, color: 'text-slate-500' },
+          hp('user_access_manager') && { label: 'Department Profiles', url: createPageUrl('DepartmentProfile'), icon: Building2, color: 'text-indigo-500' },
           hp('integrations') && { label: 'Automation Hub', url: createPageUrl('Automation'), icon: Zap, color: 'text-amber-500' },
           hp('integrations') && { label: 'Billing', url: createPageUrl('Billing'), icon: CreditCard, color: 'text-emerald-500' },
           hp('audit_trail') && { label: 'Audit Trail', url: createPageUrl('AuditTrailViewer'), icon: FileText, color: 'text-slate-400' },
@@ -991,6 +992,7 @@ export default function Layout({ children, currentPageName }) {
 
     { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'auto_reports' },
     { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
+    { label: t('Dept Profiles'), url: createPageUrl('DepartmentProfile'), icon: Building2, colorClass: 'text-indigo-600', permission: 'user_access_manager' },
     { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
     { label: t('Automation'), url: createPageUrl('Automation'), icon: Zap, colorClass: 'text-amber-500', permission: 'integrations' },
     { label: t('Billing'), url: createPageUrl('Billing'), icon: CreditCard, colorClass: 'text-emerald-600', permission: 'integrations' },
