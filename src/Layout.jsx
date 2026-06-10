@@ -412,16 +412,7 @@ export default function Layout({ children, currentPageName }) {
 
   const { prefetchForRoute } = usePrefetchOnHover();
 
-  // Set favicon dynamically
-  useEffect(() => {
-    let link = document.querySelector("link[rel~='icon']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.getElementsByTagName('head')[0].appendChild(link);
-    }
-    link.href = NEW_LOGO_URL;
-  }, []);
+  // Favicon is set statically in index.html (Zypra bolt mark).
 
   // ENHANCED: Register Service Worker with better error handling
   useEffect(() => {
@@ -966,13 +957,17 @@ export default function Layout({ children, currentPageName }) {
     const baseModules = [
     { label: t('Dashboard'), url: createPageUrl('Home'), icon: LayoutDashboard, colorClass: 'text-orange-600', permission: 'inventory_overview' },
     { label: t('Zypra Copilot'), url: createPageUrl('AICopilot'), icon: Sparkles, colorClass: 'text-violet-600', permission: 'inventory_overview' },
-    { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: Package, colorClass: 'text-red-600', permission: 'inventory_overview' },
-    { label: t('Barcode Scan'), url: createPageUrl('BarcodeScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
+
+    { section: t('Sales & Customers') },
     { label: t('Sales'), url: createPageUrl('Sales'), icon: ShoppingCart, colorClass: 'text-green-600', permission: 'sales' },
     { label: t('CRM'), url: createPageUrl('CRM'), icon: Target, colorClass: 'text-purple-600', permission: 'customer_management' },
     { label: t('Customers'), url: createPageUrl('CustomerManagement'), icon: Users, colorClass: 'text-red-500', permission: 'customer_management' },
     { label: t('Discount Offers'), url: createPageUrl('DiscountCampaigns'), icon: Sparkles, colorClass: 'text-amber-500', permission: 'discount_campaigns' },
     { label: t('Marketing ROI'), url: createPageUrl('MarketingROI'), icon: TrendingUp, colorClass: 'text-pink-600', permission: 'marketing_roi' },
+
+    { section: t('Inventory') },
+    { label: t('Inventory'), url: createPageUrl('InventoryOverview'), icon: Package, colorClass: 'text-red-600', permission: 'inventory_overview' },
+    { label: t('Barcode Scan'), url: createPageUrl('BarcodeScan'), icon: ScanLine, colorClass: 'text-emerald-600', permission: 'sales' },
     { label: t('Purchase Orders'), url: createPageUrl('PurchaseOrders'), icon: Package, colorClass: 'text-orange-600', permission: 'purchase_orders' },
     { label: t('Production House'), url: createPageUrl('ProductionHouse'), icon: Briefcase, colorClass: 'text-purple-600', permission: 'production_house' },
     { label: t('Movements'), url: createPageUrl('InventoryMovements'), icon: RotateCcw, colorClass: 'text-red-500', permission: 'inventory_movements' },
@@ -980,34 +975,50 @@ export default function Layout({ children, currentPageName }) {
     { label: t('Reconciliation'), url: createPageUrl('InventoryReconciliation'), icon: Shield, colorClass: 'text-emerald-600', permission: 'inventory_reconciliation' },
     { label: t('Suppliers'), url: createPageUrl('InventorySuppliers'), icon: Building2, colorClass: 'text-red-700', permission: 'inventory_suppliers' },
     { label: t('Categories'), url: createPageUrl('CategorySettings'), icon: Layers, colorClass: 'text-cyan-600', permission: 'inventory_categories' },
+
+    { section: t('Team & HR') },
     { label: t('Employees'), url: createPageUrl('Employees'), icon: Users, colorClass: 'text-orange-600', permission: 'attendance' },
     { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
     { label: t('Payroll'), url: createPageUrl('Payroll'), icon: Calculator, colorClass: 'text-green-600', permission: 'payroll' },
+
+    { section: t('Money') },
     { label: t('Expenses'), url: createPageUrl('Expenses'), icon: Wallet, colorClass: 'text-rose-600', permission: 'expenses' },
     { label: t('Accounting'), url: createPageUrl('Accounting'), icon: Calculator, colorClass: 'text-emerald-700', permission: 'finance_dashboard' },
     { label: t('Finance Dashboard'), url: createPageUrl('FinanceDashboard'), icon: DollarSign, colorClass: 'text-emerald-600', permission: 'finance_dashboard' },
+    { label: t('Billing'), url: createPageUrl('Billing'), icon: CreditCard, colorClass: 'text-emerald-600', permission: 'integrations' },
+
+    { section: t('Insights') },
     { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-red-500', permission: 'product_analytics' },
     { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },
     { label: t('AI Insights'), url: createPageUrl('InventoryAIInsights'), icon: Sparkles, colorClass: 'text-red-600', permission: 'inventory_ai_insights' },
-
     { label: t('Auto Reports'), url: createPageUrl('AutoReportSettings'), icon: Mail, colorClass: 'text-red-600', permission: 'auto_reports' },
+
+    { section: t('Settings') },
     { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
-    { label: t('Dept Profiles'), url: createPageUrl('DepartmentProfile'), icon: Building2, colorClass: 'text-indigo-600', permission: 'user_access_manager' },
+    { label: t('Dept Profiles'), url: createPageUrl('DepartmentProfile'), icon: Building2, colorClass: 'text-orange-600', permission: 'user_access_manager' },
     { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
     { label: t('Automation'), url: createPageUrl('Automation'), icon: Zap, colorClass: 'text-amber-500', permission: 'integrations' },
-    { label: t('Billing'), url: createPageUrl('Billing'), icon: CreditCard, colorClass: 'text-emerald-600', permission: 'integrations' },
     { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'system_alerts' },
     { label: t('Audit Trail'), url: createPageUrl('AuditTrailViewer'), icon: FileText, colorClass: 'text-slate-600', permission: 'audit_trail' }];
 
 
 
-    const visible = baseModules.filter((module) => {
+    const filtered = baseModules.filter((module) => {
+      if (module.section) return true; // keep markers; empty sections pruned below
       const permissionKey = module.permission || getPermissionKey(module.url?.split('/').pop()?.split('?')[0] || module.label);
       return hasPermission(permissionKey);
     });
 
+    // Drop section headers that have no visible items under them.
+    const visible = filtered.filter((m, i) => {
+      if (!m.section) return true;
+      const next = filtered[i + 1];
+      return next && !next.section;
+    });
+
     // Platform owner only (SaaS super admin): tenant + subscription management.
     if ((currentUser?.job_role || '').toUpperCase() === 'SUPER_ADMIN') {
+      visible.push({ section: t('Platform Owner') });
       visible.push({ label: t('Platform Admin'), url: createPageUrl('SuperAdmin'), icon: Shield, colorClass: 'text-fuchsia-600', permission: 'inventory_overview' });
       visible.push({ label: t('Payment Approvals'), url: createPageUrl('BillingAdmin'), icon: CreditCard, colorClass: 'text-fuchsia-600', permission: 'inventory_overview' });
     }

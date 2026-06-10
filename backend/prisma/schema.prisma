@@ -297,6 +297,7 @@ model Department {
 
   name        String
   description String?
+  branding    Json? // logo, colors, contact info, invoice template (per sub-company)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
