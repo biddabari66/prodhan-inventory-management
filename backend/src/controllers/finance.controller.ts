@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { ExpenseStatus, PaymentMethod } from '@prisma/client';
 import { qs } from '../utils/query';
 import { emitEvent } from '../services/eventBus';
+import { postExpense, postIncome } from './accounting.controller';
 
 const createExpenseSchema = z.object({
   category: z.string().min(1),
@@ -110,6 +111,7 @@ export const approveExpense = async (req: AuthenticatedRequest, res: Response): 
     },
   });
   emitEvent(req.user.tenantId, 'expense.approved', updated);
+  postExpense(req.user.tenantId, updated, req.user.id); // double-entry posting
   res.json(updated);
 };
 
@@ -233,6 +235,7 @@ export const createIncome = async (req: AuthenticatedRequest, res: Response): Pr
       receivedById: req.user.id 
     },
   });
+  postIncome(req.user.tenantId, income, req.user.id); // double-entry posting
   res.status(201).json(income);
 };
 

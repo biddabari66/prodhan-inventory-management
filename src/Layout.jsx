@@ -764,6 +764,7 @@ export default function Layout({ children, currentPageName }) {
     { label: t('Attendance'), url: createPageUrl('EmployeeAttendance'), icon: Clock, colorClass: 'text-red-600', permission: 'attendance' },
     { label: t('Payroll'), url: createPageUrl('Payroll'), icon: Calculator, colorClass: 'text-green-600', permission: 'payroll' },
     { label: t('Expenses'), url: createPageUrl('Expenses'), icon: Wallet, colorClass: 'text-rose-600', permission: 'expenses' },
+    { label: t('Accounting'), url: createPageUrl('Accounting'), icon: Calculator, colorClass: 'text-emerald-700', permission: 'finance_dashboard' },
     { label: t('Finance Dashboard'), url: createPageUrl('FinanceDashboard'), icon: DollarSign, colorClass: 'text-emerald-600', permission: 'finance_dashboard' },
     { label: t('Analytics'), url: createPageUrl('ProductAnalytics'), icon: BarChart3, colorClass: 'text-red-500', permission: 'product_analytics' },
     { label: t('Reports'), url: createPageUrl('InventoryReports'), icon: FileText, colorClass: 'text-slate-600', permission: 'inventory_reports' },

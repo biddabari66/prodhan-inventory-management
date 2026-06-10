@@ -286,6 +286,8 @@ model Tenant {
   webhooks      Webhook[]
   automationRules AutomationRule[]
   payments      Payment[]
+  accounts      ChartOfAccount[]
+  journalEntries JournalEntry[]
 }
 
 model Department {
@@ -1123,4 +1125,64 @@ model Payment {
 
   @@index([tenantId])
   @@index([trxId])
+}
+
+// ─────────────────────────────────────────────
+// ACCOUNTING (double-entry general ledger)
+// ─────────────────────────────────────────────
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+model ChartOfAccount {
+  id        String      @id @default(cuid())
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code      String // e.g. 1000, 4000
+  name      String
+  type      AccountType
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  lines     JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date        DateTime      @default(now())
+  reference   String?
+  description String?
+  source      String        @default("manual") // manual | expense | income | sales | payroll
+  sourceId    String?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  lines       JournalLine[]
+
+  @@index([tenantId])
+  @@index([date])
+}
+
+model JournalLine {
+  id             String         @id @default(cuid())
+  tenantId       String
+  journalEntryId String
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        ChartOfAccount @relation(fields: [accountId], references: [id])
+  debit          Float          @default(0)
+  credit         Float          @default(0)
+  description    String?
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@index([tenantId])
 }

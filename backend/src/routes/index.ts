@@ -15,6 +15,7 @@ import * as platformCtrl from '../controllers/platform.controller';
 import * as webhookCtrl from '../controllers/webhook.controller';
 import * as billingCtrl from '../controllers/billing.controller';
 import * as aiCtrl from '../controllers/ai.controller';
+import * as acctCtrl from '../controllers/accounting.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
@@ -245,6 +246,17 @@ router.post('/billing/payments', billingCtrl.submitPayment);
 router.get('/billing/payments', billingCtrl.listPayments);
 router.get('/billing/admin/payments', requireRole('SUPER_ADMIN'), billingCtrl.adminListPayments);
 router.patch('/billing/admin/payments/:id/verify', requireRole('SUPER_ADMIN'), billingCtrl.adminVerifyPayment);
+
+// ─── Accounting (double-entry ledger) ─────────────────────────────────────────
+router.use('/accounting', authenticate, apiLimiter, requirePermission('finance:read'));
+router.get('/accounting/accounts', acctCtrl.listAccounts);
+router.post('/accounting/accounts', requirePermission('expenses:create'), acctCtrl.createAccount);
+router.get('/accounting/journal', acctCtrl.listJournal);
+router.post('/accounting/journal', requirePermission('expenses:create'), acctCtrl.createJournalEntry);
+router.get('/accounting/trial-balance', acctCtrl.getTrialBalance);
+router.get('/accounting/profit-loss', acctCtrl.getProfitLoss);
+router.get('/accounting/balance-sheet', acctCtrl.getBalanceSheet);
+router.get('/accounting/general-ledger', acctCtrl.getGeneralLedger);
 
 // ─── AI (Zypra Copilot) ───────────────────────────────────────────────────────
 router.use('/ai', authenticate, apiLimiter);
