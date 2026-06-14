@@ -79,7 +79,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
     const [mappingPreview, setMappingPreview] = useState(null);
     const [pendingFile, setPendingFile] = useState(null);
 
-    const { data: deptResp } = useQuery({
+    const { data: deptResp, isLoading: isLoadingDepts, isError: isDeptError, error: deptError } = useQuery({
         queryKey: ['departments'],
         queryFn: () => api.get('/departments', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
     });
@@ -548,6 +548,11 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                     <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border overflow-x-auto">
                         <Label className="font-medium whitespace-nowrap">Select Department:</Label>
                         <div className="flex gap-2 flex-1 min-w-max">
+                            {isLoadingDepts && <span className="text-sm text-slate-500 animate-pulse">Loading departments...</span>}
+                            {isDeptError && <span className="text-sm text-red-500">Failed to load: {deptError?.message}</span>}
+                            {!isLoadingDepts && !isDeptError && departments.length === 0 && (
+                                <span className="text-sm text-amber-600">No departments found.</span>
+                            )}
                             {departments.map((dept) => {
                                 const isSelected = selectedDepartmentId === dept.id;
                                 const config = getDeptConfig(dept.id);
