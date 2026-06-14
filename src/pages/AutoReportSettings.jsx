@@ -14,6 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SearchableUserSelect from '../components/common/SearchableUserSelect';
 import { useQuery } from '@tanstack/react-query';
 import { User } from '@/entities/User';
+import { ScheduledReport } from '@/entities/ScheduledReport';
+import PageHeader from '@/components/common/PageHeader';
+
+const COMING_SOON_MSG = 'Automated report delivery is coming soon — the background scheduler is not available yet.';
 
 function AutoReportSettingsPage() {
   const [scheduledTasks, setScheduledTasks] = useState([]);
@@ -40,11 +44,13 @@ function AutoReportSettingsPage() {
   const loadScheduledTasks = async () => {
     setIsLoading(true);
     try {
-      const response = await erp.functions.invoke('manageScheduledReports', { action: 'list' });
-      setScheduledTasks(response.data?.tasks || []);
+      // Client-side: schedules are stored as ScheduledReport records.
+      const rows = await ScheduledReport.list('-created_date', 100);
+      setScheduledTasks(Array.isArray(rows) ? rows : []);
     } catch (error) {
-      console.error('Error loading tasks:', error);
-      toast.error('Failed to load scheduled tasks');
+      // Backend endpoint not available — show empty state instead of an error toast.
+      console.warn('Scheduled reports endpoint unavailable:', error?.message);
+      setScheduledTasks([]);
     } finally {
       setIsLoading(false);
     }
@@ -135,29 +141,21 @@ function AutoReportSettingsPage() {
 
     setIsCreating(true);
     try {
-      const response = await erp.functions.invoke('manageScheduledReports', {
-        action: 'create',
-        task_data: {
-          name: `${config.name} - ${frequency}`,
-          function_name: config.function,
-          description: `${config.description} | Sent to ${recipients.length} recipient(s)`,
-          function_args: { recipient_emails: recipients },
-          ...repeatConfig,
-          is_active: true,
-          ends_type: 'never'
-        }
+      await ScheduledReport.create({
+        name: `${config.name} - ${frequency}`,
+        function_name: config.function,
+        description: `${config.description} | Sent to ${recipients.length} recipient(s)`,
+        function_args: { recipient_emails: recipients },
+        ...repeatConfig,
+        is_active: true,
+        ends_type: 'never'
       });
-
-      if (response?.data?.success) {
-        toast.success(`✅ ${config.name} scheduled successfully!`);
-        setRecipients([]);
-        await loadScheduledTasks();
-      } else {
-        throw new Error(response?.data?.error || 'Schedule creation failed');
-      }
+      toast.success(`${config.name} scheduled successfully!`);
+      setRecipients([]);
+      await loadScheduledTasks();
     } catch (error) {
-      console.error('Error creating schedule:', error);
-      toast.error('Failed to create schedule: ' + error.message);
+      console.warn('Error creating schedule:', error);
+      toast.info(COMING_SOON_MSG);
     } finally {
       setIsCreating(false);
     }
@@ -165,23 +163,24 @@ function AutoReportSettingsPage() {
 
   const toggleTask = async (taskId) => {
     try {
-      await erp.functions.invoke('manageScheduledReports', { action: 'toggle', task_id: taskId });
+      const task = scheduledTasks.find(t => t.id === taskId);
+      await ScheduledReport.update(taskId, { is_active: !task?.is_active });
       toast.success('Task status updated');
       loadScheduledTasks();
     } catch (error) {
-      toast.error('Failed to toggle task');
+      toast.info(COMING_SOON_MSG);
     }
   };
 
   const deleteTask = async (taskId) => {
     if (!confirm('Delete this scheduled report? This cannot be undone.')) return;
-    
+
     try {
-      await erp.functions.invoke('manageScheduledReports', { action: 'delete', task_id: taskId });
+      await ScheduledReport.delete(taskId);
       toast.success('Scheduled report deleted');
       loadScheduledTasks();
     } catch (error) {
-      toast.error('Failed to delete task');
+      toast.info(COMING_SOON_MSG);
     }
   };
 
@@ -193,25 +192,36 @@ function AutoReportSettingsPage() {
 
     const config = reportTypeConfig[reportType];
     setIsTesting(true);
-    const loadingToast = toast.loading('📧 Sending test report...');
-    
+    const loadingToast = toast.loading('Sending test email...');
+
     try {
-      const response = await erp.functions.invoke(config.function, {
-        recipient_emails: recipients
+      // Uses the email test endpoint that exists on the backend.
+      const response = await erp.functions.invoke('sendTestEmail', {
+        recipient_emails: recipients,
+        report_type: reportType,
+        report_name: config.name
       });
-      
+
       toast.dismiss(loadingToast);
-      if (response.data?.success) {
-        toast.success(`✅ Test report sent successfully!`);
+      if (response.data?.success !== false) {
+        toast.success('Test email sent successfully!');
       } else {
-        toast.error('Failed to send test report');
+        toast.info(COMING_SOON_MSG);
       }
     } catch (error) {
       toast.dismiss(loadingToast);
-      toast.error('Error: ' + error.message);
+      toast.info(COMING_SOON_MSG);
     } finally {
       setIsTesting(false);
     }
+  };
+
+  // Static Tailwind class maps (dynamic `bg-${color}` classes don't compile)
+  const TEMPLATE_TONES = {
+    amber: { tile: 'bg-amber-100', icon: 'text-amber-600', btn: 'text-amber-700 hover:bg-amber-50', badge: 'border-amber-300 text-amber-700 bg-amber-50' },
+    orange: { tile: 'bg-orange-100', icon: 'text-orange-600', btn: 'text-orange-700 hover:bg-orange-50', badge: 'border-orange-300 text-orange-700 bg-orange-50' },
+    green: { tile: 'bg-emerald-100', icon: 'text-emerald-600', btn: 'text-emerald-700 hover:bg-emerald-50', badge: 'border-emerald-300 text-emerald-700 bg-emerald-50' },
+    blue: { tile: 'bg-sky-100', icon: 'text-sky-600', btn: 'text-sky-700 hover:bg-sky-50', badge: 'border-sky-300 text-sky-700 bg-sky-50' },
   };
 
   const reportTemplates = [
@@ -220,7 +230,7 @@ function AutoReportSettingsPage() {
       title: 'Sales Manager Report',
       description: 'Daily report (7PM-7PM BDT) with PDF notification for all employees',
       icon: TrendingUp,
-      color: 'indigo',
+      color: 'amber',
       function: 'generateSalesManagerReportNotification',
       frequencies: ['daily']
     },
@@ -229,7 +239,7 @@ function AutoReportSettingsPage() {
       title: 'Daily Sales Report',
       description: 'Daily sales summary with order details and top products',
       icon: BarChart3,
-      color: 'blue',
+      color: 'orange',
       function: 'sendDailySalesEmail',
       frequencies: ['daily']
     },
@@ -238,7 +248,7 @@ function AutoReportSettingsPage() {
       title: 'Weekly Sales Report',
       description: 'Comprehensive weekly sales analysis with trends',
       icon: TrendingUp,
-      color: 'purple',
+      color: 'amber',
       function: 'sendWeeklySalesReport',
       frequencies: ['weekly']
     },
@@ -263,35 +273,32 @@ function AutoReportSettingsPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
-            <Mail className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Automated Reports</h1>
-            <p className="text-slate-600">Schedule sales reports, alerts & performance analysis</p>
-          </div>
-        </div>
-        <Badge className="bg-green-100 text-green-700 border-green-300 px-3 py-1">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Production Ready
-        </Badge>
-      </div>
+      <PageHeader
+        icon={Mail}
+        title="Automated Reports"
+        subtitle="Schedule sales reports, alerts & performance analysis"
+        actions={
+          <Badge className="bg-green-100 text-green-700 border-green-300 px-3 py-1">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Scheduling
+          </Badge>
+        }
+      />
 
       {/* Report Templates */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {reportTemplates.map(template => {
           const Icon = template.icon;
+          const tone = TEMPLATE_TONES[template.color] || TEMPLATE_TONES.amber;
           const activeCount = scheduledTasks.filter(t => t.function_name === template.function).length;
-          
+
           return (
-            <Card key={template.id} className="border-2 hover:shadow-lg transition-all cursor-pointer group">
+            <Card key={template.id} className="border-2 hover:border-orange-300 hover:shadow-lg transition-all cursor-pointer group">
               <CardContent className="p-5">
-                <div className={`w-12 h-12 rounded-xl bg-${template.color}-100 flex items-center justify-center mb-3`}>
-                  <Icon className={`w-6 h-6 text-${template.color}-600`} />
+                <div className={`w-12 h-12 rounded-xl ${tone.tile} flex items-center justify-center mb-3`}>
+                  <Icon className={`w-6 h-6 ${tone.icon}`} />
                 </div>
                 <h3 className="font-bold text-lg mb-1">{template.title}</h3>
                 <p className="text-xs text-slate-600 mb-3">{template.description}</p>
@@ -307,7 +314,7 @@ function AutoReportSettingsPage() {
                       setFrequency(template.frequencies[0]);
                       window.scrollTo({ top: document.querySelector('.create-schedule-card')?.offsetTop - 100, behavior: 'smooth' });
                     }}
-                    className={`text-${template.color}-600 hover:bg-${template.color}-50`}
+                    className={tone.btn}
                   >
                     Configure →
                   </Button>

@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/common/PageHeader';
 
 // Mock data for charts
 const monthlyData = [
@@ -55,7 +56,7 @@ export default function ReportsPage() {
             title: 'Inventory Reports',
             description: 'Stock levels, sales analysis, and inventory management',
             icon: Package,
-            color: 'bg-purple-500',
+            color: 'bg-amber-500',
             path: '/stock-reports'
         },
         {
@@ -63,7 +64,7 @@ export default function ReportsPage() {
             title: 'HR Reports',
             description: 'Employee performance, attendance, and incentive reports',
             icon: Clock,
-            color: 'bg-indigo-500',
+            color: 'bg-orange-500',
             path: '/attendance'
         },
         {
@@ -71,17 +72,18 @@ export default function ReportsPage() {
             title: 'Advanced Analytics',
             description: 'KPI dashboards, trends, and business intelligence',
             icon: TrendingUp,
-            color: 'bg-pink-500',
+            color: 'bg-amber-600',
             path: '/kpi-dashboard'
         }
     ];
 
     return (
-        <div className="p-6 space-y-6">
-             <header>
-                <h1 className="text-4xl font-bold font-display text-gradient">Analytics & Reports</h1>
-                <p className="text-lg text-muted-foreground mt-1">Central dashboard for all key business metrics.</p>
-            </header>
+        <div className="p-4 md:p-6 space-y-6">
+            <PageHeader
+                icon={BarChart3}
+                title="Analytics & Reports"
+                subtitle="Central dashboard for all key business metrics"
+            />
 
             <Card className="premium-card">
                  <CardHeader>
@@ -104,7 +106,7 @@ export default function ReportsPage() {
                                 <Tooltip />
                                 <Legend />
                                 <Bar dataKey="expense" barSize={20} fill="#FB923C" name="Expense"/>
-                                <Line type="monotone" dataKey="revenue" stroke="#7C3AED" name="Revenue" strokeWidth={2}/>
+                                <Line type="monotone" dataKey="revenue" stroke="#EA580C" name="Revenue" strokeWidth={2}/>
                             </ComposedChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -119,7 +121,7 @@ export default function ReportsPage() {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
-                                <Line type="monotone" dataKey="leads" stroke="#EC4899" name="New Leads" strokeWidth={2}/>
+                                <Line type="monotone" dataKey="leads" stroke="#F59E0B" name="New Leads" strokeWidth={2}/>
                             </LineChart>
                         </ResponsiveContainer>
                     </CardContent>

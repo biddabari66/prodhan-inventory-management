@@ -7,90 +7,49 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Inventory } from '@/entities/Inventory';
-import { Income as IncomeApi } from '@/entities/Income';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import api from '@/api/client';
 import { erp } from '@/api/erpClient';
+import { useQuery } from '@tanstack/react-query';
 
-// Department-specific field configurations
-const DEPARTMENT_CONFIG = {
-    boibari: {
-        name: 'Boibari (Books)',
-        icon: BookOpen,
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
-        defaultCategory: 'books',
-        templateHeaders: [
-            'Book Name', 'Category', 'Subject', 'Current Stock', 'Minimum Stock',
-            'Purchase Price', 'Selling Price', 'Total Sell', 'Profits', 
-            'Author Name', 'Publisher', 'Edition', 'Total Page', 'ISBN', 'Report Date'
-        ],
-        sampleRow: [
-            'Advanced Physics', 'BCS Preparation', 'bcs', '150', '20',
-            '350', '550', '150', '30000',
-            'Dr. Rahman', 'Biddabari Publication', '3rd', '450', '978-984-123-456-7', new Date().toISOString().slice(0, 10)
-        ],
-        // Extended mapping for Boibari (books focus)
-        fieldMapping: {
-            'item_name': ['Book Name', 'Item Name', 'Product Name', 'Title', 'Name', 'বইয়ের নাম', 'পণ্যের নাম'],
-            'category': ['Category', 'Type', 'ক্যাটাগরি', 'বিভাগ'],
-            'subject': ['Subject', 'Course', 'Topic', 'বিষয়', 'কোর্স'],
-            'current_stock': ['Current Stock', 'Stock', 'Quantity', 'Available', 'In Stock', 'স্টক', 'মজুদ'],
-            'minimum_stock': ['Minimum Stock', 'Min Stock', 'Reorder Level', 'সর্বনিম্ন স্টক'],
-            'purchase_price': ['Purchase Price', 'Cost Price', 'Buy Price', 'Cost', 'ক্রয় মূল্য'],
-            'selling_price': ['Selling Price', 'Sale Price', 'Price', 'MRP', 'বিক্রয় মূল্য'],
-            'total_sell': ['Total Sell', 'Total Sales', 'Units Sold', 'Sold', 'মোট বিক্রয়'],
-            'profits': ['Profits', 'Total Profit', 'Revenue', 'Profit', 'লাভ'],
-            'author_name': ['Author Name', 'Author', 'Writer', 'লেখক'],
-            'publications_name': ['Publisher', 'Publication', 'Publications Name', 'প্রকাশনী'],
-            'edition': ['Edition', 'Version', 'সংস্করণ'],
-            'total_page': ['Total Page', 'Pages', 'Page Count', 'পৃষ্ঠা'],
-            'isbn': ['ISBN', 'ISBN-13', 'ISBN Number', 'আইএসবিএন'],
-            'barcode': ['Barcode', 'SKU', 'Product Code', 'বারকোড'],
-            'last_reported_date': ['Report Date', 'Date', 'report_date', 'তারিখ'],
-            'supplier_name': ['Supplier', 'Vendor', 'Supplier Name', 'সরবরাহকারী'],
-            'location': ['Location', 'Storage', 'Warehouse', 'অবস্থান'],
-            'description': ['Description', 'Details', 'Notes', 'বিবরণ'],
-            'boost_cost': ['Boost Cost', 'Marketing Cost', 'বুস্ট খরচ'],
-            'packaging_cost': ['Packaging Cost', 'Pack Cost', 'প্যাকেজিং খরচ'],
-            'profit_per_book': ['Profit Per Book', 'Unit Profit', 'প্রতি বই লাভ'],
-            'total_books_printing': ['Total Printed', 'Print Quantity', 'মোট মুদ্রণ']
-        }
-    },
-    prodhan_com_e_commerce: {
-        name: 'Prodhan.com (E-commerce)',
-        icon: ShoppingCart,
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-200',
-        defaultCategory: 'e-commerce',
-        templateHeaders: [
-            'Product Name', 'SKU', 'Category', 'Current Stock', 'Selling Price', 'Purchase Price', 'Description'
-        ],
-        sampleRow: [
-            'Wireless Mouse', 'SKU-001', 'Electronics & Gadgets', '50', '1200', '800', 'High-quality wireless mouse with ergonomic design'
-        ],
-        // Simplified mapping for Prodhan.com (dynamic import - essential fields only)
-        fieldMapping: {
-            'item_name': ['Product Name', 'Item Name', 'Name', 'Title', 'Product Title', 'Product', 'পণ্যের নাম', 'পণ্য'],
-            'category': ['Category', 'Type', 'Product Category', 'Product Type', 'ক্যাটাগরি', 'বিভাগ'],
-            'current_stock': ['Current Stock', 'Stock', 'Quantity', 'Available Stock', 'Qty', 'Available', 'স্টক', 'মজুদ'],
-            'selling_price': ['Selling Price', 'Sale Price', 'Price', 'MRP', 'Retail Price', 'Cost', 'বিক্রয়মূল্য', 'দাম'],
-            'description': ['Description', 'Details', 'Notes', 'Product Details', 'Info', 'বিবরণ'],
-            'barcode': ['SKU', 'Barcode', 'Product Code', 'Item Code', 'Code', 'এসকেইউ'],
-            'minimum_stock': ['Min Stock', 'Minimum Stock', 'Reorder Level', 'Low Stock Alert', 'Minimum', 'সর্বনিম্ন'],
-            'purchase_price': ['Cost Price', 'Purchase Price', 'Buy Price', 'Buying Price', 'ক্রয়মূল্য'],
-            'total_sell': ['Sold Qty', 'Total Sell', 'Units Sold', 'Sold', 'Total Sales', 'Sales', 'বিক্রিত'],
-            'profits': ['Revenue', 'Profits', 'Total Profit', 'Earnings', 'Profit', 'আয়'],
-            'supplier_name': ['Supplier', 'Vendor', 'Supplier Name', 'সরবরাহকারী'],
-            'weight_kg': ['Weight (kg)', 'Weight', 'ওজন'],
-            'dimensions': ['Dimensions', 'Size', 'মাপ'],
-            'tags': ['Tags', 'Keywords', 'Labels', 'ট্যাগ'],
-            'location': ['Location', 'Warehouse', 'Storage', 'অবস্থান'],
-            'status': ['Status', 'Availability', 'স্ট্যাটাস']
-        }
+// Default config to merge with department branding
+const DEFAULT_CONFIG = {
+    icon: Building2,
+    color: 'text-slate-600',
+    bgColor: 'bg-slate-50',
+    borderColor: 'border-slate-200',
+    defaultCategory: 'general',
+    templateHeaders: [
+        'Item Name', 'SKU', 'Category', 'Current Stock', 'Minimum Stock', 'Purchase Price', 'Selling Price', 'Description'
+    ],
+    sampleRow: [
+        'Sample Item', 'SKU-001', 'General', '10', '5', '100', '150', 'Sample description'
+    ],
+    fieldMapping: {
+        'item_name': ['Product Name', 'Item Name', 'Name', 'Title', 'Product', 'পণ্যের নাম', 'পণ্য'],
+        'category': ['Category', 'Type', 'Product Category', 'ক্যাটাগরি', 'বিভাগ'],
+        'current_stock': ['Current Stock', 'Stock', 'Quantity', 'Qty', 'স্টক', 'মজুদ'],
+        'selling_price': ['Selling Price', 'Sale Price', 'Price', 'MRP', 'বিক্রয়মূল্য', 'দাম'],
+        'description': ['Description', 'Details', 'Notes', 'বিবরণ'],
+        'barcode': ['SKU', 'Barcode', 'Product Code', 'Code', 'এসকেইউ'],
+        'minimum_stock': ['Min Stock', 'Minimum Stock', 'Reorder Level', 'সর্বনিম্ন'],
+        'purchase_price': ['Cost Price', 'Purchase Price', 'Buy Price', 'ক্রয়মূল্য'],
+        'supplier_name': ['Supplier', 'Vendor', 'সরবরাহকারী'],
+        'subject': ['Subject', 'Course', 'Topic', 'বিষয়', 'কোর্স'],
+        'total_sell': ['Total Sell', 'Total Sales', 'Units Sold', 'Sold', 'মোট বিক্রয়'],
+        'profits': ['Profits', 'Total Profit', 'Revenue', 'Profit', 'লাভ'],
+        'author_name': ['Author Name', 'Author', 'Writer', 'লেখক'],
+        'publications_name': ['Publisher', 'Publication', 'Publications Name', 'প্রকাশনী'],
+        'edition': ['Edition', 'Version', 'সংস্করণ'],
+        'total_page': ['Total Page', 'Pages', 'Page Count', 'পৃষ্ঠা'],
+        'isbn': ['ISBN', 'ISBN-13', 'ISBN Number', 'আইএসবিএন'],
+        'last_reported_date': ['Report Date', 'Date', 'report_date', 'তারিখ'],
+        'location': ['Location', 'Storage', 'Warehouse', 'অবস্থান'],
+        'boost_cost': ['Boost Cost', 'Marketing Cost', 'বুস্ট খরচ'],
+        'packaging_cost': ['Packaging Cost', 'Pack Cost', 'প্যাকেজিং খরচ'],
+        'profit_per_book': ['Profit Per Book', 'Unit Profit', 'প্রতি বই লাভ'],
+        'total_books_printing': ['Total Printed', 'Print Quantity', 'মোট মুদ্রণ']
     }
 };
 
@@ -113,19 +72,44 @@ const fuzzyMatch = (input, target) => {
 
 export default function InventoryImportExport({ inventory, onImportComplete }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [selectedDepartment, setSelectedDepartment] = useState('boibari');
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
     const [importLog, setImportLog] = useState([]);
     const [mappingPreview, setMappingPreview] = useState(null);
     const [pendingFile, setPendingFile] = useState(null);
 
-    const deptConfig = DEPARTMENT_CONFIG[selectedDepartment];
+    const { data: deptResp } = useQuery({
+        queryKey: ['departments'],
+        queryFn: () => api.get('/departments', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
+    });
+    const departments = Array.isArray(deptResp) ? deptResp : [];
+
+    React.useEffect(() => {
+        if (departments.length > 0 && !selectedDepartmentId) {
+            setSelectedDepartmentId(departments[0].id);
+        }
+    }, [departments, selectedDepartmentId]);
+
+    const getDeptConfig = (deptId) => {
+        const dept = departments.find(d => d.id === deptId);
+        if (!dept) return DEFAULT_CONFIG;
+        const config = dept.branding?.importConfig || {};
+        return {
+            ...DEFAULT_CONFIG,
+            name: dept.name,
+            templateHeaders: config.templateHeaders || DEFAULT_CONFIG.templateHeaders,
+            sampleRow: config.sampleRow || DEFAULT_CONFIG.sampleRow,
+            fieldMapping: config.fieldMapping || DEFAULT_CONFIG.fieldMapping
+        };
+    };
+
+    const deptConfig = getDeptConfig(selectedDepartmentId);
     const DeptIcon = deptConfig.icon;
 
     // Smart mapping with fuzzy matching
-    const createFieldMapping = (csvHeaders, department) => {
-        const config = DEPARTMENT_CONFIG[department];
+    const createFieldMapping = (csvHeaders, deptId) => {
+        const config = getDeptConfig(deptId);
         const mapping = {};
         const unmappedHeaders = [];
         const mappingDetails = [];
@@ -211,7 +195,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
             }
 
             const csvHeaders = rows[0].map(h => String(h).trim().replace(/"/g, ''));
-            const { mapping, unmappedHeaders, mappingDetails } = createFieldMapping(csvHeaders, selectedDepartment);
+            const { mapping, unmappedHeaders, mappingDetails } = createFieldMapping(csvHeaders, selectedDepartmentId);
 
             setMappingPreview({
                 headers: csvHeaders,
@@ -309,43 +293,39 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                         const categoryName = mappedRowData.category?.trim();
                         
                         const itemData = {
+                            name: mappedRowData.item_name,
+                            sku: mappedRowData.barcode || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                            barcode: mappedRowData.barcode || '',
+                            category_id: undefined, // category names aren't IDs directly, backend might need to handle or skip
+                            department_id: selectedDepartmentId,
+                            buying_price: parseFloat(mappedRowData.purchase_price) || 0,
+                            selling_price: parseFloat(mappedRowData.selling_price) || 0,
+                            stock: parseInt(mappedRowData.current_stock) || 0,
+                            min_stock_level: parseInt(mappedRowData.minimum_stock) || 10,
+                            unit: 'pcs',
+                            description: mappedRowData.description || '',
+                            isbn: mappedRowData.isbn || mappedRowData.barcode || '',
+                            publisher: mappedRowData.publications_name || '',
+                            author: mappedRowData.author_name || '',
+                            edition: mappedRowData.edition || '',
+                            tags: mappedRowData.tags ? mappedRowData.tags.split(',').map(t => t.trim()) : [],
+                            // legacy fields for frontend optimistic updates or custom backend handlers
                             item_name: mappedRowData.item_name,
                             category: categoryName || deptConfig.defaultCategory,
-                            department: selectedDepartment,
+                            department: selectedDepartmentId,
                             subject: mappedRowData.subject || 'general',
                             current_stock: parseInt(mappedRowData.current_stock) || 0,
                             minimum_stock: parseInt(mappedRowData.minimum_stock) || 10,
                             purchase_price: parseFloat(mappedRowData.purchase_price) || 0,
-                            selling_price: parseFloat(mappedRowData.selling_price) || 0,
-                            profits: newProfits,
-                            total_books_printing: parseInt(mappedRowData.total_books_printing) || 0,
-                            total_sell: parseInt(mappedRowData.total_sell) || 0,
-                            publications_name: mappedRowData.publications_name || '',
-                            author_name: mappedRowData.author_name || '',
-                            supplier_name: mappedRowData.supplier_name || '',
-                            location: mappedRowData.location || '',
-                            edition: mappedRowData.edition || '',
-                            total_page: parseInt(mappedRowData.total_page) || 0,
-                            barcode: mappedRowData.barcode || '',
-                            isbn: mappedRowData.isbn || mappedRowData.barcode || '',
-                            description: mappedRowData.description || '',
-                            boost_cost: parseFloat(mappedRowData.boost_cost) || 0,
-                            packaging_cost: parseFloat(mappedRowData.packaging_cost) || 0,
-                            profit_per_book: parseFloat(mappedRowData.profit_per_book) || 0,
-                            last_reported_total_sell: parseInt(mappedRowData.total_sell) || 0,
-                            last_reported_profits: newProfits,
-                            last_reported_date: mappedRowData.last_reported_date || null,
-                            weight_kg: parseFloat(mappedRowData.weight_kg) || null,
-                            tags: mappedRowData.tags ? mappedRowData.tags.split(',').map(t => t.trim()) : []
                         };
 
                         const promise = (async () => {
                             try {
                                 if (existingItem) {
-                                    await Inventory.update(existingItem.id, itemData);
+                                    await erp.entities.Inventory.update(existingItem.id, itemData);
                                     return { status: 'updated', name: itemData.item_name };
                                 } else {
-                                    await Inventory.create(itemData);
+                                    await erp.entities.Inventory.create(itemData);
                                     return { status: 'created', name: itemData.item_name };
                                 }
                             } catch (error) {
@@ -384,13 +364,14 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
 
                 // Create income record if applicable
                 if (totalIncomeForBatch > 0 && reportDateForBatch) {
-                    await IncomeApi.create({
+                    await erp.entities.Income.create({
                         income_title: `${deptConfig.name} Sales (Import: ${reportDateForBatch.toLocaleDateString()})`,
                         revenue_stream: 'book_sales',
                         amount: totalIncomeForBatch,
                         income_date: reportDateForBatch.toISOString().slice(0, 10),
                         payment_method: 'online',
-                        department: selectedDepartment,
+                        department_id: selectedDepartmentId,
+                        department: selectedDepartmentId,
                         notes: `Automated from ${deptConfig.name} CSV bulk import.`,
                         status: 'received'
                     });
@@ -399,7 +380,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
 
                 // Auto-sync categories: detect new categories and create ProductCategory records
                 try {
-                  const allCategories = await erp.entities.ProductCategory.filter({ department: selectedDepartment });
+                  const allCategories = await erp.entities.ProductCategory.filter({ department: selectedDepartmentId });
                   const existingCatNames = new Set(allCategories.map(c => c.name?.toLowerCase()));
                   
                   // Collect unique categories from imported data
@@ -423,7 +404,8 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                       await erp.entities.ProductCategory.create({
                         name: catName,
                         slug: slug,
-                        department: selectedDepartment,
+                        department_id: selectedDepartmentId,
+                        department: selectedDepartmentId,
                         category_type: 'product_category',
                         description: `Auto-created from import`,
                         color: '#8B5CF6',
@@ -448,8 +430,15 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                 onImportComplete && onImportComplete();
 
             } catch (error) {
-                toast.error(`Import error: ${error.message}`);
-                setImportLog([{ status: 'error', message: `Critical error: ${error.message}` }]);
+                let suggestion = "Please try again.";
+                if (error.message.includes("Network")) suggestion = "Check your internet connection and try again.";
+                else if (error.message.includes("format")) suggestion = "Ensure your CSV matches the template format precisely.";
+                else if (error.message.includes("duplicate")) suggestion = "Some items already exist. Try updating instead of creating.";
+                else suggestion = "Check if all required columns (like Item Name) are present and not empty.";
+                
+                toast.error(`Import failed: ${error.message}`);
+                toast.info(`Suggestion: ${suggestion}`, { duration: 8000 });
+                setImportLog(prev => [...prev, { status: 'error', message: `Critical error: ${error.message} - ${suggestion}` }]);
             } finally {
                 setIsImporting(false);
             }
@@ -457,14 +446,14 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
         reader.readAsText(pendingFile);
     };
 
-    const downloadTemplate = (department) => {
-        const config = DEPARTMENT_CONFIG[department];
+    const downloadTemplate = (deptId) => {
+        const config = getDeptConfig(deptId);
         const csvContent = `${config.templateHeaders.join(',')}\n${config.sampleRow.join(',')}`;
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${department}_inventory_template.csv`;
+        a.download = `${config.name.replace(/\s+/g, '_')}_inventory_template.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -472,10 +461,10 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
         toast.success(`${config.name} template downloaded!`);
     };
 
-    const handleExport = (department) => {
-        const config = DEPARTMENT_CONFIG[department];
+    const handleExport = (deptId) => {
+        const config = getDeptConfig(deptId);
         const filteredInventory = inventory.filter(item => 
-            department === 'all' || item.department === department
+            deptId === 'all' || item.department_id === deptId || item.department === deptId
         );
 
         if (filteredInventory.length === 0) {
@@ -525,7 +514,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${department}_inventory_export.csv`;
+        a.download = `${config.name.replace(/\s+/g, '_')}_inventory_export.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
         toast.success(`${config.name} data exported!`);
@@ -556,24 +545,26 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                     </DialogHeader>
 
                     {/* Department Selection */}
-                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border">
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border overflow-x-auto">
                         <Label className="font-medium whitespace-nowrap">Select Department:</Label>
-                        <div className="flex gap-2 flex-1">
-                            {Object.entries(DEPARTMENT_CONFIG).map(([key, config]) => {
-                                const Icon = config.icon;
+                        <div className="flex gap-2 flex-1 min-w-max">
+                            {departments.map((dept) => {
+                                const isSelected = selectedDepartmentId === dept.id;
+                                const config = getDeptConfig(dept.id);
+                                const Icon = config.icon || Building2;
                                 return (
                                     <Button
-                                        key={key}
-                                        variant={selectedDepartment === key ? 'default' : 'outline'}
+                                        key={dept.id}
+                                        variant={isSelected ? 'default' : 'outline'}
                                         onClick={() => {
-                                            setSelectedDepartment(key);
+                                            setSelectedDepartmentId(dept.id);
                                             setMappingPreview(null);
                                             setPendingFile(null);
                                         }}
-                                        className={`flex-1 ${selectedDepartment === key ? '' : config.bgColor}`}
+                                        className={`flex-1 ${isSelected ? '' : config.bgColor || 'bg-white'}`}
                                     >
                                         <Icon className="w-4 h-4 mr-2" />
-                                        {config.name}
+                                        {dept.name}
                                     </Button>
                                 );
                             })}
@@ -617,7 +608,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                                     </Alert>
 
                                     <Button 
-                                        onClick={() => downloadTemplate(selectedDepartment)} 
+                                        onClick={() => downloadTemplate(selectedDepartmentId)} 
                                         variant="outline" 
                                         className="w-full bg-white"
                                     >
@@ -744,11 +735,12 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
 
                         <TabsContent value="export" className="space-y-4 mt-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {Object.entries(DEPARTMENT_CONFIG).map(([key, config]) => {
-                                    const Icon = config.icon;
-                                    const count = inventory.filter(i => i.department === key).length;
+                                {departments.map((dept) => {
+                                    const config = getDeptConfig(dept.id);
+                                    const Icon = config.icon || Building2;
+                                    const count = inventory.filter(i => i.department_id === dept.id || i.department === dept.id).length;
                                     return (
-                                        <div key={key} className={`p-5 rounded-xl border-2 ${config.borderColor} ${config.bgColor}`}>
+                                        <div key={dept.id} className={`p-5 rounded-xl border-2 ${config.borderColor} ${config.bgColor}`}>
                                             <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-2">
                                                     <Icon className={`w-5 h-5 ${config.color}`} />
@@ -760,7 +752,7 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                                                 Export all {config.name} inventory items in the department-specific format.
                                             </p>
                                             <Button 
-                                                onClick={() => handleExport(key)} 
+                                                onClick={() => handleExport(dept.id)} 
                                                 variant="outline" 
                                                 className="w-full bg-white"
                                                 disabled={count === 0}

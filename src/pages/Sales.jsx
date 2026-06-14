@@ -45,6 +45,8 @@ import { useCachedQuery } from '../components/common/CachedQuery';
 import { getComboCount, getActualQuantity } from '../components/common/ComboProductUtils';
 import DailySalesFinalizer from '../components/sales/DailySalesFinalizer';
 import MobileOrderCard from '../components/sales/MobileOrderCard';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 
 // Main Sales Page
 function SalesPage() {
@@ -780,12 +782,15 @@ function SalesPage() {
           <span className="text-slate-900 font-medium">Sales Management</span>
         </div>
 
-        {/* Premium Header with Glassmorphism Search */}
+        {/* Unified Page Header */}
+        <PageHeader
+          icon={ShoppingCart}
+          title="Sales Management"
+          subtitle="Track and manage all your sales orders"
+        />
+
+        {/* Search + action row */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-          <div className="hidden sm:block">
-            <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sales Management</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Track and manage all your sales orders</p>
-          </div>
           {/* Mobile: Search + action row */}
           <div className="w-full space-y-2 lg:space-y-0 lg:w-auto">
           <div className="flex items-center gap-2 w-full lg:w-auto">
@@ -1006,7 +1011,7 @@ function SalesPage() {
                   setEditingOrder(null);
                   setIsOrderFormOpen(true);
                 }}
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-3 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl"
+                className="px-3 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl shadow-md"
               >
                 <Plus className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">Create Sale</span>
@@ -1048,101 +1053,30 @@ function SalesPage() {
           </div>
         )}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-          {/* Total Orders */}
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-3 sm:p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                  <ShoppingCart className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-                {!stats.isFiltered && (
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayOrders}</span>
-                )}
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalOrders}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">{stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}</p>
-            </CardContent>
-          </Card>
-
-          {/* Total Product Qty */}
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-                {!stats.isFiltered && (
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayProductQty}</span>
-                )}
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalProductQuantity}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Products Sold</p>
-            </CardContent>
-          </Card>
-
-          {/* Total Returns */}
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-                {!stats.isFiltered && (
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayReturns}</span>
-                )}
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalReturns}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Returns</p>
-            </CardContent>
-          </Card>
-
-          {/* Pending Orders */}
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                </div>
-                {!stats.isFiltered && (
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayPending}</span>
-                )}
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pendingOrders}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Pending</p>
-            </CardContent>
-          </Card>
-
-          {/* Confirmed Orders */}
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                </div>
-                {!stats.isFiltered && (
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayConfirmed}</span>
-                )}
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.confirmedOrders}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Confirmed</p>
-            </CardContent>
-          </Card>
-
-          {/* Shipped Orders */}
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all rounded-2xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <Truck className="w-5 h-5 text-blue-600" />
-                </div>
-                {!stats.isFiltered && (
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Today: {stats.todayShipped}</span>
-                )}
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">{stats.shippedOrders}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Shipped</p>
-            </CardContent>
-          </Card>
+          <StatCard index={0} icon={ShoppingCart} tone="orange"
+            label={stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}
+            value={stats.totalOrders}
+            sub={!stats.isFiltered ? `Today: ${stats.todayOrders}` : undefined} />
+          <StatCard index={1} icon={Package} tone="blue"
+            label="Products Sold"
+            value={stats.totalProductQuantity}
+            sub={!stats.isFiltered ? `Today: ${stats.todayProductQty}` : undefined} />
+          <StatCard index={2} icon={RefreshCw} tone="red"
+            label="Returns"
+            value={stats.totalReturns}
+            sub={!stats.isFiltered ? `Today: ${stats.todayReturns}` : undefined} />
+          <StatCard index={3} icon={Clock} tone="orange"
+            label="Pending"
+            value={stats.pendingOrders}
+            sub={!stats.isFiltered ? `Today: ${stats.todayPending}` : undefined} />
+          <StatCard index={4} icon={CheckCircle} tone="green"
+            label="Confirmed"
+            value={stats.confirmedOrders}
+            sub={!stats.isFiltered ? `Today: ${stats.todayConfirmed}` : undefined} />
+          <StatCard index={5} icon={Truck} tone="blue"
+            label="Shipped"
+            value={stats.shippedOrders}
+            sub={!stats.isFiltered ? `Today: ${stats.todayShipped}` : undefined} />
         </div>
 
         {/* Bulk Actions Bar */}

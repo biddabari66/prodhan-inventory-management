@@ -64,11 +64,14 @@ const auth = {
     const user = toFrontend(raw);
     user.full_name = user.full_name || user.display_name || user.name;
     user.name = user.name || user.display_name || user.full_name;
+    // Normalize role: backend enum (SUPER_ADMIN/TENANT_ADMIN/USER) -> legacy 'admin'|'user'
+    // so every legacy `user.role === 'admin'` check across the app works.
+    const adminish = ['SUPER_ADMIN', 'TENANT_ADMIN', 'ADMIN'];
     user.role =
-      user.role ||
-      (['SUPER_ADMIN', 'ADMIN', 'super_admin', 'admin'].includes(user.job_role)
+      adminish.includes(String(user.role || '').toUpperCase()) ||
+      adminish.includes(String(user.job_role || '').toUpperCase())
         ? 'admin'
-        : 'user');
+        : 'user';
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return user;
   },

@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { format, startOfDay, endOfDay, startOfWeek, startOfMonth, subDays } from 'date-fns';
 import DepartmentSelect from '../components/common/DepartmentSelect';
 import ReportComments from '../components/reports/ReportComments';
-import { erp } from '@/api/erpClient';
+import PageHeader from '@/components/common/PageHeader';
 import { TableSkeleton, CardSkeleton } from '../components/common/SkeletonLoader';
 import { useDebounce } from '../components/common/useDebounce';
 import {
@@ -149,6 +149,90 @@ const ExcelTableViewer = React.memo(({ data, columns, rows }) => {
 
 ExcelTableViewer.displayName = 'ExcelTableViewer';
 
+// ───────────────────────────────────────────────────────────────────────────
+// CLIENT-SIDE PRINTABLE EXPORT (replaces removed backend PDF function)
+// ───────────────────────────────────────────────────────────────────────────
+const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const isNum = (v) => v !== null && v !== undefined && v !== '' && isFinite(parseFloat(v));
+
+const buildReportTableHTML = (report, template) => {
+  if (!template || !template.columns || !template.rows) {
+    return `<p style="color:#64748b">No template data available for this report.</p>`;
+  }
+  const data = report.data || {};
+  const cols = template.columns;
+  const rows = template.rows;
+
+  const colTotal = (colIndex) =>
+    rows.reduce((t, _, r) => t + (isNum(data[`${r}_${colIndex}`]) ? parseFloat(data[`${r}_${colIndex}`]) : 0), 0);
+  const rowTotal = (rowIndex) =>
+    cols.slice(1).reduce((t, _, c) => t + (isNum(data[`${rowIndex}_${c + 1}`]) ? parseFloat(data[`${rowIndex}_${c + 1}`]) : 0), 0);
+  const grandTotal = cols.slice(1).reduce((s, _, c) => s + colTotal(c + 1), 0);
+
+  let html = `<table><thead><tr><th>#</th>`;
+  cols.forEach((c) => { html += `<th>${esc(c)}</th>`; });
+  html += `<th>Total</th></tr></thead><tbody>`;
+  rows.forEach((row, r) => {
+    html += `<tr><td class="idx">${r + 1}</td>`;
+    cols.forEach((_, c) => {
+      const val = c === 0 ? row : (data[`${r}_${c}`] ?? '');
+      html += `<td style="text-align:${c === 0 || !isNum(val) ? 'left' : 'center'}">${esc(val === '' ? '-' : val)}</td>`;
+    });
+    html += `<td class="total">${rowTotal(r).toFixed(2)}</td></tr>`;
+  });
+  html += `<tr class="grand"><td colspan="2">TOTAL</td>`;
+  cols.slice(1).forEach((_, c) => { html += `<td style="text-align:center">${colTotal(c + 1).toFixed(2)}</td>`; });
+  html += `<td class="total">${grandTotal.toFixed(2)}</td></tr></tbody></table>`;
+  return html;
+};
+
+const openReportsPrintWindow = (reportsToExport, templates, heading) => {
+  const printWindow = window.open('', '_blank', 'width=1200,height=800');
+  if (!printWindow) {
+    toast.error('Please allow popups to export reports');
+    return false;
+  }
+  const sections = reportsToExport.map((report) => {
+    const template = templates.find((t) => t.id === report.template_id);
+    return `
+      <div class="report">
+        <h2>${esc(report.template_name)}</h2>
+        <p class="meta">Submitted by: ${esc(report.submitted_by_name)} | Department: ${esc(report.department || 'N/A')}
+          | Report Date: ${esc(safeFormatDate(report.report_date, 'PPP'))} | Status: ${esc((report.status || 'submitted').toUpperCase())}</p>
+        ${buildReportTableHTML(report, template)}
+        ${report.notes ? `<div class="notes"><strong>Notes:</strong> ${esc(report.notes)}</div>` : ''}
+      </div>`;
+  }).join('\n');
+
+  printWindow.document.write(`<!DOCTYPE html>
+    <html><head><title>${esc(heading)}</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; padding: 24px; }
+      h1 { font-size: 20px; border-bottom: 3px solid #ea580c; padding-bottom: 8px; }
+      h2 { font-size: 16px; color: #c2410c; margin-bottom: 4px; }
+      .meta { font-size: 11px; color: #64748b; margin: 0 0 10px; }
+      .report { page-break-inside: avoid; margin-bottom: 28px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th, td { border: 1px solid #cbd5e1; padding: 6px 8px; }
+      th { background: #ea580c; color: #fff; text-align: center; }
+      td.idx { background: #f1f5f9; text-align: center; font-weight: bold; width: 32px; }
+      td.total { background: #fef3c7; text-align: center; font-weight: bold; }
+      tr.grand td { background: #dcfce7; font-weight: bold; }
+      .notes { margin-top: 10px; padding: 10px; background: #f8fafc; border-left: 4px solid #f97316; font-size: 12px; }
+      .footer { margin-top: 30px; font-size: 10px; color: #6b7280; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+      @media print { body { padding: 0; } }
+    </style></head>
+    <body>
+      <h1>${esc(heading)}</h1>
+      ${sections}
+      <div class="footer">Generated on ${format(new Date(), 'PPP p')} | ZYPRA ERP System</div>
+    </body></html>`);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 400);
+  return true;
+};
+
 export default function SubmittedReports() {
   const queryClient = useQueryClient();
   const [selectedReport, setSelectedReport] = useState(null);
@@ -177,6 +261,18 @@ export default function SubmittedReports() {
   });
 
   /**
+   * Normalized role — auth client maps SUPER_ADMIN/TENANT_ADMIN/ADMIN to role 'admin'
+   */
+  const normalizedRole = useMemo(() => {
+    if (!currentUser) return 'employee';
+    if (
+      currentUser.role === 'admin' ||
+      ['admin', 'super_admin'].includes(String(currentUser.job_role || '').toLowerCase())
+    ) return 'admin';
+    return (currentUser.job_role || 'employee').toLowerCase();
+  }, [currentUser]);
+
+  /**
    * REACT QUERY: Load all reports
    */
   const { data: allReports = [], isLoading: reportsLoading } = useQuery({
@@ -200,9 +296,8 @@ export default function SubmittedReports() {
    */
   const canListAllUsers = useMemo(() => {
     if (!currentUser) return false;
-    const role = (currentUser.job_role || 'employee').toLowerCase();
-    return ['admin', 'manager'].includes(role);
-  }, [currentUser]);
+    return ['admin', 'manager'].includes(normalizedRole);
+  }, [currentUser, normalizedRole]);
 
   const { data: users = [] } = useQuery({
     queryKey: ['allUsers'],
@@ -220,7 +315,7 @@ export default function SubmittedReports() {
   const filteredReportsByRole = useMemo(() => {
     if (!currentUser || !allReports.length) return [];
 
-    const role = (currentUser.job_role || 'employee').toLowerCase();
+    const role = normalizedRole;
     const userDept = currentUser.department;
 
     console.log(`🔒 Filtering ${allReports.length} reports for ${role} in ${userDept}`);
@@ -232,7 +327,7 @@ export default function SubmittedReports() {
     } else {
       return allReports.filter(r => r.submitted_by_id === currentUser.id);
     }
-  }, [allReports, currentUser]);
+  }, [allReports, currentUser, normalizedRole]);
 
   /**
    * MEMOIZED: Apply additional filters (search, status, department, date)
@@ -311,13 +406,12 @@ export default function SubmittedReports() {
    */
   const canExport = useMemo(() => {
     if (!currentUser) return false;
-    const role = (currentUser.job_role || 'employee').toLowerCase();
-    return ['admin', 'manager', 'department_head'].includes(role);
-  }, [currentUser]);
+    return ['admin', 'manager', 'department_head'].includes(normalizedRole);
+  }, [currentUser, normalizedRole]);
 
   const canCommentOnReport = useCallback((report) => {
     if (!currentUser || !report) return false;
-    const role = (currentUser.job_role || 'employee').toLowerCase();
+    const role = normalizedRole;
 
     if (['admin', 'manager'].includes(role)) return true;
     
@@ -326,11 +420,11 @@ export default function SubmittedReports() {
     }
     
     return report.submitted_by_id === currentUser.id;
-  }, [currentUser]);
+  }, [currentUser, normalizedRole]);
 
   const canSendWhatsApp = useCallback((report) => {
     if (!currentUser || !report) return false;
-    const role = (currentUser.job_role || 'employee').toLowerCase();
+    const role = normalizedRole;
 
     if (['admin', 'manager'].includes(role)) return true;
     
@@ -339,86 +433,45 @@ export default function SubmittedReports() {
     }
 
     return false;
-  }, [currentUser]);
+  }, [currentUser, normalizedRole]);
 
   /**
-   * PRODUCTION-READY: Export single report
+   * CLIENT-SIDE: Export single report (printable window — no backend needed)
    */
-  const handleExportSingleReport = useCallback(async (report) => {
+  const handleExportSingleReport = useCallback((report) => {
     setIsExporting(true);
     try {
-      console.log('📄 Exporting single report:', report.id);
-      
-      const response = await erp.functions.invoke('exportDepartmentReportsPDF', {
-        singleReportId: report.id
-      });
-
-      console.log('📊 Export response:', response.data);
-
-      if (response.data && response.data.success && response.data.html) {
-        // Open HTML in new window for printing
-        const printWindow = window.open('', '_blank', 'width=1200,height=800');
-        if (!printWindow) {
-          toast.error('Please allow popups to export reports');
-          return;
-        }
-        
-        printWindow.document.write(response.data.html);
-        printWindow.document.close();
-        
-        toast.success('✅ Report opened for printing!');
-      } else {
-        console.error('❌ Invalid response:', response.data);
-        toast.error('Failed to generate report: ' + (response.data?.message || 'Unknown error'));
-      }
+      const ok = openReportsPrintWindow([report], templates, report.template_name || 'Report');
+      if (ok) toast.success('Report opened for printing');
     } catch (error) {
-      console.error('❌ Export error:', error);
-      toast.error('Failed to export report: ' + (error.response?.data?.details || error.message));
+      console.error('Export error:', error);
+      toast.error('Failed to export report: ' + error.message);
     } finally {
       setIsExporting(false);
     }
-  }, []);
+  }, [templates]);
 
   /**
-   * PRODUCTION-READY: Export department reports
+   * CLIENT-SIDE: Export department reports
    */
-  const handleExportDepartmentReports = useCallback(async (department) => {
+  const handleExportDepartmentReports = useCallback((department) => {
     setIsExporting(true);
     try {
-      console.log('📄 Exporting department reports:', department);
-      
-      const response = await erp.functions.invoke('exportDepartmentReportsPDF', {
-        department: department
-      });
-
-      console.log('📊 Export response:', response.data);
-
-      if (response.data && response.data.success && response.data.html) {
-        // Open HTML in new window for printing
-        const printWindow = window.open('', '_blank', 'width=1200,height=800');
-        if (!printWindow) {
-          toast.error('Please allow popups to export reports');
-          return;
-        }
-        
-        printWindow.document.write(response.data.html);
-        printWindow.document.close();
-        
-        const deptName = department.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        toast.success(`✅ ${deptName} reports opened for printing!`);
-      } else if (response.data && !response.data.success) {
-        toast.info(response.data.message || 'No reports found to export');
-      } else {
-        console.error('❌ Invalid response:', response.data);
-        toast.error('Failed to generate reports: ' + (response.data?.message || 'Unknown error'));
+      const deptReports = allReports.filter(r => r.department === department);
+      const deptName = department.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      if (deptReports.length === 0) {
+        toast.info(`No reports found for ${deptName}`);
+        return;
       }
+      const ok = openReportsPrintWindow(deptReports, templates, `${deptName} — Submitted Reports`);
+      if (ok) toast.success(`${deptName} reports opened for printing`);
     } catch (error) {
-      console.error('❌ Export error:', error);
-      toast.error('Failed to export reports: ' + (error.response?.data?.details || error.message));
+      console.error('Export error:', error);
+      toast.error('Failed to export reports: ' + error.message);
     } finally {
       setIsExporting(false);
     }
-  }, []);
+  }, [allReports, templates]);
 
   /**
    * NEW: Export all filtered reports
@@ -431,19 +484,15 @@ export default function SubmittedReports() {
 
     setIsExporting(true);
     try {
-      // If single department filter is active, use department export
-      if (departmentFilter !== 'all') {
-        await handleExportDepartmentReports(departmentFilter);
-      } else {
-        toast.info('Please select a specific department to export reports');
-      }
+      const ok = openReportsPrintWindow(filteredReports, templates, 'Submitted Reports');
+      if (ok) toast.success(`${filteredReports.length} report(s) opened for printing`);
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to export reports: ' + error.message);
     } finally {
       setIsExporting(false);
     }
-  }, [filteredReports, departmentFilter, handleExportDepartmentReports]);
+  }, [filteredReports, templates]);
 
   const handleViewDetails = useCallback((report) => {
     const template = templates.find(t => t.id === report.template_id);
@@ -492,21 +541,14 @@ export default function SubmittedReports() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">All Submitted Reports</h1>
-          <p className="text-muted-foreground mt-1">
-            Managing {filteredReportsByRole.length} {currentUser.job_role === 'department_head' ? currentUser.department : ''} department reports
-          </p>
-          <Badge variant="outline" className="mt-2">
-            {currentUser.job_role?.toUpperCase()}
-          </Badge>
-        </div>
-        
-        {/* ENHANCED: Export Dropdown */}
-        {canExport && filteredReports.length > 0 && (
+      <PageHeader
+        icon={FileText}
+        title="All Submitted Reports"
+        subtitle={`Managing ${filteredReportsByRole.length} ${normalizedRole === 'department_head' ? currentUser.department + ' ' : ''}department reports — ${normalizedRole.toUpperCase()}`}
+        actions={
+        canExport && filteredReports.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={isExporting}>
@@ -538,7 +580,7 @@ export default function SubmittedReports() {
                 </div>
               </DropdownMenuItem>
 
-              {currentUser.job_role === 'admin' || currentUser.job_role === 'manager' ? (
+              {['admin', 'manager'].includes(normalizedRole) ? (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-xs text-muted-foreground">By Department</DropdownMenuLabel>
@@ -549,7 +591,7 @@ export default function SubmittedReports() {
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem onClick={() => handleExportDepartmentReports('it')}>
-                    <Building2 className="w-4 h-4 mr-2 text-purple-600" />
+                    <Building2 className="w-4 h-4 mr-2 text-amber-600" />
                     IT Department
                   </DropdownMenuItem>
                   
@@ -566,8 +608,9 @@ export default function SubmittedReports() {
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-      </div>
+        )
+        }
+      />
 
       {/* Filters */}
       <Card>
@@ -585,7 +628,7 @@ export default function SubmittedReports() {
             </div>
 
             {/* Department Filter */}
-            {(currentUser.job_role === 'admin' || currentUser.job_role === 'manager') && (
+            {['admin', 'manager'].includes(normalizedRole) && (
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                 <SelectTrigger>
                   <Building2 className="w-4 h-4 mr-2" />
@@ -709,7 +752,7 @@ export default function SubmittedReports() {
                       {submitter && (
                         <Avatar className="h-12 w-12 flex-shrink-0">
                           <AvatarImage src={submitter.profile_picture_url} />
-                          <AvatarFallback className="bg-gradient-to-br from-violet-500 to-pink-500 text-white font-bold">
+                          <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold">
                             {(submitter.full_name || 'U').charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -743,7 +786,7 @@ export default function SubmittedReports() {
                         </div>
 
                         {report.notes && (
-                          <p className="mt-3 text-sm text-muted-foreground italic border-l-2 border-violet-500 pl-3">
+                          <p className="mt-3 text-sm text-muted-foreground italic border-l-2 border-orange-500 pl-3">
                             "{report.notes}"
                           </p>
                         )}
@@ -800,7 +843,7 @@ export default function SubmittedReports() {
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-2xl">
-              <FileText className="w-6 h-6 text-violet-500" />
+              <FileText className="w-6 h-6 text-orange-500" />
               {selectedReport?.template_name}
             </DialogTitle>
           </DialogHeader>

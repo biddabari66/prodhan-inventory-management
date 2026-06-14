@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import PageHeader from '@/components/common/PageHeader';
+import SharedStatCard from '@/components/common/StatCard';
 
 const bdt = (n) =>
   '৳' + Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -66,26 +68,17 @@ function fmtDate(v) {
   return safeDate(v);
 }
 
-// ---------- Reusable summary stat ----------
-function StatCard({ label, value, icon: Icon, tone = 'amber' }) {
-  const tones = {
-    amber: 'text-amber-600 bg-amber-50',
-    emerald: 'text-emerald-600 bg-emerald-50',
-    rose: 'text-rose-600 bg-rose-50',
-    slate: 'text-slate-600 bg-slate-50',
-  };
+// ---------- Reusable summary stat (shared design-system StatCard) ----------
+const STAT_TONE = { amber: 'orange', emerald: 'green', rose: 'red', slate: 'slate' };
+function StatCard({ label, value, icon, tone = 'amber', index = 0 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between p-4">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-1 truncate text-xl font-bold tracking-tight">{value}</p>
-        </div>
-        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${tones[tone]}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </CardContent>
-    </Card>
+    <SharedStatCard
+      icon={icon}
+      label={label}
+      value={value}
+      tone={STAT_TONE[tone] || 'orange'}
+      index={index}
+    />
   );
 }
 
@@ -918,15 +911,11 @@ export default function Accounting() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
-      <div className="flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-xl bg-amber-600 text-white">
-          <Scale className="h-6 w-6" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Accounting</h1>
-          <p className="text-sm text-muted-foreground">Double-entry ledger, journal &amp; financial reports</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={Scale}
+        title="Accounting"
+        subtitle="Double-entry ledger, journal & financial reports"
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">

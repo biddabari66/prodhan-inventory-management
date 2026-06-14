@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { withPermission } from '../components/common/PermissionGuard';
+import PageHeader from '@/components/common/PageHeader';
 import CampaignManager from '../components/marketing/CampaignManager';
 import BudgetAlerts from '../components/marketing/BudgetAlerts';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -309,25 +310,21 @@ function MarketingROIPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Marketing ROI</h1>
-              <p className="text-slate-500 text-sm">Campaign performance & budget tracking</p>
-            </div>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setIsAddBudgetOpen(true)}>
-              <Target className="w-4 h-4 mr-2" />
-              Set Budget
-            </Button>
-            <CampaignManager onCampaignCreated={() => queryClient.invalidateQueries(['ad-spends'])} />
-          </div>
-        </div>
+        <PageHeader
+          icon={TrendingUp}
+          title="Marketing ROI"
+          subtitle="Campaign performance & budget tracking"
+          breadcrumb="Dashboard / Marketing ROI"
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setIsAddBudgetOpen(true)} className="bg-white border-slate-200 hover:bg-slate-50 shadow-sm h-10 px-4 rounded-xl">
+                <Target className="w-4 h-4 mr-2" />
+                Set Budget
+              </Button>
+              <CampaignManager onCampaignCreated={() => queryClient.invalidateQueries(['ad-spends'])} />
+            </>
+          }
+        />
 
         {/* Date Filter */}
         <Card className="bg-white border-0 shadow-sm">

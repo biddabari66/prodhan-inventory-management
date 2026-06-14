@@ -1,15 +1,8 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Globe } from 'lucide-react';
-
-const DEPARTMENTS = [
-  { 
-    value: 'prodhan_com_e_commerce', 
-    label: 'Prodhan.com E-commerce', 
-    icon: Globe,
-    color: 'text-purple-600'
-  }
-];
+import { Building2, Loader2, Globe } from 'lucide-react';
 
 export default function DepartmentSelect({ 
   value, 
@@ -18,29 +11,51 @@ export default function DepartmentSelect({
   className = "",
   required = false,
   includeAllOption = false,
-  allOptionLabel = "All Departments"
+  allOptionLabel = "All Departments",
+  disabled = false
 }) {
+  const { data: resp, isLoading } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => api.get('/departments', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
+  });
+
+  const departments = Array.isArray(resp) ? resp : [];
+
   return (
-    <Select value={value} onValueChange={onValueChange} required={required}>
+    <Select value={value || undefined} onValueChange={onValueChange} required={required} disabled={disabled}>
       <SelectTrigger className={`w-full ${className}`}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={isLoading ? "Loading departments..." : placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {DEPARTMENTS.map((dept) => {
-          const IconComponent = dept.icon;
-          return (
-            <SelectItem key={dept.value} value={dept.value}>
-              <div className="flex items-center gap-3">
-                <IconComponent className={`w-4 h-4 ${dept.color}`} />
-                <span>{dept.label}</span>
-              </div>
-            </SelectItem>
-          );
-        })}
+        {isLoading ? (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+          </div>
+        ) : (
+          <>
+            {includeAllOption && (
+              <SelectItem value="all">
+                <div className="flex items-center gap-3">
+                  <Globe className="w-4 h-4 text-slate-500" />
+                  <span>{allOptionLabel}</span>
+                </div>
+              </SelectItem>
+            )}
+            {departments.map((dept) => (
+              <SelectItem key={dept.id} value={dept.id}>
+                <div className="flex items-center gap-3">
+                  {dept.branding?.logo ? (
+                    <img src={dept.branding.logo} alt="logo" className="w-4 h-4 object-contain" />
+                  ) : (
+                    <Building2 className="w-4 h-4 text-slate-500" />
+                  )}
+                  <span>{dept.branding?.name || dept.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </>
+        )}
       </SelectContent>
     </Select>
   );
 }
-
-// Export departments array for use in other components
-export { DEPARTMENTS };

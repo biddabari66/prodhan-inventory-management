@@ -39,6 +39,12 @@ const envSchema = z.object({
   GOOGLE_SPREADSHEET_ID: z.string().optional(),
   // AI
   OPENAI_API_KEY: z.string().optional(),
+  AI_BASE_URL: z.string().optional(),
+  AI_MODEL: z.string().optional(),
+  AI_API_KEY: z.string().optional(),
+  BIOMETRIC_DEVICE_KEY: z.string().optional(),
+  ADDITIONAL_ORIGINS: z.string().optional(),
+  BKASH_MERCHANT_NUMBER: z.string().optional(),
 });
 
 // Pre-process env to trim secrets that may have whitespace injected by Railway

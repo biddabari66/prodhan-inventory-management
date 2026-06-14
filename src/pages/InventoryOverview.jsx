@@ -4,10 +4,14 @@ import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus, AlertTriangle, BookOpen, Package, Trash2, RefreshCw,
-  Filter, X, Loader2, ScanLine, ChevronDown, ChevronRight, Layers
+  Filter, X, Loader2, ScanLine, ChevronDown, ChevronRight, Layers, Banknote
 } from 'lucide-react';
 import QRCodeScanner from '../components/inventory/QRCodeScanner.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,7 +29,8 @@ import { withPermission, usePermission, useConfidentialPermission } from '../com
 import { usePurchasePriceResolver } from '../components/sales/useDiscountCampaigns';
 import { Lock } from 'lucide-react';
 import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
-import ExcelImport from '../components/common/ExcelImport';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VARIANT UTILITIES
@@ -237,7 +242,8 @@ function VariantDetailRow({ variant, parentItem, canViewPurchasePrice, getPurcha
 // ═══════════════════════════════════════════════════════════════════════════════
 function InventoryTableRow({
   item, todaySalesData, canEdit, canDelete,
-  canViewPurchasePrice, getPurchasePrice, onEdit, onDelete
+  canViewPurchasePrice, getPurchasePrice, onEdit, onDelete,
+  isSelected, onSelect
 }) {
   const [expanded, setExpanded] = useState(false);
   const variants = getVariants(item);
@@ -633,10 +639,22 @@ function InventoryOverviewPage() {
   const [itemToDelete,          setItemToDelete]          = useState(null);
   const [categoryFilter,        setCategoryFilter]        = useState('all');
   const [todaySalesData,        setTodaySalesData]        = useState({});
-  const [selectedDepartment]                              = useState('prodhan_com_e_commerce');
+  const [selectedDepartment, setSelectedDepartment]       = useState('');
   const [displayLimit,          setDisplayLimit]          = useState(50);
   const [isScannerOpen,         setIsScannerOpen]         = useState(false);
   const [variantFilter,         setVariantFilter]         = useState('all');
+
+  const { data: deptResp } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => erp.api.get('/departments', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
+  });
+  const departments = Array.isArray(deptResp) ? deptResp : [];
+
+  useEffect(() => {
+    if (departments.length > 0 && !selectedDepartment) {
+      setSelectedDepartment(departments[0].id);
+    }
+  }, [departments, selectedDepartment]);
 
   const { hasPermission: canCreate } = usePermission('inventory_overview', 'can_create');
   const { hasPermission: canEdit }   = usePermission('inventory_overview', 'can_edit');
@@ -644,12 +662,13 @@ function InventoryOverviewPage() {
   const { canView: canViewPurchasePrice } = useConfidentialPermission('can_view_purchase_price');
 
   const { data: purchaseOrders = [] } = useQuery({
-    queryKey: ['purchase-orders-for-prices'],
+    queryKey: ['purchase-orders-for-prices', selectedDepartment],
     queryFn: () => erp.entities.PurchaseOrder.filter(
-      { department: 'prodhan_com_e_commerce' }, '-order_date', 200
+      { department_id: selectedDepartment }, '-order_date', 200
     ),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    enabled: !!selectedDepartment
   });
   const { getPurchasePrice } = usePurchasePriceResolver(purchaseOrders);
 
@@ -658,9 +677,10 @@ function InventoryOverviewPage() {
     queryFn: async () => {
       const all = await erp.entities.ProductCategory.list('sort_order');
       return all.filter(c =>
-        c.is_active && (c.department === selectedDepartment || c.department === 'both')
+        c.is_active && (c.department_id === selectedDepartment || c.department === selectedDepartment || c.department === 'both')
       );
-    }
+    },
+    enabled: !!selectedDepartment
   });
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -802,10 +822,10 @@ function InventoryOverviewPage() {
   };
 
   const filterInventory = () => {
-    if (!currentUser) return;
+    if (!currentUser || !selectedDepartment) return;
 
     let filtered = (inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory)
-      .filter(item => item.department === 'prodhan_com_e_commerce');
+      .filter(item => item.department_id === selectedDepartment || item.department === selectedDepartment);
 
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -965,94 +985,51 @@ function InventoryOverviewPage() {
           <span className="text-foreground font-medium">Inventory Overview</span>
         </div>
 
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Inventory Overview</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Manage all products and stock</p>
-          </div>
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto flex-wrap">
-            <Button variant="outline"
-              className="border-slate-300 h-10 sm:h-11 px-3 sm:px-4 rounded-xl font-semibold gap-2 text-xs sm:text-sm"
-              onClick={() => setIsScannerOpen(true)}>
-              <ScanLine className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-              <span className="hidden sm:inline">Scan</span> QR
-            </Button>
-            {canCreate && (
-              <ExcelImport
-                type="products"
-                onImport={async (rows) => {
-                  for (const row of rows) {
-                    await erp.entities.Inventory.create({
-                      item_name: row.name,
-                      barcode: row.sku,
-                      subject: row.category,
-                      purchase_price: row.buy_price,
-                      selling_price: row.sell_price,
-                      current_stock: row.stock,
-                      minimum_stock: row.min_stock,
-                      unit: row.unit,
-                      description: row.description,
-                    });
-                  }
-                  await loadUserAndInventory();
-                }}
-              />
-            )}
-            {canCreate && (
-              <Button
-                className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 px-4 sm:px-6 h-10 sm:h-11 font-semibold rounded-xl text-xs sm:text-sm"
-                onClick={() => { setEditingItem(null); setIsFormOpen(true); }}>
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> Add Item
+        {/* Unified Page Header */}
+        <PageHeader
+          icon={Package}
+          title="Inventory Overview"
+          subtitle="Manage all products and stock"
+          actions={
+            <div className="flex items-center gap-2">
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <SelectTrigger className="w-[180px] h-10 bg-white border-slate-200">
+                  <SelectValue placeholder="Select Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline"
+                className="h-10 px-3 sm:px-4 rounded-xl font-semibold gap-2 text-xs sm:text-sm"
+                onClick={() => setIsScannerOpen(true)}>
+                <ScanLine className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                <span className="hidden sm:inline">Scan</span> QR
               </Button>
-            )}
-          </div>
-        </div>
+              {canCreate && (
+                <Button
+                  className="px-4 sm:px-6 h-10 font-semibold rounded-xl shadow-md text-xs sm:text-sm"
+                  onClick={() => { setEditingItem(null); setIsFormOpen(true); }}>
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> Add Item
+                </Button>
+              )}
+            </div>
+          }
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {[
-            {
-              gradient: 'from-red-500 to-rose-400', shadow: 'shadow-red-200',
-              icon: <Package className="w-5 h-5 text-white" />,
-              badge: 'bg-red-50 text-red-700 border-red-200', badgeText: 'Products',
-              value: stats.total, label: 'Total Products'
-            },
-            {
-              gradient: 'from-amber-500 to-orange-400', shadow: 'shadow-amber-200',
-              icon: <AlertTriangle className="w-5 h-5 text-white" />,
-              badge: stats.low_stock > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200',
-              badgeText: stats.low_stock > 0 ? 'Alert' : 'Healthy',
-              value: stats.low_stock, label: 'Low Stock'
-            },
-            {
-              gradient: 'from-emerald-500 to-green-400', shadow: 'shadow-green-200',
-              icon: <span className="text-white text-lg font-bold">৳</span>,
-              badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', badgeText: 'Value',
-              value: `৳${(stats.total_value / 1000).toFixed(0)}K`, label: 'Stock Value'
-            },
-            {
-              gradient: 'from-indigo-500 to-violet-400', shadow: 'shadow-indigo-200',
-              icon: <Layers className="w-5 h-5 text-white" />,
-              badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', badgeText: 'Variants',
-              value: stats.with_variants, label: 'w/ Variants'
-            },
-          ].map((s, i) => (
-            <Card key={i} className="bg-card border-0 shadow-sm rounded-2xl overflow-hidden relative">
-              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${s.gradient}`} />
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${s.gradient}
-                                  flex items-center justify-center shadow-lg ${s.shadow}`}>
-                    {s.icon}
-                  </div>
-                  <Badge className={`text-[10px] border ${s.badge}`}>{s.badgeText}</Badge>
-                </div>
-                <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{s.value}</p>
-                <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">{s.label}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <StatCard index={0} icon={Package} tone="orange"
+            label="Total Products" value={stats.total} sub="All products" />
+          <StatCard index={1} icon={AlertTriangle} tone={stats.low_stock > 0 ? 'red' : 'green'}
+            label="Low Stock" value={stats.low_stock}
+            sub={stats.low_stock > 0 ? 'Needs attention' : 'All healthy'} />
+          <StatCard index={2} icon={Banknote} tone="green"
+            label="Stock Value" value={`৳${(stats.total_value / 1000).toFixed(0)}K`} sub="At purchase price" />
+          <StatCard index={3} icon={Layers} tone="blue"
+            label="w/ Variants" value={stats.with_variants} sub="Variant products" />
         </div>
 
         {/* Search & Filters */}
@@ -1154,6 +1131,8 @@ function InventoryOverviewPage() {
                 canViewPurchasePrice={canViewPurchasePrice}
                 getPurchasePrice={getPurchasePrice}
                 onEdit={handleEdit} onDelete={handleDeleteClick}
+                        isSelected={selectedItemIds.includes(item.id)}
+                        onSelect={handleSelectItem}
               />
             ))
           )}
@@ -1194,7 +1173,13 @@ function InventoryOverviewPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/50 border-b border-slate-100">
-                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-6 min-w-[320px]">
+                    <TableHead className="w-[40px] pl-6 pr-0">
+                      <Checkbox 
+                        checked={displayedInventory.length > 0 && selectedItemIds.length === displayedInventory.length}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-4 min-w-[320px]">
                       Item Name
                       {stats.with_variants > 0 && (
                         <span className="ml-1 text-indigo-400 font-normal normal-case text-[10px]">
@@ -1221,7 +1206,7 @@ function InventoryOverviewPage() {
                 <TableBody>
                   {filteredInventory.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-16">
+                      <TableCell colSpan={11} className="text-center py-16">
                         <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No inventory items found</p>
                         <p className="text-slate-400 text-sm mt-1">Add items or adjust your filters</p>
@@ -1236,13 +1221,15 @@ function InventoryOverviewPage() {
                         canViewPurchasePrice={canViewPurchasePrice}
                         getPurchasePrice={getPurchasePrice}
                         onEdit={handleEdit} onDelete={handleDeleteClick}
+                        isSelected={selectedItemIds.includes(item.id)}
+                        onSelect={handleSelectItem}
                       />
                     ))
                   )}
 
                   {displayedInventory.length < filteredInventory.length && (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-4">
+                      <TableCell colSpan={11} className="text-center py-4">
                         <Button variant="outline"
                           onClick={() => setDisplayLimit(p => p + 50)}
                           className="gap-2">

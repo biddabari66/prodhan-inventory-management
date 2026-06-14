@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/client';
+import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
-  Building2, Save, Image as ImageIcon, LayoutTemplate, MapPin, Phone, Mail, Palette, Plus, Loader2,
+  Building2, Save, Image as ImageIcon, LayoutTemplate, MapPin, Phone, Mail, Palette, Plus, Loader2, Users, FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EMPTY_BRANDING = {
   name: '', logo: '', primaryColor: '#EA580C', secondaryColor: '#FFEDD5',
-  phone: '', email: '', address: '', tagline: '', invoice_template: 'design_1_modern',
+  phone: '', email: '', address: '', tagline: '', invoice_template: 'design_1_modern', importConfigStr: ''
 };
 
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
@@ -49,20 +50,54 @@ export default function DepartmentProfile() {
   });
   const departments = useMemo(() => (Array.isArray(resp) ? resp : []), [resp]);
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => User.list().then(res => res || [])
+  });
+
   // Keep selection + form in sync with loaded data.
   useEffect(() => {
     if (!departments.length) return;
     mirrorToLocalStorage(departments);
     const current = departments.find((d) => d.id === selectedId) || departments[0];
     if (!selectedId) setSelectedId(current.id);
-    setFormData({ ...EMPTY_BRANDING, name: current.name, ...(current.branding || {}) });
+    
+    const branding = current.branding || {};
+    const importConfig = branding.importConfig || {};
+    
+    setFormData({
+      ...EMPTY_BRANDING,
+      name: current.name || '',
+      ...(branding),
+      importConfigStr: (importConfig && Object.keys(importConfig).length) ? JSON.stringify(importConfig, null, 2) : ''
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [departments, selectedId]);
 
   const selectedDept = departments.find((d) => d.id === selectedId);
 
   const saveMutation = useMutation({
-    mutationFn: () => api.patch(`/departments/${selectedId}`, { branding: formData }),
+    mutationFn: () => {
+      let parsedImportConfig = {};
+      if (formData.importConfigStr && formData.importConfigStr.trim()) {
+        try {
+          parsedImportConfig = JSON.parse(formData.importConfigStr);
+        } catch (e) {
+          toast.error("Invalid JSON in CSV Import Configuration.");
+          throw new Error("Invalid JSON in CSV Import Configuration.");
+        }
+      }
+
+      const payload = {
+        name: formData.name,
+        branding: {
+          ...formData,
+          importConfig: parsedImportConfig
+        }
+      };
+      delete payload.branding.importConfigStr;
+      return api.patch(`/departments/${selectedId}`, payload);
+    },
     onSuccess: () => {
       toast.success(`${formData.name || selectedDept?.name} profile saved!`);
       qc.invalidateQueries({ queryKey: ['departments'] });
@@ -247,6 +282,29 @@ export default function DepartmentProfile() {
                     This layout is used for all invoices generated in this department.
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm border-t-4 border-t-green-500">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-green-500" /> CSV Import Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 pt-0 space-y-5">
+                <div className="space-y-2">
+                  <Label>Import Config (JSON Format)</Label>
+                  <Textarea
+                    rows={8}
+                    className="font-mono text-xs"
+                    placeholder={`{\n  "templateHeaders": ["Name", "Stock"],\n  "fieldMapping": { "item_name": ["Name"] }\n}`}
+                    value={formData.importConfigStr || ''}
+                    onChange={(e) => setFormData({ ...formData, importConfigStr: e.target.value })}
+                  />
+                  <p className="text-[11px] text-slate-500 leading-tight mt-1">
+                    Define custom CSV headers and mapping for this department. Leave blank to use system defaults.
+                  </p>
+                </div>
 
                 <div className="pt-4 border-t border-slate-100">
                   <Button
@@ -282,6 +340,38 @@ export default function DepartmentProfile() {
                     <p className="text-[9px] mt-1 text-slate-400">{formData.phone}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Employees in Department */}
+            <Card className="border-0 shadow-sm border-t-4 border-t-blue-500 erp-card bg-slate-100 dark:bg-slate-800">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-500" /> Employees in Department
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 pt-0 space-y-3">
+                {(() => {
+                  const deptUsers = allUsers.filter(u => u.department === selectedId || u.department === selectedDept.name);
+                  if (deptUsers.length === 0) {
+                    return <p className="text-sm text-slate-500 italic">No employees assigned to this department yet.</p>;
+                  }
+                  return (
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                      {deptUsers.map(u => (
+                        <div key={u.id} className="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
+                            {u.full_name?.charAt(0) || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{u.full_name}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{u.designation || u.job_role || 'Employee'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>

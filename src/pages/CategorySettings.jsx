@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { erp } from '@/api/erpClient';
 import CategoryManagement from '@/components/inventory/CategoryManagement';
 import { withPermission } from '@/components/common/PermissionGuard';
+import PageHeader from '@/components/common/PageHeader';
 import { Loader2, Package } from 'lucide-react';
 
 function CategorySettingsPage() {
@@ -37,23 +38,12 @@ function CategorySettingsPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>Inventory</span>
-          <span>/</span>
-          <span className="text-slate-900 font-medium">Categories</span>
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-            <Package className="w-6 h-6 text-[#D32F2F]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Category Management</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">প্রোডাক্ট ক্যাটাগরি এবং বই সাবজেক্ট পরিচালনা</p>
-          </div>
-        </div>
+        <PageHeader
+          icon={Package}
+          title="Category Management"
+          subtitle="প্রোডাক্ট ক্যাটাগরি এবং বই সাবজেক্ট পরিচালনা"
+          breadcrumb="Inventory / Categories"
+        />
 
         <CategoryManagement 
           userDepartment={userDepartment}

@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import PageHeader from '@/components/common/PageHeader';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
@@ -44,180 +46,72 @@ function CustomerManagementPage() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 50;
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
+  
+  const handleSelectAll = (checked) => {
+    setSelectedCustomerIds(checked ? filteredCustomers.map(c => c.id) : []);
+  };
 
-  // Single query to load current page of customers
-  const { data: customers = [], isLoading: customersLoading, refetch: refetchCustomers } = useQuery({
-    queryKey: ['customers-page', currentPage],
-    queryFn: () => erp.entities.Customer.list('-total_spent', pageSize, (currentPage - 1) * pageSize),
-    staleTime: 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
+  const handleSelectCustomer = (id, checked) => {
+    setSelectedCustomerIds(prev => checked ? [...prev, id] : prev.filter(cId => cId !== id));
+  };
 
-  const filteredCustomers = useMemo(() => {
-    let filtered = [...customers];
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.customer_name?.toLowerCase().includes(query) ||
-        c.customer_phone?.includes(query) ||
-        c.customer_email?.toLowerCase().includes(query)
-      );
-    }
-    if (segmentFilter !== 'all') {
-      if (segmentFilter === 'vip') filtered = filtered.filter(c => c.total_spent >= 50000);
-      else if (segmentFilter === 'regular') filtered = filtered.filter(c => c.total_spent >= 10000 && c.total_spent < 50000);
-      else if (segmentFilter === 'new') filtered = filtered.filter(c => c.total_orders <= 2);
-      else if (segmentFilter === 'frequent') filtered = filtered.filter(c => c.total_orders >= 10);
-    }
-    if (customerDateFrom || customerDateTo) {
-      filtered = filtered.filter(c => {
-        const d = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
-        if (!d) return true;
-        if (customerDateFrom && d < new Date(customerDateFrom)) return false;
-        if (customerDateTo && d > new Date(customerDateTo + 'T23:59:59')) return false;
-        return true;
-      });
-    }
-    return filtered;
-  }, [customers, searchTerm, segmentFilter, customerDateFrom, customerDateTo]);
-
-  const handleAddCustomer = async (e) => {
-    e.preventDefault();
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedCustomerIds.length} customers? This cannot be undone.`)) return;
     try {
-      await erp.entities.Customer.create({
-        ...newCustomer,
-        customer_since: new Date().toISOString().split('T')[0],
-        total_orders: 0,
-        total_spent: 0
-      });
-      toast.success('Customer added successfully');
-      setIsAddCustomerOpen(false);
-      setNewCustomer({
-        customer_name: '',
-        customer_phone: '',
-        customer_email: '',
-        customer_type: 'retail',
-        notes: '',
-        tags: []
-      });
-      refetchCustomers();
-    } catch (error) {
-      console.error('Error adding customer:', error);
-      toast.error('Failed to add customer');
-    }
-  };
-
-  const handleViewDetails = async (customer) => {
-    setSelectedCustomer(customer);
-    setIsViewDetailsOpen(true);
-  };
-
-  // Load ALL customers for stats by paginating through all records
-  const { data: allCustomersCache = [], isLoading: statsLoading } = useQuery({
-    queryKey: ['customers-all-stats'],
-    queryFn: async () => {
-      const batchSize = 5000;
-      let allRecords = [];
-      let offset = 0;
-      while (true) {
-        const batch = await erp.entities.Customer.list('-total_spent', batchSize, offset);
-        allRecords = allRecords.concat(batch);
-        if (batch.length < batchSize) break;
-        offset += batchSize;
+      for (const id of selectedCustomerIds) {
+        await erp.entities.Customer.delete(id);
       }
-      return allRecords;
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const totalCustomers = allCustomersCache.length;
-
-  // Stats that respond to date filters
-  const stats = useMemo(() => {
-    let source = allCustomersCache;
-    if (customerDateFrom || customerDateTo) {
-      source = source.filter(c => {
-        const d = c.customer_since ? new Date(c.customer_since) : (c.created_date ? new Date(c.created_date) : null);
-        if (!d) return true;
-        if (customerDateFrom && d < new Date(customerDateFrom)) return false;
-        if (customerDateTo && d > new Date(customerDateTo + 'T23:59:59')) return false;
-        return true;
-      });
+      toast.success(`${selectedCustomerIds.length} customers deleted`);
+      setSelectedCustomerIds([]);
+      refetchCustomers();
+    } catch (err) {
+      toast.error('Failed to delete customers: ' + err.message);
     }
-    return {
-      total: source.length,
-      vip: source.filter(c => c.total_spent >= 50000).length,
-      regular: source.filter(c => c.total_spent >= 10000 && c.total_spent < 50000).length,
-      totalRevenue: source.reduce((sum, c) => sum + (c.total_spent || 0), 0)
-    };
-  }, [allCustomersCache, customerDateFrom, customerDateTo]);
+  };
 
-  const handleExportCustomers = () => {
-    const headers = ['Customer Name', 'Phone', 'Email', 'Type', 'Total Orders', 'Total Spent', 'Customer Since', 'Notes'];
-    const rows = filteredCustomers.map(c => [
-      c.customer_name, c.customer_phone, c.customer_email || '', c.customer_type || '',
-      c.total_orders || 0, c.total_spent || 0, c.customer_since || '', c.notes || ''
+  const handleBulkExport = () => {
+    const toExport = filteredCustomers.filter(c => selectedCustomerIds.includes(c.id));
+    if(toExport.length === 0) return;
+    
+    const headers = ['Name', 'Phone', 'Email', 'Type', 'Orders', 'Spent', 'Since'];
+    const rows = toExport.map(c => [
+      c.customer_name, c.customer_phone, c.customer_email || '', c.customer_type, 
+      c.total_orders, c.total_spent, c.customer_since || c.created_date
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `customers_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `customers_export_${new Date().getTime()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Customers exported successfully');
+    toast.success(`Exported ${toExport.length} customers`);
   };
 
-  // Legacy import removed - using DynamicCSVImport component instead
-
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Dashboard</span>
-          <span>/</span>
-          <span className="text-foreground font-medium">Customer Management</span>
-        </div>
-
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 dark:bg-red-950/50 flex items-center justify-center flex-shrink-0">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-2xl font-semibold text-foreground tracking-tight">Customer Management</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 hidden sm:block">Manage customers, track spending, and analyze behavior</p>
-            </div>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={handleExportCustomers} className="h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg text-xs sm:text-sm">
-              <Download className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Export</span>
-            </Button>
-            <Button variant="outline" onClick={() => setIsImportCustomersOpen(true)} className="h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg text-xs sm:text-sm">
-              <Upload className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Import</span>
-            </Button>
-            {canCreate && (
-              <Button 
-                onClick={() => setIsAddCustomerOpen(true)}
-                className="bg-red-600 hover:bg-red-700 text-white shadow-sm h-9 sm:h-10 px-3 sm:px-4 rounded-xl text-xs sm:text-sm flex-1 sm:flex-none"
-              >
-                <Plus className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Add Customer</span><span className="sm:hidden">Add</span>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Main Tabs */}
-        <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <TabsTrigger value="customers" className="gap-2 h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white font-medium">
+  const handleBulkTagging = async () => {
+    const tag = prompt('Enter a tag to add to selected customers:');
+    if (!tag) return;
+    
+    try {
+      for (const id of selectedCustomerIds) {
+        const customer = customers.find(c => c.id === id);
+        if (customer) {
+          const currentTags = customer.tags || [];
+          if (!currentTags.includes(tag)) {
+            await erp.entities.Customer.update(id, { tags: [...currentTags, tag] });
+          }
+        }
+      }
+      toast.success(`Tag "${tag}" added to ${selectedCustomerIds.length} customers`);
+      setSelectedCustomerIds([]);
+      refetchCustomers();
+    } catch (err) {
+      toast.error('Failed to update tags: ' + err.message);
+    }
+  };
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Customers</span>
             </TabsTrigger>
@@ -403,7 +297,13 @@ function CustomerManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/50 border-b border-slate-100">
-                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-6">Customer</TableHead>
+                    <TableHead className="w-[40px] pl-6 pr-0">
+                      <Checkbox 
+                        checked={filteredCustomers.length > 0 && selectedCustomerIds.length === filteredCustomers.length}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pl-4">Customer</TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Contact</TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Type</TableHead>
                     <TableHead className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider text-right">Total Orders</TableHead>
@@ -415,7 +315,7 @@ function CustomerManagementPage() {
                 <TableBody>
                   {filteredCustomers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-16">
+                      <TableCell colSpan={8} className="text-center py-16">
                         <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No customers found</p>
                         <p className="text-slate-400 text-sm mt-1">Add customers or adjust your filters</p>
@@ -429,7 +329,13 @@ function CustomerManagementPage() {
                       
                       return (
                         <TableRow key={customer.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 h-16">
-                          <TableCell className="pl-6">
+                          <TableCell className="pl-6 pr-0 w-[40px]">
+                            <Checkbox 
+                              checked={selectedCustomerIds.includes(customer.id)}
+                              onCheckedChange={(checked) => handleSelectCustomer(customer.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell className="pl-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
                                 {customer.customer_name.charAt(0).toUpperCase()}

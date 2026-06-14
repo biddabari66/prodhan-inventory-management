@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   FileText, TrendingDown, RotateCcw, RefreshCw, Download,
   ShoppingBag, PackageX, BarChart3, Truck, Building2, 
@@ -16,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { erp } from '@/api/erpClient';
 import { withPermission } from '../components/common/PermissionGuard';
+import PageHeader from '@/components/common/PageHeader';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import ComprehensiveReportGenerator from '../components/reports/ComprehensiveReportGenerator';
 import SplitText from '../components/animations/SplitText';
@@ -34,6 +36,7 @@ const toBDTDate = (date = new Date()) => {
 function InventoryReportsPage() {
   const [activeTab, setActiveTab] = useState('quick');
   const [reportGenerating, setReportGenerating] = useState(null);
+  const [reportReady, setReportReady] = useState(null);
   
   // Quick report filters
   const [startDate, setStartDate] = useState(toBDTDate(subDays(new Date(), 30)));
@@ -255,17 +258,8 @@ function InventoryReportsPage() {
           throw new Error('Unknown report type');
       }
 
-      // Download CSV
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      toast.success('✅ Report downloaded!');
+      setReportReady({ csvContent, fileName, title: `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report` });
+      toast.success('✅ Report generated! Please choose download format.');
     } catch (error) {
       console.error(`Error generating ${reportType} report:`, error);
       toast.error(`Error: ${error.message || 'Failed to generate report'}`);
@@ -1405,16 +1399,8 @@ function InventoryReportsPage() {
           throw new Error('Unknown report type');
       }
 
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      toast.success('✅ Report downloaded!');
+      setReportReady({ csvContent, fileName, title: 'Custom Report' });
+      toast.success('✅ Report generated! Please choose download format.');
     } catch (error) {
       console.error('Error generating custom report:', error);
       toast.error(`Error: ${error.message || 'Failed to generate report'}`);
@@ -1429,7 +1415,7 @@ function InventoryReportsPage() {
       disabled={!!reportGenerating}
       className={`group w-full disabled:opacity-50 disabled:cursor-not-allowed`}
     >
-      <SpotlightCard className="h-24 sm:h-32 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all">
+      <SpotlightCard className="h-24 sm:h-32 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all">
       {reportGenerating === type ? (
         <div className="flex flex-col items-center justify-center h-full">
           <RefreshCw className={`w-6 h-6 sm:w-8 sm:h-8 animate-spin ${color}`} />
@@ -1450,27 +1436,12 @@ function InventoryReportsPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto px-3 py-4 sm:p-6 space-y-4 sm:space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>Inventory</span>
-          <span>/</span>
-          <span className="text-slate-900 font-medium">Reports</span>
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg flex-shrink-0">
-            <FileText className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
-          </div>
-          <div>
-            <SplitText 
-               text="Report Center" 
-               className="text-lg sm:text-2xl font-bold text-slate-900"
-               delay={30}
-            />
-            <p className="text-slate-500 text-xs sm:text-sm">Generate & download reports</p>
-          </div>
-        </div>
+        <PageHeader
+          icon={FileText}
+          title="Report Center"
+          subtitle="Generate & download reports"
+          breadcrumb="Inventory / Reports"
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full max-w-xl grid-cols-3 h-10 sm:h-12 p-1 bg-slate-100 rounded-xl">
@@ -1790,6 +1761,66 @@ function InventoryReportsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Export Options Modal */}
+      <Dialog open={!!reportReady} onOpenChange={(open) => !open && setReportReady(null)}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-white">Report Ready for Download</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <p className="text-slate-600 dark:text-slate-400 mb-6 text-center text-sm">
+              Your report <strong>{reportReady?.title}</strong> has been generated successfully. How would you like to export it?
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Button 
+                onClick={() => {
+                  const blob = new Blob(['\uFEFF' + reportReady.csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = reportReady.fileName;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  a.remove();
+                  setReportReady(null);
+                }}
+                className="h-14 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20"
+              >
+                <Download className="w-5 h-5 mr-2" /> Excel
+              </Button>
+              <Button 
+                onClick={() => {
+                  const html = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>${reportReady.title}</title>
+                      <style>
+                        body { font-family: 'Courier New', Courier, monospace; font-size: 11px; padding: 20px; white-space: pre-wrap; word-wrap: break-word; color: #000; }
+                        @media print { body { padding: 0; margin: 10mm; } }
+                      </style>
+                    </head>
+                    <body>${reportReady.csvContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+                    </html>
+                  `;
+                  const printWindow = window.open('', '_blank');
+                  printWindow.document.write(html);
+                  printWindow.document.close();
+                  setTimeout(() => {
+                    printWindow.print();
+                    setReportReady(null);
+                  }, 500);
+                }}
+                className="h-14 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20"
+              >
+                <FileText className="w-5 h-5 mr-2" /> PDF
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

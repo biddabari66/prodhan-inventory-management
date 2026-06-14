@@ -27,6 +27,7 @@ import { ReportTemplate } from '@/entities/ReportTemplate';
 import { ManualReport } from '@/entities/ManualReport';
 import { NotificationService } from '@/components/notifications/NotificationService';
 import DepartmentSelect from '../components/common/DepartmentSelect'; // Added DepartmentSelect import
+import PageHeader from '@/components/common/PageHeader';
 
 // ============================================================================
 // PRODUCTION-READY PERMISSION SYSTEM
@@ -53,8 +54,11 @@ class ReportingPermissionManager {
       };
     }
 
-    // Admin has ALL permissions
-    const isAdmin = user.job_role === 'admin' || user.role === 'admin';
+    // Admin has ALL permissions — auth client normalizes user.role to 'admin'
+    // for SUPER_ADMIN/TENANT_ADMIN/ADMIN; job_role may carry legacy values.
+    const isAdmin =
+      user.role === 'admin' ||
+      ['admin', 'super_admin'].includes(String(user.job_role || '').toLowerCase());
     if (isAdmin) {
       return {
         canView: true,
@@ -131,7 +135,7 @@ class ReportingPermissionManager {
 const LoadingScreen = ({ message = "Loading..." }) => (
   <div className="flex justify-center items-center h-64">
     <div className="text-center">
-      <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-4" />
+      <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
       <p className="text-muted-foreground">{message}</p>
     </div>
   </div>
@@ -1111,29 +1115,28 @@ export default function ManualReportingPage() {
   // ============================================================================
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-gradient">Manual Reporting</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Submit and manage your manual reports
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge className="bg-orange-100 text-orange-600 w-fit">
-            Department: {currentUser?.department?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || 'Unassigned'}
-          </Badge>
-          {permissions.canView && (
-            <Button asChild variant="outline" className="bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100">
-              <Link to={createPageUrl('SubmittedReports')}>
-                <FileText className="w-4 h-4 mr-2" />
-                View All Reports
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        icon={FileSignature}
+        title="Manual Reporting"
+        subtitle="Submit and manage your manual reports"
+        actions={
+          <>
+            <Badge className="bg-orange-100 text-orange-700 border border-orange-200 w-fit">
+              Department: {currentUser?.department?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || 'Unassigned'}
+            </Badge>
+            {permissions.canView && (
+              <Button asChild variant="outline" className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100">
+                <Link to={createPageUrl('SubmittedReports')}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  View All Reports
+                </Link>
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <Tabs defaultValue="reports" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -1493,7 +1496,7 @@ export default function ManualReportingPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Grid className="w-6 h-6 text-purple-600" />
+                      <Grid className="w-6 h-6 text-orange-600" />
                       Template Management
                     </CardTitle>
                     <CardDescription>
@@ -1501,7 +1504,7 @@ export default function ManualReportingPage() {
                     </CardDescription>
                   </div>
                   {permissions.canCreate && (
-                    <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setShowCreateForm(true)}>
+                    <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => setShowCreateForm(true)}>
                       <PlusCircle className="w-4 h-4 mr-2" />
                       Create Template
                     </Button>
@@ -1519,7 +1522,7 @@ export default function ManualReportingPage() {
                     {permissions.canCreate && (
                       <Button
                         onClick={() => setShowCreateForm(true)}
-                        className="bg-purple-600 hover:bg-purple-700"
+                        className="bg-orange-600 hover:bg-orange-700"
                       >
                         <PlusCircle className="w-4 h-4 mr-2" />
                         Create First Template

@@ -11,8 +11,9 @@ import {
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
-import SpotlightCard from '../components/animations/SpotlightCard';
-import ShinyText from '../components/animations/ShinyText';
+import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 
 const bdt = (n) => '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 0 });
 
@@ -37,36 +38,21 @@ function useCountUp(target, duration = 1200) {
   return value;
 }
 
-// ── KPI Card ──────────────────────────────────────────────────────────────────
-function KpiCard({ title, value, rawValue, sub, icon: Icon, gradient, bgLight, textColor, to, delay = 0 }) {
+// ── KPI Card — shared design system StatCard with animated count-up ──────────
+function KpiCard({ title, value, rawValue, sub, icon, tone, to, index = 0 }) {
   const counted = useCountUp(rawValue || 0);
   const displayValue = rawValue !== undefined ? bdt(counted) : value;
-
-  const body = (
-    <SpotlightCard
-      className="p-5 group cursor-pointer bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-none hover:shadow-[0_15px_40px_rgb(0,0,0,0.12)] rounded-2xl"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      {/* Subtle top gradient bar */}
-      <div className={`absolute top-0 left-0 right-0 h-1 ${gradient}`} />
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{title}</p>
-          <p className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white animate-count-up drop-shadow-sm">{displayValue}</p>
-          {sub && <p className="mt-1.5 text-xs font-semibold text-slate-500">{sub}</p>}
-        </div>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bgLight} flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm`}>
-          <Icon className={`w-6 h-6 ${textColor}`} />
-        </div>
-      </div>
-      {to && (
-        <div className={`mt-4 flex items-center text-sm font-bold ${textColor} opacity-0 group-hover:opacity-100 transition-opacity`}>
-          View details <ArrowUpRight className="ml-1 w-4 h-4" />
-        </div>
-      )}
-    </SpotlightCard>
+  return (
+    <StatCard
+      icon={icon}
+      label={title}
+      value={displayValue}
+      sub={sub}
+      tone={tone}
+      to={to}
+      index={index}
+    />
   );
-  return to ? <Link to={to}>{body}</Link> : body;
 }
 
 // ── Quick Action Button ────────────────────────────────────────────────────────
@@ -172,27 +158,19 @@ export default function Home() {
   return (
     <div className="space-y-5 p-4 md:p-6 max-w-7xl mx-auto">
 
-      {/* ── Greeting Banner ──────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 via-orange-500 to-amber-400 p-6 text-white shadow-lg shadow-orange-200 dark:shadow-orange-900/30 animate-fade-up">
-        {/* Decorative blobs */}
-        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-        <div className="absolute right-24 -bottom-10 w-24 h-24 bg-amber-300/20 rounded-full blur-2xl" />
-        <div className="absolute left-1/2 top-0 w-16 h-16 bg-orange-300/15 rounded-full blur-xl" />
-        <div className="relative z-10">
-          <p className="text-orange-100 font-medium">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          <h1 className="text-3xl font-bold mt-1 mb-2">
-            <ShinyText text={`${greeting}, ${displayName.split(' ')[0] || 'User'}`} speed={3} className="text-white" /> 👋
-          </h1>
-          <p className="text-orange-50 opacity-90">Here's everything happening at Prodhan today.</p>
-        </div>
-        <div className="absolute right-6 top-6 z-10 hidden sm:block">
+      {/* ── Page Header ──────────────────────────────────────────────────── */}
+      <PageHeader
+        icon={BarChart3}
+        title={`${greeting}, ${displayName.split(' ')[0] || 'User'}`}
+        subtitle={`${today} — here's everything happening at your business today.`}
+        actions={
           <Link to="/Sales">
-            <button className="bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 transition-all border border-white/20">
-              <ShoppingCart className="w-4 h-4" /> New Sale
-            </button>
+            <Button>
+              <ShoppingCart className="w-4 h-4 mr-2" /> New Sale
+            </Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── KPI Cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -201,44 +179,36 @@ export default function Home() {
           rawValue={stats?.todayRevenue}
           sub={`${stats?.todayOrders ?? 0} orders`}
           icon={DollarSign}
-          gradient="bg-gradient-to-r from-emerald-400 to-emerald-500"
-          bgLight="bg-emerald-50 dark:bg-emerald-900/30"
-          textColor="text-emerald-600 dark:text-emerald-400"
+          tone="green"
           to="/Sales"
-          delay={0}
+          index={0}
         />
         <KpiCard
           title="Month Revenue"
           rawValue={finance?.revenue}
           sub={`Profit ${bdt(finance?.profit)}`}
           icon={TrendingUp}
-          gradient="bg-gradient-to-r from-orange-400 to-amber-400"
-          bgLight="bg-orange-50 dark:bg-orange-900/30"
-          textColor="text-orange-600 dark:text-orange-400"
+          tone="orange"
           to="/FinanceDashboard"
-          delay={75}
+          index={1}
         />
         <KpiCard
           title="Month Expenses"
           rawValue={finance?.expenses}
           sub={`${finance?.pendingExpenses ?? 0} pending`}
           icon={TrendingDown}
-          gradient="bg-gradient-to-r from-rose-400 to-rose-500"
-          bgLight="bg-rose-50 dark:bg-rose-900/30"
-          textColor="text-rose-600 dark:text-rose-400"
+          tone="red"
           to="/Expenses"
-          delay={150}
+          index={2}
         />
         <KpiCard
           title="New Leads"
           value={stats?.newLeads ?? leadStats?.byStatus?.NEW ?? 0}
           sub={`${leadStats?.conversionRate ?? 0}% conversion`}
           icon={UserPlus}
-          gradient="bg-gradient-to-r from-blue-400 to-blue-500"
-          bgLight="bg-blue-50 dark:bg-blue-900/30"
-          textColor="text-blue-600 dark:text-blue-400"
+          tone="blue"
           to="/CRM"
-          delay={225}
+          index={3}
         />
       </div>
 

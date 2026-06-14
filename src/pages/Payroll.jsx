@@ -19,6 +19,7 @@ import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { erp } from '@/api/erpClient';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { withPermission } from '@/components/common/PermissionGuard';
+import PageHeader from '@/components/common/PageHeader';
 
 function PayrollPage() {
   const queryClient = useQueryClient();
@@ -232,32 +233,32 @@ function PayrollPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto p-6 space-y-5">
-        <div className="flex items-center gap-2 text-sm text-slate-500"><span>Finance</span><span>/</span><span className="text-slate-900 font-medium">Payroll</span></div>
-
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-              <DollarSign className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Payroll Management</h1>
-              <p className="text-sm text-slate-500">Calculate & manage employee salaries</p>
-            </div>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <div className="flex items-center border rounded-lg overflow-hidden bg-white">
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none" onClick={() => changeMonth(-1)}><ChevronLeft className="w-4 h-4" /></Button>
-              <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40 h-10 border-0 rounded-none text-sm text-center" />
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none" onClick={() => changeMonth(1)}><ChevronRight className="w-4 h-4" /></Button>
-            </div>
-            <Button variant="outline" size="sm" className="h-10" onClick={handleExport}><Download className="w-4 h-4 mr-1" /> Export</Button>
-            <Button onClick={handleGenerate} disabled={isGenerating} className="bg-red-600 hover:bg-red-700 h-10" size="sm">
-              {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Calculator className="w-4 h-4 mr-1" />}
-              Generate Payroll
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          icon={DollarSign}
+          title="Payroll Management"
+          subtitle="Calculate & manage employee salaries"
+          breadcrumb="Finance / Payroll"
+          actions={
+            <>
+              <div className="flex items-center border rounded-lg overflow-hidden bg-white shadow-sm mr-2">
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none hover:bg-slate-50" onClick={() => changeMonth(-1)}>
+                  <ChevronLeft className="w-4 h-4 text-slate-600" />
+                </Button>
+                <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-[140px] h-10 border-0 rounded-none text-sm text-center font-medium focus-visible:ring-0" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none hover:bg-slate-50" onClick={() => changeMonth(1)}>
+                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                </Button>
+              </div>
+              <Button variant="outline" size="sm" className="h-10 px-4 bg-white shadow-sm" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" /> Export
+              </Button>
+              <Button onClick={handleGenerate} disabled={isGenerating} className="h-10 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-md border-0" size="sm">
+                {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
+                Generate Payroll
+              </Button>
+            </>
+          }
+        />
 
         {/* Summary */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">

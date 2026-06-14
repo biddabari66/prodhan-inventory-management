@@ -54,14 +54,14 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     try {
       // Fetch all required data in parallel (including production waste)
       const [orders, inventory, movements, adSpends, purchaseOrders, packagingExpenses, customers, productionWaste] = await Promise.all([
-        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 10000),
-        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }),
-        erp.entities.InventoryMovement.list('-movement_date', 10000),
-        erp.entities.AdSpend.list('-spend_date', 1000),
-        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000),
-        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }),
-        erp.entities.Customer.list('-total_spent', 5000),
-        erp.entities.ProductionWasteLog.list('-waste_date', 5000)
+        erp.entities.Order.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 10000).catch(() => []),
+        erp.entities.Inventory.filter({ department: 'prodhan_com_e_commerce' }).catch(() => []),
+        erp.entities.InventoryMovement.list('-movement_date', 10000).catch(() => []),
+        erp.entities.AdSpend.list('-spend_date', 1000).catch(() => []),
+        erp.entities.PurchaseOrder.filter({ department: 'prodhan_com_e_commerce' }, '-order_date', 5000).catch(() => []),
+        erp.entities.PackagingExpense.filter({ department: 'prodhan_com_e_commerce' }).catch(() => []),
+        erp.entities.Customer.list('-total_spent', 5000).catch(() => []),
+        erp.entities.ProductionWasteLog.list('-waste_date', 5000).catch(() => [])
       ]);
 
       // Filter by date range (BDT) - only completed orders for revenue
@@ -347,35 +347,155 @@ export default function ComprehensiveReportGenerator({ onClose }) {
 <html>
 <head>
   <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; background: #f8f9fa; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .header h1 { color: #DC2626; margin: 0; font-size: 28px; }
-    .header p { color: #666; margin: 5px 0; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
-    .summary-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .summary-card.green { border-left: 4px solid #10B981; }
-    .summary-card.red { border-left: 4px solid #EF4444; }
-    .summary-card.blue { border-left: 4px solid #3B82F6; }
-    .summary-card.purple { border-left: 4px solid #8B5CF6; }
-    .summary-card h3 { margin: 0; font-size: 24px; color: #111; }
-    .summary-card p { margin: 5px 0 0; color: #666; font-size: 12px; text-transform: uppercase; }
-    .section-title { font-size: 18px; font-weight: bold; color: #333; margin: 30px 0 15px; padding-bottom: 10px; border-bottom: 2px solid #DC2626; }
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    th { background: #DC2626; color: white; padding: 12px 8px; text-align: left; font-size: 11px; text-transform: uppercase; }
-    td { padding: 10px 8px; border-bottom: 1px solid #eee; font-size: 12px; }
-    tr:hover { background: #f9f9f9; }
-    .profit-positive { color: #10B981; font-weight: bold; }
-    .profit-negative { color: #EF4444; font-weight: bold; }
-    .footer { text-align: center; margin-top: 30px; color: #999; font-size: 11px; }
-    @media print { body { padding: 20px; } }
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #EEF2FF;
+      --success: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --info: #3B82F6;
+      --purple: #8B5CF6;
+      --dark: #1E293B;
+      --gray: #64748B;
+      --light: #F8FAFC;
+    }
+    body { 
+      font-family: 'Outfit', sans-serif; 
+      padding: 40px; 
+      background: var(--light); 
+      color: var(--dark);
+      margin: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .header { 
+      text-align: center; 
+      margin-bottom: 40px; 
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      color: white;
+      padding: 40px 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);
+    }
+    .header h1 { margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { margin: 10px 0 0; opacity: 0.9; font-size: 15px; font-weight: 300; }
+    
+    .summary-grid { 
+      display: grid; 
+      grid-template-columns: repeat(4, 1fr); 
+      gap: 20px; 
+      margin-bottom: 30px; 
+    }
+    .summary-card { 
+      background: white; 
+      border-radius: 16px; 
+      padding: 24px; 
+      text-align: center; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+      border: 1px solid #E2E8F0;
+      position: relative;
+      overflow: hidden;
+    }
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+    }
+    .summary-card.green::before { background: var(--success); }
+    .summary-card.red::before { background: var(--danger); }
+    .summary-card.blue::before { background: var(--info); }
+    .summary-card.purple::before { background: var(--purple); }
+    
+    .summary-card h3 { margin: 0; font-size: 28px; color: var(--dark); font-weight: 700; }
+    .summary-card p { margin: 8px 0 0; color: var(--gray); font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .status-badges {
+      display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;
+    }
+    .status-badge {
+      flex: 1; border-radius: 12px; padding: 16px; text-align: center; min-width: 120px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.05);
+    }
+    .status-badge .count { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .status-badge .label { font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    
+    .section-title { 
+      font-size: 22px; 
+      font-weight: 700; 
+      color: var(--dark); 
+      margin: 40px 0 20px; 
+      padding-bottom: 15px; 
+      border-bottom: 3px solid var(--primary-light); 
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: separate; 
+      border-spacing: 0;
+      background: white; 
+      border-radius: 12px; 
+      overflow: hidden; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      border: 1px solid #E2E8F0;
+    }
+    th { 
+      background: var(--dark); 
+      color: white; 
+      padding: 16px 12px; 
+      text-align: left; 
+      font-size: 12px; 
+      font-weight: 600;
+      text-transform: uppercase; 
+      letter-spacing: 0.5px;
+    }
+    td { 
+      padding: 14px 12px; 
+      border-bottom: 1px solid #F1F5F9; 
+      font-size: 13px; 
+      font-weight: 500;
+      color: #334155;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: #F8FAFC; }
+    tr:hover td { background: var(--primary-light); }
+    
+    .profit-positive { color: var(--success); font-weight: 700; background: #ECFDF5; border-radius: 4px; padding: 4px 8px; }
+    .profit-negative { color: var(--danger); font-weight: 700; background: #FEF2F2; border-radius: 4px; padding: 4px 8px; }
+    
+    .footer { 
+      text-align: center; 
+      margin-top: 50px; 
+      padding-top: 20px;
+      border-top: 1px dashed #CBD5E1;
+      color: var(--gray); 
+      font-size: 12px; 
+      font-weight: 500;
+    }
+    
+    @media print { 
+      body { padding: 0; background: white; }
+      .header { padding: 30px 20px; border-radius: 0; box-shadow: none; }
+      .summary-card, table, .status-badge { box-shadow: none; border: 1px solid #E2E8F0; }
+      .summary-card.green::before { background: #10B981 !important; }
+      .summary-card.red::before { background: #EF4444 !important; }
+      .summary-card.blue::before { background: #3B82F6 !important; }
+      .summary-card.purple::before { background: #8B5CF6 !important; }
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>📊 Comprehensive Sales Report</h1>
+    <h1>📊 Comprehensive Sales & Financial Report</h1>
     <p>Prodhan.com E-commerce | ${startDate} to ${endDate}</p>
-    <p>Generated: ${toBDTDateTime()}</p>
+    <p style="opacity: 0.7; font-size: 13px;">Generated: ${toBDTDateTime()}</p>
   </div>
 
   <div class="summary-grid">
@@ -397,22 +517,22 @@ export default function ComprehensiveReportGenerator({ onClose }) {
     </div>
   </div>
 
-  <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-    <div style="flex:1; background:#F0FDF4; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
-      <div style="font-size:18px; font-weight:bold; color:#16A34A;">${orderBreakdown.completed}</div>
-      <div style="font-size:11px; color:#666;">✅ Completed</div>
+  <div class="status-badges">
+    <div class="status-badge" style="background:#F0FDF4;">
+      <div class="count" style="color:#16A34A;">${orderBreakdown.completed}</div>
+      <div class="label" style="color:#15803D;">✅ Completed</div>
     </div>
-    <div style="flex:1; background:#FFF7ED; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
-      <div style="font-size:18px; font-weight:bold; color:#EA580C;">${orderBreakdown.pending}</div>
-      <div style="font-size:11px; color:#666;">⏳ Pending</div>
+    <div class="status-badge" style="background:#FFF7ED;">
+      <div class="count" style="color:#EA580C;">${orderBreakdown.pending}</div>
+      <div class="label" style="color:#C2410C;">⏳ Pending</div>
     </div>
-    <div style="flex:1; background:#FEF2F2; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
-      <div style="font-size:18px; font-weight:bold; color:#DC2626;">${orderBreakdown.cancelled}</div>
-      <div style="font-size:11px; color:#666;">❌ Cancelled</div>
+    <div class="status-badge" style="background:#FEF2F2;">
+      <div class="count" style="color:#DC2626;">${orderBreakdown.cancelled}</div>
+      <div class="label" style="color:#B91C1C;">❌ Cancelled</div>
     </div>
-    <div style="flex:1; background:#F5F3FF; border-radius:8px; padding:12px; text-align:center; min-width:120px;">
-      <div style="font-size:18px; font-weight:bold; color:#7C3AED;">${orderBreakdown.returned}</div>
-      <div style="font-size:11px; color:#666;">↩️ Returned</div>
+    <div class="status-badge" style="background:#F5F3FF;">
+      <div class="count" style="color:#7C3AED;">${orderBreakdown.returned}</div>
+      <div class="label" style="color:#6D28D9;">↩️ Returned</div>
     </div>
   </div>
 

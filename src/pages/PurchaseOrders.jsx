@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { withPermission, usePermission } from '../components/common/PermissionGuard';
+import PageHeader from '@/components/common/PageHeader';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import MobilePOCard from '../components/procurement/MobilePOCard';
 
@@ -529,48 +530,37 @@ function PurchaseOrdersPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Inventory</span>
-          <span>/</span>
-          <span className="text-foreground font-medium">Purchase Orders</span>
-        </div>
-
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 dark:bg-red-950/50 flex items-center justify-center flex-shrink-0">
-              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-2xl font-semibold text-foreground tracking-tight">Purchase Management</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 hidden sm:block">Create orders with invoice upload & admin approval</p>
-            </div>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            {canCreate && (
-              <Button
-                onClick={() => { setEditingPackagingExpense(null); setIsPackagingFormOpen(true); }}
-                variant="outline"
-                className="border-amber-500 text-amber-700 hover:bg-amber-50 h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg text-xs sm:text-sm flex-1 sm:flex-none"
-              >
-                <Box className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Packaging Expense</span>
-                <span className="sm:hidden">Packaging</span>
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                onClick={() => { setEditingOrder(null); setIsFormOpen(true); }}
-                className="bg-red-600 hover:bg-red-700 text-white shadow-sm h-9 sm:h-10 px-3 sm:px-4 rounded-lg text-xs sm:text-sm flex-1 sm:flex-none"
-              >
-                <Plus className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Create PO</span>
-                <span className="sm:hidden">New PO</span>
-              </Button>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          icon={Package}
+          title="Purchase Management"
+          subtitle="Create orders with invoice upload & admin approval"
+          breadcrumb="Inventory / Purchase Orders"
+          actions={
+            <>
+              {canCreate && (
+                <Button
+                  onClick={() => { setEditingPackagingExpense(null); setIsPackagingFormOpen(true); }}
+                  variant="outline"
+                  className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50 shadow-sm h-10 px-4 rounded-xl ml-2"
+                >
+                  <Box className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Packaging Expense</span>
+                  <span className="sm:hidden">Packaging</span>
+                </Button>
+              )}
+              {canCreate && (
+                <Button
+                  onClick={() => { setEditingOrder(null); setIsFormOpen(true); }}
+                  className="bg-red-600 hover:bg-red-700 text-white shadow-md border-0 h-10 px-5 rounded-xl ml-2"
+                >
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Create PO</span>
+                  <span className="sm:hidden">New PO</span>
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">

@@ -214,7 +214,7 @@ export default function ShiftSelector({ user, onShiftChange, showLabel = true, c
             {showLabel && <Label className="mb-2 block">Choose Your Shift</Label>}
             <div className="space-y-3">
                 <Select
-                    value={currentShift?.id || ''}
+                    value={currentShift?.id || undefined}
                     onValueChange={handleShiftChange}
                     disabled={isUpdating}
                 >

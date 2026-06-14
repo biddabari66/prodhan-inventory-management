@@ -24,7 +24,7 @@ import { mountResource } from '../controllers/resource.controller';
 // Webhook handlers (no auth)
 import {
   facebookVerify, facebookWebhook,
-  woocommerceWebhook, steadfastWebhook, prodhanComWebhook,
+  woocommerceWebhook, steadfastWebhook, prodhanComWebhook, n8nWebhook,
 } from '../webhooks/handlers';
 
 // Rate limiters
@@ -172,7 +172,10 @@ router.get('/webhooks/facebook', webhookLimiter, facebookVerify);
 router.post('/webhooks/facebook', webhookLimiter, facebookWebhook);
 router.post('/webhooks/woocommerce', webhookLimiter, woocommerceWebhook);
 router.post('/webhooks/steadfast', webhookLimiter, steadfastWebhook);
+// Prodhan.com landing page + n8n integration
 router.post('/webhooks/prodhan-com', webhookLimiter, prodhanComWebhook);
+router.post('/webhooks/landing-page', webhookLimiter, prodhanComWebhook);
+router.post('/webhooks/n8n', webhookLimiter, n8nWebhook);
 router.post('/webhooks/biometric', webhookLimiter, attendanceCtrl.biometricScan);
 
 // ─── Notifications ────────────────────────────────────────────────────────────

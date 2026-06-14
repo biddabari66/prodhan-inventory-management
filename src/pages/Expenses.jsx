@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { printExpenseInvoice, printRequisition } from '@/components/finance/expenseDocuments';
+import PageHeader from '@/components/common/PageHeader';
 
 const bdt = (n) => '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 });
 
@@ -98,19 +99,16 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Wallet className="h-6 w-6 text-rose-500" /> Expenses
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Submit expenses, get admin approval, generate invoices &amp; MD requisitions.
-          </p>
-        </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Submit Expense
-        </Button>
-      </div>
+      <PageHeader
+        icon={Wallet}
+        title="Expenses"
+        subtitle="Submit expenses, get admin approval, generate invoices & MD requisitions."
+        actions={
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Submit Expense
+          </Button>
+        }
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>

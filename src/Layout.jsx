@@ -96,6 +96,7 @@ import SmartHelp from '@/components/ai/SmartHelp';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import PWAInstaller from '@/components/common/PWAInstaller';
 import PullToRefresh from '@/components/common/PullToRefresh';
+import ZypraLogo from '@/components/common/ZypraLogo';
 
 const NEW_LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/erp-prod/public/b15001c35_21a3a661-2715-418e-a106-588f78cb45b6.png";
 
@@ -201,7 +202,7 @@ const CategoryNav = ({ categories, currentUser }) => {
   }, [location.pathname, categories]);
 
   return (
-    <nav className="space-y-0.5 px-2">
+    <nav className="space-y-1 px-2">
       {categories.map((cat) => {
         const isOpen = openCategory === cat.id;
         const isActive = isCategoryActive(cat);
@@ -210,20 +211,27 @@ const CategoryNav = ({ categories, currentUser }) => {
             {/* Category header button */}
             <button
               onClick={() => setOpenCategory(isOpen ? null : cat.id)}
-              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
+              className={`relative w-full flex items-center justify-between gap-3 px-3 py-3 rounded-lg group zy-hover ${
                 isActive
-                  ? 'bg-orange-50 dark:bg-orange-900/20'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                  ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200/70 dark:border-orange-800/50'
+                  : 'border border-transparent hover:bg-white dark:hover:bg-slate-800/60 hover:border-slate-200 dark:hover:border-slate-700'
               }`}
             >
+              {/* Active left indicator bar */}
+              <span
+                aria-hidden
+                className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-orange-600 zy-indicator ${
+                  isActive ? 'h-7 opacity-100' : 'h-0 opacity-0'
+                }`}
+              />
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
                   isActive ? `${cat.bg} shadow-sm` : 'bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-150'
                 }`}>
                   <cat.icon className={`w-4 h-4 ${isActive ? cat.iconColor : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300'}`} />
                 </div>
-                <span className={`text-sm font-semibold truncate ${
-                  isActive ? 'text-orange-700 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'
+                <span className={`text-sm truncate ${
+                  isActive ? 'text-orange-700 dark:text-orange-400 font-bold' : 'text-slate-700 dark:text-slate-300 font-semibold'
                 }`}>{cat.label}</span>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -234,31 +242,42 @@ const CategoryNav = ({ categories, currentUser }) => {
               </div>
             </button>
 
-            {/* Sub-items */}
-            {isOpen && (
-              <div className="mt-0.5 ml-3 pl-4 border-l-2 border-slate-100 dark:border-slate-800 space-y-0.5 animate-fade-in">
-                {cat.items.map((item) => {
-                  const active = isSubActive(item.url);
-                  return (
-                    <Link
-                      key={item.url}
-                      to={item.url}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                        active
-                          ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 font-semibold'
-                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'
-                      }`}
-                    >
-                      <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-orange-600 dark:text-orange-400' : item.color}`} />
-                      <span>{item.label}</span>
-                      {item.badge && (
-                        <span className="ml-auto text-[10px] font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded-full">{item.badge}</span>
-                      )}
-                    </Link>
-                  );
-                })}
+            {/* Sub-items — smooth height animation via grid-template-rows */}
+            <div
+              className="grid zy-submenu"
+              style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+            >
+              <div className="overflow-hidden">
+                <div className="mt-1 ml-3 pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-0.5 pb-1">
+                  {cat.items.map((item) => {
+                    const active = isSubActive(item.url);
+                    return (
+                      <Link
+                        key={item.url}
+                        to={item.url}
+                        className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] zy-hover ${
+                          active
+                            ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 font-bold'
+                            : 'text-slate-500 dark:text-slate-400 font-medium hover:bg-white dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <span
+                          aria-hidden
+                          className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-orange-600 zy-indicator ${
+                            active ? 'h-5 opacity-100' : 'h-0 opacity-0'
+                          }`}
+                        />
+                        <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-orange-600 dark:text-orange-400' : item.color}`} />
+                        <span>{item.label}</span>
+                        {item.badge && (
+                          <span className="ml-auto text-[10px] font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded-full">{item.badge}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         );
       })}
@@ -1810,6 +1829,17 @@ export default function Layout({ children, currentPageName }) {
               height: auto;
               content-visibility: auto;
             }
+
+            /* ── Zypra sidebar micro-animations (override global fast transitions) ── */
+            .zy-submenu {
+              transition: grid-template-rows 0.25s ease !important;
+            }
+            .zy-indicator {
+              transition: height 0.25s ease, opacity 0.2s ease !important;
+            }
+            .zy-hover {
+              transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+            }
           `}</style>
 
           {/* Mobile Overlay — tapping closes sidebar */}
@@ -1823,20 +1853,14 @@ export default function Layout({ children, currentPageName }) {
           )}
 
           {/* ── Premium Sidebar — White/Off-White ERP Style ── */}
-          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-white dark:bg-[hsl(225,30%,7%)] border-r border-slate-100 dark:border-[hsl(225,15%,14%)] shadow-[2px_0_12px_rgba(0,0,0,0.04)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] md:w-[268px] md:max-w-[268px]
+          <aside className={`sidebar fixed top-0 left-0 h-full z-50 flex flex-col bg-slate-50/80 dark:bg-[hsl(225,30%,7%)] backdrop-blur-sm border-r border-slate-200 dark:border-[hsl(225,15%,14%)] shadow-[2px_0_12px_rgba(0,0,0,0.04)] transition-transform duration-300 ease-out w-[85vw] max-w-[320px] md:w-[268px] md:max-w-[268px]
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             onClick={(e) => e.stopPropagation()}>
 
             {/* Sidebar Header */}
-            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100 dark:border-[hsl(225,15%,14%)] flex-shrink-0">
-              <Link to={createPageUrl('Home')} className="flex items-center gap-2.5 overflow-hidden min-w-0">
-                <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl w-9 h-9 flex items-center justify-center shadow-md shadow-orange-500/25 flex-shrink-0">
-                  <Zap className="w-5 h-5 text-white" fill="white" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[16px] font-bold text-slate-900 dark:text-white block" style={{ letterSpacing: '-0.03em' }}>ZYPRA ERP</span>
-                  <span className="text-[11px] text-slate-400 font-medium tracking-wide">Business Suite</span>
-                </div>
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-[hsl(225,15%,14%)] flex-shrink-0 bg-white dark:bg-transparent">
+              <Link to={createPageUrl('Home')} className="flex items-center overflow-hidden min-w-0">
+                <ZypraLogo size={40} withWordmark />
               </Link>
               <button
                 data-sidebar-close
@@ -1847,26 +1871,31 @@ export default function Layout({ children, currentPageName }) {
               </button>
             </div>
 
-            {/* User quick info */}
-            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                  {currentUser ? (currentUser.display_name || currentUser.full_name || 'U').charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200 truncate">{currentUser?.display_name || currentUser?.full_name}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{currentUser?.designation || currentUser?.job_role}</p>
-                </div>
-              </div>
-            </div>
-
             {/* ERP Category Navigation */}
             <div className="flex-1 overflow-y-auto py-3">
               <CategoryNav categories={getNavigationCategories()} currentUser={currentUser} />
             </div>
 
-            {/* Sidebar Footer — Logout */}
-            <div className="border-t border-slate-100 dark:border-slate-800 p-3 flex-shrink-0">
+            {/* Sidebar Footer — Profile card + Logout */}
+            <div className="border-t border-slate-200 dark:border-slate-800 p-3 flex-shrink-0 space-y-2 bg-white dark:bg-transparent">
+              <button
+                onClick={() => setIsProfileOpen(true)}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-orange-300 dark:hover:border-orange-700 hover:shadow-sm transition-all duration-150 text-left"
+              >
+                <Avatar className="w-9 h-9 border-2 border-orange-200 dark:border-orange-800 flex-shrink-0">
+                  <AvatarImage src={currentUser?.profile_picture_url || ''} />
+                  <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white text-sm font-bold">
+                    {currentUser ? (currentUser.display_name || currentUser.full_name || 'U').charAt(0).toUpperCase() : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate">{currentUser?.display_name || currentUser?.full_name}</p>
+                  <span className="inline-block mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-full px-2 py-px truncate max-w-full">
+                    {currentUser?.designation || currentUser?.job_role || 'Member'}
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-150 font-medium"

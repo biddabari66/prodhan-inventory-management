@@ -29,6 +29,7 @@ import { markAttendance } from '@/functions/markAttendance';
 import { erp } from '@/api/erpClient';
 import { useDebounce, useThrottle, CacheManager, usePerformanceMonitor } from '../components/common/PerformanceOptimizer';
 import { useOptimisticActions } from '../components/common/OptimisticActions';
+import PageHeader from '@/components/common/PageHeader';
 
 import MobileCheckInOut from '../components/attendance/MobileCheckInOut';
 
@@ -663,50 +664,39 @@ export default function AttendancePage() {
     <div className="min-h-screen bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
       
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <span>Dashboard</span>
-        <span>/</span>
-        <span className="text-slate-900 font-medium">Attendance System</span>
-      </div>
-
-      {/* Premium Header Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-            <Clock className="w-6 h-6 text-[#D32F2F]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-[#111827] tracking-tight">Attendance System</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">🇧🇩 Bangladesh timezone-verified attendance tracking with GPS verification</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {lastDataLoad && (
-            <Badge className="bg-slate-100 text-slate-700 border border-slate-300 font-mono text-xs">
-              Last sync: {format(lastDataLoad, 'HH:mm')} BD
-            </Badge>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefreshAttendance}
-            disabled={isDataLoading}
-            className="bg-white border-slate-200 hover:bg-slate-50 h-10 rounded-lg"
-          >
-            <RefreshCw className={`w-4 h-4 ${isDataLoading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 text-sm font-semibold shadow-md">
-            <Shield className="w-4 h-4 mr-1.5 inline" />
-            Optimized ⚡
-            {locationPermissionStatus === 'granted' ? (
-              <Wifi className="w-4 h-4 ml-1.5 inline" />
-            ) : (
-              <WifiOff className="w-4 h-4 ml-1.5 inline" />
+      <PageHeader
+        icon={Clock}
+        title="Attendance System"
+        subtitle="🇧🇩 Bangladesh timezone-verified attendance tracking with GPS verification"
+        breadcrumb="Dashboard / Attendance System"
+        actions={
+          <>
+            {lastDataLoad && (
+              <Badge className="bg-white text-slate-700 border border-slate-200 font-mono text-xs h-9 px-3 shadow-sm mr-1 hidden sm:inline-flex items-center">
+                Last sync: {format(lastDataLoad, 'HH:mm')} BD
+              </Badge>
             )}
-          </Badge>
-        </div>
-      </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshAttendance}
+              disabled={isDataLoading}
+              className="bg-white border-slate-200 hover:bg-slate-50 h-10 px-3 shadow-sm rounded-xl mr-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isDataLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 h-10 flex items-center justify-center text-sm font-semibold shadow-sm rounded-xl">
+              <Shield className="w-4 h-4 mr-2" />
+              Optimized ⚡
+              {locationPermissionStatus === 'granted' ? (
+                <Wifi className="w-4 h-4 ml-2 text-emerald-500" />
+              ) : (
+                <WifiOff className="w-4 h-4 ml-2 text-red-500" />
+              )}
+            </Badge>
+          </>
+        }
+      />
 
       {/* Data Loading Indicator */}
       {isDataLoading && (
