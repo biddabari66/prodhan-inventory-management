@@ -21,6 +21,20 @@ export default function DepartmentSelect({
 
   const departments = Array.isArray(resp) ? resp : [];
 
+  const currentUserStr = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
+  const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+  const isAdmin = !currentUser || currentUser.role === 'admin' || ['admin', 'ADMIN', 'SUPER_ADMIN'].includes(currentUser.job_role);
+
+  React.useEffect(() => {
+    if (!isAdmin && currentUser?.department_id && onValueChange && value !== currentUser.department_id) {
+       onValueChange(currentUser.department_id);
+    }
+  }, [isAdmin, currentUser?.department_id, onValueChange, value]);
+
+  if (!isAdmin) {
+    return null;
+  }
+
   return (
     <Select value={value || undefined} onValueChange={onValueChange} required={required} disabled={disabled}>
       <SelectTrigger className={`w-full ${className}`}>

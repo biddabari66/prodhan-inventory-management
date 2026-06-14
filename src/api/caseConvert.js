@@ -52,6 +52,7 @@ export function toFrontend(input) {
     // Provide Base44 timestamp aliases alongside the snake versions.
     if (key === 'createdAt') out.created_date = toFrontend(value);
     if (key === 'updatedAt') out.updated_date = toFrontend(value);
+    if (key === 'name') out.item_name = toFrontend(value);
   }
   // Always keep a raw `id`
   if (input.id !== undefined) out.id = input.id;

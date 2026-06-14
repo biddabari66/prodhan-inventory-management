@@ -112,9 +112,27 @@ function CustomerManagementPage() {
       toast.error('Failed to update tags: ' + err.message);
     }
   };
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Customers</span>
-            </TabsTrigger>
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        icon={Users}
+        title="Customer Management"
+        subtitle="Manage your customers, interactions, and feedback"
+        actions={
+          <Button onClick={() => setIsAddCustomerOpen(true)} className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl transition-all">
+            <Plus className="w-4 h-4" />
+            Add Customer
+          </Button>
+        }
+      />
+
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
+        <TabsList className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-14 mb-6">
+          <TabsTrigger value="customers" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Customers</span>
+          </TabsTrigger>
             <TabsTrigger value="welcome" className="gap-2 h-12 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
               <PhoneCall className="w-4 h-4" />
               <span className="hidden sm:inline">Welcome Calls</span>
@@ -452,7 +470,6 @@ function CustomerManagementPage() {
         </Card>
           </TabsContent>
         </Tabs>
-      </div>
 
       {/* Import Customers Dialog */}
       <Dialog open={isImportCustomersOpen} onOpenChange={setIsImportCustomersOpen}>

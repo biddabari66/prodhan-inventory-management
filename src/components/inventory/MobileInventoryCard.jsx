@@ -2,9 +2,10 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Package, BookOpen, Edit, Trash2 } from 'lucide-react';
 
-export default function MobileInventoryCard({ item, todaySales = 0, canEdit, canDelete, canViewPurchasePrice, getPurchasePrice, onEdit, onDelete }) {
+export default function MobileInventoryCard({ item, todaySales = 0, canEdit, canDelete, canViewPurchasePrice, getPurchasePrice, onEdit, onDelete, isSelected, onSelect }) {
   const isLow = item.current_stock < item.minimum_stock;
   const isBook = item.category === 'books';
 
@@ -13,6 +14,9 @@ export default function MobileInventoryCard({ item, todaySales = 0, canEdit, can
       <CardContent className="p-0">
         {/* Header: name + status */}
         <div className="flex items-start gap-3 px-3 pt-3 pb-2">
+          <div className="pt-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+            <Checkbox checked={isSelected} onCheckedChange={(checked) => onSelect(item.id, checked)} />
+          </div>
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isBook ? 'bg-cyan-100' : 'bg-purple-100'}`}>
             {isBook ? <BookOpen className="w-4 h-4 text-cyan-600" /> : <Package className="w-4 h-4 text-purple-600" />}
           </div>
