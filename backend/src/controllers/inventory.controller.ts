@@ -53,7 +53,7 @@ export const listInventory = async (req: AuthenticatedRequest, res: Response): P
   const isActiveStr = qs(q.isActive);
   const search = qs(q.search);
   const page = parseInt(qs(q.page) || '1');
-  const limit = Math.min(parseInt(qs(q.limit) || '20'), 200);
+  const limit = Math.min(parseInt(qs(q.limit) || '20'), 2000);
   const skip = (page - 1) * limit;
 
   const where: any = { tenantId: req.user.tenantId };

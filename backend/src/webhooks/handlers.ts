@@ -292,14 +292,14 @@ export const prodhanComWebhook = async (req: Request, res: Response): Promise<vo
     const tenantId = defaultTenant.id;
     const deptId = await getProdhanDepartment(tenantId);
 
+    const data = Array.isArray(rawBody) ? rawBody[0] : rawBody;
+
     // ── Apply optional field map renames ──
-    const fieldMap: Record<string, string> = rawBody._fieldMap || {};
+    const fieldMap: Record<string, string> = data._fieldMap || {};
     const resolve = (key: string) => {
       const mapped = fieldMap[key];
-      return rawBody[mapped] ?? rawBody[key];
+      return data[mapped] ?? data[key];
     };
-
-    const data = Array.isArray(rawBody) ? rawBody[0] : rawBody;
 
     const customerName = String(resolve('customer_name') || resolve('name') || resolve('billing_name') || data.buyer_name || 'Unknown Customer').trim();
     const rawPhone = String(resolve('phone') || resolve('mobile') || resolve('customer_phone') || resolve('billing_phone') || '');

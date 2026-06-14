@@ -141,6 +141,7 @@ export const erp = {
   appLogs: { logUserInApp: async () => true },
   functions,
   auth,
+  api,
   integrations,
   entities: new Proxy({}, { get: (_t, name) => defineEntity(String(name)) }),
 };
