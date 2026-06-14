@@ -439,7 +439,7 @@ export const prodhanComWebhook = async (req: Request, res: Response): Promise<vo
 //   "_source": "n8n"
 // }
 export const n8nWebhook = async (req: Request, res: Response): Promise<void> => {
-  const apiKey = req.query.apiKey || req.headers['x-api-key'];
+  const apiKey = req.query.apiKey || req.headers['x-api-key'] || req.headers['api_key'] || req.headers['x-prodhan-secret'];
   if (env.PRODHAN_COM_SECRET && apiKey !== env.PRODHAN_COM_SECRET) {
     res.status(401).json({ error: 'Invalid API key' }); return;
   }
