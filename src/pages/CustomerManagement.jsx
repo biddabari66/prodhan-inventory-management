@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -47,7 +48,96 @@ function CustomerManagementPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
-  
+  const pageSize = 20;
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const { data: rawCustomers = [], refetch: refetchCustomers } = useQuery({
+    queryKey: ['customers-list'],
+    queryFn: () => erp.entities.Customer.list('-created_date', 1000),
+  });
+
+  // Normalize backend (name/phone/email) to the shape this page renders.
+  const customers = useMemo(
+    () =>
+      (rawCustomers || []).map((c) => ({
+        ...c,
+        customer_name: c.customer_name || c.name || 'Unknown',
+        customer_phone: c.customer_phone || c.phone || '',
+        customer_email: c.customer_email || c.email || '',
+        customer_type: c.customer_type || 'retail',
+        total_orders: c.total_orders ?? 0,
+        total_spent: c.total_spent ?? 0,
+      })),
+    [rawCustomers]
+  );
+
+  const allFiltered = useMemo(() => {
+    let list = customers;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.customer_name.toLowerCase().includes(q) ||
+          (c.customer_phone || '').includes(q) ||
+          (c.customer_email || '').toLowerCase().includes(q)
+      );
+    }
+    if (segmentFilter !== 'all') {
+      list = list.filter((c) => {
+        const seg =
+          c.total_spent >= 50000 ? 'vip' :
+          c.total_spent >= 10000 ? 'regular' :
+          c.total_orders <= 2 ? 'new' : 'standard';
+        return seg === segmentFilter;
+      });
+    }
+    return list;
+  }, [customers, searchTerm, segmentFilter]);
+
+  const totalCustomers = allFiltered.length;
+  const filteredCustomers = useMemo(
+    () => allFiltered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [allFiltered, currentPage]
+  );
+
+  const stats = useMemo(
+    () => ({
+      total: customers.length,
+      vip: customers.filter((c) => c.total_spent >= 50000).length,
+      regular: customers.filter((c) => c.total_spent >= 10000 && c.total_spent < 50000).length,
+      repeat: customers.filter((c) => c.total_orders > 1).length,
+      totalRevenue: customers.reduce((s, c) => s + (c.total_spent || 0), 0),
+    }),
+    [customers]
+  );
+
+  const handleViewDetails = (customer) => {
+    setSelectedCustomer(customer);
+    setIsViewDetailsOpen(true);
+  };
+
+  const handleAddCustomer = async (e) => {
+    e.preventDefault();
+    if (!newCustomer.customer_name || !newCustomer.customer_phone) {
+      toast.error('Name and phone are required');
+      return;
+    }
+    try {
+      await erp.entities.Customer.create({
+        name: newCustomer.customer_name,
+        phone: newCustomer.customer_phone,
+        email: newCustomer.customer_email || undefined,
+        tags: newCustomer.tags || [],
+      });
+      toast.success('Customer added');
+      setIsAddCustomerOpen(false);
+      setNewCustomer({ customer_name: '', customer_phone: '', customer_email: '', customer_type: 'retail', notes: '', tags: [] });
+      refetchCustomers();
+    } catch (err) {
+      toast.error('Failed to add customer: ' + (err?.response?.data?.error || err.message));
+    }
+  };
+
   const handleSelectAll = (checked) => {
     setSelectedCustomerIds(checked ? filteredCustomers.map(c => c.id) : []);
   };
@@ -162,61 +252,16 @@ function CustomerManagementPage() {
           </div>
         )}
 
-        {/* Stats Grid - Minimalist White */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white border-0 shadow-sm rounded-xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-[#111827]">{stats.total}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Customers</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-0 shadow-sm rounded-xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-[#111827]">{stats.vip}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">VIP Customers</p>
-              <p className="text-xs text-slate-400 mt-0.5">৳50K+ spent</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-0 shadow-sm rounded-xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-[#111827]">{stats.regular}</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Regular Customers</p>
-              <p className="text-xs text-slate-400 mt-0.5">৳10K-50K spent</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-0 shadow-sm rounded-xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-[#D32F2F]" />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-[#111827]">৳{(stats.totalRevenue / 1000).toFixed(1)}K</p>
-              <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mt-1">Total Revenue</p>
-            </CardContent>
-          </Card>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={Users} label="Total Customers" value={stats.total} tone="orange" index={0} />
+          <StatCard icon={TrendingUp} label="VIP Customers" value={stats.vip} sub="৳50K+ spent" tone="violet" index={1} />
+          <StatCard icon={Package} label="Regular Customers" value={stats.regular} sub="৳10K-50K spent" tone="blue" index={2} />
+          <StatCard icon={DollarSign} label="Total Revenue" value={`৳${(stats.totalRevenue / 1000).toFixed(1)}K`} tone="green" index={3} />
         </div>
 
         {/* Search & Filters */}
-        <Card className="bg-white border-0 shadow-sm rounded-xl">
+        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-sm rounded-xl">
           <CardContent className="p-5 space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
@@ -278,7 +323,7 @@ function CustomerManagementPage() {
             <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredCustomers.length}</Badge>
           </div>
           {filteredCustomers.length === 0 ? (
-            <Card className="bg-white border-0 shadow-sm rounded-xl">
+            <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-sm rounded-xl">
               <CardContent className="py-12 text-center">
                 <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <p className="text-sm text-slate-500">No customers found</p>
@@ -301,7 +346,7 @@ function CustomerManagementPage() {
         </div>
 
         {/* Desktop Customers Table */}
-        <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden hidden md:block">
+        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-sm rounded-xl overflow-hidden hidden md:block">
           <CardHeader className="border-b border-slate-100 px-6 py-4">
             <CardTitle className="flex items-center gap-3">
               <span className="text-lg font-semibold text-[#111827]">All Customers</span>
@@ -355,7 +400,7 @@ function CustomerManagementPage() {
                           </TableCell>
                           <TableCell className="pl-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold">
                                 {customer.customer_name.charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -412,7 +457,7 @@ function CustomerManagementPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleViewDetails(customer)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                             >
                               <Eye className="w-4 h-4 mr-1" />
                               View
@@ -449,7 +494,7 @@ function CustomerManagementPage() {
                         variant={currentPage === pageNum ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={currentPage === pageNum ? 'bg-red-600' : ''}
+                        className={currentPage === pageNum ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white' : ''}
                       >
                         {pageNum}
                       </Button>
@@ -590,7 +635,7 @@ function CustomerManagementPage() {
               <Button type="button" variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all">
                 Add Customer
               </Button>
             </div>
@@ -605,7 +650,7 @@ function CustomerManagementPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-lg">
                     {selectedCustomer.customer_name.charAt(0).toUpperCase()}
                   </div>
                   {selectedCustomer.customer_name}
@@ -697,7 +742,7 @@ function CustomerDetails({ customer }) {
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">CLV:</span>
-                      <span className="text-sm font-bold text-purple-600">৳{(customer.clv || 0).toLocaleString()}</span>
+                      <span className="text-sm font-bold text-orange-600">৳{(customer.clv || 0).toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="flex justify-between">
@@ -752,7 +797,7 @@ function CustomerDetails({ customer }) {
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <Badge className="bg-violet-100 text-violet-800">
+                        <Badge className="bg-amber-100 text-amber-800">
                           {order.order_number}
                         </Badge>
                         <Badge variant={order.order_status === 'delivered' ? 'default' : 'secondary'}>

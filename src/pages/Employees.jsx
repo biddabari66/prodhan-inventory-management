@@ -45,6 +45,7 @@ import EmployeeForm from "../components/employees/EmployeeForm";
 import EmployeeImportExport from "../components/employees/EmployeeImportExport";
 import { toast } from "sonner";
 import { withPermission } from '../components/common/PermissionGuard';
+import PageHeader from '@/components/common/PageHeader';
 
 // All departments for filtering
 const DEPARTMENTS = [
@@ -352,9 +353,9 @@ function EmployeesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+          <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto" />
           <p className="text-slate-600 font-medium">Loading employees...</p>
         </div>
       </div>
@@ -362,78 +363,65 @@ function EmployeesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-200">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
-              <Users className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Employee Management</h1>
-              <p className="text-slate-500 text-sm">Manage all employees across departments</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => refetch()} 
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-            <Button 
-              onClick={exportEmployeesToCSV} 
-              variant="outline"
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-            {isAdmin && (
-              <Dialog open={isFormOpen} onOpenChange={(open) => {
-                setIsFormOpen(open);
-                if (!open) setEditingEmployee(null);
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Employee
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-4xl max-h-[95vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <EmployeeForm
-                    employee={editingEmployee}
-                    onSubmit={handleFormSubmit}
-                    onCancel={() => {
-                      setIsFormOpen(false);
-                      setEditingEmployee(null);
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          icon={Users}
+          title="Employee Management"
+          subtitle="Manage all employees across departments"
+          actions={
+            <>
+              <Button onClick={() => refetch()} variant="outline" size="sm" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+              <Button onClick={exportEmployeesToCSV} variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+              {isAdmin && (
+                <Dialog open={isFormOpen} onOpenChange={(open) => {
+                  setIsFormOpen(open);
+                  if (!open) setEditingEmployee(null);
+                }}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl transition-all">
+                      <Plus className="w-4 h-4" />
+                      Add Employee
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-4xl max-h-[95vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <EmployeeForm
+                      employee={editingEmployee}
+                      onSubmit={handleFormSubmit}
+                      onCancel={() => {
+                        setIsFormOpen(false);
+                        setEditingEmployee(null);
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
+            </>
+          }
+        />
 
         {/* Department Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
           {DEPARTMENTS.slice(0, 6).map((dept) => (
-            <Card 
-              key={dept.value} 
-              className={`cursor-pointer transition-all hover:shadow-md ${filters.department === dept.value ? 'ring-2 ring-blue-500' : ''}`}
+            <Card
+              key={dept.value}
+              className={`cursor-pointer rounded-xl border-2 bg-white dark:bg-slate-900 transition-all hover:shadow-md ${filters.department === dept.value ? 'border-orange-400 ring-2 ring-orange-300' : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'}`}
               onClick={() => setFilters({...filters, department: filters.department === dept.value ? 'all' : dept.value})}
             >
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-slate-900">{departmentStats[dept.value] || 0}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{departmentStats[dept.value] || 0}</p>
                 <p className="text-xs text-slate-500 truncate">{dept.label}</p>
               </CardContent>
             </Card>
@@ -441,7 +429,7 @@ function EmployeesPage() {
         </div>
 
         {/* Filters */}
-        <Card className="border-0 shadow-sm">
+        <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="md:col-span-2">
@@ -542,7 +530,7 @@ function EmployeesPage() {
         <EmployeeImportExport onImportComplete={refetch} />
 
         {/* Employee Table */}
-        <Card className="border-0 shadow-sm">
+        <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/50 py-4">
             <CardTitle className="text-lg font-semibold text-slate-900 flex items-center justify-between">
               <span>Employee Directory ({filteredEmployees.length})</span>
@@ -596,7 +584,7 @@ function EmployeesPage() {
                           <div className="flex items-center gap-3">
                             <Avatar className="w-10 h-10">
                               <AvatarImage src={employee.profile_picture_url} />
-                              <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                              <AvatarFallback className="bg-orange-100 text-orange-700 font-semibold">
                                 {employee.full_name?.charAt(0) || 'U'}
                               </AvatarFallback>
                             </Avatar>

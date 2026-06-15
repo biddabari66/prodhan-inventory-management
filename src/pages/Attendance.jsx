@@ -74,7 +74,7 @@ const DigitalClock = React.memo(() => {
   }, []);
 
   return (
-    <Card className="bg-gradient-to-br from-red-600 via-red-700 to-red-800 border-0 shadow-2xl overflow-hidden relative">
+    <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 border-0 shadow-2xl overflow-hidden relative">
       <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_85%)]"></div>
       <CardContent className="p-8 sm:p-10 text-center relative z-10">
         <div className="space-y-4">
@@ -140,7 +140,7 @@ const LocationStatus = React.memo(({ currentLocation, isLocationLoading, onRefre
   const status = getLocationStatus;
 
   return (
-    <Card className="bg-white border border-slate-200 shadow-md">
+    <Card className="bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-md">
       <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50 pb-4">
         <CardTitle className="flex items-center gap-3 text-lg text-slate-900">
           <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center">
@@ -650,7 +650,7 @@ export default function AttendancePage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center space-y-6">
-          <Loader2 className="w-12 h-12 mx-auto animate-spin text-violet-500" />
+          <Loader2 className="w-12 h-12 mx-auto animate-spin text-orange-500" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Loading Attendance System</h1>
             <p className="text-muted-foreground">Optimized loading...</p>
@@ -661,8 +661,8 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 sm:space-y-6">
       
       <PageHeader
         icon={Clock}
@@ -712,11 +712,11 @@ export default function AttendancePage() {
 
       <Tabs defaultValue="checkinout" className="space-y-6">
         <TabsList className={`flex w-full ${isAdmin() ? '' : ''} h-12 p-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto gap-1`}>
-          <TabsTrigger value="checkinout" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Check In/Out</TabsTrigger>
-          <TabsTrigger value="analytics" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Analytics</TabsTrigger>
-          <TabsTrigger value="manual" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">Manual Entry</TabsTrigger>
-          {isAdmin() && <TabsTrigger value="location" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">📍 Location</TabsTrigger>}
-          {isAdmin() && <TabsTrigger value="settings" className="h-10 rounded-lg data-[state=active]:bg-[#D32F2F] data-[state=active]:text-white">⚙️ Settings</TabsTrigger>}
+          <TabsTrigger value="checkinout" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">Check In/Out</TabsTrigger>
+          <TabsTrigger value="analytics" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">Analytics</TabsTrigger>
+          <TabsTrigger value="manual" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">Manual Entry</TabsTrigger>
+          {isAdmin() && <TabsTrigger value="location" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">📍 Location</TabsTrigger>}
+          {isAdmin() && <TabsTrigger value="settings" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">⚙️ Settings</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="checkinout" className="space-y-4 sm:space-y-6">
@@ -730,10 +730,10 @@ export default function AttendancePage() {
             <DigitalClock />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Attendance Actions */}
-              <Card className="bg-white border border-slate-200 shadow-md">
-                <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 pb-5">
+              <Card className="bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-md">
+                <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-orange-50 to-amber-50 pb-5">
                   <CardTitle className="flex items-center gap-3 text-xl text-slate-900">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
                       <Clock className="w-5 h-5 text-white" />
                     </div>
                     Today's Attendance
@@ -765,7 +765,7 @@ export default function AttendancePage() {
                     <Button
                       onClick={() => submitAttendance('check_in')}
                       disabled={isSubmitting || !!todayAttendance?.check_in_time}
-                      className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white shadow-lg shadow-red-500/25 w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50"
+                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-xl text-white shadow-lg shadow-orange-500/25 w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50 transition-all"
                     >
                       {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
                       Check In Now
@@ -773,7 +773,7 @@ export default function AttendancePage() {
                     <Button
                       onClick={() => submitAttendance('check_out')}
                       disabled={isSubmitting || !todayAttendance?.check_in_time || !!todayAttendance?.check_out_time}
-                      className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-[#D32F2F] w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50"
+                      className="bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-200 hover:border-orange-400 w-full h-14 text-base font-semibold rounded-xl disabled:opacity-50"
                     >
                       {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <XCircle className="w-5 h-5 mr-2" />}
                       Check Out
@@ -804,7 +804,7 @@ export default function AttendancePage() {
         <TabsContent value="analytics">
           <React.Suspense fallback={
             <div className="flex items-center justify-center p-12">
-              <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+              <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
             </div>
           }>
             <AttendanceAnalytics />
@@ -814,7 +814,7 @@ export default function AttendancePage() {
         <TabsContent value="manual">
           <React.Suspense fallback={
             <div className="flex items-center justify-center p-12">
-              <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+              <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
             </div>
           }>
             <ManualAttendanceForm
@@ -829,7 +829,7 @@ export default function AttendancePage() {
           <TabsContent value="location" className="space-y-6">
             <React.Suspense fallback={
               <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
               </div>
             }>
               <OfficeLocationPicker
@@ -846,14 +846,14 @@ export default function AttendancePage() {
           <TabsContent value="settings" className="space-y-6">
             <React.Suspense fallback={
               <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
               </div>
             }>
               <ShiftManagement />
               <ShiftAssignmentManagement />
             </React.Suspense>
             
-            <Card className="premium-card mt-6">
+            <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 mt-6">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
@@ -996,7 +996,7 @@ export default function AttendancePage() {
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button onClick={saveAttendanceSettings} className="flex-1 bg-[#D32F2F] hover:bg-[#B71C1C] h-12 text-base font-semibold rounded-lg shadow-sm">
+                  <Button onClick={saveAttendanceSettings} className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all h-12 text-base font-semibold rounded-lg shadow-sm">
                     <Shield className="w-4 h-4 mr-2" />
                     Save Settings (Admin)
                   </Button>

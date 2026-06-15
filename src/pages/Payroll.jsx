@@ -20,6 +20,7 @@ import { erp } from '@/api/erpClient';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { withPermission } from '@/components/common/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 
 function PayrollPage() {
   const queryClient = useQueryClient();
@@ -231,8 +232,8 @@ function PayrollPage() {
   const monthLabel = format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy');
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <div className="max-w-7xl mx-auto p-6 space-y-5">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
         <PageHeader
           icon={DollarSign}
           title="Payroll Management"
@@ -252,7 +253,7 @@ function PayrollPage() {
               <Button variant="outline" size="sm" className="h-10 px-4 bg-white shadow-sm" onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" /> Export
               </Button>
-              <Button onClick={handleGenerate} disabled={isGenerating} className="h-10 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-md border-0" size="sm">
+              <Button onClick={handleGenerate} disabled={isGenerating} className="h-10 px-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-xl text-white shadow-lg shadow-orange-500/25 border-0 transition-all" size="sm">
                 {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
                 Generate Payroll
               </Button>
@@ -262,20 +263,11 @@ function PayrollPage() {
 
         {/* Summary */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          {[
-            { label: 'Employees', value: totals.employees, color: 'text-slate-700', bg: 'bg-slate-50', icon: Users },
-            { label: 'Gross Salary', value: `৳${totals.baseSalary.toLocaleString('en-IN')}`, color: 'text-blue-600', bg: 'bg-blue-50', icon: Banknote },
-            { label: 'Deductions', value: `-৳${totals.deductions.toLocaleString('en-IN')}`, color: 'text-red-600', bg: 'bg-red-50', icon: Minus },
-            { label: 'Bonuses/OT', value: `+৳${totals.bonuses.toLocaleString('en-IN')}`, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Gift },
-            { label: 'Net Payroll', value: `৳${totals.netPayroll.toLocaleString('en-IN')}`, color: 'text-green-700', bg: 'bg-green-50', icon: DollarSign },
-          ].map((s, i) => (
-            <Card key={i} className="border-0 shadow-sm">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center`}><s.icon className={`w-4 h-4 ${s.color}`} /></div>
-                <div><p className={`text-lg font-bold ${s.color}`}>{s.value}</p><p className="text-[10px] text-slate-400 uppercase">{s.label}</p></div>
-              </CardContent>
-            </Card>
-          ))}
+          <StatCard icon={Users} label="Employees" value={totals.employees} tone="slate" index={0} />
+          <StatCard icon={Banknote} label="Gross Salary" value={`৳${totals.baseSalary.toLocaleString('en-IN')}`} tone="blue" index={1} />
+          <StatCard icon={Minus} label="Deductions" value={`-৳${totals.deductions.toLocaleString('en-IN')}`} tone="red" index={2} />
+          <StatCard icon={Gift} label="Bonuses/OT" value={`+৳${totals.bonuses.toLocaleString('en-IN')}`} tone="green" index={3} />
+          <StatCard icon={DollarSign} label="Net Payroll" value={`৳${totals.netPayroll.toLocaleString('en-IN')}`} tone="orange" index={4} />
         </div>
 
         <Tabs defaultValue="payroll">
@@ -303,7 +295,7 @@ function PayrollPage() {
             </div>
 
             {/* Payroll Table */}
-            <Card className="border-0 shadow-sm overflow-hidden">
+            <Card className="border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -337,7 +329,7 @@ function PayrollPage() {
                               <div className="flex items-center gap-2.5">
                                 <Avatar className="h-9 w-9">
                                   <AvatarImage src={emp.profile_picture_url} />
-                                  <AvatarFallback className="bg-red-100 text-red-700 text-xs">{emp.full_name?.charAt(0)}</AvatarFallback>
+                                  <AvatarFallback className="bg-orange-100 text-orange-700 text-xs">{emp.full_name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <p className="font-semibold text-slate-900 text-sm">{emp.full_name}</p>
@@ -398,8 +390,8 @@ function PayrollPage() {
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4">
-            <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-base">Deduction & Calculation Settings</CardTitle></CardHeader>
+            <Card className="border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
+              <CardHeader><CardTitle className="text-base text-slate-900 dark:text-white">Deduction & Calculation Settings</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   <div>
@@ -443,14 +435,14 @@ function PayrollPage() {
         {/* ADJUST DIALOG */}
         <Dialog open={showAdjustDialog} onOpenChange={setShowAdjustDialog}>
           <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="w-5 h-5 text-red-600" /> Adjust Salary</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="w-5 h-5 text-orange-600" /> Adjust Salary</DialogTitle></DialogHeader>
             {selectedEmployee && (
               <div className="space-y-4">
                 {/* Employee info */}
                 <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedEmployee.profile_picture_url} />
-                    <AvatarFallback className="bg-red-100 text-red-700">{selectedEmployee.full_name?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="bg-orange-100 text-orange-700">{selectedEmployee.full_name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-semibold">{selectedEmployee.full_name}</p>
@@ -481,7 +473,7 @@ function PayrollPage() {
                     <Input type="number" value={adjustments.deduction} onChange={(e) => setAdjustments({ ...adjustments, deduction: parseFloat(e.target.value) || 0 })} className="mt-1" />
                   </div>
                   <div>
-                    <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3 text-purple-500" /> Overtime (hrs)</Label>
+                    <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500" /> Overtime (hrs)</Label>
                     <Input type="number" value={adjustments.overtime_hours} onChange={(e) => setAdjustments({ ...adjustments, overtime_hours: parseFloat(e.target.value) || 0 })} className="mt-1" />
                     {adjustments.overtime_hours > 0 && <p className="text-[10px] text-slate-400 mt-0.5">= ৳{(adjustments.overtime_hours * settings.overtime_rate).toLocaleString('en-IN')}</p>}
                   </div>
@@ -500,7 +492,7 @@ function PayrollPage() {
 
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" onClick={() => setShowAdjustDialog(false)}>Cancel</Button>
-                  <Button className="bg-red-600 hover:bg-red-700" onClick={handleSaveAdjust} disabled={isSaving}>
+                  <Button className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all" onClick={handleSaveAdjust} disabled={isSaving}>
                     {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />} Save
                   </Button>
                 </div>
@@ -520,7 +512,7 @@ function PayrollPage() {
                   <p className="text-xs text-slate-400">Employee Salary Statement</p>
                 </div>
                 <div className="flex items-center gap-3 mb-2">
-                  <Avatar className="h-10 w-10"><AvatarFallback className="bg-red-100 text-red-700">{showPaySlip.full_name?.charAt(0)}</AvatarFallback></Avatar>
+                  <Avatar className="h-10 w-10"><AvatarFallback className="bg-orange-100 text-orange-700">{showPaySlip.full_name?.charAt(0)}</AvatarFallback></Avatar>
                   <div><p className="font-semibold">{showPaySlip.full_name}</p><p className="text-xs text-slate-400">{showPaySlip.designation || ''} • {monthLabel}</p></div>
                 </div>
                 <div className="space-y-2 text-sm">

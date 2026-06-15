@@ -9,6 +9,7 @@ import { Loader2, User as UserIcon, Calendar, ArrowLeftRight, Clock } from 'luci
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import ShiftSelector from '../components/attendance/ShiftSelector';
+import PageHeader from '@/components/common/PageHeader';
 
 const getStatusBadgeVariant = (status) => {
     if (!status) return 'default';
@@ -78,20 +79,16 @@ export default function MyAttendancePage() {
 
     return (
         <div className="space-y-6">
-            <Card className="premium-card">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <CardTitle className="flex items-center gap-2 text-2xl">
-                           <Calendar className="w-6 h-6"/> My Attendance History
-                        </CardTitle>
-                        <p className="text-muted-foreground">Your personal attendance record.</p>
-                    </div>
-                    {viewingUser && <ShiftSelector user={viewingUser} onShiftChange={loadAttendance} />}
-                </CardHeader>
-            </Card>
+            <PageHeader
+                icon={Calendar}
+                title="My Attendance History"
+                subtitle="Your personal attendance record"
+                breadcrumb="HR / My Attendance"
+                actions={viewingUser && <ShiftSelector user={viewingUser} onShiftChange={loadAttendance} />}
+            />
 
             {isAdminOrManager && (
-                <Card className="premium-card">
+                <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                     <CardHeader>
                          <CardTitle className="flex items-center gap-2">
                            <ArrowLeftRight className="w-5 h-5"/> View Another Employee's Record
@@ -117,13 +114,13 @@ export default function MyAttendancePage() {
                 </Card>
             )}
 
-            <Card className="premium-card">
+            <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                 <CardHeader>
-                    <CardTitle>Records</CardTitle>
+                    <CardTitle className="text-slate-900 dark:text-white">Records</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                         <div className="text-center p-10"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div>
+                         <div className="text-center p-10"><Loader2 className="w-8 h-8 animate-spin mx-auto text-orange-600"/></div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

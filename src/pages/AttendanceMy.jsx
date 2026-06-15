@@ -26,6 +26,8 @@ import { Shift } from '@/entities/Shift';
 import { EmployeeShiftAssignment } from '@/entities/EmployeeShiftAssignment';
 import { AuditLog } from '@/entities/AuditLog';
 import ShiftSelector from '../components/attendance/ShiftSelector';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 
 export default function AttendanceMyPage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -165,7 +167,7 @@ export default function AttendanceMyPage() {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <Clock className="w-8 h-8 animate-spin mx-auto mb-4 text-violet-500" />
+          <Clock className="w-8 h-8 animate-spin mx-auto mb-4 text-orange-500" />
           <p>Loading your attendance data...</p>
         </div>
       </div>
@@ -177,30 +179,21 @@ export default function AttendanceMyPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-gradient">
-            {selectedEmployeeId === currentUser.id ? 'My Attendance History' : `${viewingUser?.full_name}'s Attendance`}
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            View attendance records and manage shift preferences
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={loadAttendanceHistory}
-            className="min-w-[44px] min-h-[44px]"
-          >
+      <PageHeader
+        icon={Calendar}
+        title={selectedEmployeeId === currentUser.id ? 'My Attendance History' : `${viewingUser?.full_name}'s Attendance`}
+        subtitle="View attendance records and manage shift preferences"
+        breadcrumb="HR / Attendance"
+        actions={
+          <Button variant="outline" size="sm" onClick={loadAttendanceHistory} className="min-w-[44px] min-h-[44px]">
             <RefreshCw className="w-4 h-4" />
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Employee Selector for Admin/Manager */}
       {canViewOtherEmployees && (
-        <Card className="premium-card">
+        <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-orange-500" />
@@ -240,10 +233,10 @@ export default function AttendanceMyPage() {
 
       {/* Shift Selection for Current User */}
       {selectedEmployeeId === currentUser.id && (
-        <Card className="premium-card">
+        <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-violet-500" />
+              <Settings className="w-5 h-5 text-orange-500" />
               My Shift Preferences
             </CardTitle>
           </CardHeader>
@@ -258,7 +251,7 @@ export default function AttendanceMyPage() {
       )}
 
       {/* Date Range Filter */}
-      <Card className="premium-card">
+      <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1">
@@ -290,7 +283,7 @@ export default function AttendanceMyPage() {
       </Card>
 
       {/* Attendance History Table */}
-      <Card className="premium-card">
+      <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-500" />
@@ -300,7 +293,7 @@ export default function AttendanceMyPage() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">
-              <Clock className="w-6 h-6 animate-spin mx-auto mb-4 text-violet-500" />
+              <Clock className="w-6 h-6 animate-spin mx-auto mb-4 text-orange-500" />
               <p>Loading attendance records...</p>
             </div>
           ) : attendanceHistory.length === 0 ? (
@@ -399,45 +392,11 @@ export default function AttendanceMyPage() {
 
       {/* Summary Stats */}
       {attendanceHistory.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="premium-card">
-            <CardContent className="p-4 text-center">
-              <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
-              <p className="text-2xl font-bold text-green-600">
-                {attendanceHistory.filter(r => ['present', 'late'].includes(r.status)).length}
-              </p>
-              <p className="text-sm text-muted-foreground">Days Present</p>
-            </CardContent>
-          </Card>
-          <Card className="premium-card">
-            <CardContent className="p-4 text-center">
-              <XCircle className="w-8 h-8 mx-auto mb-2 text-red-500" />
-              <p className="text-2xl font-bold text-red-600">
-                {attendanceHistory.filter(r => r.status === 'absent').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Days Absent</p>
-            </CardContent>
-          </Card>
-          <Card className="premium-card">
-            <CardContent className="p-4 text-center">
-              <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-              <p className="text-2xl font-bold text-yellow-600">
-                {attendanceHistory.filter(r => r.status === 'late').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Late Arrivals</p>
-            </CardContent>
-          </Card>
-          <Card className="premium-card">
-            <CardContent className="p-4 text-center">
-              <Clock className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-              <p className="text-2xl font-bold text-blue-600">
-                {attendanceHistory
-                  .reduce((total, record) => total + (record.working_hours || 0), 0)
-                  .toFixed(1)}h
-              </p>
-              <p className="text-sm text-muted-foreground">Total Hours</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={CheckCircle2} label="Days Present" value={attendanceHistory.filter(r => ['present', 'late'].includes(r.status)).length} tone="green" index={0} />
+          <StatCard icon={XCircle} label="Days Absent" value={attendanceHistory.filter(r => r.status === 'absent').length} tone="red" index={1} />
+          <StatCard icon={AlertTriangle} label="Late Arrivals" value={attendanceHistory.filter(r => r.status === 'late').length} tone="orange" index={2} />
+          <StatCard icon={Clock} label="Total Hours" value={`${attendanceHistory.reduce((total, record) => total + (record.working_hours || 0), 0).toFixed(1)}h`} tone="blue" index={3} />
         </div>
       )}
     </div>

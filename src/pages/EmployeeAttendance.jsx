@@ -22,6 +22,8 @@ import { User } from '@/entities/User';
 import { Attendance } from '@/entities/Attendance';
 import { withPermission } from '@/components/common/PermissionGuard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 
 const OfficeLocationPicker = React.lazy(() => import('@/components/attendance/OfficeLocationPicker'));
 const ShiftManagement = React.lazy(() => import('@/components/attendance/ShiftManagement'));
@@ -228,23 +230,17 @@ function EmployeeAttendancePage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
-      <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-        <span>HR</span><span>/</span><span className="text-slate-900 font-medium">Attendance</span>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg flex-shrink-0">
-            <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Attendance</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Track & manage employee attendance</p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => { refetchToday(); refetchMonth(); }} className="h-9 flex-shrink-0">
-          <RefreshCw className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Refresh</span>
-        </Button>
-      </div>
+      <PageHeader
+        icon={Clock}
+        title="Attendance"
+        subtitle="Track & manage employee attendance"
+        breadcrumb="HR / Attendance"
+        actions={
+          <Button variant="outline" size="sm" onClick={() => { refetchToday(); refetchMonth(); }} className="h-9 flex-shrink-0">
+            <RefreshCw className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Refresh</span>
+          </Button>
+        }
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={`flex w-full overflow-x-auto h-11 gap-1`}>
@@ -257,7 +253,7 @@ function EmployeeAttendancePage() {
 
         {/* CHECK IN/OUT */}
         <TabsContent value="checkin" className="space-y-4 sm:space-y-5 mt-4">
-          <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-2xl">
+          <Card className="border-2 border-orange-100 dark:border-orange-900/40 bg-gradient-to-br from-orange-50/60 to-amber-50/60 dark:from-orange-950/30 dark:to-slate-900 rounded-2xl">
             <CardContent className="pt-6 sm:pt-8 pb-4 sm:pb-6"><DigitalClock /></CardContent>
           </Card>
 
@@ -317,23 +313,14 @@ function EmployeeAttendancePage() {
         {/* MY HISTORY */}
         <TabsContent value="history" className="space-y-5 mt-4">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { label: 'Present', val: myStats.present, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: CheckCircle },
-              { label: 'Late', val: myStats.late, color: 'text-amber-600', bg: 'bg-amber-50', icon: AlertTriangle },
-              { label: 'Absent', val: myStats.absent, color: 'text-red-600', bg: 'bg-red-50', icon: XCircle },
-              { label: 'Leave', val: myStats.leave, color: 'text-blue-600', bg: 'bg-blue-50', icon: Calendar },
-              { label: 'Hours', val: myStats.hours.toFixed(1), color: 'text-slate-700', bg: 'bg-slate-50', icon: Timer },
-            ].map((s, i) => (
-              <Card key={i} className="border-0 shadow-sm">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center`}><s.icon className={`w-4 h-4 ${s.color}`} /></div>
-                  <div><p className={`text-xl font-bold ${s.color}`}>{s.val}</p><p className="text-[10px] text-slate-400 uppercase">{s.label}</p></div>
-                </CardContent>
-              </Card>
-            ))}
+            <StatCard icon={CheckCircle} label="Present" value={myStats.present} tone="green" index={0} />
+            <StatCard icon={AlertTriangle} label="Late" value={myStats.late} tone="orange" index={1} />
+            <StatCard icon={XCircle} label="Absent" value={myStats.absent} tone="red" index={2} />
+            <StatCard icon={Calendar} label="Leave" value={myStats.leave} tone="blue" index={3} />
+            <StatCard icon={Timer} label="Hours" value={myStats.hours.toFixed(1)} tone="slate" index={4} />
           </div>
 
-          <Card className="border-0 shadow-sm">
+          <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
             <CardHeader className="pb-3 flex-row items-center justify-between">
               <CardTitle className="text-base">My Attendance</CardTitle>
               <div className="flex items-center gap-2">
@@ -393,7 +380,7 @@ function EmployeeAttendancePage() {
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="sm" className="h-10 text-xs" onClick={handleExport}><Download className="w-4 h-4 mr-1" /> Export</Button>
-                <Button size="sm" className="h-10 bg-red-600 hover:bg-red-700 text-xs" onClick={() => setManualEntry({ employee_id: '', date: format(new Date(), 'yyyy-MM-dd'), check_in_time: '09:00', check_out_time: '18:00', status: 'present', working_hours: 9, notes: '' })}>
+                <Button size="sm" className="h-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all text-xs" onClick={() => setManualEntry({ employee_id: '', date: format(new Date(), 'yyyy-MM-dd'), check_in_time: '09:00', check_out_time: '18:00', status: 'present', working_hours: 9, notes: '' })}>
                   <Plus className="w-4 h-4 mr-1" /> Manual
                 </Button>
               </div>
@@ -403,12 +390,12 @@ function EmployeeAttendancePage() {
             {selectedEmployee === 'all' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {employeeSummary.slice(0, 12).map(emp => (
-                  <Card key={emp.user.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedEmployee(emp.user.id)}>
+                  <Card key={emp.user.id} className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedEmployee(emp.user.id)}>
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3 mb-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={emp.user.profile_picture_url} />
-                          <AvatarFallback className="bg-red-100 text-red-700 text-sm">{emp.user.full_name?.charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="bg-orange-100 text-orange-700 text-sm">{emp.user.full_name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-sm truncate">{emp.user.full_name}</p>
@@ -429,7 +416,7 @@ function EmployeeAttendancePage() {
 
             {/* Detail Table */}
             {selectedEmployee !== 'all' && (
-              <Card className="border-0 shadow-sm">
+              <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
                 <CardHeader className="pb-3 flex-row items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee('all')}><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
@@ -476,7 +463,7 @@ function EmployeeAttendancePage() {
         {/* LOCATION */}
         {isAdmin && (
           <TabsContent value="location" className="mt-4">
-            <React.Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>}>
+            <React.Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-orange-600" /></div>}>
               <LocationTabContent currentLocation={currentLocation} locationAccuracy={locationAccuracy} />
             </React.Suspense>
           </TabsContent>
@@ -485,7 +472,7 @@ function EmployeeAttendancePage() {
         {/* SHIFT SETTINGS */}
         {isAdmin && (
           <TabsContent value="settings" className="space-y-6 mt-4">
-            <React.Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>}>
+            <React.Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-orange-600" /></div>}>
               <ShiftManagement />
               <ShiftAssignmentManagement />
             </React.Suspense>
@@ -521,7 +508,7 @@ function EmployeeAttendancePage() {
             <div><Label className="text-xs">Notes</Label><Textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={2} placeholder="Reason for edit..." /></div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setEditRecord(null)}>Cancel</Button>
-              <Button className="bg-red-600 hover:bg-red-700" onClick={handleSaveEdit}><Save className="w-4 h-4 mr-1" /> Save</Button>
+              <Button className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all" onClick={handleSaveEdit}><Save className="w-4 h-4 mr-1" /> Save</Button>
             </div>
           </div>
         </DialogContent>
@@ -563,7 +550,7 @@ function EmployeeAttendancePage() {
               <div><Label className="text-xs">Notes</Label><Textarea value={manualEntry.notes} onChange={(e) => setManualEntry({ ...manualEntry, notes: e.target.value })} rows={2} /></div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setManualEntry(null)}>Cancel</Button>
-                <Button className="bg-red-600 hover:bg-red-700" onClick={handleManualEntry} disabled={!manualEntry.employee_id}><UserCheck className="w-4 h-4 mr-1" /> Add Entry</Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all" onClick={handleManualEntry} disabled={!manualEntry.employee_id}><UserCheck className="w-4 h-4 mr-1" /> Add Entry</Button>
               </div>
             </div>
           )}
