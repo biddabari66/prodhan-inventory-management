@@ -744,7 +744,7 @@ function InventoryOverviewPage() {
 
   useEffect(() => {
     filterInventory();
-  }, [inventory, inventoryWithMovements, searchTerm, currentUser, categoryFilter, variantFilter]);
+  }, [inventory, inventoryWithMovements, searchTerm, currentUser, categoryFilter, variantFilter, selectedDepartment]);
 
   // ── Data loading ─────────────────────────────────────────────────────────────
   const loadTodaySales = async () => {
@@ -774,12 +774,13 @@ function InventoryOverviewPage() {
     }
   };
 
-  const loadUserAndInventory = async () => {
+  const loadUserAndInventory = async (forceRefresh = false) => {
     setIsLoading(true);
     try {
-      const cachedUser      = CacheManager.get('current_user');
-      const cachedInventory = CacheManager.get('inventory_list');
-      const cachedMovements = CacheManager.get('inventory_movements');
+      // Always bypass cache after import or explicit refresh
+      const cachedUser      = forceRefresh ? null : CacheManager.get('current_user');
+      const cachedInventory = forceRefresh ? null : CacheManager.get('inventory_list');
+      const cachedMovements = forceRefresh ? null : CacheManager.get('inventory_movements');
 
       if (cachedUser && cachedInventory) {
         setCurrentUser(cachedUser);
@@ -787,20 +788,24 @@ function InventoryOverviewPage() {
         if (cachedMovements) enrichInventoryWithMovements(cachedInventory, cachedMovements);
         setIsLoading(false);
 
-        // Background refresh
+        // Background refresh to pick up any new items
         setTimeout(async () => {
-          const [user, data, movements] = await Promise.all([
-            erp.auth.me(),
-            erp.entities.Inventory.list('-updated_date', 2000),
-            erp.entities.InventoryMovement.list('-movement_date', 500)
-          ]);
-          setCurrentUser(user);
-          setInventory(data);
-          enrichInventoryWithMovements(data, movements);
-          CacheManager.set('current_user',       user,      10 * 60 * 1000);
-          CacheManager.set('inventory_list',     data,      10 * 60 * 1000);
-          CacheManager.set('inventory_movements', movements, 5  * 60 * 1000);
-        }, 100);
+          try {
+            const [user, data, movements] = await Promise.all([
+              erp.auth.me(),
+              erp.entities.Inventory.list('-updated_date', 2000),
+              erp.entities.InventoryMovement.list('-movement_date', 500)
+            ]);
+            setCurrentUser(user);
+            setInventory(data);
+            enrichInventoryWithMovements(data, movements);
+            CacheManager.set('current_user',       user,      10 * 60 * 1000);
+            CacheManager.set('inventory_list',     data,      10 * 60 * 1000);
+            CacheManager.set('inventory_movements', movements, 5  * 60 * 1000);
+          } catch (bgErr) {
+            console.warn('Background refresh failed:', bgErr);
+          }
+        }, 500);
       } else {
         const [user, data, movements] = await Promise.all([
           erp.auth.me(),
@@ -876,12 +881,16 @@ function InventoryOverviewPage() {
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(item => {
+        // Handle category as string OR nested object
+        const catName = (item.category?.name || item.category || '').toLowerCase();
         if (
-          item.item_name?.toLowerCase().includes(q)   ||
-          item.category?.toLowerCase().includes(q)    ||
-          item.isbn?.toLowerCase().includes(q)        ||
-          item.author_name?.toLowerCase().includes(q) ||
-          item.barcode?.toLowerCase().includes(q)
+          (item.item_name || item.name || '').toLowerCase().includes(q) ||
+          catName.includes(q)                                           ||
+          item.sku?.toLowerCase().includes(q)                           ||
+          item.barcode?.toLowerCase().includes(q)                       ||
+          item.isbn?.toLowerCase().includes(q)                          ||
+          item.author?.toLowerCase().includes(q)                        ||
+          item.author_name?.toLowerCase().includes(q)
         ) return true;
 
         // Also search inside variants
@@ -1009,15 +1018,65 @@ function InventoryOverviewPage() {
     };
   }, [filteredInventory, lowStockItems]);
 
-  // ── Loading ───────────────────────────────────────────────────────────────────
+  // ── Loading skeleton ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto">
-            <Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" />
+      <div className="min-h-screen bg-[#F8F9FA] pt-2 pb-3 px-1">
+        <div className="w-full space-y-5 animate-pulse">
+          {/* Header skeleton */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-7 w-48 bg-slate-200 rounded-lg" />
+              <div className="h-4 w-64 bg-slate-100 rounded-lg" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-10 w-40 bg-slate-200 rounded-xl" />
+              <div className="h-10 w-28 bg-slate-200 rounded-xl" />
+              <div className="h-10 w-28 bg-slate-200 rounded-xl" />
+            </div>
           </div>
-          <p className="text-slate-600 font-medium">Loading inventory...</p>
+          {/* Stats skeleton */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_,i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 bg-slate-100 rounded-xl" />
+                  <div className="h-4 w-16 bg-slate-100 rounded-full" />
+                </div>
+                <div className="h-8 w-20 bg-slate-200 rounded-lg" />
+                <div className="h-3 w-24 bg-slate-100 rounded-full" />
+              </div>
+            ))}
+          </div>
+          {/* Filter skeleton */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="h-10 w-full bg-slate-100 rounded-xl" />
+            <div className="flex gap-2">
+              {[...Array(5)].map((_,i) => <div key={i} className="h-8 w-20 bg-slate-100 rounded-full" />)}
+            </div>
+          </div>
+          {/* Table skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="border-b border-slate-100 px-6 py-4 flex gap-4">
+              <div className="h-5 w-32 bg-slate-200 rounded" />
+              <div className="h-5 w-16 bg-slate-100 rounded-full" />
+            </div>
+            <div className="divide-y divide-slate-50">
+              {[...Array(8)].map((_,i) => (
+                <div key={i} className="flex items-center gap-4 px-6 py-4">
+                  <div className="h-4 w-4 bg-slate-100 rounded" />
+                  <div className="h-9 w-9 bg-slate-100 rounded-lg flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-48 bg-slate-200 rounded" style={{ width: `${180 + (i % 4) * 30}px` }} />
+                    <div className="h-3 w-28 bg-slate-100 rounded" />
+                  </div>
+                  <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                  <div className="h-8 w-12 bg-slate-100 rounded-lg" />
+                  {[...Array(5)].map((_,j) => <div key={j} className="h-4 w-12 bg-slate-100 rounded" />)}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1150,7 +1209,11 @@ function InventoryOverviewPage() {
         </Card>
 
         {/* Import/Export */}
-        <InventoryImportExport inventory={filteredInventory} onImportComplete={loadUserAndInventory} />
+        <InventoryImportExport inventory={filteredInventory} onImportComplete={() => {
+          CacheManager.remove('inventory_list');
+          CacheManager.remove('inventory_movements');
+          loadUserAndInventory(true);
+        }} />
 
         {/* Low Stock Panel */}
         <LowStockPanel lowStockItems={lowStockItems} todaySalesData={todaySalesData} />
