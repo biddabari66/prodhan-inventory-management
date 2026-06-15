@@ -1021,7 +1021,7 @@ function InventoryOverviewPage() {
   // ── Loading skeleton ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] pt-2 pb-3 px-1">
+      <div className="min-h-screen bg-[#F8F9FA] pt-2 pb-3 px-1 animate-in fade-in duration-300">
         <div className="w-full space-y-5 animate-pulse">
           {/* Header skeleton */}
           <div className="flex items-center justify-between">
@@ -1070,9 +1070,9 @@ function InventoryOverviewPage() {
                     <div className="h-4 w-48 bg-slate-200 rounded" style={{ width: `${180 + (i % 4) * 30}px` }} />
                     <div className="h-3 w-28 bg-slate-100 rounded" />
                   </div>
-                  <div className="h-6 w-20 bg-slate-100 rounded-full" />
-                  <div className="h-8 w-12 bg-slate-100 rounded-lg" />
-                  {[...Array(5)].map((_,j) => <div key={j} className="h-4 w-12 bg-slate-100 rounded" />)}
+                    <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                    <div className="h-8 w-12 bg-slate-100 rounded-lg" />
+                    {[...Array(5)].map((_,j) => <div key={j} className="h-4 w-12 bg-slate-100 rounded" />)}
                 </div>
               ))}
             </div>
@@ -1084,7 +1084,7 @@ function InventoryOverviewPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-in fade-in duration-500">
       <div className="pt-2 pb-3 px-1 w-full space-y-4 sm:space-y-6">
 
         {/* Breadcrumb */}
