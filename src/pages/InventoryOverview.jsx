@@ -251,12 +251,12 @@ function InventoryTableRow({
   // Debug once per item (dev only)
   useEffect(() => { debugLogItem(item); }, []);
 
-  // Total stock: sum variants OR use item.current_stock
+  // Total stock: sum variants OR use stock field (backend returns 'stock', aliased to 'current_stock' too)
   const totalStock = variants
     ? variants.reduce((sum, v) => sum + getVariantStock(v), 0)
-    : (item.current_stock ?? 0);
+    : (item.stock ?? item.current_stock ?? 0);
 
-  const minStock  = item.minimum_stock ?? 0;
+  const minStock  = item.min_stock_level ?? item.minimum_stock ?? 0;
   const isLow     = totalStock < minStock;
   const outCount  = variants ? variants.filter(v => getVariantStock(v) === 0).length : 0;
   const lowCount  = variants ? variants.filter(v => {
@@ -320,7 +320,7 @@ function InventoryTableRow({
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-semibold text-slate-900 text-sm leading-tight"
                    style={{ fontFamily: "'Anek Bangla', sans-serif" }}>
-                  {item.item_name}
+                  {item.item_name || item.name || <span className="text-slate-400 italic text-xs">(No name)</span>}
                 </p>
 
                 {variants && (
@@ -368,7 +368,7 @@ function InventoryTableRow({
         {/* ── CATEGORY ── */}
         <TableCell>
           <Badge className="bg-slate-100 text-slate-700 border border-slate-200 rounded-full px-3 text-xs font-medium">
-            {item.category}
+            {item.category?.name || item.category || '—'}
           </Badge>
         </TableCell>
 
@@ -855,10 +855,23 @@ function InventoryOverviewPage() {
   };
 
   const filterInventory = () => {
-    if (!currentUser || !selectedDepartment) return;
+    if (!currentUser) return;
 
-    let filtered = (inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory)
-      .filter(item => item.department_id === selectedDepartment || item.department === selectedDepartment);
+    const isAdmin = currentUser.role === 'admin' || currentUser.job_role === 'ADMIN' || currentUser.job_role === 'SUPER_ADMIN';
+    const allItems = inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory;
+
+    // Admins see all inventory; non-admins see only their department
+    // Also show items with no department set (newly imported items)
+    let filtered = selectedDepartment
+      ? (isAdmin
+          ? allItems
+          : allItems.filter(item =>
+              !item.department_id ||
+              item.department_id === selectedDepartment ||
+              item.department === selectedDepartment
+            )
+        )
+      : allItems;
 
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -948,10 +961,11 @@ function InventoryOverviewPage() {
     const result = [];
     for (const item of filteredInventory) {
       const variants = getVariants(item);
+      const minSt = item.min_stock_level ?? item.minimum_stock ?? 0;
       if (variants) {
         variants.forEach(v => {
           const s = getVariantStock(v);
-          if (s < (item.minimum_stock ?? 0)) {
+          if (s < minSt) {
             result.push({
               ...item,
               current_stock: s,
@@ -960,7 +974,8 @@ function InventoryOverviewPage() {
           }
         });
       } else {
-        if ((item.current_stock ?? 0) < (item.minimum_stock ?? 0)) result.push(item);
+        const st = item.stock ?? item.current_stock ?? 0;
+        if (st < minSt) result.push(item);
       }
     }
     return result;
@@ -982,7 +997,8 @@ function InventoryOverviewPage() {
           totalValue += getVariantStock(v) * price;
         });
       } else {
-        totalValue += (item.current_stock || 0) * (item.selling_price || 0);
+        const st = item.stock ?? item.current_stock ?? 0;
+        totalValue += st * (item.selling_price || 0);
       }
     }
     return {
@@ -1180,18 +1196,21 @@ function InventoryOverviewPage() {
           )}
         </div>
 
+
+
+        {/* ── BULK DELETE ACTION BAR ──────────────────────────────────────────── */}
         {selectedItemIds.length > 0 && (
-          <div className="sticky top-4 z-50 flex items-center justify-between bg-white px-6 py-3 rounded-xl shadow-lg border border-slate-200 mb-4 animate-in fade-in slide-in-from-top-4">
+          <div className="sticky top-4 z-50 flex items-center justify-between bg-white px-6 py-3 rounded-xl shadow-lg border border-red-200 mb-2 animate-in fade-in slide-in-from-top-4">
             <div className="flex items-center gap-3">
-              <Badge className="bg-indigo-100 text-indigo-700 px-3 py-1 text-sm font-semibold">
+              <Badge className="bg-red-100 text-red-700 px-3 py-1 text-sm font-semibold border border-red-200">
                 {selectedItemIds.length} Selected
               </Badge>
-              <span className="text-sm font-medium text-slate-600">items</span>
+              <span className="text-sm font-medium text-slate-600">items ready for bulk action</span>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => setSelectedItemIds([])}>Cancel</Button>
-              <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="gap-2">
-                <Trash2 className="w-4 h-4" /> Bulk Delete
+              <Button variant="outline" size="sm" onClick={() => setSelectedItemIds([])}>✕ Deselect All</Button>
+              <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="gap-2 bg-red-600 hover:bg-red-700">
+                <Trash2 className="w-4 h-4" /> Delete {selectedItemIds.length} Items
               </Button>
             </div>
           </div>

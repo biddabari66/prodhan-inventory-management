@@ -27,7 +27,12 @@ const DEFAULT_CONFIG = {
         'Sample Item', 'SKU-001', 'General', '10', '5', '100', '150', 'Sample description'
     ],
     fieldMapping: {
-        'item_name': ['Product Name', 'Item Name', 'Name', 'Title', 'Product', 'পণ্যের নাম', 'পণ্য'],
+        'item_name': [
+            'Product Name', 'Item Name', 'Name', 'Title', 'Product', 'Item', 'Product Title',
+            'পণ্যের নাম', 'পণ্য', 'নাম', 'পণ্যের নাম (বাংলা)', 'আইটেম নাম', 'product_name',
+            'item_name', 'ITEM NAME', 'PRODUCT NAME', 'Product name', 'product name',
+            'sku_name', 'SKU Name', 'Variant Name', 'variant_name',
+        ],
         'category': ['Category', 'Type', 'Product Category', 'ক্যাটাগরি', 'বিভাগ'],
         'current_stock': ['Current Stock', 'Stock', 'Quantity', 'Qty', 'স্টক', 'মজুদ'],
         'selling_price': ['Selling Price', 'Sale Price', 'Price', 'MRP', 'বিক্রয়মূল্য', 'দাম'],
@@ -259,6 +264,17 @@ export default function InventoryImportExport({ inventory, onImportComplete }) {
                             }
                         });
 
+                        if (!mappedRowData.item_name) {
+                            // Fallback: try to find any unmapped column that could be the name
+                            // (look for the first non-empty string value that isn't a number)
+                            for (const [header, idx] of csvHeaders.map((h, i) => [h, i])) {
+                                const val = String(row[idx] || '').replace(/"/g, '').trim();
+                                if (val && isNaN(Number(val)) && val.length > 1) {
+                                    mappedRowData.item_name = val;
+                                    break;
+                                }
+                            }
+                        }
                         if (!mappedRowData.item_name) continue;
 
                         const existingItem = inventory.find(item => 
