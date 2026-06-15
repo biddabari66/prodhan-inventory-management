@@ -122,8 +122,6 @@ router.get('/attendance', requirePermission('attendance:read'), attendanceCtrl.l
 router.get('/attendance/my', attendanceCtrl.getMyAttendance);
 router.get('/attendance/daily-report', requirePermission('attendance:read'), attendanceCtrl.getDailyReport);
 router.get('/attendance/monthly-summary', requirePermission('attendance:read'), attendanceCtrl.getMonthlySummary);
-router.get('/accounting/reports/pnl', requirePermission('accounting:reports'), acctCtrl.generateProfitAndLoss);
-router.get('/accounting/reports/balances', requirePermission('accounting:reports'), acctCtrl.getAccountBalances);
 
 // ─── System / Backups ────────────────────────────────────────────────────────
 router.use('/system', authenticate, apiLimiter);
@@ -305,6 +303,7 @@ mountResource(router, '/campaigns', 'campaign', resourceAuth);
 mountResource(router, '/budget-plans', 'budgetPlan', resourceAuth);
 mountResource(router, '/shifts', 'shift', resourceAuth);
 mountResource(router, '/performance-logs', 'performanceLog', resourceAuth);
+mountResource(router, '/companies', 'company', resourceAuth);
 mountResource(router, '/departments', 'department', resourceAuth);
 mountResource(router, '/follow-ups', 'followUp', resourceAuth);
 mountResource(router, '/reports', 'report', resourceAuth);

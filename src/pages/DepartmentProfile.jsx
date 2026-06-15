@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/client';
-import { User } from '@/entities/User';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,394 +8,227 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import {
-  Building2, Save, Image as ImageIcon, LayoutTemplate, MapPin, Phone, Mail, Palette, Plus, Loader2, Users, FileSpreadsheet
+  Building2, Save, Image as ImageIcon, LayoutTemplate, MapPin, Phone, Mail, Palette, Plus, Loader2, Network, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import PageHeader from '@/components/common/PageHeader';
 
 const EMPTY_BRANDING = {
   name: '', logo: '', primaryColor: '#EA580C', secondaryColor: '#FFEDD5',
-  phone: '', email: '', address: '', tagline: '', invoice_template: 'design_1_modern', importConfigStr: ''
+  phone: '', email: '', address: '', tagline: '', invoice_template: 'design_1_modern',
 };
-
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
-// Mirror branding to localStorage so existing invoice components keep working
-// offline/instantly. Keyed by both the department slug and raw name.
-function mirrorToLocalStorage(departments) {
+// Mirror branding to localStorage so invoice/receipt components keep working.
+function mirrorToLocalStorage(companies) {
   try {
-    const map = {};
-    for (const d of departments) {
-      const b = d.branding || {};
-      const entry = { ...EMPTY_BRANDING, ...b, name: b.name || d.name };
-      map[slugify(d.name)] = entry;
-      map[d.name] = entry;
+    const map = JSON.parse(localStorage.getItem('department_branding') || '{}');
+    for (const c of companies) {
+      const b = c.branding || {};
+      const entry = { ...EMPTY_BRANDING, ...b, name: b.name || c.name };
+      map[slugify(c.name)] = entry;
+      map[c.name] = entry;
     }
-    const prev = JSON.parse(localStorage.getItem('department_branding') || '{}');
-    localStorage.setItem('department_branding', JSON.stringify({ ...prev, ...map }));
-  } catch { /* non-fatal cache */ }
+    localStorage.setItem('department_branding', JSON.stringify(map));
+  } catch { /* non-fatal */ }
 }
 
-export default function DepartmentProfile() {
+export default function CompanyProfiles() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_BRANDING);
   const [isAddOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState('');
   const [newDeptName, setNewDeptName] = useState('');
 
-  const { data: resp, isLoading } = useQuery({
-    queryKey: ['departments'],
-    queryFn: () => api.get('/departments', { params: { limit: 100 } }).then((r) => r.data?.data ?? r.data ?? []),
+  // ── Sub-companies ────────────────────────────────────────────────────────
+  const { data: compResp, isLoading } = useQuery({
+    queryKey: ['companies'],
+    queryFn: () => api.get('/companies', { params: { limit: 100 } }).then((r) => r.data?.data ?? r.data ?? []),
   });
-  const departments = useMemo(() => (Array.isArray(resp) ? resp : []), [resp]);
+  const companies = useMemo(() => (Array.isArray(compResp) ? compResp : []), [compResp]);
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => User.list().then(res => res || [])
+  // Departments of the selected company
+  const { data: deptResp } = useQuery({
+    queryKey: ['company-departments', selectedId],
+    queryFn: () => api.get('/departments', { params: { companyId: selectedId, limit: 100 } }).then((r) => r.data?.data ?? r.data ?? []),
+    enabled: !!selectedId,
   });
+  const departments = useMemo(() => (Array.isArray(deptResp) ? deptResp : []), [deptResp]);
 
-  // Keep selection + form in sync with loaded data.
   useEffect(() => {
-    if (!departments.length) return;
-    mirrorToLocalStorage(departments);
-    const current = departments.find((d) => d.id === selectedId) || departments[0];
-    if (!selectedId) setSelectedId(current.id);
-    
-    const branding = current.branding || {};
-    const importConfig = branding.importConfig || {};
-    
-    setFormData({
-      ...EMPTY_BRANDING,
-      name: current.name || '',
-      ...(branding),
-      importConfigStr: (importConfig && Object.keys(importConfig).length) ? JSON.stringify(importConfig, null, 2) : ''
-    });
+    if (!companies.length) { setSelectedId(null); return; }
+    mirrorToLocalStorage(companies);
+    const current = companies.find((c) => c.id === selectedId) || companies[0];
+    if (!selectedId || !companies.find((c) => c.id === selectedId)) setSelectedId(current.id);
+    setFormData({ ...EMPTY_BRANDING, name: current.name, ...(current.branding || {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [departments, selectedId]);
+  }, [companies, selectedId]);
 
-  const selectedDept = departments.find((d) => d.id === selectedId);
+  const selected = companies.find((c) => c.id === selectedId);
 
-  const saveMutation = useMutation({
-    mutationFn: () => {
-      let parsedImportConfig = {};
-      if (formData.importConfigStr && formData.importConfigStr.trim()) {
-        try {
-          parsedImportConfig = JSON.parse(formData.importConfigStr);
-        } catch (e) {
-          toast.error("Invalid JSON in CSV Import Configuration.");
-          throw new Error("Invalid JSON in CSV Import Configuration.");
-        }
-      }
-
-      const payload = {
-        name: formData.name,
-        branding: {
-          ...formData,
-          importConfig: parsedImportConfig
-        }
-      };
-      delete payload.branding.importConfigStr;
-      return api.patch(`/departments/${selectedId}`, payload);
-    },
-    onSuccess: () => {
-      toast.success(`${formData.name || selectedDept?.name} profile saved!`);
-      qc.invalidateQueries({ queryKey: ['departments'] });
-    },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Could not save profile'),
+  const save = useMutation({
+    mutationFn: () => api.patch(`/companies/${selectedId}`, { name: formData.name, branding: formData }),
+    onSuccess: () => { toast.success(`${formData.name} saved`); qc.invalidateQueries({ queryKey: ['companies'] }); },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Could not save'),
   });
 
-  const addMutation = useMutation({
-    mutationFn: () => api.post('/departments', { name: newDeptName.trim(), branding: { ...EMPTY_BRANDING, name: newDeptName.trim() } }),
+  const addCompany = useMutation({
+    mutationFn: () => api.post('/companies', { name: newName.trim(), branding: { ...EMPTY_BRANDING, name: newName.trim() } }),
     onSuccess: (res) => {
-      toast.success('Department created');
-      setAddOpen(false);
-      setNewDeptName('');
-      qc.invalidateQueries({ queryKey: ['departments'] });
+      toast.success('Company created'); setAddOpen(false); setNewName('');
+      qc.invalidateQueries({ queryKey: ['companies'] });
       const created = res.data?.data ?? res.data;
       if (created?.id) setSelectedId(created.id);
     },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Could not create department (name may already exist)'),
+    onError: (e) => toast.error(e?.response?.data?.error || 'Could not create company'),
   });
+
+  const addDept = useMutation({
+    mutationFn: () => api.post('/departments', { name: newDeptName.trim(), companyId: selectedId }),
+    onSuccess: () => { toast.success('Department added'); setNewDeptName(''); qc.invalidateQueries({ queryKey: ['company-departments', selectedId] }); },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Could not add department (name may exist)'),
+  });
+
+  const delDept = useMutation({
+    mutationFn: (id) => api.delete(`/departments/${id}`),
+    onSuccess: () => { toast.success('Department removed'); qc.invalidateQueries({ queryKey: ['company-departments', selectedId] }); },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Could not remove'),
+  });
+
+  const set = (k, v) => setFormData((f) => ({ ...f, [k]: v }));
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-            <Building2 className="w-6 h-6 text-white" />
+      <PageHeader
+        icon={Building2}
+        title="Company Profiles"
+        subtitle="Mother company → sub-companies → departments. Each sub-company has its own logo, colors, contacts, invoice design and departments."
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="w-48">
+              <Select value={selectedId || ''} onValueChange={setSelectedId}>
+                <SelectTrigger className="h-10 bg-white dark:bg-slate-900">
+                  <SelectValue placeholder={isLoading ? 'Loading…' : 'Select company'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-1" /> Company</Button>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Department Profiles</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Each department (sub-company) gets its own logo, colors, contacts and invoice design — saved for the whole team.
-            </p>
-          </div>
-        </div>
-        <div className="flex w-full sm:w-auto items-center gap-2">
-          <div className="flex-1 sm:w-64">
-            <Select value={selectedId || ''} onValueChange={setSelectedId}>
-              <SelectTrigger className="bg-white dark:bg-slate-900 border-slate-200 shadow-sm h-11">
-                <SelectValue placeholder={isLoading ? 'Loading…' : 'Select Department'} />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.branding?.name || d.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" className="h-11" onClick={() => setAddOpen(true)} title="Add department">
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
-      {!isLoading && departments.length === 0 && (
-        <Card className="border-dashed">
+      {!isLoading && companies.length === 0 && (
+        <Card className="border-2 border-dashed border-slate-200">
           <CardContent className="p-10 text-center space-y-3">
             <Building2 className="w-10 h-10 mx-auto text-slate-300" />
-            <p className="text-slate-600 font-medium">No departments yet</p>
-            <p className="text-sm text-slate-500">Create your first department (e.g. your main brand or a sub-company).</p>
-            <Button onClick={() => setAddOpen(true)} className="mt-2">
-              <Plus className="w-4 h-4 mr-2" /> Add Department
-            </Button>
+            <p className="font-medium text-slate-700">No sub-companies yet</p>
+            <p className="text-sm text-slate-500">Create your first sub-company (e.g. Prodhan.com or Boibari.com).</p>
+            <Button onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-2" /> Add Company</Button>
           </CardContent>
         </Card>
       )}
 
-      {selectedDept && (
+      {selected && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Settings Form */}
+          {/* Branding form */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="border-b border-slate-100 bg-slate-50/50 dark:bg-slate-900/40 pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-orange-500" /> General Info & Branding
-                </CardTitle>
+            <Card className="border-2 border-slate-200 dark:border-slate-700">
+              <CardHeader className="border-b bg-slate-50/60 dark:bg-slate-900/40 pb-4">
+                <CardTitle className="text-base flex items-center gap-2"><ImageIcon className="w-4 h-4 text-orange-500" /> Branding</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <Label>Company/Brand Name</Label>
-                    <Input value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tagline / Slogan</Label>
-                    <Input value={formData.tagline || ''} onChange={(e) => setFormData({ ...formData, tagline: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label>Company Name</Label><Input value={formData.name || ''} onChange={(e) => set('name', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Tagline</Label><Input value={formData.tagline || ''} onChange={(e) => set('tagline', e.target.value)} /></div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Logo Image URL</Label>
                   <div className="flex gap-4 items-start">
-                    <Input
-                      className="flex-1"
-                      placeholder="https://… (paste a logo image link)"
-                      value={formData.logo || ''}
-                      onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                    />
-                    {formData.logo && (
-                      <div className="w-12 h-12 rounded-lg border border-slate-200 flex items-center justify-center p-1 bg-white shrink-0">
-                        <img src={formData.logo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
-                      </div>
-                    )}
+                    <Input className="flex-1" placeholder="https://… logo link" value={formData.logo || ''} onChange={(e) => set('logo', e.target.value)} />
+                    {formData.logo && <div className="w-12 h-12 rounded-lg border flex items-center justify-center p-1 bg-white shrink-0"><img src={formData.logo} alt="logo" className="max-w-full max-h-full object-contain" /></div>}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Palette className="w-3 h-3" /> Primary Color</Label>
-                    <div className="flex gap-2">
-                      <Input type="color" className="w-12 p-1 h-10 cursor-pointer"
-                        value={formData.primaryColor || '#000000'}
-                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })} />
-                      <Input className="flex-1 font-mono uppercase"
-                        value={formData.primaryColor || ''}
-                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })} />
-                    </div>
+                  <div className="space-y-2"><Label className="flex items-center gap-2"><Palette className="w-3 h-3" /> Primary Color</Label>
+                    <div className="flex gap-2"><Input type="color" className="w-12 p-1 h-10" value={formData.primaryColor || '#000000'} onChange={(e) => set('primaryColor', e.target.value)} /><Input className="flex-1 font-mono uppercase" value={formData.primaryColor || ''} onChange={(e) => set('primaryColor', e.target.value)} /></div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Palette className="w-3 h-3" /> Secondary Color</Label>
-                    <div className="flex gap-2">
-                      <Input type="color" className="w-12 p-1 h-10 cursor-pointer"
-                        value={formData.secondaryColor || '#ffffff'}
-                        onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })} />
-                      <Input className="flex-1 font-mono uppercase"
-                        value={formData.secondaryColor || ''}
-                        onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })} />
-                    </div>
+                  <div className="space-y-2"><Label className="flex items-center gap-2"><Palette className="w-3 h-3" /> Secondary Color</Label>
+                    <div className="flex gap-2"><Input type="color" className="w-12 p-1 h-10" value={formData.secondaryColor || '#ffffff'} onChange={(e) => set('secondaryColor', e.target.value)} /><Input className="flex-1 font-mono uppercase" value={formData.secondaryColor || ''} onChange={(e) => set('secondaryColor', e.target.value)} /></div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="border-b border-slate-100 bg-slate-50/50 dark:bg-slate-900/40 pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-500" /> Contact Details
-                </CardTitle>
+            <Card className="border-2 border-slate-200 dark:border-slate-700">
+              <CardHeader className="border-b bg-slate-50/60 dark:bg-slate-900/40 pb-4">
+                <CardTitle className="text-base flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-500" /> Contact Details</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Phone className="w-3 h-3" /> Phone Number</Label>
-                    <Input value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Mail className="w-3 h-3" /> Email Address</Label>
-                    <Input value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label className="flex items-center gap-2"><Phone className="w-3 h-3" /> Phone</Label><Input value={formData.phone || ''} onChange={(e) => set('phone', e.target.value)} /></div>
+                  <div className="space-y-2"><Label className="flex items-center gap-2"><Mail className="w-3 h-3" /> Email</Label><Input value={formData.email || ''} onChange={(e) => set('email', e.target.value)} /></div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Head Office Address</Label>
-                  <Textarea rows={3} value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
-                </div>
+                <div className="space-y-2"><Label>Head Office Address</Label><Textarea rows={3} value={formData.address || ''} onChange={(e) => set('address', e.target.value)} /></div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Invoice Settings & Preview Sidebar */}
+          {/* Invoice + Departments */}
           <div className="space-y-6">
-            <Card className="border-0 shadow-sm border-t-4 border-t-orange-500">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <LayoutTemplate className="w-4 h-4 text-orange-500" /> Invoice Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-5">
-                <div className="space-y-2">
-                  <Label>Invoice Design Template</Label>
-                  <Select
-                    value={formData.invoice_template || 'design_1_modern'}
-                    onValueChange={(val) => setFormData({ ...formData, invoice_template: val })}
-                  >
-                    <SelectTrigger className="bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="design_1_modern">Design 1: Modern & Clean</SelectItem>
-                      <SelectItem value="design_2_classic">Design 2: Classic Tabular</SelectItem>
-                      <SelectItem value="design_3_minimal">Design 3: Minimal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-slate-500 mt-2">
-                    This layout is used for all invoices generated in this department.
-                  </p>
-                </div>
+            <Card className="border-2 border-slate-200 dark:border-slate-700 border-t-4 border-t-orange-500">
+              <CardHeader className="pb-4"><CardTitle className="text-base flex items-center gap-2"><LayoutTemplate className="w-4 h-4 text-orange-500" /> Invoice Template</CardTitle></CardHeader>
+              <CardContent className="p-6 pt-0 space-y-4">
+                <Select value={formData.invoice_template || 'design_1_modern'} onValueChange={(v) => set('invoice_template', v)}>
+                  <SelectTrigger className="bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="design_1_modern">Design 1: Modern & Clean</SelectItem>
+                    <SelectItem value="design_2_classic">Design 2: Classic Tabular</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full h-11">
+                  {save.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Save Company
+                </Button>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-sm border-t-4 border-t-green-500">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-green-500" /> CSV Import Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-5">
-                <div className="space-y-2">
-                  <Label>Import Config (JSON Format)</Label>
-                  <Textarea
-                    rows={8}
-                    className="font-mono text-xs"
-                    placeholder={`{\n  "templateHeaders": ["Name", "Stock"],\n  "fieldMapping": { "item_name": ["Name"] }\n}`}
-                    value={formData.importConfigStr || ''}
-                    onChange={(e) => setFormData({ ...formData, importConfigStr: e.target.value })}
-                  />
-                  <p className="text-[11px] text-slate-500 leading-tight mt-1">
-                    Define custom CSV headers and mapping for this department. Leave blank to use system defaults.
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100">
-                  <Button
-                    onClick={() => saveMutation.mutate()}
-                    disabled={saveMutation.isPending}
-                    className="w-full h-11"
-                  >
-                    {saveMutation.isPending
-                      ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      : <Save className="w-4 h-4 mr-2" />}
-                    Save Department Profile
-                  </Button>
-                  <p className="text-[11px] text-slate-400 text-center mt-2">
-                    Saved to your workspace — visible to your whole team.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Mini Preview Box */}
-            <Card className="border-0 shadow-sm bg-slate-50 dark:bg-slate-900/40">
-              <CardContent className="p-5">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Invoice Header Preview</p>
-                <div className="bg-white p-4 rounded border shadow-sm flex gap-3">
-                  {formData.logo && (
-                    <img src={formData.logo} alt="Logo" className="w-12 h-12 object-contain" />
-                  )}
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight" style={{ color: formData.primaryColor }}>
-                      {formData.name || 'Company Name'}
-                    </h3>
-                    <p className="text-[10px] text-slate-500">{formData.tagline || 'Your Tagline Here'}</p>
-                    <p className="text-[9px] mt-1 text-slate-400">{formData.phone}</p>
+            {/* Departments under this sub-company */}
+            <Card className="border-2 border-slate-200 dark:border-slate-700">
+              <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Network className="w-4 h-4 text-orange-500" /> Departments <Badge variant="secondary" className="ml-1">{departments.length}</Badge></CardTitle></CardHeader>
+              <CardContent className="p-4 pt-0 space-y-2">
+                {departments.length === 0 && <p className="text-sm text-slate-500 px-1">No departments yet for {selected.name}.</p>}
+                {departments.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                    <span className="font-medium">{d.name}</span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => delDept.mutate(d.id)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
+                ))}
+                <div className="flex gap-2 pt-2">
+                  <Input value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="New department name" onKeyDown={(e) => e.key === 'Enter' && newDeptName.trim() && addDept.mutate()} />
+                  <Button onClick={() => addDept.mutate()} disabled={!newDeptName.trim() || addDept.isPending}><Plus className="w-4 h-4" /></Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Employees in Department */}
-            <Card className="border-0 shadow-sm border-t-4 border-t-blue-500 erp-card bg-slate-100 dark:bg-slate-800">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-500" /> Employees in Department
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-3">
-                {(() => {
-                  const deptUsers = allUsers.filter(u => u.department === selectedId || u.department === selectedDept.name);
-                  if (deptUsers.length === 0) {
-                    return <p className="text-sm text-slate-500 italic">No employees assigned to this department yet.</p>;
-                  }
-                  return (
-                    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                      {deptUsers.map(u => (
-                        <div key={u.id} className="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
-                            {u.full_name?.charAt(0) || '?'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{u.full_name}</p>
-                            <p className="text-[10px] text-slate-500 truncate">{u.designation || u.job_role || 'Employee'}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
               </CardContent>
             </Card>
           </div>
         </div>
       )}
 
-      {/* Add department dialog */}
       <Dialog open={isAddOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Add Department</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add Sub-Company</DialogTitle></DialogHeader>
           <div className="space-y-2">
-            <Label>Department / Sub-company name</Label>
-            <Input
-              value={newDeptName}
-              onChange={(e) => setNewDeptName(e.target.value)}
-              placeholder="e.g. Boibari.com"
-              onKeyDown={(e) => e.key === 'Enter' && newDeptName.trim() && addMutation.mutate()}
-              autoFocus
-            />
+            <Label>Company name</Label>
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Boibari.com" onKeyDown={(e) => e.key === 'Enter' && newName.trim() && addCompany.mutate()} autoFocus />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button onClick={() => addMutation.mutate()} disabled={!newDeptName.trim() || addMutation.isPending}>
-              {addMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-              Create
+            <Button onClick={() => addCompany.mutate()} disabled={!newName.trim() || addCompany.isPending}>
+              {addCompany.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />} Create
             </Button>
           </DialogFooter>
         </DialogContent>

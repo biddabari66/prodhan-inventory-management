@@ -2,7 +2,7 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
-import prisma from '../config/database';
+import prisma from '../config/db';
 import { logger } from '../config/logger';
 
 const execAsync = promisify(exec);

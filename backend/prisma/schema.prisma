@@ -290,12 +290,32 @@ model Tenant {
   payments      Payment[]
   accounts      ChartOfAccount[]
   journalEntries JournalEntry[]
+  companies     Company[]
+}
+
+// A Company is a SUB-COMPANY under the tenant (mother company), e.g. Prodhan.com,
+// Boibari.com. It owns its branding and a set of departments.
+model Company {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  branding  Json? // logo, colors, contacts, invoice template
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  departments Department[]
+
+  @@index([tenantId])
 }
 
 model Department {
   id       String @id @default(cuid())
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   name        String
   description String?

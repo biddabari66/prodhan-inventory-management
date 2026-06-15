@@ -23,7 +23,7 @@ export const triggerBackup = async (req: Request, res: Response) => {
 };
 
 export const downloadBackup = async (req: Request, res: Response) => {
-  const filename = req.params.filename;
+  const filename = String(req.params.filename || '');
   // Basic security check to prevent directory traversal
   if (!filename || filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
     throw new AppError(400, 'Invalid filename');
