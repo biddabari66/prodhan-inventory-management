@@ -14,6 +14,22 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Multi-company scoping: auto-append the active company's departmentId to GET
+  // requests so dashboards, orders, CRM, accounting, etc. filter to the selected
+  // company. Harmless when no company is active. Never scope the department list
+  // itself, auth, or platform-admin endpoints.
+  try {
+    const method = (config.method || 'get').toLowerCase();
+    const url = config.url || '';
+    const exempt = /\/(departments|auth|admin|billing|onboarding|ai)\b/.test(url);
+    const companyId = localStorage.getItem('activeCompanyId');
+    if (method === 'get' && companyId && !exempt) {
+      config.params = { ...(config.params || {}) };
+      if (config.params.departmentId === undefined) config.params.departmentId = companyId;
+    }
+  } catch { /* non-fatal */ }
+
   return config;
 });
 
