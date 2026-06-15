@@ -285,6 +285,8 @@ model Tenant {
   auditLogs     AuditLog[]
   webhooks      Webhook[]
   automationRules AutomationRule[]
+  automationTasks AutomationTask[]
+  systemBackups   SystemBackup[]
   payments      Payment[]
   accounts      ChartOfAccount[]
   journalEntries JournalEntry[]
@@ -1185,5 +1187,35 @@ model JournalLine {
 
   @@index([journalEntryId])
   @@index([accountId])
+  @@index([tenantId])
+}
+
+model SystemBackup {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  filename  String
+  sizeBytes Int
+  status    String   // PENDING, SUCCESS, FAILED
+  url       String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model AutomationTask {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  trigger     String   // SCHEDULED, EVENT_BASED
+  action      String   // SEND_EMAIL, SYNC_DATA, etc.
+  payload     Json?
+  status      String   @default("ACTIVE") // ACTIVE, PAUSED
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@index([tenantId])
 }

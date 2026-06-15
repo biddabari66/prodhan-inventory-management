@@ -4,6 +4,23 @@ import { emailService } from '../utils/email.service';
 import { logger } from '../config/logger';
 
 export function startCronJobs() {
+  // ── Daily Database Backup — 1am Bangladesh time (UTC+6 = 19:00 UTC) ──
+  cron.schedule('0 1 * * *', async () => {
+    logger.info('🕒 Running scheduled daily database backup...');
+    try {
+      const { BackupService } = await import('../services/backupService');
+      const firstTenant = await prisma.tenant.findFirst({ where: { isActive: true } });
+      if (firstTenant) {
+        await BackupService.createBackup(firstTenant.id);
+        logger.info('✅ Scheduled backup completed successfully.');
+      } else {
+        logger.warn('No active tenants found. Skipping scheduled backup.');
+      }
+    } catch (err: any) {
+      logger.error('Scheduled backup failed:', err.message);
+    }
+  }, { timezone: 'Asia/Dhaka' });
+
   // ── Daily Sales Digest — 9pm Bangladesh time (UTC+6 = 15:00 UTC) ──
   cron.schedule('0 15 * * *', async () => {
     logger.info('🕒 Running daily sales digest...');

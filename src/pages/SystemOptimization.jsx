@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Database, Archive, Monitor } from 'lucide-react';
 import DataArchiver from '../components/common/DataArchiver';
 import PerformanceMonitor from '../components/common/PerformanceMonitor';
+import DatabaseBackups from '../components/system/DatabaseBackups';
 
 export default function SystemOptimization() {
     return (
@@ -14,7 +15,7 @@ export default function SystemOptimization() {
             </div>
 
             <Tabs defaultValue="performance" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="performance" className="flex items-center gap-2">
                         <Monitor className="w-4 h-4" />
                         Performance Monitor
@@ -22,6 +23,10 @@ export default function SystemOptimization() {
                     <TabsTrigger value="archiver" className="flex items-center gap-2">
                         <Archive className="w-4 h-4" />
                         Data Archiver
+                    </TabsTrigger>
+                    <TabsTrigger value="backups" className="flex items-center gap-2">
+                        <Database className="w-4 h-4" />
+                        Database Backups
                     </TabsTrigger>
                 </TabsList>
                 
@@ -31,6 +36,10 @@ export default function SystemOptimization() {
                 
                 <TabsContent value="archiver" className="mt-6">
                     <DataArchiver />
+                </TabsContent>
+                
+                <TabsContent value="backups" className="mt-6">
+                    <DatabaseBackups />
                 </TabsContent>
             </Tabs>
         </div>

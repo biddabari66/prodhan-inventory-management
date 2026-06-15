@@ -16,6 +16,7 @@ import * as webhookCtrl from '../controllers/webhook.controller';
 import * as billingCtrl from '../controllers/billing.controller';
 import * as aiCtrl from '../controllers/ai.controller';
 import * as acctCtrl from '../controllers/accounting.controller';
+import * as systemCtrl from '../controllers/system.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
@@ -121,6 +122,14 @@ router.get('/attendance', requirePermission('attendance:read'), attendanceCtrl.l
 router.get('/attendance/my', attendanceCtrl.getMyAttendance);
 router.get('/attendance/daily-report', requirePermission('attendance:read'), attendanceCtrl.getDailyReport);
 router.get('/attendance/monthly-summary', requirePermission('attendance:read'), attendanceCtrl.getMonthlySummary);
+router.get('/accounting/reports/pnl', requirePermission('accounting:reports'), acctCtrl.generateProfitAndLoss);
+router.get('/accounting/reports/balances', requirePermission('accounting:reports'), acctCtrl.getAccountBalances);
+
+// ─── System / Backups ────────────────────────────────────────────────────────
+router.use('/system', authenticate, apiLimiter);
+router.get('/system/backups', requireRole('SUPER_ADMIN', 'ADMIN'), systemCtrl.listBackups);
+router.post('/system/backups', requireRole('SUPER_ADMIN', 'ADMIN'), systemCtrl.triggerBackup);
+router.get('/system/backups/download/:filename', systemCtrl.downloadBackup);
 
 // ─── Payroll ──────────────────────────────────────────────────────────────────
 router.use('/payroll', authenticate, apiLimiter);
