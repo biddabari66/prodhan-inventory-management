@@ -204,7 +204,7 @@ export default function InventoryImportExport({ inventory = [], onImportComplete
         publisher:     fields.publisher || '',
         edition:       fields.edition || '',
         isbn:          fields.isbn || '',
-        weight:        fields.weight ? parseFloat(String(fields.weight).replace(/,/g, '')) : undefined,
+        weight:        fields.weight ? (parseFloat(String(fields.weight).replace(/,/g, '')) || undefined) : undefined,
         hasVariants:   false,
         variants:      [],
         isCombo:       false,

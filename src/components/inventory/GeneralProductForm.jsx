@@ -217,10 +217,11 @@ export default function GeneralProductForm({ product, onUpdate, onClose }) {
         width_cm: parseFloat(formData.dimensions.width_cm) || 0,
         height_cm: parseFloat(formData.dimensions.height_cm) || 0
       },
-      department: 'prodhan_com_e_commerce',
+      departmentId: formData.department === 'prodhan_com_e_commerce' ? undefined : formData.department,
       category: formData.category,
       english_item_name: formData.english_item_name || (!containsBengali(formData.item_name) ? formData.item_name : ''),
       sku: formData.sku || '',
+      name: formData.item_name, // Map item_name to name to satisfy Zod schema
     };
 
     console.log('Submitting product data:', cleanedData);
