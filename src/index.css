@@ -144,7 +144,7 @@
 
   /* Stat card */
   .stat-card {
-    @apply erp-card p-5 cursor-pointer group;
+    @apply erp-card p-5 cursor-pointer;
   }
   .stat-card:hover {
     @apply -translate-y-0.5;

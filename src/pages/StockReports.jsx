@@ -14,10 +14,12 @@ import {
 } from "@/components/ui/table";
 import { BarChart3, Download, Package, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import { TableSkeleton, StatGridSkeleton, ErrorState } from '@/components/common/Skeletons';
 
 export default function StockReports() {
   const [inventory, setInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -27,11 +29,13 @@ export default function StockReports() {
 
   const loadInventoryData = async () => {
     setIsLoading(true);
+    setIsError(false);
     try {
       const inventoryData = await Inventory.list();
       setInventory(inventoryData);
     } catch (error) {
       console.error("Error loading inventory data:", error);
+      setIsError(true);
     } finally {
       setIsLoading(false);
     }
@@ -85,8 +89,21 @@ export default function StockReports() {
     return 'In Stock';
   };
 
-  if (isLoading) {
-    return <div className="p-6">Loading stock reports...</div>;
+  if (isLoading && inventory.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-background">
+        <StatGridSkeleton count={4} />
+        <TableSkeleton rows={10} cols={8} />
+      </div>
+    );
+  }
+
+  if (isError && inventory.length === 0) {
+    return (
+      <div className="p-6">
+        <ErrorState message="Failed to load stock reports." onRetry={loadInventoryData} />
+      </div>
+    );
   }
 
   return (

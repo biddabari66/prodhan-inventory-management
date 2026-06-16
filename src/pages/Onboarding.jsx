@@ -8,6 +8,9 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  Network,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 import api from "@/api/client";
@@ -57,11 +60,17 @@ const STEPS = [
   { title: "Company", icon: Building2 },
   { title: "Size", icon: Users },
   { title: "Discovery", icon: Compass },
+  { title: "Your Companies", icon: Network },
 ];
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  // Sub-companies created during onboarding
+  const [subCompanyName, setSubCompanyName] = useState("");
+  const [addingCompany, setAddingCompany] = useState(false);
+  const [companies, setCompanies] = useState([]); // [{ id, name }]
   const [form, setForm] = useState({
     companyName: "",
     industry: "",
@@ -107,6 +116,37 @@ export default function Onboarding() {
     return true;
   }
 
+  async function handleAddCompany() {
+    const name = subCompanyName.trim();
+    if (!name) {
+      toast.error("Please enter a company name.");
+      return;
+    }
+    if (companies.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("You already added that company.");
+      return;
+    }
+    setAddingCompany(true);
+    try {
+      const res = await api.post("/companies", { name, branding: {} });
+      const created = res?.data?.data ?? res?.data ?? {};
+      setCompanies((prev) => [...prev, { id: created.id, name: created.name || name }]);
+      setSubCompanyName("");
+      toast.success(`Added "${name}" 🐝`);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        "Couldn't add that company. Please try again.";
+      toast.error(msg);
+    } finally {
+      setAddingCompany(false);
+    }
+  }
+
+  function handleRemoveCompany(id) {
+    setCompanies((prev) => prev.filter((c) => c.id !== id));
+  }
+
   function handleNext() {
     if (!validateStep()) return;
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -130,6 +170,13 @@ export default function Onboarding() {
         phone: form.phone.trim(),
         address: form.address.trim(),
       });
+
+      // Set the first created sub-company as the active company.
+      if (companies.length > 0 && companies[0].id) {
+        localStorage.setItem("activeCompanyId", companies[0].id);
+        localStorage.setItem("activeCompany", companies[0].name);
+      }
+
       toast.success("Welcome to ZYPRA ERP! 🐝");
       window.location.href = "/";
     } catch (err) {
@@ -333,6 +380,89 @@ export default function Onboarding() {
                   onChange={(e) => update("address", e.target.value)}
                 />
               </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <Label className="flex items-center gap-2 text-base">
+                  <Network className="h-4 w-4 text-amber-500" />
+                  Add your sub-companies
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {form.companyName.trim() || "Your business"} can have one or
+                  more sub-companies (e.g. Prodhan.com). Add them now — you can
+                  always add more later.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  placeholder="e.g. Prodhan.com"
+                  value={subCompanyName}
+                  onChange={(e) => setSubCompanyName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCompany();
+                    }
+                  }}
+                  disabled={addingCompany}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddCompany}
+                  disabled={addingCompany || !subCompanyName.trim()}
+                  className="bg-amber-500 hover:bg-amber-600 text-white shrink-0"
+                >
+                  {addingCompany ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Add
+                </Button>
+              </div>
+
+              {companies.length === 0 ? (
+                <div className="rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/40 p-6 text-center">
+                  <Building2 className="mx-auto mb-2 h-7 w-7 text-amber-400" />
+                  <p className="text-sm text-muted-foreground">
+                    No sub-companies yet. Add at least one to get started.
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {companies.map((c, i) => (
+                    <li
+                      key={c.id || c.name}
+                      className="flex items-center justify-between rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-amber-500" />
+                        <span className="truncate font-medium text-slate-800">
+                          {c.name}
+                        </span>
+                        {i === 0 && (
+                          <span className="ml-1 shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                            Active
+                          </span>
+                        )}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveCompany(c.id)}
+                        className="h-8 w-8 text-slate-400 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 

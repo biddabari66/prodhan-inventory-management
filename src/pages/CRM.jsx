@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { withPermission } from '../components/common/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
+import { StatGridSkeleton, TableSkeleton } from '@/components/common/Skeletons';
 import LeadExcelUpload from '../components/crm/LeadExcelUpload';
 import KanbanBoard from '../components/crm/KanbanBoard';
 import Leaderboard from '../components/crm/Leaderboard';
@@ -277,13 +278,17 @@ function CRMPage() {
         />
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-          <StatCard icon={Users} label="Total Leads" value={stats.total} sub={`+${stats.todayLeads} today`} tone="blue" index={0} />
-          <StatCard icon={TrendingUp} label="Active Pipeline" value={stats.active} sub={`${stats.weekLeads} new this week`} tone="orange" index={1} />
-          <StatCard icon={Flame} label="Hot Leads" value={stats.hotLeads} sub="Score 70+" tone="red" index={2} />
-          <StatCard icon={CheckCircle} label="Converted" value={stats.converted} sub={`${stats.conversionRate}% conversion`} tone="green" index={3} />
-          <StatCard icon={Banknote} label="Pipeline Value" value={`৳${(stats.pipelineValue / 1000).toFixed(0)}K`} sub="Open opportunities" tone="violet" index={4} />
-        </div>
+        {leadsLoading ? (
+          <StatGridSkeleton count={5} />
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+            <StatCard icon={Users} label="Total Leads" value={stats.total} sub={`+${stats.todayLeads} today`} tone="blue" index={0} />
+            <StatCard icon={TrendingUp} label="Active Pipeline" value={stats.active} sub={`${stats.weekLeads} new this week`} tone="orange" index={1} />
+            <StatCard icon={Flame} label="Hot Leads" value={stats.hotLeads} sub="Score 70+" tone="red" index={2} />
+            <StatCard icon={CheckCircle} label="Converted" value={stats.converted} sub={`${stats.conversionRate}% conversion`} tone="green" index={3} />
+            <StatCard icon={Banknote} label="Pipeline Value" value={`৳${(stats.pipelineValue / 1000).toFixed(0)}K`} sub="Open opportunities" tone="violet" index={4} />
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-white dark:bg-slate-900 border shadow-sm h-12 p-1 rounded-xl w-full sm:w-auto overflow-x-auto justify-start">
@@ -373,80 +378,84 @@ function CRMPage() {
             </Card>
 
             <Card className="bg-white dark:bg-slate-900 border-0 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800">
-                      <TableHead>Lead</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLeads.slice(0, 100).map((lead) => {
-                      const score = scoreLead(lead);
-                      const tier = scoreTier(score);
-                      return (
-                        <TableRow key={lead.id} className="hover:bg-amber-50/40 dark:hover:bg-amber-950/20">
-                          <TableCell>
-                            <p className="font-medium">{lead.student_name}</p>
-                            {lead.priority && (
-                              <p className="text-[10px] text-slate-400">{titleCase(lead.priority)} priority</p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1 text-sm">
-                                <Phone className="w-3 h-3" />
-                                {lead.phone}
-                              </div>
-                              {lead.email && (
-                                <div className="flex items-center gap-1 text-xs text-slate-500">
-                                  <Mail className="w-3 h-3" />
-                                  {lead.email}
-                                </div>
+              {leadsLoading ? (
+                <div className="p-4"><TableSkeleton rows={8} cols={8} /></div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50 dark:bg-slate-800">
+                        <TableHead>Lead</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLeads.slice(0, 100).map((lead) => {
+                        const score = scoreLead(lead);
+                        const tier = scoreTier(score);
+                        return (
+                          <TableRow key={lead.id} className="hover:bg-amber-50/40 dark:hover:bg-amber-950/20">
+                            <TableCell>
+                              <p className="font-medium">{lead.student_name}</p>
+                              {lead.priority && (
+                                <p className="text-[10px] text-slate-400">{titleCase(lead.priority)} priority</p>
                               )}
-                            </div>
-                          </TableCell>
-                          <TableCell><Badge variant="outline">{titleCase(lead.lead_source)}</Badge></TableCell>
-                          <TableCell className="font-semibold tabular-nums">৳{(Number(lead.value) || 0).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Select value={lead.lead_status} onValueChange={(val) => handleStatusChange(lead, val)}>
-                              <SelectTrigger className="w-36 h-8">{getStatusBadge(lead.lead_status)}</SelectTrigger>
-                              <SelectContent>
-                                {STATUSES.map((s) => <SelectItem key={s} value={s}>{titleCase(s)}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${tier.badge}`}>{score}</span>
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-500">
-                            {lead.created_date ? format(new Date(lead.created_date), 'dd MMM yyyy') : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => { setSelectedLead(lead); setIsLeadDetailsOpen(true); }}>
-                              View
-                            </Button>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1 text-sm">
+                                  <Phone className="w-3 h-3" />
+                                  {lead.phone}
+                                </div>
+                                {lead.email && (
+                                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                                    <Mail className="w-3 h-3" />
+                                    {lead.email}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell><Badge variant="outline">{titleCase(lead.lead_source)}</Badge></TableCell>
+                            <TableCell className="font-semibold tabular-nums">৳{(Number(lead.value) || 0).toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Select value={lead.lead_status} onValueChange={(val) => handleStatusChange(lead, val)}>
+                                <SelectTrigger className="w-36 h-8">{getStatusBadge(lead.lead_status)}</SelectTrigger>
+                                <SelectContent>
+                                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{titleCase(s)}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${tier.badge}`}>{score}</span>
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-500">
+                              {lead.created_date ? format(new Date(lead.created_date), 'dd MMM yyyy') : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" onClick={() => { setSelectedLead(lead); setIsLeadDetailsOpen(true); }}>
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {filteredLeads.length === 0 && !leadsLoading && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                            No leads match your filters.
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
-                    {filteredLeads.length === 0 && !leadsLoading && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                          No leads match your filters.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </Card>
           </TabsContent>
 

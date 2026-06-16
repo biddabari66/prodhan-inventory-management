@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/api/client';
+import { erp } from '@/api/erpClient';
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import {
-  User as UserIcon, Building2, Phone, Mail, Calendar, DollarSign, Edit, Briefcase, Lock, Settings, AlertTriangle, Save, Loader2, X
+  User as UserIcon, Building2, Phone, Mail, Calendar, DollarSign, Edit, Briefcase, Lock, Settings, AlertTriangle, Save, Loader2, X, Network, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UploadFile } from '@/integrations/Core';
@@ -48,6 +49,53 @@ export default function UserProfile({ user, onUpdate, onClose }) {
     queryFn: () => api.get('/departments', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
   });
   const departments = Array.isArray(deptResp) ? deptResp : [];
+
+  // ─── Company & Department (sub-company) section ──────────────────────────────
+  const [selectedCompanyId, setSelectedCompanyId] = useState(
+    () => localStorage.getItem('activeCompanyId') || ''
+  );
+  const [savingDepartment, setSavingDepartment] = useState(false);
+
+  const { data: companyResp } = useQuery({
+    queryKey: ['companies'],
+    queryFn: () => api.get('/companies', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
+  });
+  const companies = Array.isArray(companyResp) ? companyResp : [];
+
+  // Departments scoped to the selected company.
+  const { data: companyDeptResp } = useQuery({
+    queryKey: ['departments', 'by-company', selectedCompanyId],
+    queryFn: () => api.get('/departments', { params: { companyId: selectedCompanyId } })
+      .then(r => r.data?.data ?? r.data ?? []),
+    enabled: !!selectedCompanyId
+  });
+  const companyDepartments = Array.isArray(companyDeptResp) ? companyDeptResp : [];
+
+  const handleSelectCompany = (id) => {
+    setSelectedCompanyId(id);
+    const company = companies.find(c => c.id === id);
+    if (company) {
+      localStorage.setItem('activeCompanyId', company.id);
+      localStorage.setItem('activeCompany', company.name || '');
+      toast.success(`Switched to ${company.name}`);
+    }
+  };
+
+  const handleAssignDepartment = async (departmentId) => {
+    if (!currentUser?.id) return toast.error('Could not determine current user.');
+    setSavingDepartment(true);
+    try {
+      await erp.entities.User.update(currentUser.id, { department_id: departmentId });
+      setCurrentUser(prev => prev ? { ...prev, department_id: departmentId } : prev);
+      const dept = companyDepartments.find(d => d.id === departmentId);
+      toast.success(`Profile assigned to ${dept?.name || 'department'}`);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error(`Failed to assign department: ${err.message}`);
+    } finally {
+      setSavingDepartment(false);
+    }
+  };
 
   // Fetch current user to check if they are admin
   useEffect(() => {
@@ -220,6 +268,9 @@ export default function UserProfile({ user, onUpdate, onClose }) {
           <Button variant={activeTab === 'work' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'work' ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : ''}`} onClick={() => setActiveTab('work')}>
             <Briefcase className="w-4 h-4 mr-3" /> Work & Role
           </Button>
+          <Button variant={activeTab === 'company' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'company' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : ''}`} onClick={() => setActiveTab('company')}>
+            <Network className="w-4 h-4 mr-3" /> Company &amp; Department
+          </Button>
           <Button variant={activeTab === 'settings' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'settings' ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : ''}`} onClick={() => setActiveTab('settings')}>
             <Settings className="w-4 h-4 mr-3" /> Settings
           </Button>
@@ -332,6 +383,86 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                 <div className="pt-6 border-t border-slate-100">
                   <h3 className="text-lg font-medium mb-4">Shift Settings</h3>
                   <ShiftSelector userId={user.id} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* COMPANY & DEPARTMENT TAB */}
+          {activeTab === 'company' && (
+            <Card className="border-0 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between border-b bg-amber-50/50 p-6">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Network className="w-5 h-5 text-amber-500" /> Company &amp; Department
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* Current assignment summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-4">
+                    <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">Active Company</p>
+                    <p className="mt-1 font-semibold text-slate-800 truncate">
+                      {companies.find(c => c.id === selectedCompanyId)?.name
+                        || localStorage.getItem('activeCompany')
+                        || 'None selected'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
+                    <p className="text-xs font-medium text-violet-700 uppercase tracking-wide">Your Department</p>
+                    <p className="mt-1 font-semibold text-slate-800 truncate">
+                      {companyDepartments.find(d => d.id === currentUser?.department_id)?.name
+                        || departments.find(d => d.id === currentUser?.department_id)?.name
+                        || 'Not assigned'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Company selector */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-amber-500" /> Company (Sub-company)
+                  </Label>
+                  <Select value={selectedCompanyId} onValueChange={handleSelectCompany}>
+                    <SelectTrigger><SelectValue placeholder="Select a company" /></SelectTrigger>
+                    <SelectContent>
+                      {companies.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-slate-400">No companies found</div>
+                      ) : (
+                        companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">Selecting a company sets it as your active workspace.</p>
+                </div>
+
+                {/* Department selector */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-violet-500" /> Department
+                  </Label>
+                  <Select
+                    value={currentUser?.department_id || ''}
+                    onValueChange={handleAssignDepartment}
+                    disabled={!selectedCompanyId || savingDepartment}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={selectedCompanyId ? 'Select your department' : 'Select a company first'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companyDepartments.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-slate-400">
+                          {selectedCompanyId ? 'No departments in this company' : 'Select a company first'}
+                        </div>
+                      ) : (
+                        companyDepartments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    {savingDepartment
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving your department…</>
+                      : <><Check className="w-3 h-3 text-emerald-500" /> Picking a department saves it to your profile instantly.</>}
+                  </p>
                 </div>
               </CardContent>
             </Card>

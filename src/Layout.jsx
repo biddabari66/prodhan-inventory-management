@@ -939,6 +939,7 @@ export default function Layout({ children, currentPageName }) {
         items: [
           hp('user_access_manager') && { label: 'User & Roles', url: createPageUrl('UserAccessManager'), icon: Shield, color: 'text-slate-500' },
           hp('user_access_manager') && { label: 'Company Profiles', url: createPageUrl('DepartmentProfile'), icon: Building2, color: 'text-orange-500' },
+          hp('integrations') && { label: 'Hardware Config', url: createPageUrl('HardwareConfiguration'), icon: Settings, color: 'text-cyan-500' },
           hp('integrations') && { label: 'Automation Hub', url: createPageUrl('Automation'), icon: Zap, color: 'text-amber-500' },
           hp('integrations') && { label: 'Billing', url: createPageUrl('Billing'), icon: CreditCard, color: 'text-emerald-500' },
           hp('audit_trail') && { label: 'Audit Trail', url: createPageUrl('AuditTrailViewer'), icon: FileText, color: 'text-slate-400' },
@@ -1015,6 +1016,7 @@ export default function Layout({ children, currentPageName }) {
     { section: t('Settings') },
     { label: t('User Access'), url: createPageUrl('UserAccessManager'), icon: Shield, colorClass: 'text-slate-600', permission: 'user_access_manager' },
     { label: t('Company Profiles'), url: createPageUrl('DepartmentProfile'), icon: Building2, colorClass: 'text-orange-600', permission: 'user_access_manager' },
+    { label: t('Hardware Config'), url: createPageUrl('HardwareConfiguration'), icon: Settings, colorClass: 'text-cyan-600', permission: 'integrations' },
     { label: t('Integrations'), url: createPageUrl('Integrations'), icon: Link2, colorClass: 'text-slate-600', permission: 'integrations' },
     { label: t('Automation'), url: createPageUrl('Automation'), icon: Zap, colorClass: 'text-amber-500', permission: 'integrations' },
     { label: t('System Alerts'), url: createPageUrl('AlertsConfiguration'), icon: Bell, colorClass: 'text-slate-600', permission: 'system_alerts' },

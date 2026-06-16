@@ -21,6 +21,7 @@ import MobileCustomerCard from '../components/customers/MobileCustomerCard';
 import WelcomeCallList from '../components/customers/WelcomeCallList';
 import FeedbackCallList from '../components/customers/FeedbackCallList';
 import DynamicCSVImport from '../components/customers/DynamicCSVImport';
+import { TableSkeleton, StatGridSkeleton, CardGridSkeleton, ErrorState, PageLoader } from '@/components/common/Skeletons';
 
 function CustomerManagementPage() {
   // CRITICAL: Permission-based access control
@@ -51,9 +52,10 @@ function CustomerManagementPage() {
   const pageSize = 20;
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: rawCustomers = [], refetch: refetchCustomers } = useQuery({
+  const { data: rawCustomers = [], refetch: refetchCustomers, isLoading: customersLoading, isError: customersError } = useQuery({
     queryKey: ['customers-list'],
     queryFn: () => erp.entities.Customer.list('-created_date', 1000),
+    placeholderData: (prev) => prev,
   });
 
   // Normalize backend (name/phone/email) to the shape this page renders.
@@ -110,6 +112,8 @@ function CustomerManagementPage() {
     }),
     [customers]
   );
+
+  const firstLoad = customersLoading && customers.length === 0;
 
   const handleViewDetails = (customer) => {
     setSelectedCustomer(customer);
@@ -253,12 +257,16 @@ function CustomerManagementPage() {
         )}
 
         {/* Stats Grid */}
+        {firstLoad ? <StatGridSkeleton count={4} /> : customersError ? (
+          <ErrorState message="Failed to load customers." onRetry={refetchCustomers} />
+        ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={Users} label="Total Customers" value={stats.total} tone="orange" index={0} />
           <StatCard icon={TrendingUp} label="VIP Customers" value={stats.vip} sub="৳50K+ spent" tone="violet" index={1} />
           <StatCard icon={Package} label="Regular Customers" value={stats.regular} sub="৳10K-50K spent" tone="blue" index={2} />
           <StatCard icon={DollarSign} label="Total Revenue" value={`৳${(stats.totalRevenue / 1000).toFixed(1)}K`} tone="green" index={3} />
         </div>
+        )}
 
         {/* Search & Filters */}
         <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-sm rounded-xl">
@@ -322,7 +330,9 @@ function CustomerManagementPage() {
             <span className="text-sm font-semibold text-slate-900">Customers</span>
             <Badge className="bg-slate-100 text-slate-700 font-medium rounded-full px-2 text-xs">{filteredCustomers.length}</Badge>
           </div>
-          {filteredCustomers.length === 0 ? (
+          {firstLoad ? (
+            <CardGridSkeleton count={6} />
+          ) : filteredCustomers.length === 0 ? (
             <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-sm rounded-xl">
               <CardContent className="py-12 text-center">
                 <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
@@ -376,7 +386,13 @@ function CustomerManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers.length === 0 ? (
+                  {firstLoad ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="p-4">
+                        <TableSkeleton rows={8} cols={8} />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredCustomers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-16">
                         <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
@@ -781,9 +797,7 @@ function CustomerDetails({ customer }) {
 
       <TabsContent value="orders" className="mt-4">
         {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-slate-500">Loading orders...</p>
-          </div>
+          <PageLoader label="Loading orders…" />
         ) : orders.length === 0 ? (
           <div className="text-center py-12">
             <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
@@ -843,9 +857,7 @@ function CustomerDetails({ customer }) {
 
       <TabsContent value="shipped" className="mt-4">
         {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-slate-500">Loading...</p>
-          </div>
+          <PageLoader />
         ) : shippedOrders.length === 0 ? (
           <div className="text-center py-12">
             <Truck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
@@ -896,9 +908,7 @@ function CustomerDetails({ customer }) {
 
       <TabsContent value="returns" className="mt-4">
         {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-slate-500">Loading...</p>
-          </div>
+          <PageLoader />
         ) : returns.length === 0 ? (
           <div className="text-center py-12">
             <RotateCcw className="w-12 h-12 mx-auto text-slate-300 mb-3" />

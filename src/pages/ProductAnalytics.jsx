@@ -26,6 +26,7 @@ import ROIGenerator from '../components/analytics/ROIGenerator';
 import ProductTrends from '../components/analytics/ProductTrends';
 import LowStockAlerts from '../components/analytics/LowStockAlerts';
 import InventoryABCAnalysis from '../components/analytics/InventoryABCAnalysis';
+import { TableSkeleton, StatGridSkeleton, ErrorState, Spinner } from '@/components/common/Skeletons';
 
 const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#06B6D4', '#A855F7'];
 
@@ -37,12 +38,13 @@ function ProductAnalyticsDashboard() {
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isExporting, setIsExporting] = useState(false);
 
-  const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
+  const { data: inventory = [], isLoading: inventoryLoading, isError: inventoryError, refetch: refetchInventory } = useQuery({
     queryKey: ['inventory-analytics'],
     queryFn: () => erp.entities.Inventory.list('-updated_date', 2000),
     staleTime: 3 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: allOrders = [] } = useQuery({
@@ -140,15 +142,21 @@ function ProductAnalyticsDashboard() {
     }
   };
 
-  if (inventoryLoading) {
+  if (inventoryLoading && inventory.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA]">
+        <div className="w-full px-3 py-3 sm:p-6 space-y-4 sm:space-y-6">
+          <StatGridSkeleton count={6} />
+          <TableSkeleton rows={8} cols={4} />
+        </div>
+      </div>
+    );
+  }
+
+  if (inventoryError && inventory.length === 0) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto">
-            <Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" />
-          </div>
-          <p className="text-slate-600 font-medium">Loading analytics...</p>
-        </div>
+        <ErrorState message="Failed to load analytics data." onRetry={refetchInventory} />
       </div>
     );
   }
@@ -270,9 +278,9 @@ function ProductAnalyticsDashboard() {
           <div className="lg:col-span-2 space-y-6">
             {analyticsLoading && selectedProductIds.length > 0 && (
               <Card className="p-8">
-                <div className="text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-violet-600 mx-auto mb-3" />
-                  <p className="text-slate-600">Analyzing {selectedProductIds.length} products...</p>
+                <div className="flex flex-col items-center justify-center gap-3 text-slate-600">
+                  <Spinner size={28} />
+                  <p>Analyzing {selectedProductIds.length} products…</p>
                 </div>
               </Card>
             )}

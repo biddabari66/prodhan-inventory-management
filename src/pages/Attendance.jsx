@@ -39,6 +39,7 @@ const ManualAttendanceForm = React.lazy(() => import('../components/attendance/M
 const ShiftManagement = React.lazy(() => import('../components/attendance/ShiftManagement'));
 const ShiftAssignmentManagement = React.lazy(() => import('../components/attendance/ShiftAssignmentManagement'));
 const OfficeLocationPicker = React.lazy(() => import('../components/attendance/OfficeLocationPicker'));
+const AllEmployeesAttendance = React.lazy(() => import('../components/attendance/AllEmployeesAttendance'));
 
 // Rate limit retry utility
 const withRateLimitRetry = async (apiCall, maxRetries = 3, baseDelay = 1000) => {
@@ -715,6 +716,7 @@ export default function AttendancePage() {
           <TabsTrigger value="checkinout" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">Check In/Out</TabsTrigger>
           <TabsTrigger value="analytics" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">Analytics</TabsTrigger>
           <TabsTrigger value="manual" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">Manual Entry</TabsTrigger>
+          {isAdmin() && <TabsTrigger value="all_employees" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">👥 All Employees</TabsTrigger>}
           {isAdmin() && <TabsTrigger value="location" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">📍 Location</TabsTrigger>}
           {isAdmin() && <TabsTrigger value="settings" className="h-10 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white">⚙️ Settings</TabsTrigger>}
         </TabsList>
@@ -823,6 +825,19 @@ export default function AttendancePage() {
             />
           </React.Suspense>
         </TabsContent>
+
+        {/* All Employees Tab - Admin Only */}
+        {isAdmin() && (
+          <TabsContent value="all_employees" className="space-y-6">
+            <React.Suspense fallback={
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+              </div>
+            }>
+              <AllEmployeesAttendance />
+            </React.Suspense>
+          </TabsContent>
+        )}
 
         {/* Location Tab - Admin Only (Office Location Picker) */}
         {isAdmin() && (

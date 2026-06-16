@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader';
+import { TableSkeleton, StatGridSkeleton, ErrorState } from '@/components/common/Skeletons';
 import InvoiceGenerator from '../components/invoices/InvoiceGenerator';
 import OrderInvoice from '../components/invoices/OrderInvoice';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1140,10 +1140,11 @@ function ProcurementPage() {
     staleTime: 5 * 60 * 1000
   });
 
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+  const { data: orders = [], isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useQuery({
     queryKey: ['orders'],
     queryFn: () => Order.list('-order_date', 500),
-    staleTime: 1 * 60 * 1000
+    staleTime: 1 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const { data: customers = [] } = useQuery({
@@ -1808,11 +1809,21 @@ function ProcurementPage() {
     return <Badge className={className}>{label}</Badge>;
   };
 
-  if (ordersLoading) {
+  const firstLoad = ordersLoading && orders.length === 0;
+
+  if (firstLoad) {
     return (
       <div className="p-6 space-y-6">
-        <CardSkeleton count={3} />
-        <TableSkeleton rows={10} columns={8} />
+        <StatGridSkeleton count={4} />
+        <TableSkeleton rows={10} cols={8} />
+      </div>
+    );
+  }
+
+  if (ordersError && orders.length === 0) {
+    return (
+      <div className="p-6">
+        <ErrorState message="Failed to load orders." onRetry={refetchOrders} />
       </div>
     );
   }

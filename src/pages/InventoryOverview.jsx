@@ -31,6 +31,7 @@ import { Lock } from 'lucide-react';
 import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
+import { TableSkeleton, StatGridSkeleton } from '@/components/common/Skeletons';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VARIANT UTILITIES
@@ -677,17 +678,29 @@ function InventoryOverviewPage() {
   const [isScannerOpen,         setIsScannerOpen]         = useState(false);
   const [variantFilter,         setVariantFilter]         = useState('all');
 
-  const { data: deptResp } = useQuery({
-    queryKey: ['departments'],
-    queryFn: () => erp.api.get('/departments', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
+  // User-facing "Company" selector — lists sub-companies. The selected company id
+  // is fed to the inventory/PO/category queries via the existing `selectedDepartment`
+  // param so the data scoping logic stays unchanged.
+  const { data: companyResp } = useQuery({
+    queryKey: ['companies'],
+    queryFn: () => erp.api.get('/companies', { params: { limit: 100 } }).then(r => r.data?.data ?? r.data ?? [])
   });
-  const departments = Array.isArray(deptResp) ? deptResp : [];
+  const companies = Array.isArray(companyResp) ? companyResp : [];
+
+  const handleSelectCompany = (id) => {
+    setSelectedDepartment(id);
+    const company = companies.find(c => c.id === id);
+    localStorage.setItem('activeCompanyId', id);
+    if (company) localStorage.setItem('activeCompany', company.name || '');
+  };
 
   useEffect(() => {
-    if (departments.length > 0 && !selectedDepartment) {
-      setSelectedDepartment(departments[0].id);
+    if (companies.length > 0 && !selectedDepartment) {
+      const active = localStorage.getItem('activeCompanyId');
+      const initial = companies.find(c => c.id === active)?.id || companies[0].id;
+      setSelectedDepartment(initial);
     }
-  }, [departments, selectedDepartment]);
+  }, [companies, selectedDepartment]);
 
   const { hasPermission: canCreate } = usePermission('inventory_overview', 'can_create');
   const { hasPermission: canEdit }   = usePermission('inventory_overview', 'can_edit');
@@ -1035,19 +1048,8 @@ function InventoryOverviewPage() {
               <div className="h-10 w-28 bg-slate-200 rounded-xl" />
             </div>
           </div>
-          {/* Stats skeleton */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_,i) => (
-              <div key={i} className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="h-10 w-10 bg-slate-100 rounded-xl" />
-                  <div className="h-4 w-16 bg-slate-100 rounded-full" />
-                </div>
-                <div className="h-8 w-20 bg-slate-200 rounded-lg" />
-                <div className="h-3 w-24 bg-slate-100 rounded-full" />
-              </div>
-            ))}
-          </div>
+          {/* Stats skeleton (shared kit) */}
+          <StatGridSkeleton count={4} />
           {/* Filter skeleton */}
           <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
             <div className="h-10 w-full bg-slate-100 rounded-xl" />
@@ -1055,28 +1057,8 @@ function InventoryOverviewPage() {
               {[...Array(5)].map((_,i) => <div key={i} className="h-8 w-20 bg-slate-100 rounded-full" />)}
             </div>
           </div>
-          {/* Table skeleton */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4 flex gap-4">
-              <div className="h-5 w-32 bg-slate-200 rounded" />
-              <div className="h-5 w-16 bg-slate-100 rounded-full" />
-            </div>
-            <div className="divide-y divide-slate-50">
-              {[...Array(8)].map((_,i) => (
-                <div key={i} className="flex items-center gap-4 px-6 py-4">
-                  <div className="h-4 w-4 bg-slate-100 rounded" />
-                  <div className="h-9 w-9 bg-slate-100 rounded-lg flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-48 bg-slate-200 rounded" style={{ width: `${180 + (i % 4) * 30}px` }} />
-                    <div className="h-3 w-28 bg-slate-100 rounded" />
-                  </div>
-                    <div className="h-6 w-20 bg-slate-100 rounded-full" />
-                    <div className="h-8 w-12 bg-slate-100 rounded-lg" />
-                    {[...Array(5)].map((_,j) => <div key={j} className="h-4 w-12 bg-slate-100 rounded" />)}
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Table skeleton (shared kit) */}
+          <TableSkeleton rows={8} cols={7} />
         </div>
       </div>
     );
@@ -1100,13 +1082,13 @@ function InventoryOverviewPage() {
           subtitle="Manage all products and stock"
           actions={
             <div className="flex items-center gap-2">
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={selectedDepartment} onValueChange={handleSelectCompany}>
                 <SelectTrigger className="w-[180px] h-10 bg-white border-slate-200">
-                  <SelectValue placeholder="Select Department" />
+                  <SelectValue placeholder="Select Company" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map(dept => (
-                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

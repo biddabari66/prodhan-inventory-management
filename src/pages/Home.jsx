@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
+import { StatGridSkeleton, TableSkeleton } from '@/components/common/Skeletons';
 
 const bdt = (n) => '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 0 });
 
@@ -100,41 +101,43 @@ export default function Home() {
     else setGreeting('Good Evening');
   }, []);
 
-  const { data: user } = useQuery({
+  const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => erp.auth.me(),
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: isStatsLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => api.get('/dashboard/stats').then((r) => r.data),
     retry: false,
   });
 
-  const { data: finance } = useQuery({
+  const { data: finance, isLoading: isFinanceLoading } = useQuery({
     queryKey: ['finance-dashboard'],
     queryFn: () => api.get('/finance/dashboard').then((r) => r.data),
     retry: false,
   });
 
-  const { data: leadStats } = useQuery({
+  const { data: leadStats, isLoading: isLeadStatsLoading } = useQuery({
     queryKey: ['lead-stats'],
     queryFn: () => api.get('/crm/leads/stats').then((r) => r.data),
     retry: false,
   });
 
-  const { data: recentOrders = [] } = useQuery({
+  const { data: recentOrders = [], isLoading: isOrdersLoading } = useQuery({
     queryKey: ['recent-orders'],
     queryFn: () => erp.entities.Order.list('-created_date', 8),
     retry: false,
   });
 
-  const { data: lowStock = [] } = useQuery({
+  const { data: lowStock = [], isLoading: isLowStockLoading } = useQuery({
     queryKey: ['low-stock-home'],
     queryFn: () => api.get('/inventory/low-stock').then((r) => r.data?.data ?? r.data ?? []),
     retry: false,
   });
+
+  const isDataLoading = isStatsLoading || isFinanceLoading || isLeadStatsLoading;
 
   // 7-day trend
   const trend = React.useMemo(() => {
@@ -174,44 +177,48 @@ export default function Home() {
       />
 
       {/* ── KPI Cards ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <KpiCard
-          title="Today's Revenue"
-          rawValue={stats?.todayRevenue}
-          sub={`${stats?.todayOrders ?? 0} orders`}
-          icon={DollarSign}
-          tone="green"
-          to="/Sales"
-          index={0}
-        />
-        <KpiCard
-          title="Month Revenue"
-          rawValue={finance?.revenue}
-          sub={`Profit ${bdt(finance?.profit)}`}
-          icon={TrendingUp}
-          tone="orange"
-          to="/FinanceDashboard"
-          index={1}
-        />
-        <KpiCard
-          title="Month Expenses"
-          rawValue={finance?.expenses}
-          sub={`${finance?.pendingExpenses ?? 0} pending`}
-          icon={TrendingDown}
-          tone="red"
-          to="/Expenses"
-          index={2}
-        />
-        <KpiCard
-          title="New Leads"
-          value={stats?.newLeads ?? leadStats?.byStatus?.NEW}
-          sub={leadStats ? `${leadStats?.conversionRate ?? 0}% conversion` : undefined}
-          icon={UserPlus}
-          tone="blue"
-          to="/CRM"
-          index={3}
-        />
-      </div>
+      {isDataLoading ? (
+        <StatGridSkeleton count={4} />
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <KpiCard
+            title="Today's Revenue"
+            rawValue={stats?.todayRevenue}
+            sub={`${stats?.todayOrders ?? 0} orders`}
+            icon={DollarSign}
+            tone="green"
+            to="/Sales"
+            index={0}
+          />
+          <KpiCard
+            title="Month Revenue"
+            rawValue={finance?.revenue}
+            sub={`Profit ${bdt(finance?.profit)}`}
+            icon={TrendingUp}
+            tone="orange"
+            to="/FinanceDashboard"
+            index={1}
+          />
+          <KpiCard
+            title="Month Expenses"
+            rawValue={finance?.expenses}
+            sub={`${finance?.pendingExpenses ?? 0} pending`}
+            icon={TrendingDown}
+            tone="red"
+            to="/Expenses"
+            index={2}
+          />
+          <KpiCard
+            title="New Leads"
+            value={stats?.newLeads ?? leadStats?.byStatus?.NEW}
+            sub={leadStats ? `${leadStats?.conversionRate ?? 0}% conversion` : undefined}
+            icon={UserPlus}
+            tone="blue"
+            to="/CRM"
+            index={3}
+          />
+        </div>
+      )}
 
       {/* ── Chart + Alerts row ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -300,37 +307,43 @@ export default function Home() {
             View all <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full erp-table">
-            <thead>
-              <tr>
-                <th className="text-left">Order #</th>
-                <th className="text-left">Customer</th>
-                <th className="text-left hidden sm:table-cell">Date</th>
-                <th className="text-left">Status</th>
-                <th className="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentOrders.length === 0 && (
-                <tr><td colSpan={5} className="py-10 text-center text-sm text-slate-400">No orders yet — create your first sale!</td></tr>
-              )}
-              {recentOrders.map((o, i) => (
-                <tr key={o.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
-                  <td className="font-mono text-xs text-slate-500">{o.order_number || `#${String(i+1).padStart(4,'0')}`}</td>
-                  <td className="font-medium text-slate-800 dark:text-slate-200">{o.customer_name}</td>
-                  <td className="text-slate-400 hidden sm:table-cell text-xs">{(o.order_date || o.created_date || '').slice(0,10)}</td>
-                  <td>
-                    <span className={`status-pill text-[11px] ${STATUS_STYLES[o.order_status] || 'badge-slate'}`}>
-                      {(o.order_status || 'PENDING').replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="text-right font-bold text-slate-900 dark:text-white">{bdt(o.total_amount)}</td>
+        {isOrdersLoading ? (
+          <div className="p-4">
+            <TableSkeleton rows={5} cols={5} />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full erp-table">
+              <thead>
+                <tr>
+                  <th className="text-left">Order #</th>
+                  <th className="text-left">Customer</th>
+                  <th className="text-left hidden sm:table-cell">Date</th>
+                  <th className="text-left">Status</th>
+                  <th className="text-right">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {recentOrders.length === 0 && (
+                  <tr><td colSpan={5} className="py-10 text-center text-sm text-slate-400">No orders yet — create your first sale!</td></tr>
+                )}
+                {recentOrders.map((o, i) => (
+                  <tr key={o.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
+                    <td className="font-mono text-xs text-slate-500">{o.order_number || `#${String(i+1).padStart(4,'0')}`}</td>
+                    <td className="font-medium text-slate-800 dark:text-slate-200">{o.customer_name}</td>
+                    <td className="text-slate-400 hidden sm:table-cell text-xs">{(o.order_date || o.created_date || '').slice(0,10)}</td>
+                    <td>
+                      <span className={`status-pill text-[11px] ${STATUS_STYLES[o.order_status] || 'badge-slate'}`}>
+                        {(o.order_status || 'PENDING').replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="text-right font-bold text-slate-900 dark:text-white">{bdt(o.total_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

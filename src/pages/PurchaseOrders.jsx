@@ -26,6 +26,7 @@ import { withPermission, usePermission } from '../components/common/PermissionGu
 import PageHeader from '@/components/common/PageHeader';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import MobilePOCard from '../components/procurement/MobilePOCard';
+import { TableSkeleton, StatGridSkeleton, ErrorState } from '@/components/common/Skeletons';
 
 // Main Purchase Orders Page
 function PurchaseOrdersPage() {
@@ -64,7 +65,7 @@ function PurchaseOrdersPage() {
 
   const isAdmin = currentUser?.job_role === 'admin' || currentUser?.role === 'admin';
 
-  const { data: purchaseOrders = [], isLoading } = useQuery({
+  const { data: purchaseOrders = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['purchaseOrders'],
     queryFn: () => erp.entities.PurchaseOrder.list('-order_date', 500),
     staleTime: 3 * 60 * 1000,
@@ -516,16 +517,7 @@ function PurchaseOrdersPage() {
     return <Badge className={className}>{label}</Badge>;
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Package className="w-12 h-12 animate-pulse mx-auto text-violet-600" />
-          <p className="text-muted-foreground mt-2">Loading purchase orders...</p>
-        </div>
-      </div>
-    );
-  }
+  const firstLoad = isLoading && purchaseOrders.length === 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -563,6 +555,9 @@ function PurchaseOrdersPage() {
         />
 
         {/* Stats Grid */}
+        {firstLoad ? <StatGridSkeleton count={5} /> : isError ? (
+          <ErrorState message="Failed to load purchase orders." onRetry={refetch} />
+        ) : (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <Card className="bg-card border-0 shadow-sm rounded-xl">
             <CardContent className="p-5">
@@ -614,6 +609,7 @@ function PurchaseOrdersPage() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Category Filter */}
         <PurchaseCategoryFilter selected={categoryFilter} onSelect={setCategoryFilter} />
@@ -682,7 +678,9 @@ function PurchaseOrdersPage() {
           <TabsContent value="purchase_orders">
             {/* Mobile PO Cards */}
             <div className="md:hidden space-y-3">
-              {filteredOrders.length === 0 ? (
+              {firstLoad ? (
+                <TableSkeleton rows={6} cols={2} />
+              ) : filteredOrders.length === 0 ? (
                 <Card className="bg-white border-0 shadow-sm rounded-xl">
                   <CardContent className="py-12 text-center">
                     <Package className="w-10 h-10 mx-auto mb-2 text-slate-300" />
@@ -716,6 +714,9 @@ function PurchaseOrdersPage() {
                 <CardTitle className="text-xl font-semibold text-slate-900">Purchase Orders ({filteredOrders.length})</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
+            {firstLoad ? (
+              <div className="p-4"><TableSkeleton rows={8} cols={8} /></div>
+            ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -829,6 +830,7 @@ function PurchaseOrdersPage() {
                 </TableBody>
               </Table>
             </div>
+            )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -47,6 +47,7 @@ import DailySalesFinalizer from '../components/sales/DailySalesFinalizer';
 import MobileOrderCard from '../components/sales/MobileOrderCard';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
+import { StatGridSkeleton, CardGridSkeleton, ErrorState } from '@/components/common/Skeletons';
 
 // Main Sales Page
 function SalesPage() {
@@ -85,7 +86,7 @@ function SalesPage() {
   const [allOrdersLoaded, setAllOrdersLoaded] = useState(false);
 
   // First load: Get recent 500 orders fast
-  const { data: recentOrders = [], isLoading: ordersLoading } = useQuery({
+  const { data: recentOrders = [], isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useQuery({
     queryKey: ['orders-sales-recent'],
     queryFn: () => Order.list('-order_date', 500),
     staleTime: 60 * 1000,
@@ -758,15 +759,12 @@ function SalesPage() {
     return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
   };
 
-  if (ordersLoading && orders.length === 0) {
+  const firstLoad = ordersLoading && orders.length === 0;
+
+  if (ordersError && orders.length === 0) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mx-auto animate-pulse">
-            <ShoppingCart className="w-6 h-6 text-amber-600" />
-          </div>
-          <p className="text-slate-600 font-medium">Loading sales data...</p>
-        </div>
+        <ErrorState message="Failed to load sales data." onRetry={refetchOrders} />
       </div>
     );
   }
@@ -1052,6 +1050,7 @@ function SalesPage() {
             </span>
           </div>
         )}
+        {firstLoad ? <StatGridSkeleton count={6} /> : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
           <StatCard index={0} icon={ShoppingCart} tone="orange"
             label={stats.isFiltered ? 'Filtered Orders' : 'Total Orders'}
@@ -1078,6 +1077,7 @@ function SalesPage() {
             value={stats.shippedOrders}
             sub={!stats.isFiltered ? `Today: ${stats.todayShipped}` : undefined} />
         </div>
+        )}
 
         {/* Bulk Actions Bar */}
         {selectedOrderIds.length > 0 && (
@@ -1195,7 +1195,9 @@ function SalesPage() {
               </Button>
             )}
           </div>
-          {displayedOrders.length === 0 ? (
+          {firstLoad ? (
+            <CardGridSkeleton count={6} />
+          ) : displayedOrders.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-12 text-center">
                 <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-slate-300" />
@@ -1287,7 +1289,13 @@ function SalesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedOrders.length === 0 ? (
+                  {firstLoad ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="p-4">
+                        <TableSkeleton rows={8} cols={10} />
+                      </TableCell>
+                    </TableRow>
+                  ) : displayedOrders.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
