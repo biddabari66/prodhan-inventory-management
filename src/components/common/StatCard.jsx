@@ -18,9 +18,11 @@ const TONES = {
  * <StatCard icon={DollarSign} label="Today's Revenue" value="৳12,790"
  *   sub="9 orders today" tone="green" to="/Sales" index={0} />
  */
-export default function StatCard({ icon: Icon, label, value, sub, tone = 'orange', to, index = 0 }) {
+export default function StatCard({ icon: Icon, label, value, sub, tone = 'orange', to, index = 0, loading }) {
   const reduce = useReducedMotion();
   const t = TONES[tone] || TONES.orange;
+  // Treat null/undefined value as "loading" so we never flash a 0 before data.
+  const isLoading = loading || value === undefined || value === null || value === '';
 
   const card = (
     <motion.div
@@ -33,8 +35,16 @@ export default function StatCard({ icon: Icon, label, value, sub, tone = 'orange
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs md:text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 truncate">{label}</p>
-          <p className="mt-1.5 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tabular-nums">{value}</p>
-          {sub && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">{sub}</p>}
+          {isLoading ? (
+            <div className="mt-2 h-7 md:h-8 w-24 rounded-md bg-slate-200 dark:bg-slate-700 animate-pulse" />
+          ) : (
+            <p className="mt-1.5 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tabular-nums">{value}</p>
+          )}
+          {isLoading ? (
+            sub !== undefined && <div className="mt-2 h-3 w-16 rounded bg-slate-100 dark:bg-slate-800 animate-pulse" />
+          ) : (
+            sub && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">{sub}</p>
+          )}
         </div>
         {Icon && (
           <div className={`w-11 h-11 shrink-0 rounded-xl ${t.tile} flex items-center justify-center shadow-md transition-transform group-hover:scale-110`}>

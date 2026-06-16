@@ -40,8 +40,9 @@ function useCountUp(target, duration = 1200) {
 
 // ── KPI Card — shared design system StatCard with animated count-up ──────────
 function KpiCard({ title, value, rawValue, sub, icon, tone, to, index = 0 }) {
-  const counted = useCountUp(rawValue || 0);
-  const displayValue = rawValue !== undefined ? bdt(counted) : value;
+  // No count-up: show the real number instantly (undefined → StatCard skeleton).
+  const displayValue =
+    rawValue !== undefined && rawValue !== null ? bdt(rawValue) : value;
   return (
     <StatCard
       icon={icon}
@@ -203,8 +204,8 @@ export default function Home() {
         />
         <KpiCard
           title="New Leads"
-          value={stats?.newLeads ?? leadStats?.byStatus?.NEW ?? 0}
-          sub={`${leadStats?.conversionRate ?? 0}% conversion`}
+          value={stats?.newLeads ?? leadStats?.byStatus?.NEW}
+          sub={leadStats ? `${leadStats?.conversionRate ?? 0}% conversion` : undefined}
           icon={UserPlus}
           tone="blue"
           to="/CRM"
