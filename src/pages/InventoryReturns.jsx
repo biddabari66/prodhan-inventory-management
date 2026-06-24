@@ -29,10 +29,7 @@ function InventoryReturnsPage() {
         {/* Main Content */}
         <div className="bg-white rounded-xl border-0 shadow-sm">
           <div className="p-0 sm:p-2 lg:p-4">
-            <ReturnDamageManagement 
-              selectedDepartment="prodhan_com_e_commerce" 
-              defaultTab="returns"
-            />
+            <ReturnDamageManagement defaultTab="returns" />
           </div>
         </div>
       </div>

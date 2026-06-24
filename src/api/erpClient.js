@@ -53,7 +53,8 @@ function seedScopeFromUser(user) {
 const unwrap = (res) => res.data?.data ?? res.data ?? [];
 
 // Base44-style call signature: filter(query, sortBy, limit) / list(sortBy, limit)
-function buildParams(query = {}, sortBy, limit) {
+// Base44-style call signature: filter(query, sortBy, limit) / list(sortBy, limit)
+function buildParams(query = {}, sortBy, limit, page) {
   const params = toBackend({ ...(query || {}) });
   if (sortBy) {
     const desc = sortBy.startsWith('-');
@@ -61,6 +62,7 @@ function buildParams(query = {}, sortBy, limit) {
     params.sort = `${desc ? '-' : ''}${field}`;
   }
   if (limit) params.limit = limit;
+  if (page) params.page = page;
   return params;
 }
 
@@ -69,8 +71,30 @@ export function defineEntity(entityName) {
   return {
     list: async (sortBy, limit) =>
       toFrontend(unwrap(await api.get(endpoint, { params: buildParams({}, sortBy, limit) }))),
+    listPaginated: async (sortBy, limit, page) => {
+      const res = await api.get(endpoint, { params: buildParams({}, sortBy, limit, page) });
+      const data = toFrontend(unwrap(res));
+      return {
+        data,
+        total: res.data?.total || data.length,
+        page: res.data?.page || 1,
+        limit: res.data?.limit || limit || data.length,
+        totalPages: res.data?.totalPages || 1,
+      };
+    },
     filter: async (query, sortBy, limit) =>
       toFrontend(unwrap(await api.get(endpoint, { params: buildParams(query, sortBy, limit) }))),
+    filterPaginated: async (query, sortBy, limit, page) => {
+      const res = await api.get(endpoint, { params: buildParams(query, sortBy, limit, page) });
+      const data = toFrontend(unwrap(res));
+      return {
+        data,
+        total: res.data?.total || data.length,
+        page: res.data?.page || 1,
+        limit: res.data?.limit || limit || data.length,
+        totalPages: res.data?.totalPages || 1,
+      };
+    },
     get: async (id) => {
       const res = await api.get(`${endpoint}/${id}`);
       return toFrontend(res.data?.data ?? res.data);

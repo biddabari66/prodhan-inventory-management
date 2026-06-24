@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { CardSkeleton, TableSkeleton } from '../components/common/SkeletonLoader';
+import PaginationControls from '../components/common/PaginationControls';
 import OrderInvoice from '../components/invoices/OrderInvoice';
 import ThermalReceipt from '../components/invoices/ThermalReceipt';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -475,7 +476,8 @@ function SalesPage() {
   // Department filter change is no longer needed — scope is server-side via useScope().
 
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
-  const [displayLimit, setDisplayLimit] = useState(50);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersLimit, setOrdersLimit] = useState(50);
 
   // 🚀 Pre-compute date strings for ALL orders ONCE (BDT timezone)
   const bdtFormatter = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }), []);
@@ -544,14 +546,16 @@ function SalesPage() {
     return filtered;
   }, [ordersWithDateStr, searchQuery, statusFilter, paymentFilter, dateRange, productFilter, showDuplicates]);
 
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setOrdersPage(1);
+  }, [filteredOrders.length]);
+
   // 🚀 Display only limited rows for smooth scrolling
   const displayedOrders = useMemo(() => {
-    return filteredOrders.slice(0, displayLimit);
-  }, [filteredOrders, displayLimit]);
-
-  const loadMoreOrders = useCallback(() => {
-    setDisplayLimit(prev => Math.min(prev + 100, filteredOrders.length));
-  }, [filteredOrders.length]);
+    const start = (ordersPage - 1) * ordersLimit;
+    return filteredOrders.slice(start, start + ordersLimit);
+  }, [filteredOrders, ordersPage, ordersLimit]);
 
   // Fast Excel Export Function
   const handleExportExcel = useCallback(() => {
@@ -1230,11 +1234,20 @@ function SalesPage() {
               />
             ))
           )}
-          {displayedOrders.length < filteredOrders.length && (
-            <Button variant="outline" onClick={loadMoreOrders} className="w-full gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Load More ({filteredOrders.length - displayedOrders.length} remaining)
-            </Button>
+          
+          {filteredOrders.length > 0 && (
+            <PaginationControls
+              className="bg-white border-0 shadow-sm rounded-xl px-4 py-2 mt-2"
+              currentPage={ordersPage}
+              totalPages={Math.ceil(filteredOrders.length / ordersLimit)}
+              totalRecords={filteredOrders.length}
+              limit={ordersLimit}
+              onPageChange={setOrdersPage}
+              onLimitChange={(newLimit) => {
+                setOrdersLimit(newLimit);
+                setOrdersPage(1);
+              }}
+            />
           )}
         </div>
 
@@ -1894,24 +1907,24 @@ function SalesPage() {
                       </TableRow>
                     ))
                   )}
-                  {/* Load More Row */}
-                  {displayedOrders.length < filteredOrders.length && (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-4">
-                        <Button
-                          variant="outline"
-                          onClick={loadMoreOrders}
-                          className="gap-2"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                          Load More ({filteredOrders.length - displayedOrders.length} remaining)
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {/* Client-side Pagination removed from table row, rendered below table instead */}
                 </TableBody>
               </Table>
             </div>
+            
+            {filteredOrders.length > 0 && (
+              <PaginationControls
+                currentPage={ordersPage}
+                totalPages={Math.ceil(filteredOrders.length / ordersLimit)}
+                totalRecords={filteredOrders.length}
+                limit={ordersLimit}
+                onPageChange={setOrdersPage}
+                onLimitChange={(newLimit) => {
+                  setOrdersLimit(newLimit);
+                  setOrdersPage(1);
+                }}
+              />
+            )}
           </CardContent>
         </Card>
 

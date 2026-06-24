@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import PaginationControls from '../common/PaginationControls';
 
 // Lazy load heavy form components
 const ReturnForm = lazy(() => import('./ReturnForm'));
@@ -51,8 +52,9 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   
   // Pagination state
   const [returnsPage, setReturnsPage] = useState(1);
+  const [returnsLimit, setReturnsLimit] = useState(25);
   const [damagesPage, setDamagesPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const [damagesLimit, setDamagesLimit] = useState(25);
 
   // ⚡ PHASE 1: Fast initial load — recent 500 movements (instant display)
   const { data: recentMovements = [], isLoading: recentLoading } = useQuery({
@@ -979,7 +981,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 <p className="text-sm">No returns recorded</p>
               </div>
             ) : (
-              returnsData.slice((returnsPage - 1) * PAGE_SIZE, returnsPage * PAGE_SIZE).map((movement) => (
+              returnsData.slice((returnsPage - 1) * returnsLimit, returnsPage * returnsLimit).map((movement) => (
                 <MobileReturnCard
                   key={movement.id}
                   movement={movement}
@@ -1027,7 +1029,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                       </TableCell>
                     </TableRow>
                   ) : (
-                    returnsData.slice((returnsPage - 1) * PAGE_SIZE, returnsPage * PAGE_SIZE).map((movement) => {
+                    returnsData.slice((returnsPage - 1) * returnsLimit, returnsPage * returnsLimit).map((movement) => {
                       const metadata = movement.metadata || {};
                       return (
                         <TableRow key={movement.id}>
@@ -1126,23 +1128,19 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           </Card>
 
           {/* Returns Pagination */}
-          {returnsData.length > PAGE_SIZE && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
-              <p className="text-xs sm:text-sm text-slate-600">
-                {((returnsPage - 1) * PAGE_SIZE) + 1}-{Math.min(returnsPage * PAGE_SIZE, returnsData.length)} of {returnsData.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="h-8 text-xs"
-                  onClick={() => setReturnsPage(p => Math.max(1, p - 1))}
-                  disabled={returnsPage === 1}>Prev</Button>
-                <span className="text-xs font-medium px-2">
-                  {returnsPage}/{Math.ceil(returnsData.length / PAGE_SIZE)}
-                </span>
-                <Button variant="outline" size="sm" className="h-8 text-xs"
-                  onClick={() => setReturnsPage(p => Math.min(Math.ceil(returnsData.length / PAGE_SIZE), p + 1))}
-                  disabled={returnsPage >= Math.ceil(returnsData.length / PAGE_SIZE)}>Next</Button>
-              </div>
-            </div>
+          {returnsData.length > 0 && (
+            <PaginationControls
+              className="bg-white border-t border-slate-100 rounded-b-xl px-4 py-3"
+              currentPage={returnsPage}
+              totalPages={Math.ceil(returnsData.length / returnsLimit)}
+              totalRecords={returnsData.length}
+              limit={returnsLimit}
+              onPageChange={setReturnsPage}
+              onLimitChange={(newLimit) => {
+                setReturnsLimit(newLimit);
+                setReturnsPage(1);
+              }}
+            />
           )}
         </TabsContent>
 
@@ -1155,7 +1153,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                 <p className="text-sm">No damages recorded</p>
               </div>
             ) : (
-              damagesData.slice((damagesPage - 1) * PAGE_SIZE, damagesPage * PAGE_SIZE).map((movement) => (
+              damagesData.slice((damagesPage - 1) * damagesLimit, damagesPage * damagesLimit).map((movement) => (
                 <MobileDamageCard
                   key={movement.id}
                   movement={movement}
@@ -1199,7 +1197,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
                       </TableCell>
                     </TableRow>
                   ) : (
-                    damagesData.slice((damagesPage - 1) * PAGE_SIZE, damagesPage * PAGE_SIZE).map((movement) => {
+                    damagesData.slice((damagesPage - 1) * damagesLimit, damagesPage * damagesLimit).map((movement) => {
                       const metadata = movement.metadata || {};
                       return (
                         <TableRow key={movement.id}>
@@ -1257,23 +1255,19 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
           </Card>
 
           {/* Damages Pagination */}
-          {damagesData.length > PAGE_SIZE && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
-              <p className="text-xs sm:text-sm text-slate-600">
-                {((damagesPage - 1) * PAGE_SIZE) + 1}-{Math.min(damagesPage * PAGE_SIZE, damagesData.length)} of {damagesData.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="h-8 text-xs"
-                  onClick={() => setDamagesPage(p => Math.max(1, p - 1))}
-                  disabled={damagesPage === 1}>Prev</Button>
-                <span className="text-xs font-medium px-2">
-                  {damagesPage}/{Math.ceil(damagesData.length / PAGE_SIZE)}
-                </span>
-                <Button variant="outline" size="sm" className="h-8 text-xs"
-                  onClick={() => setDamagesPage(p => Math.min(Math.ceil(damagesData.length / PAGE_SIZE), p + 1))}
-                  disabled={damagesPage >= Math.ceil(damagesData.length / PAGE_SIZE)}>Next</Button>
-              </div>
-            </div>
+          {damagesData.length > 0 && (
+            <PaginationControls
+              className="bg-white border-t border-slate-100 rounded-b-xl px-4 py-3"
+              currentPage={damagesPage}
+              totalPages={Math.ceil(damagesData.length / damagesLimit)}
+              totalRecords={damagesData.length}
+              limit={damagesLimit}
+              onPageChange={setDamagesPage}
+              onLimitChange={(newLimit) => {
+                setDamagesLimit(newLimit);
+                setDamagesPage(1);
+              }}
+            />
           )}
         </TabsContent>
       </Tabs>

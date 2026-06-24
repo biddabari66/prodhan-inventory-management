@@ -11,6 +11,9 @@ import {
   Plus,
   RefreshCw,
   Users,
+  Fingerprint,
+  Bluetooth,
+  Wifi,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -416,6 +419,10 @@ export default function AttendanceAdmin() {
         <TabsList>
           <TabsTrigger value="records">Records</TabsTrigger>
           <TabsTrigger value="summary">Per-Employee Summary</TabsTrigger>
+          <TabsTrigger value="config" className="gap-2 text-indigo-600 data-[state=active]:text-indigo-700">
+            <Fingerprint className="w-4 h-4" />
+            Device Config
+          </TabsTrigger>
         </TabsList>
 
         {/* Records tab */}
@@ -558,6 +565,106 @@ export default function AttendanceAdmin() {
                   </Table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Biometrics Config tab */}
+        <TabsContent value="config">
+          <Card className="rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+            <CardHeader className="bg-indigo-50/50 border-b border-indigo-100">
+              <CardTitle className="flex items-center gap-2 text-base text-indigo-900">
+                <Fingerprint className="w-5 h-5 text-indigo-500" />
+                Biometric & Bluetooth Device Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left column: Setup Guide */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Device Setup Guide</h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Follow these steps to connect supported biometric terminals (e.g., ZKTeco) or Bluetooth attendance beacons to your workspace.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="flex gap-4 p-4 rounded-lg border border-slate-100 bg-slate-50">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">1</div>
+                        <div>
+                          <h4 className="font-medium text-slate-900">Network Configuration</h4>
+                          <p className="text-sm text-slate-600 mt-1">Connect your biometric device to the same local network, or configure it to push data to our cloud endpoint: <code className="bg-slate-200 px-1 rounded">https://api.prodhan.com/webhooks/attendance</code></p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-4 p-4 rounded-lg border border-slate-100 bg-slate-50">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">2</div>
+                        <div>
+                          <h4 className="font-medium text-slate-900">Register Device Serial</h4>
+                          <p className="text-sm text-slate-600 mt-1">Enter the Serial Number (SN) of the biometric device or MAC address of the Bluetooth beacon in the registration panel.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-4 p-4 rounded-lg border border-slate-100 bg-slate-50">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">3</div>
+                        <div>
+                          <h4 className="font-medium text-slate-900">Sync Users</h4>
+                          <p className="text-sm text-slate-600 mt-1">Click "Sync Users" to push the employee list to the device, or pull enrolled fingerprints from the device to the cloud.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right column: Active Devices */}
+                <div className="space-y-6">
+                  <div className="p-5 rounded-xl border border-slate-200 shadow-sm bg-white">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-slate-900">Connected Devices</h3>
+                      <Button size="sm" variant="outline" className="h-8 gap-1">
+                        <Plus className="w-3.5 h-3.5" /> Add
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {/* Mock Device 1 */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <Wifi className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">ZKTeco K40</p>
+                            <p className="text-xs text-slate-500">IP: 192.168.1.100</p>
+                          </div>
+                        </div>
+                        <Badge className="bg-green-100 text-green-700">Online</Badge>
+                      </div>
+
+                      {/* Mock Device 2 */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                            <Bluetooth className="w-5 h-5 text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">Entrance Beacon</p>
+                            <p className="text-xs text-slate-500">MAC: 00:1A:2B:3C</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="bg-slate-200 text-slate-600">Offline</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <Button className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+                        <RefreshCw className="w-4 h-4" />
+                        Sync All Devices
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

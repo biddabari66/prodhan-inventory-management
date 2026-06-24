@@ -32,6 +32,7 @@ import MobileInventoryCard from '../components/inventory/MobileInventoryCard';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import { TableSkeleton, StatGridSkeleton } from '@/components/common/Skeletons';
+import PaginationControls from '../components/common/PaginationControls';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VARIANT UTILITIES
@@ -674,7 +675,8 @@ function InventoryOverviewPage() {
     }
   };
   const [selectedDepartment, setSelectedDepartment]       = useState('');
-  const [displayLimit,          setDisplayLimit]          = useState(50);
+  const [inventoryPage, setInventoryPage]                 = useState(1);
+  const [inventoryLimit, setInventoryLimit]               = useState(50);
   const [isScannerOpen,         setIsScannerOpen]         = useState(false);
   const [variantFilter,         setVariantFilter]         = useState('all');
 
@@ -937,6 +939,7 @@ function InventoryOverviewPage() {
     }
 
     setFilteredInventory(filtered);
+    setInventoryPage(1); // Reset page on filter
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -1003,9 +1006,10 @@ function InventoryOverviewPage() {
     return result;
   }, [filteredInventory]);
 
-  const displayedInventory = useMemo(() =>
-    filteredInventory.slice(0, displayLimit),
-  [filteredInventory, displayLimit]);
+  const displayedInventory = useMemo(() => {
+    const start = (inventoryPage - 1) * inventoryLimit;
+    return filteredInventory.slice(start, start + inventoryLimit);
+  }, [filteredInventory, inventoryPage, inventoryLimit]);
 
   const stats = useMemo(() => {
     let totalValue   = 0;
@@ -1230,14 +1234,20 @@ function InventoryOverviewPage() {
               />
             ))
           )}
-
-          {displayedInventory.length < filteredInventory.length && (
-            <Button variant="outline"
-              onClick={() => setDisplayLimit(p => p + 50)}
-              className="w-full gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Load More ({filteredInventory.length - displayedInventory.length} remaining)
-            </Button>
+          
+          {filteredInventory.length > 0 && (
+            <PaginationControls
+              className="bg-white border-0 shadow-sm rounded-xl px-4 py-2 mt-4"
+              currentPage={inventoryPage}
+              totalPages={Math.ceil(filteredInventory.length / inventoryLimit)}
+              totalRecords={filteredInventory.length}
+              limit={inventoryLimit}
+              onPageChange={setInventoryPage}
+              onLimitChange={(newLimit) => {
+                setInventoryLimit(newLimit);
+                setInventoryPage(1);
+              }}
+            />
           )}
         </div>
 
@@ -1341,21 +1351,24 @@ function InventoryOverviewPage() {
                     ))
                   )}
 
-                  {displayedInventory.length < filteredInventory.length && (
-                    <TableRow>
-                      <TableCell colSpan={11} className="text-center py-4">
-                        <Button variant="outline"
-                          onClick={() => setDisplayLimit(p => p + 50)}
-                          className="gap-2">
-                          <RefreshCw className="w-4 h-4" />
-                          Load More ({filteredInventory.length - displayedInventory.length} remaining)
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {/* Client-side Pagination removed from table row, rendered below table instead */}
                 </TableBody>
               </Table>
             </div>
+            
+            {filteredInventory.length > 0 && (
+              <PaginationControls
+                currentPage={inventoryPage}
+                totalPages={Math.ceil(filteredInventory.length / inventoryLimit)}
+                totalRecords={filteredInventory.length}
+                limit={inventoryLimit}
+                onPageChange={setInventoryPage}
+                onLimitChange={(newLimit) => {
+                  setInventoryLimit(newLimit);
+                  setInventoryPage(1);
+                }}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
