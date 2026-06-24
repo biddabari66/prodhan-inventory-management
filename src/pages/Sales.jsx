@@ -60,6 +60,8 @@ function SalesPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersLimit, setOrdersLimit] = useState(50);
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
@@ -96,25 +98,38 @@ function SalesPage() {
     );
   }, [currentUser]);
 
+  const queryFilters = useMemo(() => {
+    const q = {};
+    if (searchQuery) q.search = searchQuery;
+    if (statusFilter !== 'all') q.status = statusFilter;
+    if (paymentFilter !== 'all') q.payment_status = paymentFilter;
+    if (scopeCompanyId && scopeCompanyId !== 'all') q.company_id = scopeCompanyId;
+    if (departmentFilter !== 'all') q.department_id = departmentFilter;
+    if (dateRange?.from) q.date_from = dateRange.from.toISOString();
+    if (dateRange?.to) q.date_to = dateRange.to.toISOString();
+    return q;
+  }, [searchQuery, statusFilter, paymentFilter, scopeCompanyId, departmentFilter, dateRange]);
+
   // ✅ FIX: Single fast order query scoped to the user's company/department.
   // No more background batch loop that fetched 1000+ records and stalled the UI.
   // The axios interceptor auto-applies companyId/departmentId from localStorage
   // so Order.list() already returns only the right company's orders.
   const {
-    data: orders = [],
+    data: orders,
     isLoading: ordersLoading,
     isError: ordersError,
     refetch: refetchOrders,
   } = useQuery({
-    queryKey: ['orders-sales', scopeCompanyId, scopeDepartmentId],
-    queryFn: () => Order.list('-order_date', 300),
+    queryKey: ['orders-sales', scopeCompanyId, scopeDepartmentId, ordersPage, ordersLimit, queryFilters],
+    queryFn: () => Order.filterPaginated(queryFilters, '-createdAt', ordersLimit, ordersPage),
     staleTime: 45 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: 'always',
-    refetchInterval: 60 * 1000,
     placeholderData: (prev) => prev,
   });
+
+  const ordersList = orders?.data || [];
+  const totalOrders = orders?.total || 0;
 
   // 🚀 Customers scoped to active company
   const { data: customers = [] } = useQuery({
@@ -476,90 +491,15 @@ function SalesPage() {
   // Department filter change is no longer needed — scope is server-side via useScope().
 
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
-  const [ordersPage, setOrdersPage] = useState(1);
-  const [ordersLimit, setOrdersLimit] = useState(50);
 
-  // 🚀 Pre-compute date strings for ALL orders ONCE (BDT timezone)
-  const bdtFormatter = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }), []);
+  // SERVER-SIDE PAGINATION REPLACES CLIENT-SIDE FILTERING
+  const filteredOrders = ordersList;
+  const displayedOrders = ordersList;
 
-  const ordersWithDateStr = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
-    return orders.map(o => {
-      const d = new Date(o.order_date || o.created_date);
-      const isValid = !isNaN(d.getTime());
-      return {
-        ...o,
-        _dateStr: isValid ? bdtFormatter.format(d) : '1970-01-01'
-      };
-    });
-  }, [orders, bdtFormatter]);
-
-  const filteredOrders = useMemo(() => {
-    if (!ordersWithDateStr || ordersWithDateStr.length === 0) return [];
-
-    let filtered = ordersWithDateStr;
-
-    // Data is already server-scoped to the user's company/department via the
-    // axios interceptor. No client-side department filter needed.
-
-    if (dateRange.from) {
-      const fromDateStr = dateRange.from;
-      const toDateStr = dateRange.to || dateRange.from;
-      filtered = filtered.filter(o => o._dateStr >= fromDateStr && o._dateStr <= toDateStr);
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(o => o.order_status === statusFilter);
-    }
-
-    if (paymentFilter !== 'all') {
-      filtered = filtered.filter(o => o.payment_status === paymentFilter);
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(o =>
-        o.order_number?.toLowerCase().includes(query) ||
-        o.customer_name?.toLowerCase().includes(query) ||
-        o.customer_phone?.includes(query)
-      );
-    }
-
-    if (productFilter !== 'all') {
-      filtered = filtered.filter(o =>
-        o.order_items?.some(item => item.inventory_id === productFilter)
-      );
-    }
-
-    if (showDuplicates) {
-      const seen = new Map();
-      filtered.forEach(o => {
-        const key = `${(o.customer_phone || '').trim()}_${o.total_amount || 0}`;
-        if (!seen.has(key)) seen.set(key, []);
-        seen.get(key).push(o.id);
-      });
-      const dupIds = new Set();
-      seen.forEach(ids => { if (ids.length > 1) ids.forEach(id => dupIds.add(id)); });
-      filtered = filtered.filter(o => dupIds.has(o.id));
-    }
-
-    return filtered;
-  }, [ordersWithDateStr, searchQuery, statusFilter, paymentFilter, dateRange, productFilter, showDuplicates]);
-
-  // Reset to page 1 whenever filters change
-  useEffect(() => {
-    setOrdersPage(1);
-  }, [filteredOrders.length]);
-
-  // 🚀 Display only limited rows for smooth scrolling
-  const displayedOrders = useMemo(() => {
-    const start = (ordersPage - 1) * ordersLimit;
-    return filteredOrders.slice(start, start + ordersLimit);
-  }, [filteredOrders, ordersPage, ordersLimit]);
 
   // Fast Excel Export Function
   const handleExportExcel = useCallback(() => {
-    const ordersToExport = exportOptions.onlyFiltered ? filteredOrders : orders;
+    const ordersToExport = filteredOrders; // With server pagination, we export current view or need a separate fetch. For now, export current visible.
 
     if (ordersToExport.length === 0) {
       toast.error('No orders to export');
@@ -1239,8 +1179,8 @@ function SalesPage() {
             <PaginationControls
               className="bg-white border-0 shadow-sm rounded-xl px-4 py-2 mt-2"
               currentPage={ordersPage}
-              totalPages={Math.ceil(filteredOrders.length / ordersLimit)}
-              totalRecords={filteredOrders.length}
+              totalPages={orders?.totalPages || Math.ceil(totalOrders / ordersLimit)}
+              totalRecords={totalOrders}
               limit={ordersLimit}
               onPageChange={setOrdersPage}
               onLimitChange={(newLimit) => {
@@ -1915,8 +1855,8 @@ function SalesPage() {
             {filteredOrders.length > 0 && (
               <PaginationControls
                 currentPage={ordersPage}
-                totalPages={Math.ceil(filteredOrders.length / ordersLimit)}
-                totalRecords={filteredOrders.length}
+                totalPages={orders?.totalPages || Math.ceil(totalOrders / ordersLimit)}
+                totalRecords={totalOrders}
                 limit={ordersLimit}
                 onPageChange={setOrdersPage}
                 onLimitChange={(newLimit) => {
