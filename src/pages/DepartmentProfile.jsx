@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import {
-  Building2, Save, Image as ImageIcon, LayoutTemplate, MapPin, Phone, Mail, Palette, Plus, Loader2, Network, Trash2,
+  Building2, Save, Image as ImageIcon, LayoutTemplate, MapPin, Phone, Mail, Palette, Plus, Loader2, Network, Trash2, Truck,
+  Globe, Plug, Webhook, Facebook, ShoppingCart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '@/components/common/PageHeader';
@@ -18,6 +19,11 @@ import PageHeader from '@/components/common/PageHeader';
 const EMPTY_BRANDING = {
   name: '', logo: '', primaryColor: '#EA580C', secondaryColor: '#FFEDD5',
   phone: '', email: '', address: '', tagline: '', invoice_template: 'design_1_modern',
+  shipping: { webhookUrl: '', provider: 'steadfast' },
+  integrations: {
+    wordpressUrl: '', wordpressKey: '', woocommerceUrl: '', woocommerceKey: '', woocommerceSecret: '',
+    n8nWebhookBase: '', facebookPageId: '', facebookToken: '', websiteUrl: '', customWebhook: '',
+  },
 };
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
@@ -99,6 +105,8 @@ export default function CompanyProfiles() {
   });
 
   const set = (k, v) => setFormData((f) => ({ ...f, [k]: v }));
+  const setShip = (k, v) => setFormData((f) => ({ ...f, shipping: { ...(f.shipping || {}), [k]: v } }));
+  const setIntg = (k, v) => setFormData((f) => ({ ...f, integrations: { ...(f.integrations || {}), [k]: v } }));
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-5xl mx-auto">
@@ -175,6 +183,129 @@ export default function CompanyProfiles() {
                   <div className="space-y-2"><Label className="flex items-center gap-2"><Mail className="w-3 h-3" /> Email</Label><Input value={formData.email || ''} onChange={(e) => set('email', e.target.value)} /></div>
                 </div>
                 <div className="space-y-2"><Label>Head Office Address</Label><Textarea rows={3} value={formData.address || ''} onChange={(e) => set('address', e.target.value)} /></div>
+              </CardContent>
+            </Card>
+
+            {/* Courier / Shipping — per sub-company webhook (no Supabase needed) */}
+            <Card className="border-2 border-slate-200 dark:border-slate-700 border-t-4 border-t-cyan-500">
+              <CardHeader className="border-b bg-slate-50/60 dark:bg-slate-900/40 pb-4">
+                <CardTitle className="text-base flex items-center gap-2"><Truck className="w-4 h-4 text-cyan-500" /> Courier / Shipping</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-5">
+                <p className="text-sm text-slate-500">
+                  When an order for <span className="font-medium">{formData.name || 'this sub-company'}</span> is shipped, it's sent to this courier webhook (n8n / Steadfast). Each sub-company can have its own.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Courier Webhook URL</Label>
+                    <Input
+                      placeholder="https://…/webhook/…"
+                      value={formData.shipping?.webhookUrl || ''}
+                      onChange={(e) => setShip('webhookUrl', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Provider</Label>
+                    <Select value={formData.shipping?.provider || 'steadfast'} onValueChange={(v) => setShip('provider', v)}>
+                      <SelectTrigger className="bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="steadfast">Steadfast</SelectItem>
+                        <SelectItem value="pathao">Pathao</SelectItem>
+                        <SelectItem value="redx">RedX</SelectItem>
+                        <SelectItem value="custom">Custom / n8n</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">Tip: changes here save when you press “Save Company”.</p>
+              </CardContent>
+            </Card>
+
+            {/* Integrations — per sub-company connections (WordPress / WooCommerce / n8n / Facebook) */}
+            <Card className="border-2 border-slate-200 dark:border-slate-700 border-t-4 border-t-violet-500">
+              <CardHeader className="border-b bg-slate-50/60 dark:bg-slate-900/40 pb-4">
+                <CardTitle className="text-base flex items-center gap-2"><Plug className="w-4 h-4 text-violet-500" /> Integrations</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <p className="text-sm text-slate-500">
+                  These settings apply only to <span className="font-medium">{formData.name || 'this sub-company'}</span>. Each sub-company can connect to its own WordPress/WooCommerce/n8n/Facebook.
+                </p>
+
+                {/* Website / WordPress */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <Globe className="w-4 h-4 text-violet-500" /> Website / WordPress
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Website URL</Label>
+                    <Input placeholder="https://example.com" value={formData.integrations?.websiteUrl || ''} onChange={(e) => setIntg('websiteUrl', e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <Label>WordPress URL</Label>
+                      <Input placeholder="https://example.com/wp-json" value={formData.integrations?.wordpressUrl || ''} onChange={(e) => setIntg('wordpressUrl', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>WordPress API Key</Label>
+                      <Input type="password" placeholder="••••••••" value={formData.integrations?.wordpressKey || ''} onChange={(e) => setIntg('wordpressKey', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* WooCommerce */}
+                <div className="space-y-4 pt-2 border-t border-dashed">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <ShoppingCart className="w-4 h-4 text-violet-500" /> WooCommerce
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Store URL</Label>
+                    <Input placeholder="https://shop.example.com" value={formData.integrations?.woocommerceUrl || ''} onChange={(e) => setIntg('woocommerceUrl', e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <Label>Consumer Key</Label>
+                      <Input type="password" placeholder="ck_••••••••" value={formData.integrations?.woocommerceKey || ''} onChange={(e) => setIntg('woocommerceKey', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Consumer Secret</Label>
+                      <Input type="password" placeholder="cs_••••••••" value={formData.integrations?.woocommerceSecret || ''} onChange={(e) => setIntg('woocommerceSecret', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Automation (n8n) */}
+                <div className="space-y-4 pt-2 border-t border-dashed">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <Webhook className="w-4 h-4 text-violet-500" /> Automation (n8n)
+                  </div>
+                  <div className="space-y-2">
+                    <Label>n8n Webhook Base URL</Label>
+                    <Input placeholder="https://n8n.example.com/webhook" value={formData.integrations?.n8nWebhookBase || ''} onChange={(e) => setIntg('n8nWebhookBase', e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Custom Webhook URL</Label>
+                    <Input placeholder="https://…/webhook/…" value={formData.integrations?.customWebhook || ''} onChange={(e) => setIntg('customWebhook', e.target.value)} />
+                  </div>
+                </div>
+
+                {/* Facebook */}
+                <div className="space-y-4 pt-2 border-t border-dashed">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <Facebook className="w-4 h-4 text-violet-500" /> Facebook
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <Label>Page ID</Label>
+                      <Input placeholder="1234567890" value={formData.integrations?.facebookPageId || ''} onChange={(e) => setIntg('facebookPageId', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Access Token</Label>
+                      <Input type="password" placeholder="••••••••" value={formData.integrations?.facebookToken || ''} onChange={(e) => setIntg('facebookToken', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400">Tip: changes here save when you press “Save Company”.</p>
               </CardContent>
             </Card>
           </div>

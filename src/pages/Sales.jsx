@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { format } from 'date-fns';
 import { erp } from '@/api/erpClient';
+import api from '@/api/client';
 import { Order } from '@/entities/Order';
 import { Customer } from '@/entities/Customer';
 import { Inventory } from '@/entities/Inventory';
@@ -48,6 +49,7 @@ import MobileOrderCard from '../components/sales/MobileOrderCard';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import { StatGridSkeleton, CardGridSkeleton, ErrorState } from '@/components/common/Skeletons';
+import { useScope } from '@/lib/scope'; // ✅ global company scope hook
 
 // Main Sales Page
 function SalesPage() {
@@ -74,6 +76,11 @@ function SalesPage() {
   });
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
+  // ✅ FIX: Read the active scope (company + department) from the global hook.
+  // For non-admins this is always their profile scope (seeded on login).
+  // For admins this is whatever they chose in the header ScopeSelector.
+  const { companyId: scopeCompanyId, departmentId: scopeDepartmentId } = useScope();
+
   // 🚀 LIGHTNING FAST: Cached current user
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -82,68 +89,35 @@ function SalesPage() {
     gcTime: 30 * 60 * 1000,
   });
 
-  // 🚀 LIGHTNING FAST: Orders with pagination for ALL orders + fast initial load
-  const [allOrdersLoaded, setAllOrdersLoaded] = useState(false);
+  const isAdmin = useMemo(() => {
+    return ['admin', 'manager', 'super_admin'].includes(
+      String(currentUser?.job_role || currentUser?.role || '').toLowerCase()
+    );
+  }, [currentUser]);
 
-  // First load: Get recent 500 orders fast
-  const { data: recentOrders = [], isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useQuery({
-    queryKey: ['orders-sales-recent'],
-    queryFn: () => Order.list('-order_date', 500),
-    staleTime: 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+  // ✅ FIX: Single fast order query scoped to the user's company/department.
+  // No more background batch loop that fetched 1000+ records and stalled the UI.
+  // The axios interceptor auto-applies companyId/departmentId from localStorage
+  // so Order.list() already returns only the right company's orders.
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    isError: ordersError,
+    refetch: refetchOrders,
+  } = useQuery({
+    queryKey: ['orders-sales', scopeCompanyId, scopeDepartmentId],
+    queryFn: () => Order.list('-order_date', 300),
+    staleTime: 45 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: 'always',
     refetchInterval: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
-  // Background load: Get ALL orders (runs after initial render)
-  const { data: allOrders = [] } = useQuery({
-    queryKey: ['orders-sales-all'],
-    queryFn: async () => {
-      const batchSize = 1000;
-      let allData = [];
-      let offset = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const batch = await Order.list('-order_date', batchSize, offset);
-        allData = [...allData, ...batch];
-        offset += batchSize;
-        hasMore = batch.length === batchSize;
-      }
-
-      setAllOrdersLoaded(true);
-      return allData;
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    enabled: recentOrders.length > 0,
-  });
-
-  // Use all orders if loaded, otherwise use recent
-  const orders = allOrdersLoaded && allOrders.length > 0 ? allOrders : recentOrders;
-
-  // 🚀 LIGHTNING FAST: Real-time subscription with debounce
-  useEffect(() => {
-    let timeoutId = null;
-    const unsubscribe = Order.subscribe(() => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['orders-sales'] });
-      }, 500);
-    });
-    return () => {
-      unsubscribe();
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [queryClient]);
-
-  // 🚀 LIGHTNING FAST: Customers with very long cache
+  // 🚀 Customers scoped to active company
   const { data: customers = [] } = useQuery({
-    queryKey: ['customers-sales'],
+    queryKey: ['customers-sales', scopeCompanyId, scopeDepartmentId],
     queryFn: () => Customer.list('-created_date', 500),
     staleTime: 30 * 60 * 1000,
     gcTime: 2 * 60 * 60 * 1000,
@@ -151,33 +125,21 @@ function SalesPage() {
     refetchOnMount: false,
   });
 
-  // 🚀 LIGHTNING FAST: Inventory with very long cache
+  // ✅ FIX: Inventory scoped to the active company/department via axios interceptor.
+  // No more hard-coded 'prodhan_com_e_commerce' — the backend filters automatically.
   const { data: inventory = [] } = useQuery({
-    queryKey: ['inventory-sales'],
-    queryFn: () => Inventory.filter({ department: 'prodhan_com_e_commerce' }, '-updated_date', 500),
+    queryKey: ['inventory-sales', scopeCompanyId, scopeDepartmentId],
+    queryFn: () => Inventory.list('-updated_date', 500),
     staleTime: 30 * 60 * 1000,
     gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 
-  const canViewAllDepartments = useMemo(() => {
-    return ['super_admin', 'admin'].includes(currentUser?.job_role?.toLowerCase());
-  }, [currentUser]);
-
-  const userDepartment = useMemo(() => {
-    if (!currentUser) return 'all';
-    if (canViewAllDepartments) return 'all';
-    return currentUser?.department || 'all';
-  }, [currentUser, canViewAllDepartments]);
-
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-
-  useEffect(() => {
-    if (currentUser && !canViewAllDepartments && departmentFilter !== userDepartment) {
-      setDepartmentFilter(userDepartment);
-    }
-  }, [currentUser, canViewAllDepartments, userDepartment, departmentFilter]);
+  // ✅ FIX: No more local departmentFilter state — we use the global scope hook.
+  // The data is already server-filtered by scope. departmentFilter kept only
+  // for the product filter popover UI (filters already-fetched inventory locally).
+  const canViewAllDepartments = useMemo(() => isAdmin, [isAdmin]);
 
   // 🚀 LIGHTNING FAST: Permissions with long cache
   const { data: rawUserPermissions = [] } = useQuery({
@@ -215,9 +177,7 @@ function SalesPage() {
   const canApprove = hasPermission('sales', 'can_approve');
   const canExport = hasPermission('sales', 'can_export');
 
-  const isAdmin = useMemo(() => {
-    return ['admin', 'manager', 'super_admin'].includes(currentUser?.job_role?.toLowerCase());
-  }, [currentUser]);
+  // isAdmin already defined above near useScope()
 
   // Create order mutation - NO inventory deduction on create
   const createOrderMutation = useMutation({
@@ -322,6 +282,61 @@ function SalesPage() {
   const handleQuickStatusChange = (order, newStatus) => {
     updateOrderStatusMutation.mutate({ orderId: order.id, newStatus });
   };
+
+  // Ship order: posts to backend ship endpoint which forwards to the
+  // sub-company's courier (Steadfast) webhook and flips status to 'shipped'.
+  const shipOrderMutation = useMutation({
+    mutationFn: async (orderId) => {
+      return await api.post('/orders/' + orderId + '/ship');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['orders-sales-recent']);
+      queryClient.invalidateQueries(['orders-sales-all']);
+      // Backend automation deducts inventory on ship; refresh after delays.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['inventory'] });
+        queryClient.invalidateQueries({ queryKey: ['inventory-sales'] });
+      }, 2000);
+      toast.success('Order sent to courier & marked shipped');
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Failed to ship order');
+    },
+  });
+
+  // Order pending confirmation of ship action (AlertDialog target).
+  const [orderToShip, setOrderToShip] = useState(null);
+
+  const confirmShipOrder = () => {
+    if (orderToShip) {
+      shipOrderMutation.mutate(orderToShip.id);
+      setOrderToShip(null);
+    }
+  };
+
+  // Check live delivery status: GETs the courier delivery status for an order.
+  // Reports the courier status via toast and (if the backend updated the order)
+  // notes that, then refreshes the orders lists.
+  const checkDeliveryStatusMutation = useMutation({
+    mutationFn: async (orderId) => {
+      return await api.get('/orders/' + orderId + '/delivery-status');
+    },
+    onSuccess: (res) => {
+      const data = res?.data?.data;
+      const courierStatus = data?.courierStatus || data?.status || 'unknown';
+      toast.success('Courier status: ' + courierStatus);
+      if (data?.updated) {
+        toast.success('Order status was updated from the courier.');
+      }
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['orders-sales-recent']);
+      queryClient.invalidateQueries(['orders-sales-all']);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Could not fetch delivery status');
+    },
+  });
 
   // Payment status update mutation
   const updatePaymentStatusMutation = useMutation({
@@ -457,15 +472,7 @@ function SalesPage() {
     setIsInvoiceOpen(true);
   };
 
-  const handleDepartmentFilterChange = (value) => {
-    if (!canViewAllDepartments) {
-      if (value !== userDepartment) {
-        toast.error('You can only view orders from your assigned department.');
-        return;
-      }
-    }
-    setDepartmentFilter(value);
-  };
+  // Department filter change is no longer needed — scope is server-side via useScope().
 
   // 🚀 LIGHTNING FAST: Optimized filtering with virtual pagination
   const [displayLimit, setDisplayLimit] = useState(50);
@@ -490,11 +497,8 @@ function SalesPage() {
 
     let filtered = ordersWithDateStr;
 
-    if (!canViewAllDepartments) {
-      filtered = filtered.filter(o => o.department === userDepartment);
-    } else if (departmentFilter !== 'all') {
-      filtered = filtered.filter(o => o.department === departmentFilter);
-    }
+    // Data is already server-scoped to the user's company/department via the
+    // axios interceptor. No client-side department filter needed.
 
     if (dateRange.from) {
       const fromDateStr = dateRange.from;
@@ -538,7 +542,7 @@ function SalesPage() {
     }
 
     return filtered;
-  }, [ordersWithDateStr, departmentFilter, searchQuery, statusFilter, paymentFilter, dateRange, canViewAllDepartments, userDepartment, productFilter]);
+  }, [ordersWithDateStr, searchQuery, statusFilter, paymentFilter, dateRange, productFilter, showDuplicates]);
 
   // 🚀 Display only limited rows for smooth scrolling
   const displayedOrders = useMemo(() => {
@@ -759,15 +763,9 @@ function SalesPage() {
     return <Badge className={`${className} rounded-full px-3 py-0.5 text-xs font-medium`}>{label}</Badge>;
   };
 
+  // ✅ FIX: firstLoad only gates the TABLE, not the entire page.
+  // Header, buttons, and stats render immediately — only the table shows skeleton.
   const firstLoad = ordersLoading && orders.length === 0;
-
-  if (ordersError && orders.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
-        <ErrorState message="Failed to load sales data." onRetry={refetchOrders} />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -786,6 +784,17 @@ function SalesPage() {
           title="Sales Management"
           subtitle="Track and manage all your sales orders"
         />
+
+        {/* Inline error banner — does NOT block the rest of the UI */}
+        {ordersError && orders.length === 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Failed to load orders.</span>
+            <Button size="sm" variant="ghost" onClick={refetchOrders} className="ml-auto text-red-600 hover:text-red-700 hover:bg-red-100 h-7">
+              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retry
+            </Button>
+          </div>
+        )}
 
         {/* Search + action row */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
@@ -1463,66 +1472,100 @@ function SalesPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="center" sideOffset={4} className="min-w-[200px]">
-                              {/* Pre-confirmation statuses */}
+                              {/* Pre-confirmation quick actions */}
                               {['pending', 'on_hold', 'call_not_received', 'follow_up', 'callback_requested'].includes(order.order_status) && (
                                 <>
-                                  {order.order_status !== 'on_hold' && (
-                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'on_hold')}>
-                                      <Clock className="w-4 h-4 mr-2 text-yellow-600" />
-                                      Put On Hold
-                                    </DropdownMenuItem>
-                                  )}
+                                  <DropdownMenuItem
+                                    disabled={updateOrderStatusMutation.isPending}
+                                    onClick={() => handleQuickStatusChange(order, 'confirmed')}
+                                    className="font-semibold text-green-700 focus:bg-green-50"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                    Confirm Order
+                                  </DropdownMenuItem>
+                                  <div className="border-t border-slate-100 my-1" />
                                   {order.order_status !== 'call_not_received' && (
-                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'call_not_received')}>
+                                    <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'call_not_received')}>
                                       <Phone className="w-4 h-4 mr-2 text-amber-600" />
                                       Call Not Received
                                     </DropdownMenuItem>
                                   )}
+                                  {order.order_status !== 'pending' && (
+                                    <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'pending')}>
+                                      <AlertCircle className="w-4 h-4 mr-2 text-slate-600" />
+                                      Pending
+                                    </DropdownMenuItem>
+                                  )}
+                                  {order.order_status !== 'on_hold' && (
+                                    <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'on_hold')}>
+                                      <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                                      On Hold
+                                    </DropdownMenuItem>
+                                  )}
                                   {order.order_status !== 'follow_up' && (
-                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'follow_up')}>
+                                    <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'follow_up')}>
                                       <RefreshCw className="w-4 h-4 mr-2 text-indigo-600" />
                                       Needs Follow Up
                                     </DropdownMenuItem>
                                   )}
                                   {order.order_status !== 'callback_requested' && (
-                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'callback_requested')}>
+                                    <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'callback_requested')}>
                                       <Phone className="w-4 h-4 mr-2 text-pink-600" />
                                       Callback Requested
                                     </DropdownMenuItem>
                                   )}
-                                  {order.order_status !== 'pending' && (
-                                    <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'pending')}>
-                                      <AlertCircle className="w-4 h-4 mr-2 text-slate-600" />
-                                      Back to Pending
-                                    </DropdownMenuItem>
-                                  )}
-                                  <div className="border-t border-slate-100 my-1" />
-                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'confirmed')}>
-                                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                    ✅ Confirm Order
+                                </>
+                              )}
+                              {/* Confirmed: move to packaging, then prominent Ship via Steadfast */}
+                              {order.order_status === 'confirmed' && (
+                                <>
+                                  <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'packed')}>
+                                    <Package className="w-4 h-4 mr-2 text-purple-600" />
+                                    Move to Packaging
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={shipOrderMutation.isPending}
+                                    onClick={() => setOrderToShip(order)}
+                                    className="font-semibold text-cyan-700 focus:bg-cyan-50"
+                                  >
+                                    <Truck className="w-4 h-4 mr-2 text-cyan-600" />
+                                    Ship via Steadfast
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              {/* Post-confirmation statuses — same as before */}
-                              {order.order_status === 'confirmed' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'processing')}>
-                                  <Package className="w-4 h-4 mr-2 text-indigo-600" />
-                                  Mark as Processing
-                                </DropdownMenuItem>
-                              )}
+                              {/* Packed / Processing: prominent Ship via Steadfast */}
                               {(order.order_status === 'processing' || order.order_status === 'packed') && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'shipped')}>
-                                  <Truck className="w-4 h-4 mr-2 text-purple-600" />
-                                  Mark as Shipped
+                                <DropdownMenuItem disabled={shipOrderMutation.isPending} onClick={() => setOrderToShip(order)} className="font-semibold text-cyan-700 focus:bg-cyan-50">
+                                  <Truck className="w-4 h-4 mr-2 text-cyan-600" />
+                                  Ship via Steadfast
                                 </DropdownMenuItem>
                               )}
+                              {/* Shipped / Out for delivery: check live status, mark delivered, show tracking */}
                               {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
-                                <DropdownMenuItem onClick={() => handleQuickStatusChange(order, 'delivered')}>
-                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                  Mark as Delivered
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem
+                                    disabled={checkDeliveryStatusMutation.isPending}
+                                    onClick={() => checkDeliveryStatusMutation.mutate(order.id)}
+                                    className="font-semibold text-cyan-700 focus:bg-cyan-50"
+                                  >
+                                    {checkDeliveryStatusMutation.isPending && checkDeliveryStatusMutation.variables === order.id
+                                      ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-cyan-600" />
+                                      : <RefreshCw className="w-4 h-4 mr-2 text-cyan-600" />}
+                                    Check Delivery Status
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem disabled={updateOrderStatusMutation.isPending} onClick={() => handleQuickStatusChange(order, 'delivered')} className="font-semibold text-emerald-700 focus:bg-emerald-50">
+                                    <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />
+                                    Mark Delivered
+                                  </DropdownMenuItem>
+                                  {(order.courier_tracking_code || order.tracking_number) && (
+                                    <div className="px-2 py-1.5 text-xs text-slate-500 flex items-center gap-1">
+                                      <Truck className="w-3 h-3" />
+                                      Tracking: <span className="font-mono text-slate-700">{order.courier_tracking_code || order.tracking_number}</span>
+                                    </div>
+                                  )}
+                                </>
                               )}
-                              {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
+                              {!['cancelled', 'delivered', 'returned'].includes(order.order_status) && (
                                 <DropdownMenuItem onClick={async () => {
                                   // For shipped orders, use the revert function
                                   if (['shipped', 'out_for_delivery'].includes(order.order_status)) {
@@ -1551,7 +1594,7 @@ function SalesPage() {
                                   } else {
                                     handleQuickStatusChange(order, 'cancelled');
                                   }
-                                }}>
+                                }} className="text-red-600 focus:bg-red-50 focus:text-red-700">
                                   <XCircle className="w-4 h-4 mr-2 text-red-600" />
                                   Cancel Order
                                 </DropdownMenuItem>
@@ -1561,6 +1604,57 @@ function SalesPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            {/* Prominent Ship Order action for confirmed orders */}
+                            {order.order_status === 'confirmed' && (
+                              <Button
+                                size="sm"
+                                disabled={shipOrderMutation.isPending}
+                                onClick={() => setOrderToShip(order)}
+                                className="h-8 px-3 gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold shadow-sm hover:shadow transition-all"
+                                title="Send to courier (Steadfast) & mark shipped"
+                              >
+                                {shipOrderMutation.isPending && shipOrderMutation.variables === order.id
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <Truck className="w-3.5 h-3.5" />}
+                                Ship
+                              </Button>
+                            )}
+                            {/* Check delivery status + Mark Delivered for shipped orders */}
+                            {(order.order_status === 'shipped' || order.order_status === 'out_for_delivery') && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={checkDeliveryStatusMutation.isPending}
+                                  onClick={() => checkDeliveryStatusMutation.mutate(order.id)}
+                                  className="h-8 gap-1 border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+                                  title="Check live delivery status from courier"
+                                >
+                                  {checkDeliveryStatusMutation.isPending && checkDeliveryStatusMutation.variables === order.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <RefreshCw className="w-4 h-4" />}
+                                  Check Status
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={updateOrderStatusMutation.isPending}
+                                  onClick={() => handleQuickStatusChange(order, 'delivered')}
+                                  className="h-8 gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                  title="Mark as delivered"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  Delivered
+                                </Button>
+                              </>
+                            )}
+                            {/* Tracking number stays visible when present */}
+                            {(order.courier_tracking_code || order.tracking_number) && (
+                              <Badge className="bg-cyan-50 text-cyan-700 border border-cyan-200 text-xs h-7 px-2" title="Courier tracking">
+                                <Truck className="w-3 h-3 mr-1" />
+                                {order.courier_tracking_code || order.tracking_number}
+                              </Badge>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1617,7 +1711,7 @@ function SalesPage() {
                             >
                               <Download className="w-4 h-4 text-green-600" />
                             </Button>
-                            {['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
+                            {false /* legacy Adprofit paper-plane button removed */ && ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'].includes(order.order_status) && !order.adprofit_synced && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1639,8 +1733,8 @@ function SalesPage() {
                                 <Send className="w-4 h-4 text-indigo-600" />
                               </Button>
                             )}
-                            {/* Send to Courier Button */}
-                            {['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
+                            {/* Legacy direct-webhook courier button — replaced by the per-sub-company "Ship" button above. Disabled. */}
+                            {false && ['confirmed', 'processing', 'packed'].includes(order.order_status) && !order.courier_placed && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1740,7 +1834,7 @@ function SalesPage() {
                                 <Truck className="w-4 h-4 text-orange-600" />
                               </Button>
                             )}
-                            {order.courier_placed && (
+                            {false /* legacy courier status block — replaced by Check Status / tracking badge */ && order.courier_placed && (
                               <>
                                 <Badge className="bg-orange-100 text-orange-800 text-xs h-7 px-2">
                                   <PackageCheck className="w-3 h-3 mr-1" />
@@ -1848,6 +1942,33 @@ function SalesPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Ship Order Confirmation */}
+        <AlertDialog open={!!orderToShip} onOpenChange={(open) => { if (!open) setOrderToShip(null); }}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-cyan-600" />
+                Send this order to the courier?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {orderToShip
+                  ? `Order ${orderToShip.order_number || orderToShip.id} will be posted to the courier (Steadfast) and marked as shipped. Inventory will be deducted automatically.`
+                  : ''}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmShipOrder}
+                disabled={shipOrderMutation.isPending}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white"
+              >
+                {shipOrderMutation.isPending ? 'Shipping...' : 'Ship Order'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Export Dialog */}
         <AlertDialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>

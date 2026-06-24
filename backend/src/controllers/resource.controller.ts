@@ -83,6 +83,12 @@ export function makeResource({ model, defaultSort = '-createdAt' }: ResourceOpti
     if (req.user?.tenantId && modelInfo?.set.has('tenantId')) {
       where.tenantId = req.user.tenantId;
     }
+    // SECURITY: non-admin users are hard-scoped to their own department (sub-company),
+    // ignoring any client-supplied departmentId. Admins keep the picker freedom.
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes((req.user as any)?.jobRole);
+    if (!isAdmin && modelInfo?.set.has('departmentId') && (req.user as any)?.departmentId) {
+      where.departmentId = (req.user as any).departmentId;
+    }
     return where;
   };
 
@@ -116,6 +122,20 @@ export function makeResource({ model, defaultSort = '-createdAt' }: ResourceOpti
       const page = qn(req.query.page, 1);
       const orderBy = parseSort(qs(req.query.sort));
       const where = tenantWhere(req, extractFilters(req.query as any));
+
+      // Sub-company filter (admins): scope department-owned models to all
+      // departments under the chosen company. Non-admins are already locked to
+      // their own department by tenantWhere.
+      const info = MODEL_FIELDS[model];
+      const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes((req.user as any)?.jobRole);
+      const companyId = req.query.companyId as string;
+      if (isAdmin && companyId && companyId !== 'all' && info?.set.has('departmentId') && where.departmentId === undefined) {
+        const depts = await prisma.department.findMany({
+          where: { tenantId: req.user?.tenantId, companyId },
+          select: { id: true },
+        });
+        where.departmentId = { in: depts.length ? depts.map((d: any) => d.id) : ['__none__'] };
+      }
 
       const [rows, total] = await Promise.all([
         delegate().findMany({

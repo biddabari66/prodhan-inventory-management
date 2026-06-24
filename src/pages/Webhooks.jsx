@@ -9,8 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { toast, Toaster } from 'sonner';
 import SplitText from '../components/animations/SplitText';
+import api from '@/api/client';
+import { useScope } from '@/lib/scope';
 
 export default function Webhooks() {
+  const { companyId: activeCompanyId } = useScope();
+  const [companies, setCompanies] = useState([]);
+  const [companyFilter, setCompanyFilter] = useState('all');
   const [outboundHooks, setOutboundHooks] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newHook, setNewHook] = useState({
@@ -19,6 +24,7 @@ export default function Webhooks() {
     url: '',
     method: 'POST',
     isActive: true,
+    companyId: '',
     headers: [{ key: 'Authorization', value: 'Bearer n8n_token_here' }]
   });
 
@@ -33,6 +39,24 @@ export default function Webhooks() {
       }
     }
   }, []);
+
+  // Load sub-companies for the filter + per-webhook assignment.
+  useEffect(() => {
+    api.get('/companies', { params: { limit: 100 } })
+      .then((r) => setCompanies(Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])))
+      .catch(() => setCompanies([]));
+  }, []);
+
+  // Default the filter + new-hook company to the active sub-company from the header picker.
+  useEffect(() => {
+    if (activeCompanyId) {
+      setCompanyFilter(activeCompanyId);
+      setNewHook((h) => ({ ...h, companyId: h.companyId || activeCompanyId }));
+    }
+  }, [activeCompanyId]);
+
+  const companyName = (id) => companies.find((c) => c.id === id)?.name || (companies.find((c) => c.id === id)?.branding?.name) || 'All sub-companies';
+  const visibleHooks = outboundHooks.filter((h) => companyFilter === 'all' || (h.companyId || '') === companyFilter);
 
   // Save to local storage
   const saveHooks = (hooks) => {
@@ -50,7 +74,7 @@ export default function Webhooks() {
       toast.error('Name and URL are required');
       return;
     }
-    const updatedHooks = [...outboundHooks, { ...newHook, id: Date.now().toString() }];
+    const updatedHooks = [...outboundHooks, { ...newHook, companyId: newHook.companyId || activeCompanyId || '', id: Date.now().toString() }];
     saveHooks(updatedHooks);
     setIsCreating(false);
     toast.success('n8n Webhook connection created successfully!');
@@ -60,6 +84,7 @@ export default function Webhooks() {
       url: '',
       method: 'POST',
       isActive: true,
+      companyId: activeCompanyId || '',
       headers: [{ key: 'Authorization', value: 'Bearer n8n_token_here' }]
     });
   };
@@ -164,9 +189,22 @@ export default function Webhooks() {
 
           {/* OUTBOUND TAB */}
           <TabsContent value="outbound" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Active Triggers</h2>
-              
+            <div className="flex flex-wrap justify-between items-center gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Active Triggers</h2>
+                {companies.length > 0 && (
+                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                    <SelectTrigger className="h-9 w-52 bg-white dark:bg-slate-900">
+                      <SelectValue placeholder="Filter by sub-company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All sub-companies</SelectItem>
+                      {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               <Dialog open={isCreating} onOpenChange={setIsCreating}>
                 <DialogTrigger asChild>
                   <Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md">
@@ -188,11 +226,24 @@ export default function Webhooks() {
                   <div className="grid gap-6 py-4">
                     <div className="grid gap-2">
                       <label className="text-sm font-medium">Connection Name</label>
-                      <Input 
-                        placeholder="e.g. Sync Orders to Excel via n8n" 
+                      <Input
+                        placeholder="e.g. Sync Orders to Excel via n8n"
                         value={newHook.name}
                         onChange={(e) => setNewHook({...newHook, name: e.target.value})}
                       />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium">Sub-Company</label>
+                      <Select value={newHook.companyId || ''} onValueChange={(v) => setNewHook({...newHook, companyId: v})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Which sub-company is this webhook for?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">This webhook will belong to the selected sub-company.</p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -281,7 +332,7 @@ export default function Webhooks() {
               </Dialog>
             </div>
 
-            {outboundHooks.length === 0 ? (
+            {visibleHooks.length === 0 ? (
               <Card className="border-dashed border-2 border-gray-200 dark:border-gray-800 bg-transparent shadow-none">
                 <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                   <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mb-4">
@@ -298,7 +349,7 @@ export default function Webhooks() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {outboundHooks.map(hook => (
+                {visibleHooks.map(hook => (
                   <Card key={hook.id} className="border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
                       <div className="flex justify-between items-start">
@@ -313,6 +364,11 @@ export default function Webhooks() {
                             <Badge className={hook.method === 'POST' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}>
                               {hook.method}
                             </Badge>
+                            {hook.companyId && (
+                              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+                                {companyName(hook.companyId)}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => handleDeleteHook(hook.id)}>

@@ -1,123 +1,94 @@
 /**
  * pages.config.js - Page routing configuration
- * 
- * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
- * Pages are auto-registered when you create files in the ./pages/ folder.
- * 
+ *
+ * Pages are lazy-loaded so each is its own async chunk (fast first load).
+ * NOTE: do NOT add a Vite manualChunks config that splits react/react-dom into a
+ * separate chunk — it causes "Cannot read properties of undefined (forwardRef)"
+ * at boot. Lazy routes alone are safe (React stays in the entry chunk).
  * THE ONLY EDITABLE VALUE: mainPage
- * This controls which page is the landing page (shown when users visit the app).
- * 
- * Example file structure:
- * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
- *   
- *   export const PAGES = {
- *       "HomePage": HomePage,
- *       "Dashboard": Dashboard,
- *       "Settings": Settings,
- *   }
- *   
- *   export const pagesConfig = {
- *       mainPage: "HomePage",
- *       Pages: PAGES,
- *   };
- * 
- * Example with Layout (wraps all pages):
- *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
- *   import __Layout from './Layout.jsx';
- *
- *   export const PAGES = {
- *       "Home": Home,
- *       "Settings": Settings,
- *   }
- *
- *   export const pagesConfig = {
- *       mainPage: "Home",
- *       Pages: PAGES,
- *       Layout: __Layout,
- *   };
- *
- * To change the main page from HomePage to Dashboard, use find_replace:
- *   Old: mainPage: "HomePage",
- *   New: mainPage: "Dashboard",
- *
- * The mainPage value must match a key in the PAGES object exactly.
  */
-import ActivityLog from './pages/ActivityLog';
-import AlertsConfiguration from './pages/AlertsConfiguration';
-import Attendance from './pages/Attendance';
-import AttendanceMy from './pages/AttendanceMy';
-import AuditTrailViewer from './pages/AuditTrailViewer';
-import Auth from './pages/Auth';
-import BarcodeScan from './pages/BarcodeScan';
-import AutoReportSettings from './pages/AutoReportSettings';
-import CRM from './pages/CRM';
-import CategorySettings from './pages/CategorySettings';
-import CustomerManagement from './pages/CustomerManagement';
-import DailyExpenseReport from './pages/DailyExpenseReport';
-import DepartmentProfile from './pages/DepartmentProfile';
-import DiscountCampaigns from './pages/DiscountCampaigns';
-import DocumentCenter from './pages/DocumentCenter';
-import Documentation from './pages/Documentation';
-import EmailNotifications from './pages/EmailNotifications';
-import EmployeeAttendance from './pages/EmployeeAttendance';
-import Employees from './pages/Employees';
-import ExpenseApprovals from './pages/ExpenseApprovals';
-import Expenses from './pages/Expenses';
-import ExportCenter from './pages/ExportCenter';
-import FacebookLeadsWebhook from './pages/FacebookLeadsWebhook';
-import FeludaAnalytics from './pages/FeludaAnalytics';
-import FinanceDashboard from './pages/FinanceDashboard';
-import FinanceReports from './pages/FinanceReports';
-import Home from './pages/Home';
-import Integrations from './pages/Integrations';
-import InventoryAIInsights from './pages/InventoryAIInsights';
-import InventoryMovements from './pages/InventoryMovements';
-import InventoryOverview from './pages/InventoryOverview';
-import InventoryReconciliation from './pages/InventoryReconciliation';
-import InventoryReports from './pages/InventoryReports';
-import InventoryReturns from './pages/InventoryReturns';
-import InventorySuppliers from './pages/InventorySuppliers';
-import KPIDashboard from './pages/KPIDashboard';
-import ManualReporting from './pages/ManualReporting';
-import MarketingROI from './pages/MarketingROI';
-import MyAttendance from './pages/MyAttendance';
-import NotificationPreferences from './pages/NotificationPreferences';
-import Onboarding from './pages/Onboarding';
-import SuperAdmin from './pages/SuperAdmin';
-import AICopilot from './pages/AICopilot';
-import Accounting from './pages/Accounting';
-import Automation from './pages/Automation';
-import Billing from './pages/Billing';
-import BillingAdmin from './pages/BillingAdmin';
-import NotificationSettings from './pages/NotificationSettings';
-import Payroll from './pages/Payroll';
-import PayrollReport from './pages/PayrollReport';
-import Permissions from './pages/Permissions';
-import Procurement from './pages/Procurement';
-import ProdhanComIntegration from './pages/ProdhanComIntegration';
-import ProductAnalytics from './pages/ProductAnalytics';
-import ProductionHouse from './pages/ProductionHouse';
-import PurchaseOrders from './pages/PurchaseOrders';
-import ReportBuilder from './pages/ReportBuilder';
-import ReportGenerator from './pages/ReportGenerator';
-import Reports from './pages/Reports';
-import Sales from './pages/Sales';
-import ScheduledReports from './pages/ScheduledReports';
-import SendEmail from './pages/SendEmail';
-import Settings from './pages/Settings';
-import StockReports from './pages/StockReports';
-import SubmittedReports from './pages/SubmittedReports';
-import SystemLogs from './pages/SystemLogs';
-import SystemOptimization from './pages/SystemOptimization';
-import ThirdPartyApps from './pages/ThirdPartyApps';
-import UserAccessManager from './pages/UserAccessManager';
-import Webhooks from './pages/Webhooks';
-import WhatsAppWebhook from './pages/WhatsAppWebhook';
+import { lazy } from 'react';
+
+const ActivityLog = lazy(() => import('./pages/ActivityLog'));
+const AlertsConfiguration = lazy(() => import('./pages/AlertsConfiguration'));
+const Attendance = lazy(() => import('./pages/Attendance'));
+const AttendanceAdmin = lazy(() => import('./pages/AttendanceAdmin'));
+const AttendanceMy = lazy(() => import('./pages/AttendanceMy'));
+const AuditTrailViewer = lazy(() => import('./pages/AuditTrailViewer'));
+const Auth = lazy(() => import('./pages/Auth'));
+const BarcodeScan = lazy(() => import('./pages/BarcodeScan'));
+const AutoReportSettings = lazy(() => import('./pages/AutoReportSettings'));
+const CRM = lazy(() => import('./pages/CRM'));
+const CategorySettings = lazy(() => import('./pages/CategorySettings'));
+const CustomerManagement = lazy(() => import('./pages/CustomerManagement'));
+const DailyExpenseReport = lazy(() => import('./pages/DailyExpenseReport'));
+const DepartmentProfile = lazy(() => import('./pages/DepartmentProfile'));
+const DiscountCampaigns = lazy(() => import('./pages/DiscountCampaigns'));
+const DocumentCenter = lazy(() => import('./pages/DocumentCenter'));
+const Documentation = lazy(() => import('./pages/Documentation'));
+const EmailNotifications = lazy(() => import('./pages/EmailNotifications'));
+const EmployeeAttendance = lazy(() => import('./pages/EmployeeAttendance'));
+const Employees = lazy(() => import('./pages/Employees'));
+const ExpenseApprovals = lazy(() => import('./pages/ExpenseApprovals'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const ExportCenter = lazy(() => import('./pages/ExportCenter'));
+const FacebookLeadsWebhook = lazy(() => import('./pages/FacebookLeadsWebhook'));
+const FeludaAnalytics = lazy(() => import('./pages/FeludaAnalytics'));
+const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'));
+const FinanceReports = lazy(() => import('./pages/FinanceReports'));
+const HardwareConfiguration = lazy(() => import('./pages/HardwareConfiguration'));
+const Home = lazy(() => import('./pages/Home'));
+const Integrations = lazy(() => import('./pages/Integrations'));
+const InventoryAIInsights = lazy(() => import('./pages/InventoryAIInsights'));
+const InventoryMovements = lazy(() => import('./pages/InventoryMovements'));
+const InventoryOverview = lazy(() => import('./pages/InventoryOverview'));
+const InventoryReconciliation = lazy(() => import('./pages/InventoryReconciliation'));
+const InventoryReports = lazy(() => import('./pages/InventoryReports'));
+const InventoryReturns = lazy(() => import('./pages/InventoryReturns'));
+const InventorySuppliers = lazy(() => import('./pages/InventorySuppliers'));
+const KPIDashboard = lazy(() => import('./pages/KPIDashboard'));
+const ManualReporting = lazy(() => import('./pages/ManualReporting'));
+const MarketingROI = lazy(() => import('./pages/MarketingROI'));
+const MyAttendance = lazy(() => import('./pages/MyAttendance'));
+const NotificationPreferences = lazy(() => import('./pages/NotificationPreferences'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
+const AICopilot = lazy(() => import('./pages/AICopilot'));
+const Accounting = lazy(() => import('./pages/Accounting'));
+const Automation = lazy(() => import('./pages/Automation'));
+const Billing = lazy(() => import('./pages/Billing'));
+const BillingAdmin = lazy(() => import('./pages/BillingAdmin'));
+const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
+const Payroll = lazy(() => import('./pages/Payroll'));
+const PayrollReport = lazy(() => import('./pages/PayrollReport'));
+const Permissions = lazy(() => import('./pages/Permissions'));
+const Procurement = lazy(() => import('./pages/Procurement'));
+const ProdhanComIntegration = lazy(() => import('./pages/ProdhanComIntegration'));
+const ProductAnalytics = lazy(() => import('./pages/ProductAnalytics'));
+const ProductionHouse = lazy(() => import('./pages/ProductionHouse'));
+const PurchaseOrders = lazy(() => import('./pages/PurchaseOrders'));
+const ReportBuilder = lazy(() => import('./pages/ReportBuilder'));
+const ReportGenerator = lazy(() => import('./pages/ReportGenerator'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Sales = lazy(() => import('./pages/Sales'));
+const ScheduledReports = lazy(() => import('./pages/ScheduledReports'));
+const SendEmail = lazy(() => import('./pages/SendEmail'));
+const Settings = lazy(() => import('./pages/Settings'));
+const StockReports = lazy(() => import('./pages/StockReports'));
+const SubmittedReports = lazy(() => import('./pages/SubmittedReports'));
+const SystemLogs = lazy(() => import('./pages/SystemLogs'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Wholesale = lazy(() => import('./pages/Wholesale'));
+const ProductionProjects = lazy(() => import('./pages/ProductionProjects'));
+const DailyReport = lazy(() => import('./pages/DailyReport'));
+const Complaints = lazy(() => import('./pages/Complaints'));
+const Accountability = lazy(() => import('./pages/Accountability'));
+const SystemOptimization = lazy(() => import('./pages/SystemOptimization'));
+const ThirdPartyApps = lazy(() => import('./pages/ThirdPartyApps'));
+const UserAccessManager = lazy(() => import('./pages/UserAccessManager'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
+const WhatsAppWebhook = lazy(() => import('./pages/WhatsAppWebhook'));
+// Layout stays eagerly imported so the app shell appears instantly.
 import __Layout from './Layout.jsx';
 
 
@@ -125,6 +96,7 @@ export const PAGES = {
     "ActivityLog": ActivityLog,
     "AlertsConfiguration": AlertsConfiguration,
     "Attendance": Attendance,
+    "AttendanceAdmin": AttendanceAdmin,
     "AttendanceMy": AttendanceMy,
     "AuditTrailViewer": AuditTrailViewer,
     "Auth": Auth,
@@ -148,6 +120,7 @@ export const PAGES = {
     "FeludaAnalytics": FeludaAnalytics,
     "FinanceDashboard": FinanceDashboard,
     "FinanceReports": FinanceReports,
+    "HardwareConfiguration": HardwareConfiguration,
     "Home": Home,
     "Integrations": Integrations,
     "InventoryAIInsights": InventoryAIInsights,
@@ -188,11 +161,17 @@ export const PAGES = {
     "StockReports": StockReports,
     "SubmittedReports": SubmittedReports,
     "SystemLogs": SystemLogs,
+    "Tasks": Tasks,
     "SystemOptimization": SystemOptimization,
     "ThirdPartyApps": ThirdPartyApps,
     "UserAccessManager": UserAccessManager,
     "Webhooks": Webhooks,
     "WhatsAppWebhook": WhatsAppWebhook,
+    "Wholesale": Wholesale,
+    "ProductionProjects": ProductionProjects,
+    "DailyReport": DailyReport,
+    "Complaints": Complaints,
+    "Accountability": Accountability,
 }
 
 export const pagesConfig = {

@@ -56,6 +56,7 @@ import {
   MessageSquare,
   Warehouse,
   Shield,
+  AlertTriangle,
   CheckSquare,
   WifiOff,
   RefreshCw,
@@ -86,6 +87,7 @@ import ErrorBoundary from "@/components/common/ErrorBoundary";
 import Chatbot from "@/components/common/Chatbot";
 import SessionProvider from '@/components/common/EnhancedSessionManager';
 import UniversalSearch from '@/components/common/UniversalSearch';
+import ScopeSelector from '@/components/common/ScopeSelector';
 import { erp } from '@/api/erpClient';
 import FastLoadingProvider from '@/components/common/FastLoadingProvider';
 import { ShimmerStyles } from '@/components/common/SkeletonLoaders';
@@ -863,6 +865,7 @@ export default function Layout({ children, currentPageName }) {
         dotColor: 'bg-green-500',
         items: [
           hp('sales') && { label: 'Sales Orders', url: createPageUrl('Sales'), icon: ShoppingCart, color: 'text-green-600' },
+          hp('sales') && { label: 'Wholesale / Distribution', url: createPageUrl('Wholesale'), icon: Building2, color: 'text-indigo-500' },
           hp('customer_management') && { label: 'CRM & Leads', url: createPageUrl('CRM'), icon: Target, color: 'text-purple-500' },
           hp('customer_management') && { label: 'Customers', url: createPageUrl('CustomerManagement'), icon: Users, color: 'text-blue-500' },
           hp('discount_campaigns') && { label: 'Discount Offers', url: createPageUrl('DiscountCampaigns'), icon: Sparkles, color: 'text-amber-500' },
@@ -897,6 +900,13 @@ export default function Layout({ children, currentPageName }) {
         items: [
           hp('attendance') && { label: 'Employees', url: createPageUrl('Employees'), icon: Users, color: 'text-violet-500' },
           hp('attendance') && { label: 'Attendance', url: createPageUrl('EmployeeAttendance'), icon: Clock, color: 'text-rose-500' },
+          hp('attendance') && { label: 'Attendance (Admin)', url: createPageUrl('AttendanceAdmin'), icon: Clock, color: 'text-orange-500' },
+          { label: 'Tasks', url: createPageUrl('Tasks'), icon: CheckSquare, color: 'text-blue-500' },
+          { label: 'Daily Report (DPR)', url: createPageUrl('DailyReport'), icon: FileText, color: 'text-emerald-500' },
+          { label: 'Production Projects', url: createPageUrl('ProductionProjects'), icon: Briefcase, color: 'text-purple-500' },
+          { label: 'KPI Tracking', url: createPageUrl('KPIDashboard'), icon: Target, color: 'text-amber-500' },
+          hp('attendance') && { label: 'Team Accountability', url: createPageUrl('Accountability'), icon: Shield, color: 'text-rose-500' },
+          { label: 'Complaints', url: createPageUrl('Complaints'), icon: AlertTriangle, color: 'text-orange-500' },
           hp('payroll') && { label: 'Payroll', url: createPageUrl('Payroll'), icon: Calculator, color: 'text-green-500' },
           hp('expenses') && { label: 'Expenses', url: createPageUrl('Expenses'), icon: Wallet, color: 'text-amber-500' },
         ].filter(Boolean),
@@ -1950,6 +1960,7 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Header Actions */}
               <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-3">
+                <ScopeSelector />
                 <Button
                   onClick={toggleTheme}
                   variant="ghost"
@@ -2051,7 +2062,7 @@ export default function Layout({ children, currentPageName }) {
                     <p>Loading page...</p>
                   </div>
                 }>
-                  <div className="fade-in">
+                  <div key={location.pathname} className="page-enter">
                     {children}
                   </div>
                 </Suspense>

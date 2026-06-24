@@ -88,4 +88,39 @@ export class BackupService {
       orderBy: { createdAt: 'desc' }
     });
   }
+
+  /**
+   * Retention: keep only the most recent `keep` SUCCESSFUL backups for a tenant.
+   * Deletes the on-disk file (if present) and the DB record for older ones so
+   * the ephemeral container disk doesn't fill up. Never throws — best-effort.
+   */
+  static async pruneOldBackups(tenantId: string, keep = 7): Promise<void> {
+    try {
+      const successful = await prisma.systemBackup.findMany({
+        where: { tenantId, status: 'SUCCESS' },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const toDelete = successful.slice(keep);
+      for (const rec of toDelete) {
+        try {
+          const fp = path.join(this.backupDir, rec.filename);
+          if (fs.existsSync(fp)) fs.unlinkSync(fp);
+        } catch (e: any) {
+          logger.warn(`Failed to delete backup file ${rec.filename}: ${e?.message}`);
+        }
+        try {
+          await prisma.systemBackup.delete({ where: { id: rec.id } });
+        } catch (e: any) {
+          logger.warn(`Failed to delete backup record ${rec.id}: ${e?.message}`);
+        }
+      }
+
+      if (toDelete.length) {
+        logger.info(`Backup retention: pruned ${toDelete.length} old backup(s), kept latest ${keep}.`);
+      }
+    } catch (err: any) {
+      logger.error('Backup retention prune failed:', err?.message);
+    }
+  }
 }

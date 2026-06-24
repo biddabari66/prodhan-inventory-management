@@ -1085,12 +1085,15 @@ model Webhook {
   secret      String?  // HMAC signing secret (encrypted at rest)
   headers     Json?
   isActive    Boolean  @default(true)
+  companyId    String? // sub-company this webhook belongs to
+  departmentId String?
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deliveries  WebhookDelivery[]
 
   @@index([tenantId])
+  @@index([companyId])
 }
 
 model WebhookDelivery {
@@ -1238,4 +1241,282 @@ model AutomationTask {
   updatedAt   DateTime @updatedAt
 
   @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────
+// HRM: TASKS & KPI
+// ─────────────────────────────────────────────
+
+model Task {
+  id            String    @id @default(cuid())
+  tenantId      String
+  title         String
+  description   String?
+  status        String    @default("TODO")   // TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED
+  priority      String    @default("MEDIUM")  // LOW, MEDIUM, HIGH, URGENT
+  assigneeId    String?
+  assigneeName  String?
+  createdById   String?
+  createdByName String?
+  departmentId  String?
+  progress      Int       @default(0)         // 0-100
+  dueDate       DateTime?
+  completedAt   DateTime?
+  tags          Json?     @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+model Kpi {
+  id            String    @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  employeeId    String?
+  employeeName  String?
+  departmentId  String?
+  metric        String?                        // unit label, e.g. "Sales (BDT)", "Calls"
+  target        Float     @default(0)
+  actual        Float     @default(0)
+  weight        Float     @default(1)
+  period        String    @default("MONTHLY")  // WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  periodStart   DateTime?
+  periodEnd     DateTime?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([employeeId])
+}
+
+
+// ─────────────────────────────────────────────
+// WHOLESALE & PRODUCTION
+// ─────────────────────────────────────────────
+
+model WholesaleEntry {
+  id            String    @id @default(cuid())
+  tenantId      String
+  companyId     String?
+  departmentId  String?
+  date          DateTime                        // the sale date
+  buyerType     String    @default("library")   // library, publication, distributor, other
+  buyerName     String
+  items         Json?     @default("[]")         // [{bookTitle, quantity, unitPrice, subtotal}]
+  totalQuantity Int       @default(0)
+  totalAmount   Float     @default(0)
+  paidAmount    Float     @default(0)
+  paymentStatus String    @default("due")        // paid, partial, due
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([date])
+}
+
+model ProductionProject {
+  id             String    @id @default(cuid())
+  tenantId       String
+  companyId      String?
+  departmentId   String?
+  title          String
+  type           String    @default("graphic")   // graphic, video, photo, copywriting, web, other
+  assigneeId     String?
+  assigneeName   String?
+  status         String    @default("submitted")  // submitted, in_progress, review, revision, approved, done
+  progress       Int       @default(0)
+  workDate       DateTime?
+  dueDate        DateTime?
+  deliverableUrl String?
+  description    String?
+  revisionNotes  String?
+  createdById    String?
+  createdByName  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// REPORTING & ACCOUNTABILITY (additive — all scalar fields, no relations,
+// nullable/defaulted so existing rows & code keep working with zero backfill)
+// ─────────────────────────────────────────────
+
+model KpiDefinition {
+  id          String   @id @default(cuid())
+  tenantId    String
+  companyId   String?
+  roleKey     String
+  kpiKey      String
+  label       String
+  unit        String?
+  target      Float    @default(0)
+  weight      Float    @default(1)
+  direction   String   @default("higher")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([roleKey])
+}
+
+model DailyProgressReport {
+  id              String   @id @default(cuid())
+  tenantId        String
+  companyId       String?
+  departmentId    String?
+  employeeId      String
+  employeeName    String?
+  date            DateTime @db.Date
+  tasksPlanned    String?
+  tasksCompleted  String?
+  kpiValues       Json?    @default("{}")
+  blockers        String?
+  helpNeeded      String?
+  tomorrowPlan    String?
+  productionProjectIds Json? @default("[]")
+  isLocked        Boolean  @default(false)
+  submitTimestamp DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, employeeId, date])
+  @@index([tenantId])
+  @@index([departmentId])
+}
+
+model DailyTeamSummary {
+  id            String   @id @default(cuid())
+  tenantId      String
+  companyId     String?
+  departmentId  String
+  teamLeaderId  String?
+  date          DateTime @db.Date
+  teamKpiTotal  Float    @default(0)
+  attendance    Json?    @default("{}")
+  topPerformer  String?
+  bottomPerformer String?
+  membersNoDpr  Json?    @default("[]")
+  escalations   String?
+  complaintsToday Int    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([departmentId])
+}
+
+model WeeklyTeamReport {
+  id            String   @id @default(cuid())
+  tenantId      String
+  companyId     String?
+  departmentId  String
+  teamLeaderId  String?
+  weekStart     DateTime @db.Date
+  kpiTarget     Float    @default(0)
+  kpiActual     Float    @default(0)
+  kpiPercent    Float    @default(0)
+  best3         Json?    @default("[]")
+  worst3        Json?    @default("[]")
+  belowMinimum  Json?    @default("[]")
+  complaints    Json?    @default("[]")
+  improvementActions String?
+  hireOrCutRequest String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([departmentId])
+}
+
+model Complaint {
+  id             String   @id @default(cuid())
+  tenantId       String
+  companyId      String?
+  date           DateTime @default(now())
+  customer       String?
+  channel        String?
+  description    String?
+  sourceTeamId   String?
+  sourceTeamName String?
+  handledById    String?
+  handledByName  String?
+  status         String   @default("open")
+  resolutionTime Int?
+  isRepeat       Boolean  @default(false)
+  reopenedCount  Int      @default(0)
+  rootCause      String?
+  fix            String?
+  csat           Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([sourceTeamId])
+  @@index([status])
+}
+
+model Scorecard {
+  id            String   @id @default(cuid())
+  tenantId      String
+  companyId     String?
+  subjectId     String
+  subjectName   String?
+  subjectType   String   @default("employee")
+  periodMonth   String
+  kpiScore      Float    @default(0)
+  qualityScore  Float    @default(0)
+  reliabilityScore Float @default(0)
+  behaviourScore Float   @default(0)
+  totalScore    Float    @default(0)
+  band          String?
+  isCutCandidate Boolean @default(false)
+  breakdown     Json?    @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, subjectId, periodMonth])
+  @@index([tenantId])
+}
+
+model ScoringWeight {
+  id          String   @id @default(cuid())
+  tenantId    String
+  scope       String   @default("employee")
+  weights     Json     @default("{}")
+  bands       Json?    @default("{}")
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, scope])
+}
+
+model SkipLevelPulse {
+  id            String   @id @default(cuid())
+  tenantId      String
+  companyId     String?
+  departmentId  String?
+  leaderId      String?
+  periodMonth   String
+  fairnessScore Int?
+  answers       Json?    @default("{}")
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([leaderId])
 }

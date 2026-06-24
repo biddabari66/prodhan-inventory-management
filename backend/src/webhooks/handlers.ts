@@ -32,6 +32,24 @@ async function getProdhanDepartment(tenantId: string): Promise<string | null> {
   return dept.id;
 }
 
+// Resolve the target department for a given SUB-COMPANY (Company id). Returns the
+// first department under that company, creating a default "<Company> Orders" one
+// if none exists. Falls back to the Prodhan department when companyId is missing
+// or invalid. This lets each sub-company receive its own inbound orders via n8n.
+async function resolveDepartmentForCompany(tenantId: string, companyId?: string): Promise<string | null> {
+  if (!companyId) return getProdhanDepartment(tenantId);
+  const company = await prisma.company.findFirst({ where: { id: companyId, tenantId } });
+  if (!company) return getProdhanDepartment(tenantId);
+  let dept = await prisma.department.findFirst({ where: { tenantId, companyId } });
+  if (!dept) {
+    dept = await prisma.department.create({
+      data: { tenantId, companyId, name: `${company.name} Orders`, description: `Inbound orders for ${company.name}`, isActive: true },
+    });
+    logger.info(`✨ Created department for sub-company ${company.name}`);
+  }
+  return dept.id;
+}
+
 // ─── Helper: find or create customer ────────────────────────────────────────
 async function upsertCustomer(tenantId: string, data: {
   name: string; phone: string; email?: string; address?: string; city?: string; source?: string;
@@ -277,9 +295,9 @@ export const steadfastWebhook = async (req: Request, res: Response): Promise<voi
 // }
 
 export const prodhanComWebhook = async (req: Request, res: Response): Promise<void> => {
-  const secret = req.headers['x-prodhan-secret'] || req.headers['x-api-key'];
+  const secret = req.headers['x-prodhan-secret'] || req.headers['x-api-key'] || req.headers['api_key'] || req.query.apiKey;
   if (env.PRODHAN_COM_SECRET && secret !== env.PRODHAN_COM_SECRET) {
-    res.status(401).json({ error: 'Invalid secret. Set x-prodhan-secret header.' }); return;
+    res.status(401).json({ error: 'Invalid secret. Set the api_key (or x-api-key) header.' }); return;
   }
 
   const rawBody = req.body;
@@ -290,9 +308,14 @@ export const prodhanComWebhook = async (req: Request, res: Response): Promise<vo
     const defaultTenant = await prisma.tenant.findFirst();
     if (!defaultTenant) { logger.error('No tenant found'); return; }
     const tenantId = defaultTenant.id;
-    const deptId = await getProdhanDepartment(tenantId);
 
     const data = Array.isArray(rawBody) ? rawBody[0] : rawBody;
+
+    // Route to the right SUB-COMPANY: companyId can come from query, header, or body.
+    const companyId = String(
+      (req.query.companyId as string) || req.headers['x-company-id'] || data._companyId || data.companyId || ''
+    ).trim() || undefined;
+    const deptId = await resolveDepartmentForCompany(tenantId, companyId);
 
     // ── Apply optional field map renames ──
     const fieldMap: Record<string, string> = data._fieldMap || {};

@@ -17,10 +17,16 @@ import * as billingCtrl from '../controllers/billing.controller';
 import * as aiCtrl from '../controllers/ai.controller';
 import * as acctCtrl from '../controllers/accounting.controller';
 import * as systemCtrl from '../controllers/system.controller';
+import * as taskCtrl from '../controllers/task.controller';
+import * as kpiCtrl from '../controllers/kpi.controller';
+import * as wholesaleCtrl from '../controllers/wholesale.controller';
+import * as productionCtrl from '../controllers/production.controller';
+import * as companyCtrl from '../controllers/company.controller';
 
 // Middleware
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
 import { mountResource } from '../controllers/resource.controller';
+import * as reportingCtrl from '../controllers/reporting.controller';
 
 // Webhook handlers (no auth)
 import {
@@ -78,6 +84,8 @@ router.get('/orders', requirePermission('orders:read'), ordersCtrl.listOrders);
 router.post('/orders', requirePermission('orders:create'), ordersCtrl.createOrder);
 router.get('/orders/stats', requirePermission('orders:read'), ordersCtrl.getOrderStats);
 router.get('/orders/:id', requirePermission('orders:read'), ordersCtrl.getOrder);
+router.post('/orders/:id/ship', requirePermission('orders:update'), ordersCtrl.shipOrder);
+router.get('/orders/:id/delivery-status', requirePermission('orders:update'), ordersCtrl.checkDeliveryStatus);
 router.patch('/orders/:id', requirePermission('orders:update'), ordersCtrl.updateOrder);
 router.delete('/orders/:id', requireRole('SUPER_ADMIN', 'ADMIN', 'SALES_MANAGER'), ordersCtrl.deleteOrder);
 
@@ -122,6 +130,43 @@ router.get('/attendance', requirePermission('attendance:read'), attendanceCtrl.l
 router.get('/attendance/my', attendanceCtrl.getMyAttendance);
 router.get('/attendance/daily-report', requirePermission('attendance:read'), attendanceCtrl.getDailyReport);
 router.get('/attendance/monthly-summary', requirePermission('attendance:read'), attendanceCtrl.getMonthlySummary);
+
+// ─── Tasks (HRM) ──────────────────────────────────────────────────────────────
+router.use('/tasks', authenticate, apiLimiter);
+router.get('/tasks/stats', taskCtrl.taskStats); // before /:id
+router.get('/tasks', taskCtrl.listTasks);
+router.post('/tasks', taskCtrl.createTask);
+router.get('/tasks/:id', taskCtrl.getTask);
+router.patch('/tasks/:id', taskCtrl.updateTask);
+router.delete('/tasks/:id', taskCtrl.deleteTask);
+
+// ─── KPIs (HRM) ───────────────────────────────────────────────────────────────
+router.use('/kpis', authenticate, apiLimiter);
+router.get('/kpis/dashboard', kpiCtrl.kpiDashboard); // before /:id
+router.get('/kpis', kpiCtrl.listKpis);
+router.post('/kpis', kpiCtrl.createKpi);
+router.get('/kpis/:id', kpiCtrl.getKpi);
+router.patch('/kpis/:id', kpiCtrl.updateKpi);
+router.post('/kpis/:id/record', kpiCtrl.recordKpiActual);
+router.delete('/kpis/:id', kpiCtrl.deleteKpi);
+
+// ─── Wholesale (Boibari book wholesale entries) ───────────────────────────────
+router.use('/wholesale', authenticate, apiLimiter);
+router.get('/wholesale/stats', wholesaleCtrl.wholesaleStats); // before /:id
+router.get('/wholesale', wholesaleCtrl.listWholesale);
+router.post('/wholesale', wholesaleCtrl.createWholesale);
+router.get('/wholesale/:id', wholesaleCtrl.getWholesale);
+router.patch('/wholesale/:id', wholesaleCtrl.updateWholesale);
+router.delete('/wholesale/:id', wholesaleCtrl.deleteWholesale);
+
+// ─── Production projects (graphic/video/photo team works) ─────────────────────
+router.use('/production-projects', authenticate, apiLimiter);
+router.get('/production-projects/stats', productionCtrl.productionStats); // before /:id
+router.get('/production-projects', productionCtrl.listProjects);
+router.post('/production-projects', productionCtrl.createProject);
+router.get('/production-projects/:id', productionCtrl.getProject);
+router.patch('/production-projects/:id', productionCtrl.updateProject);
+router.delete('/production-projects/:id', productionCtrl.deleteProject);
 
 // ─── System / Backups ────────────────────────────────────────────────────────
 router.use('/system', authenticate, apiLimiter);
@@ -303,9 +348,32 @@ mountResource(router, '/campaigns', 'campaign', resourceAuth);
 mountResource(router, '/budget-plans', 'budgetPlan', resourceAuth);
 mountResource(router, '/shifts', 'shift', resourceAuth);
 mountResource(router, '/performance-logs', 'performanceLog', resourceAuth);
+// Sub-company shipping/courier config (before generic /companies resource).
+router.get('/companies/:id/shipping', authenticate, apiLimiter, companyCtrl.getShippingConfig);
+router.patch('/companies/:id/shipping', authenticate, apiLimiter, requireRole('SUPER_ADMIN', 'ADMIN'), companyCtrl.setShippingConfig);
+
 mountResource(router, '/companies', 'company', resourceAuth);
 mountResource(router, '/departments', 'department', resourceAuth);
 mountResource(router, '/follow-ups', 'followUp', resourceAuth);
 mountResource(router, '/reports', 'report', resourceAuth);
+
+// ─── Reporting & Accountability ───────────────────────────────────────────────
+// Config / report tables via generic CRUD (tenant + sub-company scoped).
+mountResource(router, '/kpi-definitions', 'kpiDefinition', resourceAuth);
+mountResource(router, '/daily-team-summaries', 'dailyTeamSummary', resourceAuth);
+mountResource(router, '/weekly-team-reports', 'weeklyTeamReport', resourceAuth);
+mountResource(router, '/scoring-weights', 'scoringWeight', resourceAuth);
+mountResource(router, '/skip-level-pulses', 'skipLevelPulse', resourceAuth);
+// Custom logic (DPR upsert, complaint closed-loop, scorecards, dashboard summary).
+router.use('/reporting', authenticate, apiLimiter);
+router.post('/reporting/dpr', reportingCtrl.submitDpr);
+router.get('/reporting/dpr', reportingCtrl.listDpr);
+router.post('/reporting/complaints', reportingCtrl.createComplaint);
+router.get('/reporting/complaints', reportingCtrl.listComplaints);
+router.patch('/reporting/complaints/:id', reportingCtrl.updateComplaint);
+router.get('/reporting/complaints-by-source', reportingCtrl.complaintsBySourceTeam);
+router.get('/reporting/summary', reportingCtrl.accountabilitySummary);
+router.get('/reporting/scorecards', reportingCtrl.listScorecards);
+router.post('/reporting/scorecards/compute', reportingCtrl.computeScorecards);
 
 export default router;

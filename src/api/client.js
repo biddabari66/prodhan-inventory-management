@@ -15,18 +15,42 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Multi-company scoping: auto-append the active company's departmentId to GET
-  // requests so dashboards, orders, CRM, accounting, etc. filter to the selected
-  // company. Harmless when no company is active. Never scope the department list
-  // itself, auth, or platform-admin endpoints.
+  // Global scope (Sub-Company → Department): auto-apply the active scope from the
+  // header picker (see src/lib/scope.js) to every data request so dashboards,
+  // orders, CRM, accounting, etc. filter to the selected sub-company/department.
+  // Harmless when nothing is selected. Never scope the company/department lists
+  // themselves, auth, or platform-admin/billing/onboarding/ai endpoints.
   try {
     const method = (config.method || 'get').toLowerCase();
     const url = config.url || '';
-    const exempt = /\/(departments|auth|admin|billing|onboarding|ai)\b/.test(url);
-    const companyId = localStorage.getItem('activeCompanyId');
-    if (method === 'get' && companyId && !exempt) {
-      config.params = { ...(config.params || {}) };
-      if (config.params.departmentId === undefined) config.params.departmentId = companyId;
+    const exempt = /\/(companies|departments|auth|admin|billing|onboarding|ai)\b/.test(url);
+    if (!exempt) {
+      const companyId = localStorage.getItem('activeCompanyId') || null;
+      const departmentId = localStorage.getItem('activeDepartmentId') || null;
+
+      if (method === 'get') {
+        // Reads: narrow query params to the active scope (never overriding an
+        // explicit value already on the request).
+        config.params = { ...(config.params || {}) };
+        if (departmentId && config.params.departmentId === undefined) {
+          config.params.departmentId = departmentId;
+        }
+        if (companyId && config.params.companyId === undefined) {
+          config.params.companyId = companyId;
+        }
+      } else if (
+        (method === 'post' || method === 'put' || method === 'patch') &&
+        config.data && typeof config.data === 'object' && !Array.isArray(config.data)
+      ) {
+        // Writes: stamp the active scope onto the body. Never override values the
+        // form set explicitly. The backend ignores fields a model doesn't have.
+        if (companyId && config.data.companyId === undefined) {
+          config.data = { ...config.data, companyId };
+        }
+        if (departmentId && config.data.departmentId === undefined) {
+          config.data = { ...config.data, departmentId };
+        }
+      }
     }
   } catch { /* non-fatal */ }
 

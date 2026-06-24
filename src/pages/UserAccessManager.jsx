@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User } from '@/entities/User';
 import { UserPermission } from '@/entities/UserPermission';
+import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  Shield, Users, Save, Crown, Lock, AlertTriangle, Loader2
+  Shield, Users, Save, Crown, Lock, AlertTriangle, Loader2, Building2, Network
 } from 'lucide-react';
 import EmployeeList from '../components/access/EmployeeList';
 import PermissionMatrix from '../components/access/PermissionMatrix';
@@ -279,7 +284,83 @@ function UserAccessManagerPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [filters, setFilters] = useState({ search: '', department: 'all', job_role: 'all' });
 
+  // Sub-Company → Department assignment state
+  const [companies, setCompanies] = useState([]);
+  const [deptOptions, setDeptOptions] = useState([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [selectedDeptId, setSelectedDeptId] = useState('');
+  const [isLoadingDepts, setIsLoadingDepts] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Create-user (with login credentials) — admin only
+  const [addOpen, setAddOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ displayName: '', email: '', password: '', jobRole: 'EMPLOYEE', companyId: '', departmentId: '' });
+  const [newUserDepts, setNewUserDepts] = useState([]);
+
+  const loadNewUserDepts = async (companyId) => {
+    if (!companyId) { setNewUserDepts([]); return; }
+    try {
+      const res = await erp.api.get('/departments', { params: { companyId } });
+      setNewUserDepts(res.data?.data ?? res.data ?? []);
+    } catch { setNewUserDepts([]); }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.displayName.trim() || !newUser.email.trim() || newUser.password.length < 6) {
+      toast.error('Name, valid email, and a password (min 6 chars) are required'); return;
+    }
+    setCreating(true);
+    try {
+      await erp.api.post('/auth/register', {
+        displayName: newUser.displayName.trim(),
+        email: newUser.email.trim().toLowerCase(),
+        password: newUser.password,
+        jobRole: newUser.jobRole,
+        departmentId: newUser.departmentId || undefined,
+      });
+      toast.success(`User created — ${newUser.email} can now log in`);
+      setAddOpen(false);
+      setNewUser({ displayName: '', email: '', password: '', jobRole: 'EMPLOYEE', companyId: '', departmentId: '' });
+      setNewUserDepts([]);
+      const fresh = await User.list();
+      setUsers(Array.isArray(fresh) ? fresh : []);
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Could not create user (email may already exist)');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   useEffect(() => { loadData(); }, []);
+
+  // Load sub-companies once
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await erp.api.get('/companies');
+        const data = res.data?.data ?? res.data ?? [];
+        setCompanies(Array.isArray(data) ? data : []);
+      } catch {
+        setCompanies([]);
+      }
+    })();
+  }, []);
+
+  // Load departments for a given sub-company
+  const loadDepartments = useCallback(async (companyId) => {
+    if (!companyId) { setDeptOptions([]); return; }
+    setIsLoadingDepts(true);
+    try {
+      const res = await erp.api.get('/departments', { params: { companyId } });
+      const data = res.data?.data ?? res.data ?? [];
+      setDeptOptions(Array.isArray(data) ? data : []);
+    } catch {
+      setDeptOptions([]);
+    } finally {
+      setIsLoadingDepts(false);
+    }
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -318,7 +399,48 @@ function UserAccessManagerPage() {
   const handleEmployeeSelect = (employee) => {
     setSelectedEmployee(employee);
     loadPermissions(employee.id);
+    // Reset & seed the company/department assignment for this user
+    const deptId = employee.department_id || employee.departmentId || '';
+    setSelectedDeptId(deptId ? String(deptId) : '');
+    setSelectedCompanyId('');
+    setDeptOptions([]);
   };
+
+  const handleCompanyChange = (companyId) => {
+    setSelectedCompanyId(companyId);
+    setSelectedDeptId('');
+    loadDepartments(companyId);
+  };
+
+  const handleAssignDepartment = async () => {
+    if (!selectedEmployee || !selectedDeptId) {
+      toast.error('Select a sub-company and department first');
+      return;
+    }
+    setIsAssigning(true);
+    try {
+      await User.update(selectedEmployee.id, { department_id: selectedDeptId });
+      setSelectedEmployee({ ...selectedEmployee, department_id: selectedDeptId, departmentId: selectedDeptId });
+      setUsers(users.map(u =>
+        u.id === selectedEmployee.id
+          ? { ...u, department_id: selectedDeptId, departmentId: selectedDeptId }
+          : u
+      ));
+      toast.success('Sub-company & department assigned');
+    } catch {
+      toast.error('Failed to assign department');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const companyName = (c) => c?.name || c?.display_name || c?.title || `Company #${c?.id}`;
+  const deptName = (d) => d?.name || d?.display_name || d?.title || `Dept #${d?.id}`;
+  const currentDeptId = selectedEmployee?.department_id || selectedEmployee?.departmentId || '';
+  const currentDeptLabel = (() => {
+    const match = deptOptions.find(d => String(d.id) === String(currentDeptId));
+    return match ? deptName(match) : (currentDeptId ? `Department #${currentDeptId}` : 'Unassigned');
+  })();
 
   const handleRoleChange = async (newRole) => {
     if (!selectedEmployee) return;
@@ -384,6 +506,8 @@ function UserAccessManagerPage() {
         })
       ));
     }
+    // Refresh the PermissionGuard's cache so changes take effect immediately
+    localStorage.removeItem('cached_user_permissions');
     toast.success('Permissions saved successfully!');
     setIsSaving(false);
   };
@@ -418,10 +542,58 @@ function UserAccessManagerPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">User Access Manager</h1>
-              <p className="text-slate-500 mt-0.5 text-sm">Role-based permissions, confidential data access & security</p>
+              <p className="text-slate-500 mt-0.5 text-sm">Create users, assign sub-company & department, set permissions</p>
             </div>
           </div>
+          <Button onClick={() => setAddOpen(true)} className="bg-gradient-to-r from-slate-800 to-red-800 text-white shadow hover:shadow-md">
+            <UserPlus className="w-4 h-4 mr-2" /> Create User
+          </Button>
         </div>
+
+        {/* Create User dialog */}
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5 text-red-700" /> Create New User</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-1">
+              <div className="space-y-1.5"><Label>Full Name</Label><Input value={newUser.displayName} onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })} placeholder="e.g. Karim Ahmed" /></div>
+              <div className="space-y-1.5"><Label>Email (login)</Label><Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="user@company.com" /></div>
+              <div className="space-y-1.5"><Label>Password</Label><Input type="text" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="min 6 characters" /></div>
+              <div className="space-y-1.5">
+                <Label>Role</Label>
+                <Select value={newUser.jobRole} onValueChange={(v) => setNewUser({ ...newUser, jobRole: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['ADMIN','MANAGER','DEPARTMENT_HEAD','SALES_MANAGER','SALES_EXECUTIVE','INVENTORY_MANAGER','HR_MANAGER','ACCOUNTANT','EMPLOYEE'].map(r => (
+                      <SelectItem key={r} value={r}>{r.replace(/_/g,' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Sub-Company</Label>
+                  <Select value={newUser.companyId} onValueChange={(v) => { setNewUser({ ...newUser, companyId: v, departmentId: '' }); loadNewUserDepts(v); }}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Department</Label>
+                  <Select value={newUser.departmentId} onValueChange={(v) => setNewUser({ ...newUser, departmentId: v })} disabled={!newUser.companyId}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{newUserDepts.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateUser} disabled={creating} className="bg-red-700 hover:bg-red-800 text-white">
+                {creating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />} Create User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Role Legend */}
         <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
@@ -525,6 +697,89 @@ function UserAccessManagerPage() {
                         </div>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+
+                {/* Sub-Company → Department Assignment */}
+                <Card className="premium-card">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Building2 className="w-5 h-5 text-red-600" />
+                      Sub-Company &amp; Department
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Current assignment */}
+                    <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-lg border">
+                      <span className="text-sm text-slate-500">Current department:</span>
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Network className="w-3 h-3" />
+                        {currentDeptLabel}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Sub-Company select */}
+                      <div>
+                        <Label className="text-sm font-semibold mb-2 block">Sub-Company</Label>
+                        <Select value={selectedCompanyId} onValueChange={handleCompanyChange} disabled={isAssigning}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select sub-company" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {companies.length === 0 ? (
+                              <SelectItem value="__none" disabled>No sub-companies found</SelectItem>
+                            ) : (
+                              companies.map(c => (
+                                <SelectItem key={c.id} value={String(c.id)}>{companyName(c)}</SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Department select (cascading) */}
+                      <div>
+                        <Label className="text-sm font-semibold mb-2 block">Department</Label>
+                        {isLoadingDepts ? (
+                          <Skeleton className="h-10 w-full rounded-md" />
+                        ) : (
+                          <Select
+                            value={selectedDeptId}
+                            onValueChange={setSelectedDeptId}
+                            disabled={isAssigning || !selectedCompanyId}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={selectedCompanyId ? 'Select department' : 'Select sub-company first'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {deptOptions.length === 0 ? (
+                                <SelectItem value="__none" disabled>No departments</SelectItem>
+                              ) : (
+                                deptOptions.map(d => (
+                                  <SelectItem key={d.id} value={String(d.id)}>{deptName(d)}</SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleAssignDepartment}
+                        disabled={isAssigning || !selectedDeptId}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {isAssigning ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Assigning...</>
+                        ) : (
+                          <><Save className="w-4 h-4 mr-2" /> Assign Department</>
+                        )}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 

@@ -200,6 +200,18 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* Smooth page-content entrance (re-keyed per route) so data eases in
+   instead of popping. Modern, subtle — like FB/Google transitions. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter { animation: none; }
+}
 @keyframes slide-in-left {
   from { opacity: 0; transform: translateX(-12px); }
   to   { opacity: 1; transform: translateX(0); }

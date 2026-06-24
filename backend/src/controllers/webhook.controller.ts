@@ -26,6 +26,8 @@ const shapeWebhook = (wh: any) => ({
   events: wh.events,
   headers: wh.headers || null,
   isActive: wh.isActive,
+  companyId: wh.companyId || null,
+  departmentId: wh.departmentId || null,
   secretMasked: wh.secret ? maskSecret(decryptSecret(wh.secret)) : '',
   createdById: wh.createdById,
   createdAt: wh.createdAt,
@@ -41,6 +43,8 @@ const createWebhookSchema = z.object({
   secret: z.string().optional(),
   headers: z.record(z.string()).optional(),
   isActive: z.boolean().optional().default(true),
+  companyId: z.string().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
 });
 
 const updateWebhookSchema = z.object({
@@ -50,6 +54,8 @@ const updateWebhookSchema = z.object({
   secret: z.string().optional(),
   headers: z.record(z.string()).optional(),
   isActive: z.boolean().optional(),
+  companyId: z.string().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
 });
 
 const ruleSchema = z.object({
@@ -72,8 +78,12 @@ const ruleUpdateSchema = z.object({
 
 export const listWebhooks = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = requireTenant(req);
+  const where: any = { tenantId };
+  // Scope to the active sub-company when provided (global picker sends companyId).
+  if (req.query.companyId && req.query.companyId !== 'all') where.companyId = String(req.query.companyId);
+  if (req.query.departmentId && req.query.departmentId !== 'all') where.departmentId = String(req.query.departmentId);
   const webhooks = await prisma.webhook.findMany({
-    where: { tenantId },
+    where,
     orderBy: { createdAt: 'desc' },
   });
   res.json({ data: webhooks.map(shapeWebhook) });
@@ -94,6 +104,8 @@ export const createWebhook = async (req: AuthenticatedRequest, res: Response): P
       secret: encryptSecret(rawSecret),
       headers: body.headers ?? undefined,
       isActive: body.isActive,
+      companyId: body.companyId ?? null,
+      departmentId: body.departmentId ?? null,
       createdById: req.user.id,
     },
   });
@@ -119,6 +131,8 @@ export const updateWebhook = async (req: AuthenticatedRequest, res: Response): P
   if (body.events !== undefined) data.events = body.events;
   if (body.headers !== undefined) data.headers = body.headers;
   if (body.isActive !== undefined) data.isActive = body.isActive;
+  if (body.companyId !== undefined) data.companyId = body.companyId;
+  if (body.departmentId !== undefined) data.departmentId = body.departmentId;
   // Re-encrypt only when a new (non-empty) secret is supplied.
   if (body.secret !== undefined && body.secret.trim()) {
     data.secret = encryptSecret(body.secret.trim());

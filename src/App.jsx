@@ -2,8 +2,8 @@ import './App.css'
 import React, { useEffect, useState } from 'react'
 import api from '@/api/client'
 import { Toaster } from "@/components/ui/toaster"
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { queryClientInstance, queryPersister } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
@@ -11,14 +11,16 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import QRInventory from './pages/QRInventory';
-import LogisticsScan from './pages/LogisticsScan';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+import RouteFallback from '@/components/common/RouteFallback';
+const QRInventory = React.lazy(() => import('./pages/QRInventory'));
+const LogisticsScan = React.lazy(() => import('./pages/LogisticsScan'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-import Landing from './pages/Landing';
+const Landing = React.lazy(() => import('./pages/Landing'));
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -110,14 +112,28 @@ function App() {
 
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
+      <PersistQueryClientProvider
+        client={queryClientInstance}
+        persistOptions={{
+          persister: queryPersister,
+          maxAge: 24 * 60 * 60 * 1000,
+          dehydrateOptions: {
+            // Only persist successful queries (never errored/loading states).
+            shouldDehydrateQuery: (q) => q.state.status === 'success',
+          },
+        }}
+      >
         <Router>
           <NavigationTracker />
-          <AuthenticatedApp />
+          <ErrorBoundary>
+            <React.Suspense fallback={<RouteFallback />}>
+              <AuthenticatedApp />
+            </React.Suspense>
+          </ErrorBoundary>
         </Router>
         <Toaster />
         <VisualEditAgent />
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </AuthProvider>
   )
 }

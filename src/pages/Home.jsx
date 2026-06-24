@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import { StatGridSkeleton, TableSkeleton } from '@/components/common/Skeletons';
+import AccountabilitySummary from '@/components/reporting/AccountabilitySummary';
 
 const bdt = (n) => '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 0 });
 
@@ -175,6 +176,9 @@ export default function Home() {
           </Link>
         }
       />
+
+      {/* ── Team Accountability summary (Reporting Head view) ─────────────── */}
+      <AccountabilitySummary />
 
       {/* ── KPI Cards ────────────────────────────────────────────────────── */}
       {isDataLoading ? (

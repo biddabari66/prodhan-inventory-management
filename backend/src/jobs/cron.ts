@@ -4,22 +4,45 @@ import { emailService } from '../utils/email.service';
 import { logger } from '../config/logger';
 
 export function startCronJobs() {
-  // ── Daily Database Backup — 1am Bangladesh time (UTC+6 = 19:00 UTC) ──
-  cron.schedule('0 1 * * *', async () => {
-    logger.info('🕒 Running scheduled daily database backup...');
-    try {
-      const { BackupService } = await import('../services/backupService');
-      const firstTenant = await prisma.tenant.findFirst({ where: { isActive: true } });
-      if (firstTenant) {
-        await BackupService.createBackup(firstTenant.id);
-        logger.info('✅ Scheduled backup completed successfully.');
-      } else {
-        logger.warn('No active tenants found. Skipping scheduled backup.');
+  // ── Daily Database Backup — 02:00 Bangladesh time ──
+  // Guarded to production only: in dev/local the host usually lacks pg_dump and
+  // the ephemeral container disk makes file backups pointless. Set
+  // BACKUP_CRON_ENABLED=true to force-enable in any environment.
+  const backupEnabled =
+    process.env.BACKUP_CRON_ENABLED === 'true' ||
+    (process.env.NODE_ENV === 'production' && process.env.BACKUP_CRON_ENABLED !== 'false');
+
+  if (backupEnabled) {
+    const RETENTION = parseInt(process.env.BACKUP_RETENTION || '7', 10) || 7;
+    cron.schedule('0 2 * * *', async () => {
+      logger.info('🕒 Running scheduled daily database backup...');
+      try {
+        const { BackupService } = await import('../services/backupService');
+        // Back up every active tenant, then prune old backups per-tenant.
+        const tenants = await prisma.tenant.findMany({ where: { isActive: true }, select: { id: true } });
+        if (tenants.length === 0) {
+          logger.warn('No active tenants found. Skipping scheduled backup.');
+          return;
+        }
+        for (const t of tenants) {
+          try {
+            await BackupService.createBackup(t.id);
+            await BackupService.pruneOldBackups(t.id, RETENTION);
+            logger.info(`✅ Scheduled backup completed for tenant ${t.id}.`);
+          } catch (err: any) {
+            // Isolate per-tenant failures so one bad tenant doesn't abort the rest.
+            logger.error(`Scheduled backup failed for tenant ${t.id}:`, err?.message);
+          }
+        }
+      } catch (err: any) {
+        // Never let the cron crash the process.
+        logger.error('Scheduled backup job failed:', err?.message);
       }
-    } catch (err: any) {
-      logger.error('Scheduled backup failed:', err.message);
-    }
-  }, { timezone: 'Asia/Dhaka' });
+    }, { timezone: 'Asia/Dhaka' });
+    logger.info(`📦 Daily DB backup cron enabled (02:00 Asia/Dhaka, retention=${RETENTION}).`);
+  } else {
+    logger.info('📦 Daily DB backup cron disabled (non-production). Set BACKUP_CRON_ENABLED=true to enable.');
+  }
 
   // ── Daily Sales Digest — 9pm Bangladesh time (UTC+6 = 15:00 UTC) ──
   cron.schedule('0 15 * * *', async () => {

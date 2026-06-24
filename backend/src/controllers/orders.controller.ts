@@ -138,6 +138,20 @@ export const listOrders = async (req: AuthenticatedRequest, res: Response): Prom
   if (status) where.orderStatus = status;
   if (paymentStatus) where.paymentStatus = paymentStatus;
   if (departmentId) where.departmentId = departmentId;
+  // Sub-company filter: when a companyId is chosen (and no specific department),
+  // scope to all departments under that sub-company.
+  const companyIdQ = qs(q.companyId);
+  if (!departmentId && companyIdQ && companyIdQ !== 'all') {
+    const depts = await prisma.department.findMany({
+      where: { tenantId: req.user.tenantId, companyId: companyIdQ },
+      select: { id: true },
+    });
+    where.departmentId = { in: depts.length ? depts.map((d) => d.id) : ['__none__'] };
+  }
+  // SECURITY: non-admins are hard-scoped to their own department (sub-company),
+  // overriding any client-supplied scope. Admins keep full picker freedom.
+  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes((req.user as any)?.jobRole);
+  if (!isAdmin && (req.user as any)?.departmentId) where.departmentId = (req.user as any).departmentId;
   if (source) where.orderSource = source;
   if (courier) where.courierService = courier;
   if (salesDayDate) where.salesDayDate = salesDayDate;
@@ -287,6 +301,239 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response): Pro
   });
 
   res.json({ message: 'Order cancelled' });
+};
+
+export const shipOrder = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+
+  const order = await prisma.order.findFirst({
+    where: { id: req.params.id, tenantId: req.user.tenantId },
+  });
+  if (!order) throw new AppError(404, 'Order not found');
+
+  // ── Resolve the sub-company whose shipping webhook we'll use ──────────────────
+  let company: any = null;
+  if (order.departmentId) {
+    const dept = await prisma.department.findFirst({
+      where: { id: order.departmentId, tenantId: req.user.tenantId },
+    });
+    if (dept?.companyId) {
+      company = await prisma.company.findFirst({
+        where: { id: dept.companyId, tenantId: req.user.tenantId },
+      });
+    }
+  }
+  if (!company && req.body?.companyId) {
+    company = await prisma.company.findFirst({
+      where: { id: req.body.companyId, tenantId: req.user.tenantId },
+    });
+  }
+  if (!company) {
+    company = await prisma.company.findFirst({
+      where: { tenantId: req.user.tenantId, isActive: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  const branding = (company?.branding as any) || {};
+  const webhookUrl = branding?.shipping?.webhookUrl;
+  if (!webhookUrl) {
+    res.status(400).json({ error: 'No shipping/courier webhook configured for this sub-company. Set it in Sub-Company settings.' });
+    return;
+  }
+
+  // ── Build Steadfast-format courier payload ───────────────────────────────────
+  const addr = (order.shippingAddress as any) || {};
+  const addressParts = [addr.addressLine, addr.city, addr.district, addr.postalCode].filter(Boolean);
+  const recipientAddress = addressParts.length
+    ? addressParts.join(', ')
+    : ((order as any).customerAddress || 'N/A');
+
+  const items = Array.isArray(order.orderItems) ? (order.orderItems as any[]) : [];
+  const itemDescription = items
+    .map((it) => `${it.itemName} (×${it.quantity})`)
+    .join(', ');
+  const totalLot = Math.max(1, items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0));
+
+  const payload = {
+    invoice: order.orderNumber,
+    recipient_name: order.customerName,
+    recipient_phone: order.customerPhone,
+    recipient_address: recipientAddress,
+    cod_amount: Math.max(0, (order.totalAmount || 0) - (order.paidAmount || 0)),
+    note: order.notes || '',
+    item_description: itemDescription,
+    total_lot: totalLot,
+    delivery_type: 0,
+  };
+
+  // ── POST to the configured webhook with a 15s timeout ────────────────────────
+  let webhookJson: any = null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let resp: Response | any;
+    try {
+      resp = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!resp.ok) {
+      let detail: any = `HTTP ${resp.status}`;
+      try { detail = await resp.text(); } catch { /* ignore */ }
+      res.status(502).json({ error: 'Courier webhook failed', detail });
+      return;
+    }
+
+    try { webhookJson = await resp.json(); } catch { webhookJson = null; }
+  } catch (err: any) {
+    res.status(502).json({ error: 'Courier webhook failed', detail: err?.message || String(err) });
+    return;
+  }
+
+  // ── Capture tracking / consignment id from response if present ────────────────
+  const respData = webhookJson?.data || webhookJson || {};
+  const consignmentId = respData?.consignment_id ?? webhookJson?.consignment_id;
+  const trackingCode = respData?.tracking_code ?? webhookJson?.tracking_code;
+
+  const updateData: any = {
+    orderStatus: 'SHIPPED',
+    courierPlaced: true,
+    courierPlacedDate: new Date(),
+  };
+  if ((CourierService as any).STEADFAST) updateData.courierService = 'STEADFAST';
+  if (consignmentId != null) updateData.courierConsignmentId = String(consignmentId);
+  if (trackingCode != null) updateData.courierTrackingCode = String(trackingCode);
+
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: updateData,
+  });
+
+  res.json(updated);
+};
+
+export const checkDeliveryStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+
+  const order = await prisma.order.findFirst({
+    where: { id: req.params.id, tenantId: req.user.tenantId },
+  });
+  if (!order) throw new AppError(404, 'Order not found');
+
+  // ── Resolve the sub-company whose status-check webhook we'll use ──────────────
+  let company: any = null;
+  if (order.departmentId) {
+    const dept = await prisma.department.findFirst({
+      where: { id: order.departmentId, tenantId: req.user.tenantId },
+    });
+    if (dept?.companyId) {
+      company = await prisma.company.findFirst({
+        where: { id: dept.companyId, tenantId: req.user.tenantId },
+      });
+    }
+  }
+  if (!company && req.body?.companyId) {
+    company = await prisma.company.findFirst({
+      where: { id: req.body.companyId, tenantId: req.user.tenantId },
+    });
+  }
+  if (!company) {
+    company = await prisma.company.findFirst({
+      where: { tenantId: req.user.tenantId, isActive: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  const branding = (company?.branding as any) || {};
+  const statusWebhookUrl = branding?.shipping?.statusWebhookUrl || branding?.shipping?.webhookUrl;
+  if (!statusWebhookUrl) {
+    res.status(400).json({ error: 'No delivery-status webhook configured for this sub-company. Set it in Company Profiles → Courier / Shipping.' });
+    return;
+  }
+
+  // ── Build the status-check query ─────────────────────────────────────────────
+  const query =
+    `invoice=${encodeURIComponent(order.orderNumber || '')}` +
+    `&consignment=${encodeURIComponent(order.courierConsignmentId || '')}` +
+    `&tracking=${encodeURIComponent(order.courierTrackingCode || '')}`;
+  const url = statusWebhookUrl + (statusWebhookUrl.includes('?') ? '&' : '?') + query;
+
+  // ── Call the webhook with a 15s timeout ──────────────────────────────────────
+  let webhookJson: any = null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let resp: Response | any;
+    try {
+      resp = await fetch(url, { method: 'GET', signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!resp.ok) {
+      let detail: any = `HTTP ${resp.status}`;
+      try { detail = await resp.text(); } catch { /* ignore */ }
+      res.status(502).json({ error: 'Delivery-status webhook failed', detail });
+      return;
+    }
+
+    try { webhookJson = await resp.json(); } catch { webhookJson = null; }
+  } catch (err: any) {
+    res.status(502).json({ error: 'Delivery-status webhook failed', detail: err?.message || String(err) });
+    return;
+  }
+
+  // ── Parse the status defensively ─────────────────────────────────────────────
+  const data = webhookJson || {};
+  const rawStatus =
+    data.delivery_status ||
+    data.status ||
+    data.current_status ||
+    (data.data && (data.data.status || data.data.delivery_status));
+  const courierStatus = rawStatus != null ? String(rawStatus) : null;
+  const normalized = courierStatus ? courierStatus.toLowerCase() : '';
+
+  // ── Map to our enum ──────────────────────────────────────────────────────────
+  let mappedStatus: string | null = null;
+  const updateData: any = {};
+  let updated = false;
+
+  if (courierStatus != null) {
+    updateData.courierStatus = courierStatus;
+  }
+
+  if (normalized === 'delivered') {
+    mappedStatus = 'DELIVERED';
+    updateData.orderStatus = 'DELIVERED';
+    if (!order.deliveryDate) updateData.deliveryDate = new Date();
+  } else if (normalized === 'returned' || normalized === 'return') {
+    mappedStatus = 'RETURNED';
+    updateData.orderStatus = 'RETURNED';
+  } else if (normalized === 'cancelled' || normalized === 'canceled') {
+    mappedStatus = 'CANCELLED';
+    updateData.orderStatus = 'CANCELLED';
+  } else if (normalized === 'in_review' || normalized === 'partial_delivered' || normalized === 'hold') {
+    // Known but non-terminal: keep orderStatus, store raw in courierStatus only.
+  }
+  // else: unknown / in-transit / pending / shipped — store raw only, leave orderStatus.
+
+  let resultOrder = order;
+  if (Object.keys(updateData).length > 0) {
+    resultOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: updateData,
+    });
+    updated = updateData.orderStatus != null;
+  }
+
+  res.json({ data: { courierStatus, mappedStatus, updated, order: resultOrder } });
 };
 
 export const getOrderStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

@@ -9,6 +9,47 @@ import { endpointFor } from './endpoints';
 import { toBackend, toFrontend } from './caseConvert';
 
 const USER_KEY = 'currentUser';
+const COMPANY_KEY = 'activeCompanyId';
+const DEPT_KEY    = 'activeDepartmentId';
+const SCOPE_EVENT = 'scopechange';
+
+/**
+ * Writes the user's assigned company/department scope into localStorage and
+ * fires a scopechange event so every component using useScope() re-renders.
+ *
+ * Rules:
+ *  - Non-admins: always overwrite — their scope is locked to their profile.
+ *  - Admins:     only set a default if nothing is saved yet (they may have
+ *                manually chosen a different scope from the header picker).
+ */
+function seedScopeFromUser(user) {
+  try {
+    const adminRoles = ['admin', 'super_admin', 'tenant_admin', 'ADMIN', 'SUPER_ADMIN', 'TENANT_ADMIN'];
+    const isAdmin =
+      adminRoles.includes(String(user.role || '').toUpperCase().replace(/ /g,'_')) ||
+      adminRoles.includes(String(user.job_role || '').toUpperCase().replace(/ /g,'_')) ||
+      user.role === 'admin';
+
+    const profileCompanyId   = user.company_id   || user.companyId   || null;
+    const profileDepartmentId = user.department_id || user.departmentId || null;
+
+    if (!isAdmin) {
+      // Non-admins: scope is always their profile — hard lock.
+      if (profileCompanyId)   localStorage.setItem(COMPANY_KEY, String(profileCompanyId));
+      else                    localStorage.removeItem(COMPANY_KEY);
+      if (profileDepartmentId) localStorage.setItem(DEPT_KEY, String(profileDepartmentId));
+      else                     localStorage.removeItem(DEPT_KEY);
+    } else {
+      // Admins: set a sensible default only when no saved scope exists.
+      if (!localStorage.getItem(COMPANY_KEY) && profileCompanyId)
+        localStorage.setItem(COMPANY_KEY, String(profileCompanyId));
+      if (!localStorage.getItem(DEPT_KEY) && profileDepartmentId)
+        localStorage.setItem(DEPT_KEY, String(profileDepartmentId));
+    }
+
+    window.dispatchEvent(new CustomEvent(SCOPE_EVENT));
+  } catch { /* non-fatal */ }
+}
 const unwrap = (res) => res.data?.data ?? res.data ?? [];
 
 // Base44-style call signature: filter(query, sortBy, limit) / list(sortBy, limit)
@@ -73,12 +114,19 @@ const auth = {
         ? 'admin'
         : 'user';
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    // ✅ KEY FIX: seed the user's company/department scope into localStorage
+    // so the axios interceptor (client.js) auto-stamps it on every API call.
+    seedScopeFromUser(user);
     return user;
   },
   login: async (credentials) => {
     const res = await api.post('/auth/login', credentials);
     if (res.data.accessToken) localStorage.setItem('accessToken', res.data.accessToken);
-    if (res.data.user) localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+    if (res.data.user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+      // ✅ Seed scope immediately on login
+      seedScopeFromUser(toFrontend(res.data.user));
+    }
     return res.data;
   },
   logout: async () => {
@@ -89,6 +137,8 @@ const auth = {
     }
     localStorage.removeItem('accessToken');
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('zypra-query-cache'); // drop persisted data cache
+    localStorage.removeItem('cached_user_permissions');
     window.location.href = '/Auth';
   },
   changePassword: async (payload) => (await api.post('/auth/change-password', payload)).data,

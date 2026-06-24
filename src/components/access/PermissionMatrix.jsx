@@ -31,12 +31,27 @@ const MODULES = [
   { id: 'finance_dashboard', name: 'Finance Dashboard', icon: TrendingUp, category: 'Finance & Payroll' },
   { id: 'financial_analytics', name: 'Financial Reports', icon: DollarSign, category: 'Finance & Payroll' },
   { id: 'payroll', name: 'Payroll', icon: Calculator, category: 'Finance & Payroll' },
+  { id: 'wholesale', name: 'Wholesale / Distribution', icon: Building2, category: 'Inventory & Products' },
+  { id: 'crm', name: 'CRM & Leads', icon: Users, category: 'Inventory & Products' },
+  // Analytics & Reports
+  { id: 'reports', name: 'Reports Hub', icon: FileText, category: 'Analytics & Reports' },
+  { id: 'ai_copilot', name: 'AI Copilot', icon: Sparkles, category: 'Analytics & Reports' },
+  // Finance
+  { id: 'accounting', name: 'Accounting', icon: Calculator, category: 'Finance & Payroll' },
+  { id: 'expenses', name: 'Expenses', icon: DollarSign, category: 'Finance & Payroll' },
   // HR
   { id: 'attendance', name: 'Employee Attendance', icon: Clock, category: 'Human Resources' },
+  { id: 'tasks', name: 'Tasks', icon: FileText, category: 'Human Resources' },
+  { id: 'kpi', name: 'KPI Tracking', icon: BarChart3, category: 'Human Resources' },
+  { id: 'production_projects', name: 'Production Projects', icon: Briefcase, category: 'Human Resources' },
   // System
   { id: 'auto_reports', name: 'Auto Report Settings', icon: Bell, category: 'System & Security' },
   { id: 'user_access_manager', name: 'User Access Manager', icon: Shield, category: 'System & Security' },
   { id: 'integrations', name: 'Integrations', icon: Link2, category: 'System & Security' },
+  { id: 'automation', name: 'Automation Hub', icon: Link2, category: 'System & Security' },
+  { id: 'webhooks', name: 'Webhooks', icon: Link2, category: 'System & Security' },
+  { id: 'company_profiles', name: 'Company Profiles', icon: Building2, category: 'System & Security' },
+  { id: 'hardware_config', name: 'Hardware Config', icon: Shield, category: 'System & Security' },
   { id: 'system_alerts', name: 'System Alerts', icon: Bell, category: 'System & Security' },
   { id: 'audit_trail', name: 'Audit Trail', icon: FileText, category: 'System & Security' },
 ];
