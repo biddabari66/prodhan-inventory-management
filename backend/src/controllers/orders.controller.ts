@@ -294,13 +294,24 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response): Pro
   const wasActive = ['CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(order.orderStatus);
   if (wasActive) await restoreInventory(order.orderItems as any[], order.id, req.user.tenantId, req.user.id);
 
-  await prisma.order.update({ where: { id: req.params.id }, data: { orderStatus: 'CANCELLED' } });
+  // Clean up relations
+  await prisma.feedbackCall.deleteMany({ where: { orderId: req.params.id } });
+  await prisma.welcomeCall.deleteMany({ where: { orderId: req.params.id } });
+  
+  // Unlink from converted leads
+  await prisma.lead.updateMany({
+    where: { convertedOrderId: req.params.id },
+    data: { convertedOrderId: null, leadStatus: 'IN_PROGRESS' }
+  });
+
+  // Hard delete the order
+  await prisma.order.delete({ where: { id: req.params.id } });
 
   await prisma.auditLog.create({
     data: { tenantId: req.user.tenantId, userId: req.user.id, action: 'DELETE', entity: 'Order', entityId: req.params.id, ipAddress: req.ip },
   });
 
-  res.json({ message: 'Order cancelled' });
+  res.json({ message: 'Order deleted completely' });
 };
 
 export const shipOrder = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

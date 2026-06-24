@@ -368,23 +368,23 @@ function SalesPage() {
         return;
       }
 
-      const loadingToast = toast.loading(`Deleting ${selectedOrderIds.length} order(s)...`);
+      const toastId = toast.loading(`Deleting ${selectedOrderIds.length} order(s)...`);
       try {
         const results = await Promise.allSettled(selectedOrderIds.map(id => Order.delete(id)));
         const succeeded = results.filter(r => r.status === 'fulfilled').length;
         const failed = results.filter(r => r.status === 'rejected').length;
-        toast.dismiss(loadingToast);
-        queryClient.invalidateQueries(['orders-sales-recent']);
-        queryClient.invalidateQueries(['orders-sales-all']);
+        
+        // Use the new scoped query keys for invalidation
+        queryClient.invalidateQueries(['orders-sales']);
+        
         if (failed > 0) {
-          toast.success(`${succeeded} order(s) deleted. ${failed} were already removed.`);
+          toast.success(`${succeeded} order(s) deleted. ${failed} failed.`, { id: toastId });
         } else {
-          toast.success(`${succeeded} order(s) deleted successfully`);
+          toast.success(`${succeeded} order(s) deleted successfully`, { id: toastId });
         }
         setSelectedOrderIds([]);
       } catch (error) {
-        toast.dismiss(loadingToast);
-        toast.error('Failed to delete orders: ' + error.message);
+        toast.error('Failed to delete orders: ' + error.message, { id: toastId });
       }
     } else {
       try {
