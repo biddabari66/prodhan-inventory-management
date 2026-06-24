@@ -11,9 +11,15 @@ import { toast, Toaster } from 'sonner';
 import SplitText from '../components/animations/SplitText';
 import api from '@/api/client';
 import { useScope } from '@/lib/scope';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Webhooks() {
   const { companyId: activeCompanyId } = useScope();
+  const { user } = useAuth();
+  const isAdmin =
+    user?.role === 'admin' ||
+    ['admin', 'super_admin'].includes(String(user?.job_role || '').toLowerCase());
+
   const [companies, setCompanies] = useState([]);
   const [companyFilter, setCompanyFilter] = useState('all');
   const [outboundHooks, setOutboundHooks] = useState([]);
@@ -40,17 +46,19 @@ export default function Webhooks() {
     }
   }, []);
 
-  // Load sub-companies for the filter + per-webhook assignment.
+  // Load sub-companies — only admins need the full picker list.
   useEffect(() => {
+    if (!isAdmin) return;
     api.get('/companies', { params: { limit: 100 } })
       .then((r) => setCompanies(Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])))
       .catch(() => setCompanies([]));
-  }, []);
+  }, [isAdmin]);
 
-  // Default the filter + new-hook company to the active sub-company from the header picker.
+  // Default the filter + new-hook company to the active sub-company.
+  // Non-admins are always locked to their own company.
   useEffect(() => {
     if (activeCompanyId) {
-      setCompanyFilter(activeCompanyId);
+      setCompanyFilter(activeCompanyId); // lock non-admins; set default for admins
       setNewHook((h) => ({ ...h, companyId: h.companyId || activeCompanyId }));
     }
   }, [activeCompanyId]);
@@ -192,17 +200,18 @@ export default function Webhooks() {
             <div className="flex flex-wrap justify-between items-center gap-3">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Active Triggers</h2>
-                {companies.length > 0 && (
-                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
-                    <SelectTrigger className="h-9 w-52 bg-white dark:bg-slate-900">
-                      <SelectValue placeholder="Filter by sub-company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All sub-companies</SelectItem>
-                      {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
+                              {/* Company filter — admins only */}
+              {isAdmin && companies.length > 0 && (
+                <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                  <SelectTrigger className="h-9 w-52 bg-white dark:bg-slate-900">
+                    <SelectValue placeholder="Filter by sub-company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sub-companies</SelectItem>
+                    {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               </div>
 
               <Dialog open={isCreating} onOpenChange={setIsCreating}>
@@ -235,14 +244,20 @@ export default function Webhooks() {
 
                     <div className="grid gap-2">
                       <label className="text-sm font-medium">Sub-Company</label>
-                      <Select value={newHook.companyId || ''} onValueChange={(v) => setNewHook({...newHook, companyId: v})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Which sub-company is this webhook for?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      {isAdmin ? (
+                        <Select value={newHook.companyId || ''} onValueChange={(v) => setNewHook({...newHook, companyId: v})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Which sub-company is this webhook for?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.branding?.name || c.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="h-10 px-3 flex items-center text-sm bg-slate-50 border border-slate-200 rounded-md text-slate-500">
+                          {companies.find(c => c.id === (newHook.companyId || activeCompanyId))?.name || 'Your company (auto-assigned)'}
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500">This webhook will belong to the selected sub-company.</p>
                     </div>
                     

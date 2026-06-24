@@ -23,6 +23,7 @@ import PageHeader from '@/components/common/PageHeader';
 import { CardGridSkeleton, TableSkeleton, ErrorState } from '@/components/common/Skeletons';
 import api from '@/api/client';
 import { useScope } from '@/lib/scope';
+import { useAuth } from '@/lib/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const fullUrl = (path) => `${API_BASE}${path}`;
@@ -111,10 +112,15 @@ const copyText = (text) => {
 const companyLabel = (c) => c?.branding?.name || c?.name || c?.id;
 
 export default function Automation() {
-  const { companyId: activeCompanyId } = useScope();
+  const { companyId: activeCompanyId, departmentId: activeDepartmentId } = useScope();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // ── Sub-companies (for routing + filtering) ──
+  const isAdmin =
+    user?.role === 'admin' ||
+    ['admin', 'super_admin'].includes(String(user?.job_role || '').toLowerCase());
+
+  // ── Sub-companies — only admins need the full list for the company picker ──
   const { data: companies = [] } = useQuery({
     queryKey: ['companies', 'automation'],
     queryFn: async () => {
@@ -122,6 +128,7 @@ export default function Automation() {
       return Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : []);
     },
     staleTime: 5 * 60 * 1000,
+    enabled: isAdmin, // non-admins don't need the company list
   });
 
   // ── Tab 2: inbound order webhook routing ──
@@ -132,6 +139,7 @@ export default function Automation() {
   }, [inboundCompanyId]);
 
   // ── Tab 3: outbound webhooks ──
+  // Default the filter to the user's active company (locked for non-admins)
   const [outboundFilter, setOutboundFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -143,18 +151,24 @@ export default function Automation() {
     isError: hooksError,
     refetch: refetchHooks,
   } = useQuery({
-    queryKey: ['automation-webhooks'],
+    // ✅ Include scope in query key — re-fetches when user switches company
+    queryKey: ['automation-webhooks', activeCompanyId, activeDepartmentId],
     queryFn: async () => {
       try {
         const r = await api.get('/automation/webhooks');
         return Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : []);
       } catch (e) {
-        if (e?.response?.status === 404) return []; // endpoint not deployed yet — degrade gracefully
+        if (e?.response?.status === 404) return [];
         throw e;
       }
     },
     retry: false,
   });
+
+  // ✅ For non-admins: auto-lock the filter to their company
+  React.useEffect(() => {
+    if (!isAdmin && activeCompanyId) setOutboundFilter(activeCompanyId);
+  }, [isAdmin, activeCompanyId]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
@@ -194,13 +208,6 @@ export default function Automation() {
     onError: (e) => toast.error(e?.response?.data?.message || 'Failed to send test event'),
   });
 
-  const openDialog = (hook = null) => {
-    setEditing(hook);
-    setForm(hook
-      ? { id: hook.id, name: hook.name || '', url: hook.url || '', events: hook.events || [], companyId: hook.companyId || '' }
-      : { name: '', url: '', events: [], companyId: activeCompanyId || '' });
-    setDialogOpen(true);
-  };
 
   const toggleEvent = (ev) => {
     setForm((f) => ({
@@ -225,6 +232,15 @@ export default function Automation() {
   );
 
   const nameForCompany = (id) => companyLabel(companies.find((c) => c.id === id)) || 'All sub-companies';
+
+  // For the dialog form: new webhooks default to the user's active company
+  const openDialog = (hook = null) => {
+    setEditing(hook);
+    setForm(hook
+      ? { id: hook.id, name: hook.name || '', url: hook.url || '', events: hook.events || [], companyId: hook.companyId || '' }
+      : { name: '', url: '', events: [], companyId: activeCompanyId || '' });
+    setDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-6xl mx-auto">
@@ -370,7 +386,8 @@ export default function Automation() {
               <p className="text-xs text-slate-500">Push real-time events to n8n / Zapier / Make when things happen in the ERP.</p>
             </div>
             <div className="flex items-center gap-2">
-              {companies.length > 0 && (
+              {/* ✅ Company filter only shown to admins — non-admins are auto-scoped */}
+              {isAdmin && companies.length > 0 && (
                 <Select value={outboundFilter} onValueChange={setOutboundFilter}>
                   <SelectTrigger className="h-9 w-48"><SelectValue placeholder="Filter by sub-company" /></SelectTrigger>
                   <SelectContent>
@@ -540,13 +557,19 @@ export default function Automation() {
             </div>
             <div className="space-y-2">
               <Label>Sub-company</Label>
-              <Select value={form.companyId || 'none'} onValueChange={(v) => setForm({ ...form, companyId: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Select sub-company" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">All sub-companies</SelectItem>
-                  {companies.map((c) => <SelectItem key={c.id} value={c.id}>{companyLabel(c)}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {isAdmin ? (
+                <Select value={form.companyId || 'none'} onValueChange={(v) => setForm({ ...form, companyId: v === 'none' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select sub-company" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">All sub-companies</SelectItem>
+                    {companies.map((c) => <SelectItem key={c.id} value={c.id}>{companyLabel(c)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="h-10 px-3 flex items-center text-sm bg-slate-50 border border-slate-200 rounded-md text-slate-600">
+                  {companyLabel(companies.find(c => c.id === (form.companyId || activeCompanyId))) || 'Your company (auto-assigned)'}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Trigger Events</Label>
