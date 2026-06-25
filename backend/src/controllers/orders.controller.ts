@@ -174,7 +174,8 @@ export const listOrders = async (req: AuthenticatedRequest, res: Response): Prom
       where, skip, take: limit,
       include: { 
         customer: { select: { id: true, name: true, phone: true } },
-        department: { select: { name: true } }
+        department: { select: { name: true } },
+        orderItems: true
       },
       orderBy: { createdAt: 'desc' },
     }),
