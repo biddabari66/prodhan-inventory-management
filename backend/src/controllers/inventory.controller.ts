@@ -47,7 +47,8 @@ export const listInventory = async (req: AuthenticatedRequest, res: Response): P
   if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
   
   const q = req.query;
-  const departmentId = qs(q.departmentId);
+  let departmentId = qs(q.departmentId);
+  const companyIdQ = qs(q.companyId);
   const categoryId = qs(q.categoryId);
   const supplierId = qs(q.supplierId);
   const isActiveStr = qs(q.isActive);
@@ -57,7 +58,23 @@ export const listInventory = async (req: AuthenticatedRequest, res: Response): P
   const skip = (page - 1) * limit;
 
   const where: any = { tenantId: req.user.tenantId };
-  if (departmentId) where.departmentId = departmentId;
+  
+  const canViewAll = req.user?.canViewAllCompanies ?? false;
+  if (!canViewAll) {
+    if ((req.user as any)?.departmentId) {
+      where.departmentId = (req.user as any).departmentId;
+    }
+  } else {
+    if (departmentId) {
+      where.departmentId = departmentId;
+    } else if (companyIdQ && companyIdQ !== 'all') {
+      const depts = await prisma.department.findMany({
+        where: { tenantId: req.user.tenantId, companyId: companyIdQ },
+        select: { id: true },
+      });
+      where.departmentId = { in: depts.length ? depts.map(d => d.id) : ['__none__'] };
+    }
+  }
   if (categoryId) where.categoryId = categoryId;
   if (supplierId) where.supplierId = supplierId;
   if (isActiveStr !== undefined) where.isActive = isActiveStr === 'true';
@@ -92,6 +109,32 @@ export const listInventory = async (req: AuthenticatedRequest, res: Response): P
 export const getLowStock = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
 
+  const companyIdQ = qs(req.query.companyId);
+  const departmentId = qs(req.query.departmentId);
+  const canViewAll = req.user?.canViewAllCompanies ?? false;
+
+  let deptIds: string[] = [];
+  if (!canViewAll) {
+    if ((req.user as any)?.departmentId) {
+      deptIds = [(req.user as any).departmentId];
+    }
+  } else {
+    if (departmentId) {
+      deptIds = [departmentId];
+    } else if (companyIdQ && companyIdQ !== 'all') {
+      const depts = await prisma.department.findMany({
+        where: { tenantId: req.user.tenantId, companyId: companyIdQ },
+        select: { id: true },
+      });
+      deptIds = depts.map(d => d.id);
+      if (deptIds.length === 0) deptIds = ['__none__'];
+    }
+  }
+
+  const deptFilterSql = deptIds.length > 0 
+    ? require('@prisma/client').Prisma.sql`AND i."departmentId" IN (${require('@prisma/client').Prisma.join(deptIds)})` 
+    : require('@prisma/client').Prisma.empty;
+
   const items = await prisma.$queryRaw`
     SELECT i.*, c.name as "categoryName", s.name as "supplierName"
     FROM "Inventory" i
@@ -100,6 +143,7 @@ export const getLowStock = async (req: AuthenticatedRequest, res: Response): Pro
     WHERE i.stock <= i."minStockLevel" 
       AND i."isActive" = true 
       AND i."tenantId" = ${req.user.tenantId}
+      ${deptFilterSql}
     ORDER BY i.stock ASC
   `;
   res.json(items);

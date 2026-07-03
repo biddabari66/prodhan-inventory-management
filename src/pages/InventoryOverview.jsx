@@ -24,6 +24,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { useScope } from '@/lib/scope';
 import { usePerformanceMonitor, CacheManager } from '../components/common/PerformanceOptimizer';
 import { withPermission, usePermission, useConfidentialPermission } from '../components/common/PermissionGuard';
 import { usePurchasePriceResolver } from '../components/sales/useDiscountCampaigns';
@@ -637,6 +638,8 @@ function InventoryForm({ item, onSubmit, onCancel }) {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 function InventoryOverviewPage() {
+  const { companyId, departmentId } = useScope();
+  const queryClient = useQueryClient();
   usePerformanceMonitor('InventoryOverviewPage');
 
   const [inventory,             setInventory]             = useState([]);
@@ -710,30 +713,31 @@ function InventoryOverviewPage() {
   const { canView: canViewPurchasePrice } = useConfidentialPermission('can_view_purchase_price');
 
   const { data: purchaseOrders = [] } = useQuery({
-    queryKey: ['purchase-orders-for-prices', selectedDepartment],
+    queryKey: ['purchase-orders-for-prices', companyId, departmentId],
     queryFn: () => erp.entities.PurchaseOrder.filter(
-      { department_id: selectedDepartment }, '-order_date', 200
+      { department_id: departmentId ?? selectedDepartment }, '-order_date', 200
     ),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    enabled: !!selectedDepartment
+    enabled: !!(departmentId ?? selectedDepartment)
   });
   const { getPurchasePrice } = usePurchasePriceResolver(purchaseOrders);
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['product-categories', selectedDepartment],
+    queryKey: ['product-categories', companyId, departmentId],
     queryFn: async () => {
       const all = await erp.entities.ProductCategory.list('sort_order');
+      const target = departmentId ?? selectedDepartment;
       return all.filter(c =>
-        c.is_active && (c.department_id === selectedDepartment || c.department === selectedDepartment || c.department === 'both')
+        c.is_active && (c.department_id === target || c.department === target || c.department === 'both')
       );
     },
-    enabled: !!selectedDepartment
+    enabled: !!(departmentId ?? selectedDepartment)
   });
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    loadUserAndInventory();
+    loadUserAndInventory(true);
     loadTodaySales();
 
     const unsubOrders = erp.entities.Order.subscribe(() => loadTodaySales());
@@ -744,7 +748,7 @@ function InventoryOverviewPage() {
       invTimeout = setTimeout(() => {
         CacheManager.remove('inventory_list');
         CacheManager.remove('inventory_movements');
-        loadUserAndInventory();
+        loadUserAndInventory(true);
       }, 1500);
     });
 
@@ -755,7 +759,7 @@ function InventoryOverviewPage() {
       if (invTimeout) clearTimeout(invTimeout);
       clearInterval(ticker);
     };
-  }, []);
+  }, [companyId, departmentId]);
 
   useEffect(() => {
     filterInventory();

@@ -297,6 +297,9 @@ function UserAccessManagerPage() {
   const [creating, setCreating] = useState(false);
   const [newUser, setNewUser] = useState({ displayName: '', email: '', password: '', jobRole: 'EMPLOYEE', companyId: '', departmentId: '' });
   const [newUserDepts, setNewUserDepts] = useState([]);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const loadNewUserDepts = async (companyId) => {
     if (!companyId) { setNewUserDepts([]); return; }
@@ -306,20 +309,39 @@ function UserAccessManagerPage() {
     } catch { setNewUserDepts([]); }
   };
 
+  const handleResetPassword = async () => {
+    if (resetPasswordValue.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    setIsResettingPassword(true);
+    try {
+      await erp.api.post(`/users/${selectedEmployee.id}/reset-password`, { newPassword: resetPasswordValue });
+      toast.success('Password reset successfully');
+      setResetPasswordOpen(false);
+      setResetPasswordValue('');
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Failed to reset password');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const handleCreateUser = async () => {
     if (!newUser.displayName.trim() || !newUser.email.trim() || newUser.password.length < 6) {
       toast.error('Name, valid email, and a password (min 6 chars) are required'); return;
     }
     setCreating(true);
-    try {
-      await erp.api.post('/auth/register', {
-        displayName: newUser.displayName.trim(),
-        email: newUser.email.trim().toLowerCase(),
-        password: newUser.password,
-        jobRole: newUser.jobRole,
-        departmentId: newUser.departmentId || undefined,
-      });
-      toast.success(`User created — ${newUser.email} can now log in`);
+      try {
+        await erp.api.post('/auth/register', {
+          displayName: newUser.displayName.trim(),
+          email: newUser.email.trim().toLowerCase(),
+          password: newUser.password,
+          jobRole: newUser.jobRole,
+          companyId: newUser.companyId || undefined,
+          departmentId: newUser.departmentId || undefined,
+        });
+        toast.success(`User created - ${newUser.email} can now log in`);
       setAddOpen(false);
       setNewUser({ displayName: '', email: '', password: '', jobRole: 'EMPLOYEE', companyId: '', departmentId: '' });
       setNewUserDepts([]);
@@ -413,17 +435,17 @@ function UserAccessManagerPage() {
   };
 
   const handleAssignDepartment = async () => {
-    if (!selectedEmployee || !selectedDeptId) {
+    if (!selectedEmployee || !selectedCompanyId || !selectedDeptId) {
       toast.error('Select a sub-company and department first');
       return;
     }
     setIsAssigning(true);
     try {
-      await User.update(selectedEmployee.id, { department_id: selectedDeptId });
-      setSelectedEmployee({ ...selectedEmployee, department_id: selectedDeptId, departmentId: selectedDeptId });
+      await User.update(selectedEmployee.id, { company_id: selectedCompanyId, department_id: selectedDeptId });
+      setSelectedEmployee({ ...selectedEmployee, company_id: selectedCompanyId, companyId: selectedCompanyId, department_id: selectedDeptId, departmentId: selectedDeptId });
       setUsers(users.map(u =>
         u.id === selectedEmployee.id
-          ? { ...u, department_id: selectedDeptId, departmentId: selectedDeptId }
+          ? { ...u, company_id: selectedCompanyId, companyId: selectedCompanyId, department_id: selectedDeptId, departmentId: selectedDeptId }
           : u
       ));
       toast.success('Sub-company & department assigned');
@@ -595,6 +617,28 @@ function UserAccessManagerPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Reset Password Dialog */}
+        <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>New Password</Label>
+                <Input type="text" value={resetPasswordValue} onChange={e => setResetPasswordValue(e.target.value)} placeholder="Minimum 8 characters" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>Cancel</Button>
+              <Button onClick={handleResetPassword} disabled={isResettingPassword} className="bg-red-700 hover:bg-red-800 text-white">
+                {isResettingPassword ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Reset Password
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Role Legend */}
         <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
           <CardContent className="p-4">
@@ -647,13 +691,18 @@ function UserAccessManagerPage() {
                         <Lock className="w-5 h-5 text-red-600" />
                         {selectedEmployee.full_name}
                       </CardTitle>
-                      <Badge
-                        variant={selectedEmployee.job_role === 'super_admin' ? 'default' : 'secondary'}
-                        className="flex items-center gap-1"
-                      >
-                        {selectedEmployee.job_role === 'super_admin' && <Crown className="w-3 h-3" />}
-                        {selectedEmployee.job_role?.replace(/_/g, ' ').toUpperCase()}
-                      </Badge>
+                      <div className="flex gap-2 items-center">
+                        <Button variant="outline" size="sm" onClick={() => setResetPasswordOpen(true)} className="text-xs h-7">
+                           Reset Password
+                        </Button>
+                        <Badge
+                          variant={selectedEmployee.job_role === 'super_admin' ? 'default' : 'secondary'}
+                          className="flex items-center gap-1"
+                        >
+                          {selectedEmployee.job_role === 'super_admin' && <Crown className="w-3 h-3" />}
+                          {selectedEmployee.job_role?.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">

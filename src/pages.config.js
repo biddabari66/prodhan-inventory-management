@@ -80,6 +80,7 @@ const SystemLogs = lazy(() => import('./pages/SystemLogs'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Wholesale = lazy(() => import('./pages/Wholesale'));
 const ProductionProjects = lazy(() => import('./pages/ProductionProjects'));
+const ViralGrowth = lazy(() => import('./pages/ViralGrowth'));
 const DailyReport = lazy(() => import('./pages/DailyReport'));
 const Complaints = lazy(() => import('./pages/Complaints'));
 const Accountability = lazy(() => import('./pages/Accountability'));
@@ -169,6 +170,7 @@ export const PAGES = {
     "WhatsAppWebhook": WhatsAppWebhook,
     "Wholesale": Wholesale,
     "ProductionProjects": ProductionProjects,
+    "ViralGrowth": ViralGrowth,
     "DailyReport": DailyReport,
     "Complaints": Complaints,
     "Accountability": Accountability,

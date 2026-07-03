@@ -13,7 +13,11 @@ export interface AuthenticatedRequest extends Request {
     jobRole: JobRole;
     displayName: string;
     departmentId: string | null;
+    companyId: string | null;        // derived from department.companyId
     canViewFinancialData: boolean;
+    isAdmin: boolean;                // SUPER_ADMIN | ADMIN
+    isMd: boolean;                   // MD (Managing Director) — same cross-company visibility as admin
+    canViewAllCompanies: boolean;    // isAdmin || isMd
   };
 }
 
@@ -51,6 +55,9 @@ export const authenticate = async (
         canViewFinancialData: true,
         isActive: true,
         accountLockedUntil: true,
+        department: {
+          select: { companyId: true }
+        },
         tenant: {
           select: { isActive: true, status: true }
         }
@@ -78,6 +85,8 @@ export const authenticate = async (
       return;
     }
 
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(user.jobRole as string);
+    const isMd = (user.jobRole as string) === 'MD';
     req.user = {
       id: user.id,
       tenantId: user.tenantId,
@@ -85,7 +94,11 @@ export const authenticate = async (
       jobRole: user.jobRole,
       displayName: user.displayName,
       departmentId: user.departmentId,
+      companyId: user.department?.companyId ?? null,
       canViewFinancialData: user.canViewFinancialData,
+      isAdmin,
+      isMd,
+      canViewAllCompanies: isAdmin || isMd,
     };
 
     next();
@@ -98,13 +111,13 @@ export const authenticate = async (
   }
 };
 
-export const requireRole = (...roles: JobRole[]) => {
+export const requireRole = (...roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({ error: 'Unauthenticated' });
       return;
     }
-    if (!roles.includes(req.user.jobRole)) {
+    if (!roles.includes(req.user.jobRole as string)) {
       res.status(403).json({
         error: 'Forbidden: insufficient role',
         required: roles,

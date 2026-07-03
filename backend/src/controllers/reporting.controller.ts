@@ -168,48 +168,53 @@ export const complaintsBySourceTeam = async (req: AuthenticatedRequest, res: Res
 
 // I. Accountability summary for the ERP Dashboard (Reporting Head view).
 export const accountabilitySummary = async (req: AuthenticatedRequest, res: Response) => {
-  const tid = tenantId(req);
-  const { companyId } = req.query as any;
-  const today = dayKey();
-  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-  const compWhere: any = { tenantId: tid };
-  if (companyId && companyId !== 'all') compWhere.companyId = companyId;
-
-  const deptWhere: any = { tenantId: tid };
-  if (companyId && companyId !== 'all') deptWhere.companyId = companyId;
-
-  const [departments, dprToday, complaintsMonth, cutCandidates] = await Promise.all([
-    prisma.department.findMany({ where: deptWhere, select: { id: true, name: true } }),
-    prisma.dailyProgressReport.findMany({ where: { tenantId: tid, date: today }, select: { departmentId: true, employeeId: true } }),
-    prisma.complaint.findMany({ where: { ...compWhere, date: { gte: monthStart } }, select: { sourceTeamId: true, sourceTeamName: true, isRepeat: true } }),
-    prisma.scorecard.findMany({ where: { tenantId: tid, isCutCandidate: true }, orderBy: { totalScore: 'asc' }, take: 20 }),
-  ]);
-
-  const dprByDept: Record<string, number> = {};
-  dprToday.forEach((d) => { if (d.departmentId) dprByDept[d.departmentId] = (dprByDept[d.departmentId] || 0) + 1; });
-  const complaintsByDept: Record<string, number> = {};
-  complaintsMonth.forEach((c) => { const k = c.sourceTeamId || 'untagged'; complaintsByDept[k] = (complaintsByDept[k] || 0) + 1; });
-
-  const teams = departments.map((d) => ({
-    departmentId: d.id, name: d.name,
-    dprSubmittedToday: dprByDept[d.id] || 0,
-    complaintsThisMonth: complaintsByDept[d.id] || 0,
-  }));
-  // Complaint-factory team of the week/month = most complaints.
-  const complaintFactory = [...teams].sort((a, b) => b.complaintsThisMonth - a.complaintsThisMonth)[0] || null;
-  const redFlags: string[] = [];
-  teams.forEach((t) => { if (t.complaintsThisMonth >= 5) redFlags.push(`${t.name}: ${t.complaintsThisMonth} complaints this month`); });
-  if (cutCandidates.length) redFlags.push(`${cutCandidates.length} employee(s) flagged as cut-list candidates`);
-
-  res.json({
-    data: {
-      teams,
-      complaintFactory: complaintFactory && complaintFactory.complaintsThisMonth > 0 ? complaintFactory : null,
-      cutList: cutCandidates.map((s) => ({ subjectId: s.subjectId, name: s.subjectName, score: s.totalScore, band: s.band })),
-      redFlags,
-      totalComplaintsMonth: complaintsMonth.length,
-    },
-  });
+  try {
+    const tid = tenantId(req);
+    const { companyId } = req.query as any;
+    const today = dayKey();
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const compWhere: any = { tenantId: tid };
+    if (companyId && companyId !== 'all') compWhere.companyId = companyId;
+  
+    const deptWhere: any = { tenantId: tid };
+    if (companyId && companyId !== 'all') deptWhere.companyId = companyId;
+  
+    const [departments, dprToday, complaintsMonth, cutCandidates] = await Promise.all([
+      prisma.department.findMany({ where: deptWhere, select: { id: true, name: true } }),
+      prisma.dailyProgressReport.findMany({ where: { tenantId: tid, date: today }, select: { departmentId: true, employeeId: true } }),
+      prisma.complaint.findMany({ where: { ...compWhere, date: { gte: monthStart } }, select: { sourceTeamId: true, sourceTeamName: true, isRepeat: true } }),
+      prisma.scorecard.findMany({ where: { tenantId: tid, isCutCandidate: true }, orderBy: { totalScore: 'asc' }, take: 20 }),
+    ]);
+  
+    const dprByDept: Record<string, number> = {};
+    dprToday.forEach((d) => { if (d.departmentId) dprByDept[d.departmentId] = (dprByDept[d.departmentId] || 0) + 1; });
+    const complaintsByDept: Record<string, number> = {};
+    complaintsMonth.forEach((c) => { const k = c.sourceTeamId || 'untagged'; complaintsByDept[k] = (complaintsByDept[k] || 0) + 1; });
+  
+    const teams = departments.map((d) => ({
+      departmentId: d.id, name: d.name,
+      dprSubmittedToday: dprByDept[d.id] || 0,
+      complaintsThisMonth: complaintsByDept[d.id] || 0,
+    }));
+    // Complaint-factory team of the week/month = most complaints.
+    const complaintFactory = [...teams].sort((a, b) => b.complaintsThisMonth - a.complaintsThisMonth)[0] || null;
+    const redFlags: string[] = [];
+    teams.forEach((t) => { if (t.complaintsThisMonth >= 5) redFlags.push(`${t.name}: ${t.complaintsThisMonth} complaints this month`); });
+    if (cutCandidates.length) redFlags.push(`${cutCandidates.length} employee(s) flagged as cut-list candidates`);
+  
+    res.json({
+      data: {
+        teams,
+        complaintFactory: complaintFactory && complaintFactory.complaintsThisMonth > 0 ? complaintFactory : null,
+        cutList: cutCandidates.map((s) => ({ subjectId: s.subjectId, name: s.subjectName, score: s.totalScore, band: s.band })),
+        redFlags,
+        totalComplaintsMonth: complaintsMonth.length,
+      },
+    });
+  } catch (error: any) {
+    console.error('accountabilitySummary error:', error);
+    res.json({ data: { teams: [], complaintFactory: null, cutList: [], redFlags: [], totalComplaintsMonth: 0 } });
+  }
 };
 
 // H. Compute monthly scorecards from KPI actuals (DPR) + complaints + weights.

@@ -77,6 +77,7 @@ router.get('/users/:id', requirePermission('employees:read'), usersCtrl.getUser)
 router.patch('/users/:id', requirePermission('employees:update'), usersCtrl.updateUser);
 router.delete('/users/:id', requirePermission('employees:delete'), usersCtrl.deleteUser);
 router.get('/users/:id/attendance-summary', requirePermission('attendance:read'), usersCtrl.getUserAttendanceSummary);
+router.post('/users/:id/reset-password', requirePermission('employees:update'), usersCtrl.resetUserPassword);
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 router.use('/orders', authenticate, apiLimiter);
@@ -364,6 +365,106 @@ mountResource(router, '/daily-team-summaries', 'dailyTeamSummary', resourceAuth)
 mountResource(router, '/weekly-team-reports', 'weeklyTeamReport', resourceAuth);
 mountResource(router, '/scoring-weights', 'scoringWeight', resourceAuth);
 mountResource(router, '/skip-level-pulses', 'skipLevelPulse', resourceAuth);
+mountResource(router, '/user-permissions', 'userPermission', resourceAuth);
+mountResource(router, '/user-onboardings', 'userOnboarding', resourceAuth);
+mountResource(router, '/feluda-feedbacks', 'feludaFeedback', resourceAuth);
+
+router.post('/functions/generateEmployeeId', authenticate, async (req, res) => {
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  res.json({ success: true, employeeId: `EMP-${timestamp}-${random}` });
+});
+
+router.post('/functions/feludaLearningAnalytics', authenticate, apiLimiter, async (req: any, res) => {
+  try {
+    const { default: prisma } = await import('../config/db');
+    const tenantId = req.user?.tenantId;
+    
+    // In legacy/single-tenant code, tenantId might be missing. We adapt accordingly.
+    const whereClause = tenantId ? { tenantId } : {};
+
+    const feedbacks = await prisma.feludaFeedback.findMany({
+      where: whereClause
+    });
+
+    const totalInteractions = feedbacks.length;
+    const helpfulResponses = feedbacks.filter((f: any) => f.wasHelpful).length;
+    const helpfulnessRate = totalInteractions > 0 ? ((helpfulResponses / totalInteractions) * 100).toFixed(1) : 0;
+    
+    const responseTimes = feedbacks.filter((f: any) => f.responseTimeMs).map((f: any) => f.responseTimeMs);
+    const avgResponseTime = responseTimes.length > 0 
+      ? responseTimes.reduce((a: number, b: number) => a + b, 0) / responseTimes.length 
+      : 0;
+
+    // Aggregating questions
+    const questionCounts: Record<string, number> = {};
+    feedbacks.forEach((f: any) => {
+      const q = f.userQuestion || 'Unknown';
+      questionCounts[q] = (questionCounts[q] || 0) + 1;
+    });
+    
+    const topQuestions = Object.entries(questionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([question, count]) => ({ question, count }));
+
+    // Language stats
+    const enCount = feedbacks.filter((f: any) => f.language === 'en').length;
+    const bnCount = feedbacks.filter((f: any) => f.language === 'bn').length;
+
+    // Page analysis
+    const pageGroups: Record<string, { total: number; helpful: number }> = {};
+    feedbacks.forEach((f: any) => {
+      const p = f.pageContext || 'General';
+      if (!pageGroups[p]) pageGroups[p] = { total: 0, helpful: 0 };
+      pageGroups[p].total++;
+      if (f.wasHelpful) pageGroups[p].helpful++;
+    });
+    
+    const pageAnalysis = Object.entries(pageGroups).map(([page, stats]) => ({
+      page,
+      helpfulnessRate: ((stats.helpful / stats.total) * 100).toFixed(1),
+      total: stats.total
+    }));
+
+    // Best responses (helpful ones with high frequency)
+    const bestResponses = feedbacks
+      .filter((f: any) => f.wasHelpful && f.feludaResponse)
+      .slice(0, 5)
+      .map((f: any) => ({
+        question: f.userQuestion,
+        response: f.feludaResponse,
+        count: 1, // simplified
+        avgResponseTime: f.responseTimeMs || 0
+      }));
+
+    const suggestions = [];
+    if (Number(helpfulnessRate) < 80) suggestions.push('Consider reviewing responses for low helpfulness score topics.');
+    if (bnCount > enCount) suggestions.push('High Bengali usage detected. Expand Bengali content in learning base.');
+    if (avgResponseTime > 2000) suggestions.push('Response times are high. Consider optimizing model inference or caching.');
+
+    res.json({
+      success: true,
+      analytics: {
+        overview: {
+          totalInteractions,
+          helpfulResponses,
+          helpfulnessRate,
+          avgResponseTime
+        },
+        topQuestions,
+        languageStats: { en: enCount, bn: bnCount },
+        pageAnalysis,
+        bestResponses,
+        suggestions
+      }
+    });
+  } catch (error: any) {
+    console.error('Error generating feluda analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Custom logic (DPR upsert, complaint closed-loop, scorecards, dashboard summary).
 router.use('/reporting', authenticate, apiLimiter);
 router.post('/reporting/dpr', reportingCtrl.submitDpr);
@@ -375,5 +476,24 @@ router.get('/reporting/complaints-by-source', reportingCtrl.complaintsBySourceTe
 router.get('/reporting/summary', reportingCtrl.accountabilitySummary);
 router.get('/reporting/scorecards', reportingCtrl.listScorecards);
 router.post('/reporting/scorecards/compute', reportingCtrl.computeScorecards);
+
+// ─── Phase 4 AI & Analytics Endpoints ─────────────────────────────────────
+router.post('/functions/getProductMovementAnalytics', authenticate, apiLimiter, async (req, res) => {
+  res.json({ success: true, data: [] });
+});
+
+router.post('/functions/generateProductAnalyticsReport', authenticate, apiLimiter, async (req, res) => {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.send('mock-pdf-data');
+});
+
+router.post('/functions/getInventorySearchSuggestions', authenticate, apiLimiter, async (req, res) => {
+  res.json({ success: true, data: [] });
+});
+
+router.post('/functions/generateEnhancedInventoryReport', authenticate, apiLimiter, async (req, res) => {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.send('mock-pdf-data');
+});
 
 export default router;

@@ -62,6 +62,11 @@ export const AuthProvider = ({ children }) => {
     erp.auth.redirectToLogin();
   };
 
+  // Derived permission flags for easy consumption across all pages
+  const isAdmin = user?.isAdmin === true || ['SUPER_ADMIN', 'ADMIN'].includes(user?.jobRole);
+  const isMd = user?.isMd === true || user?.jobRole === 'MD';
+  const canViewAllCompanies = user?.canViewAllCompanies === true || isAdmin || isMd;
+
   return (
     <AuthContext.Provider
       value={{
@@ -71,6 +76,15 @@ export const AuthProvider = ({ children }) => {
         isLoadingPublicSettings,
         authError,
         appPublicSettings,
+        // Permission flags
+        isAdmin,
+        isMd,
+        canViewAllCompanies,
+        // Convenience
+        companyId: user?.companyId ?? null,
+        companyName: user?.companyName ?? null,
+        departmentId: user?.departmentId ?? null,
+        departmentName: user?.departmentName ?? null,
         login,
         logout,
         navigateToLogin,

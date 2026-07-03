@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +10,23 @@ import { toast } from 'sonner';
 import { LogIn, Loader2, Lock, Mail } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
 export default function AuthPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@bee-erp.com');
-  const [password, setPassword] = useState('Admin@BeeERP123!');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState(null);
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: 'admin@bee-erp.com',
+      password: 'Admin@BeeERP123!',
+    }
+  });
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -23,12 +37,11 @@ export default function AuthPage() {
     }
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setIsLoggingIn(true);
     setError(null);
     try {
-      await login({ email, password });
+      await login(data);
       toast.success('Welcome back!');
       window.location.href = '/';
     } catch (err) {
@@ -59,7 +72,7 @@ export default function AuthPage() {
             <p className="text-sm text-slate-500 mt-1">Sign in to your workspace</p>
           </CardHeader>
           <CardContent className="px-8 pb-10">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -68,13 +81,12 @@ export default function AuthPage() {
                     id="email"
                     type="email"
                     autoComplete="username"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="pl-9"
+                    className={`pl-9 ${errors.email ? 'border-red-500' : ''}`}
+                    {...register('email')}
                   />
                 </div>
+                {errors.email && <span className="text-xs text-red-500">{errors.email.message}</span>}
               </div>
 
               <div className="space-y-1.5">
@@ -85,13 +97,12 @@ export default function AuthPage() {
                     id="password"
                     type="password"
                     autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-9"
+                    className={`pl-9 ${errors.password ? 'border-red-500' : ''}`}
+                    {...register('password')}
                   />
                 </div>
+                {errors.password && <span className="text-xs text-red-500">{errors.password.message}</span>}
               </div>
 
               {error && (

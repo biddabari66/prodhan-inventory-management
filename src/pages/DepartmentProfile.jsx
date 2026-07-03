@@ -93,9 +93,12 @@ export default function CompanyProfiles() {
   });
 
   const addDept = useMutation({
-    mutationFn: () => api.post('/departments', { name: newDeptName.trim(), companyId: selectedId }),
+    mutationFn: () => {
+      if (!selectedId) return Promise.reject(new Error('Please select a company first'));
+      return api.post('/departments', { name: newDeptName.trim(), companyId: selectedId });
+    },
     onSuccess: () => { toast.success('Department added'); setNewDeptName(''); qc.invalidateQueries({ queryKey: ['company-departments', selectedId] }); },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Could not add department (name may exist)'),
+    onError: (e) => toast.error(e?.message || e?.response?.data?.error || 'Could not add department (name may exist)'),
   });
 
   const delDept = useMutation({

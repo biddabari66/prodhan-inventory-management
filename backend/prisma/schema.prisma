@@ -255,12 +255,12 @@ model Tenant {
   paymentNotes    String?
 
   // Onboarding profile (collected on first login)
-  industry            String?
-  employeeCount       String? // bucket e.g. "1-10", "11-50"
-  hearAboutUs         String?
-  country             String?
-  website             String?
-  onboardingCompleted Boolean   @default(false)
+  industry              String?
+  employeeCount         String? // bucket e.g. "1-10", "11-50"
+  hearAboutUs           String?
+  country               String?
+  website               String?
+  onboardingCompleted   Boolean   @default(false)
   onboardingCompletedAt DateTime?
 
   isActive  Boolean  @default(true)
@@ -268,29 +268,29 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // Tenant Scoped Data Relations
-  users         User[]
-  departments   Department[]
-  orders        Order[]
-  customers     Customer[]
-  inventory     Inventory[]
-  categories    Category[]
-  suppliers     Supplier[]
-  leads         Lead[]
-  expenses      Expense[]
-  incomes       Income[]
-  shifts        Shift[]
-  payrolls      Payroll[]
-  integrations  IntegrationSetting[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
-  webhooks      Webhook[]
+  users           User[]
+  departments     Department[]
+  orders          Order[]
+  customers       Customer[]
+  inventory       Inventory[]
+  categories      Category[]
+  suppliers       Supplier[]
+  leads           Lead[]
+  expenses        Expense[]
+  incomes         Income[]
+  shifts          Shift[]
+  payrolls        Payroll[]
+  integrations    IntegrationSetting[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  webhooks        Webhook[]
   automationRules AutomationRule[]
   automationTasks AutomationTask[]
   systemBackups   SystemBackup[]
-  payments      Payment[]
-  accounts      ChartOfAccount[]
-  journalEntries JournalEntry[]
-  companies     Company[]
+  payments        Payment[]
+  accounts        ChartOfAccount[]
+  journalEntries  JournalEntry[]
+  companies       Company[]
 }
 
 // A Company is a SUB-COMPANY under the tenant (mother company), e.g. Prodhan.com,
@@ -373,7 +373,7 @@ model User {
   maxAllowedLates         Int                @default(3)
 
   // Biometric (fingerprint device) enrollment
-  biometricId        String? // enrollment number / device user id from the fingerprint terminal
+  biometricId         String? // enrollment number / device user id from the fingerprint terminal
   biometricEnrolledAt DateTime?
 
   // Profile
@@ -417,6 +417,9 @@ model User {
   budgetPlans           BudgetPlan[]
   updatedIntegrations   IntegrationSetting[]
   manualAttendances     Attendance[]         @relation("MankedAttendances")
+  userPermissions       UserPermission[]
+  userOnboardings       UserOnboarding[]
+  feludaFeedbacks       FeludaFeedback[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, employeeId])
@@ -784,16 +787,16 @@ model Expense {
   recurringFrequency String?
 
   // Invoice + requisition (MD sign-off) workflow
-  invoiceNumber      String?
-  requisitionNumber  String?
-  requisitionStatus  String?  @default("none") // none | pending_md | signed | rejected
-  mdApprovedById     String?
-  mdApprovedByName   String?
-  mdApprovedAt       DateTime?
-  mdRemarks          String?
+  invoiceNumber     String?
+  requisitionNumber String?
+  requisitionStatus String?   @default("none") // none | pending_md | signed | rejected
+  mdApprovedById    String?
+  mdApprovedByName  String?
+  mdApprovedAt      DateTime?
+  mdRemarks         String?
 
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@index([date])
@@ -1076,21 +1079,21 @@ model Report {
 // ─────────────────────────────────────────────
 
 model Webhook {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  url         String
-  events      String[] @default([]) // e.g. order.created, lead.converted
-  secret      String?  // HMAC signing secret (encrypted at rest)
-  headers     Json?
-  isActive    Boolean  @default(true)
+  id           String            @id @default(cuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  url          String
+  events       String[]          @default([]) // e.g. order.created, lead.converted
+  secret       String? // HMAC signing secret (encrypted at rest)
+  headers      Json?
+  isActive     Boolean           @default(true)
   companyId    String? // sub-company this webhook belongs to
   departmentId String?
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deliveries  WebhookDelivery[]
+  createdById  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deliveries   WebhookDelivery[]
 
   @@index([tenantId])
   @@index([companyId])
@@ -1119,8 +1122,8 @@ model AutomationRule {
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name         String
   triggerEvent String
-  conditions   Json?    // [{ field, op, value }]
-  actions      Json     // [{ type, config }]
+  conditions   Json? // [{ field, op, value }]
+  actions      Json // [{ type, config }]
   isActive     Boolean  @default(true)
   createdById  String?
   createdAt    DateTime @default(now())
@@ -1166,14 +1169,14 @@ enum AccountType {
 }
 
 model ChartOfAccount {
-  id        String      @id @default(cuid())
+  id        String        @id @default(cuid())
   tenantId  String
-  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   code      String // e.g. 1000, 4000
   name      String
   type      AccountType
-  isActive  Boolean     @default(true)
-  createdAt DateTime    @default(now())
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
   lines     JournalLine[]
 
   @@unique([tenantId, code])
@@ -1219,7 +1222,7 @@ model SystemBackup {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   filename  String
   sizeBytes Int
-  status    String   // PENDING, SUCCESS, FAILED
+  status    String // PENDING, SUCCESS, FAILED
   url       String?
   createdAt DateTime @default(now())
 
@@ -1227,18 +1230,18 @@ model SystemBackup {
 }
 
 model AutomationTask {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  trigger     String   // SCHEDULED, EVENT_BASED
-  action      String   // SEND_EMAIL, SYNC_DATA, etc.
-  payload     Json?
-  status      String   @default("ACTIVE") // ACTIVE, PAUSED
-  lastRunAt   DateTime?
-  nextRunAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  trigger   String // SCHEDULED, EVENT_BASED
+  action    String // SEND_EMAIL, SYNC_DATA, etc.
+  payload   Json?
+  status    String    @default("ACTIVE") // ACTIVE, PAUSED
+  lastRunAt DateTime?
+  nextRunAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([tenantId])
 }
@@ -1252,14 +1255,14 @@ model Task {
   tenantId      String
   title         String
   description   String?
-  status        String    @default("TODO")   // TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED
-  priority      String    @default("MEDIUM")  // LOW, MEDIUM, HIGH, URGENT
+  status        String    @default("TODO") // TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED
+  priority      String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
   assigneeId    String?
   assigneeName  String?
   createdById   String?
   createdByName String?
   departmentId  String?
-  progress      Int       @default(0)         // 0-100
+  progress      Int       @default(0) // 0-100
   dueDate       DateTime?
   completedAt   DateTime?
   tags          Json?     @default("[]")
@@ -1272,51 +1275,50 @@ model Task {
 }
 
 model Kpi {
-  id            String    @id @default(cuid())
-  tenantId      String
-  name          String
-  description   String?
-  employeeId    String?
-  employeeName  String?
-  departmentId  String?
-  metric        String?                        // unit label, e.g. "Sales (BDT)", "Calls"
-  target        Float     @default(0)
-  actual        Float     @default(0)
-  weight        Float     @default(1)
-  period        String    @default("MONTHLY")  // WEEKLY, MONTHLY, QUARTERLY, YEARLY
-  periodStart   DateTime?
-  periodEnd     DateTime?
-  createdById   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  tenantId     String
+  name         String
+  description  String?
+  employeeId   String?
+  employeeName String?
+  departmentId String?
+  metric       String? // unit label, e.g. "Sales (BDT)", "Calls"
+  target       Float     @default(0)
+  actual       Float     @default(0)
+  weight       Float     @default(1)
+  period       String    @default("MONTHLY") // WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([employeeId])
 }
-
 
 // ─────────────────────────────────────────────
 // WHOLESALE & PRODUCTION
 // ─────────────────────────────────────────────
 
 model WholesaleEntry {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   tenantId      String
   companyId     String?
   departmentId  String?
-  date          DateTime                        // the sale date
-  buyerType     String    @default("library")   // library, publication, distributor, other
+  date          DateTime // the sale date
+  buyerType     String   @default("library") // library, publication, distributor, other
   buyerName     String
-  items         Json?     @default("[]")         // [{bookTitle, quantity, unitPrice, subtotal}]
-  totalQuantity Int       @default(0)
-  totalAmount   Float     @default(0)
-  paidAmount    Float     @default(0)
-  paymentStatus String    @default("due")        // paid, partial, due
+  items         Json?    @default("[]") // [{bookTitle, quantity, unitPrice, subtotal}]
+  totalQuantity Int      @default(0)
+  totalAmount   Float    @default(0)
+  paidAmount    Float    @default(0)
+  paymentStatus String   @default("due") // paid, partial, due
   notes         String?
   createdById   String?
   createdByName String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([tenantId])
   @@index([companyId])
@@ -1329,10 +1331,10 @@ model ProductionProject {
   companyId      String?
   departmentId   String?
   title          String
-  type           String    @default("graphic")   // graphic, video, photo, copywriting, web, other
+  type           String    @default("graphic") // graphic, video, photo, copywriting, web, other
   assigneeId     String?
   assigneeName   String?
-  status         String    @default("submitted")  // submitted, in_progress, review, revision, approved, done
+  status         String    @default("submitted") // submitted, in_progress, review, revision, approved, done
   progress       Int       @default(0)
   workDate       DateTime?
   dueDate        DateTime?
@@ -1356,43 +1358,43 @@ model ProductionProject {
 // ─────────────────────────────────────────────
 
 model KpiDefinition {
-  id          String   @id @default(cuid())
-  tenantId    String
-  companyId   String?
-  roleKey     String
-  kpiKey      String
-  label       String
-  unit        String?
-  target      Float    @default(0)
-  weight      Float    @default(1)
-  direction   String   @default("higher")
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  tenantId  String
+  companyId String?
+  roleKey   String
+  kpiKey    String
+  label     String
+  unit      String?
+  target    Float    @default(0)
+  weight    Float    @default(1)
+  direction String   @default("higher")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@index([roleKey])
 }
 
 model DailyProgressReport {
-  id              String   @id @default(cuid())
-  tenantId        String
-  companyId       String?
-  departmentId    String?
-  employeeId      String
-  employeeName    String?
-  date            DateTime @db.Date
-  tasksPlanned    String?
-  tasksCompleted  String?
-  kpiValues       Json?    @default("{}")
-  blockers        String?
-  helpNeeded      String?
-  tomorrowPlan    String?
-  productionProjectIds Json? @default("[]")
-  isLocked        Boolean  @default(false)
-  submitTimestamp DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  tenantId             String
+  companyId            String?
+  departmentId         String?
+  employeeId           String
+  employeeName         String?
+  date                 DateTime @db.Date
+  tasksPlanned         String?
+  tasksCompleted       String?
+  kpiValues            Json?    @default("{}")
+  blockers             String?
+  helpNeeded           String?
+  tomorrowPlan         String?
+  productionProjectIds Json?    @default("[]")
+  isLocked             Boolean  @default(false)
+  submitTimestamp      DateTime @default(now())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@unique([tenantId, employeeId, date])
   @@index([tenantId])
@@ -1400,44 +1402,44 @@ model DailyProgressReport {
 }
 
 model DailyTeamSummary {
-  id            String   @id @default(cuid())
-  tenantId      String
-  companyId     String?
-  departmentId  String
-  teamLeaderId  String?
-  date          DateTime @db.Date
-  teamKpiTotal  Float    @default(0)
-  attendance    Json?    @default("{}")
-  topPerformer  String?
+  id              String   @id @default(cuid())
+  tenantId        String
+  companyId       String?
+  departmentId    String
+  teamLeaderId    String?
+  date            DateTime @db.Date
+  teamKpiTotal    Float    @default(0)
+  attendance      Json?    @default("{}")
+  topPerformer    String?
   bottomPerformer String?
-  membersNoDpr  Json?    @default("[]")
-  escalations   String?
-  complaintsToday Int    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  membersNoDpr    Json?    @default("[]")
+  escalations     String?
+  complaintsToday Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([tenantId])
   @@index([departmentId])
 }
 
 model WeeklyTeamReport {
-  id            String   @id @default(cuid())
-  tenantId      String
-  companyId     String?
-  departmentId  String
-  teamLeaderId  String?
-  weekStart     DateTime @db.Date
-  kpiTarget     Float    @default(0)
-  kpiActual     Float    @default(0)
-  kpiPercent    Float    @default(0)
-  best3         Json?    @default("[]")
-  worst3        Json?    @default("[]")
-  belowMinimum  Json?    @default("[]")
-  complaints    Json?    @default("[]")
+  id                 String   @id @default(cuid())
+  tenantId           String
+  companyId          String?
+  departmentId       String
+  teamLeaderId       String?
+  weekStart          DateTime @db.Date
+  kpiTarget          Float    @default(0)
+  kpiActual          Float    @default(0)
+  kpiPercent         Float    @default(0)
+  best3              Json?    @default("[]")
+  worst3             Json?    @default("[]")
+  belowMinimum       Json?    @default("[]")
+  complaints         Json?    @default("[]")
   improvementActions String?
-  hireOrCutRequest String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  hireOrCutRequest   String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([tenantId])
   @@index([departmentId])
@@ -1471,36 +1473,36 @@ model Complaint {
 }
 
 model Scorecard {
-  id            String   @id @default(cuid())
-  tenantId      String
-  companyId     String?
-  subjectId     String
-  subjectName   String?
-  subjectType   String   @default("employee")
-  periodMonth   String
-  kpiScore      Float    @default(0)
-  qualityScore  Float    @default(0)
-  reliabilityScore Float @default(0)
-  behaviourScore Float   @default(0)
-  totalScore    Float    @default(0)
-  band          String?
-  isCutCandidate Boolean @default(false)
-  breakdown     Json?    @default("{}")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  tenantId         String
+  companyId        String?
+  subjectId        String
+  subjectName      String?
+  subjectType      String   @default("employee")
+  periodMonth      String
+  kpiScore         Float    @default(0)
+  qualityScore     Float    @default(0)
+  reliabilityScore Float    @default(0)
+  behaviourScore   Float    @default(0)
+  totalScore       Float    @default(0)
+  band             String?
+  isCutCandidate   Boolean  @default(false)
+  breakdown        Json?    @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([tenantId, subjectId, periodMonth])
   @@index([tenantId])
 }
 
 model ScoringWeight {
-  id          String   @id @default(cuid())
-  tenantId    String
-  scope       String   @default("employee")
-  weights     Json     @default("{}")
-  bands       Json?    @default("{}")
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  tenantId  String
+  scope     String   @default("employee")
+  weights   Json     @default("{}")
+  bands     Json?    @default("{}")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   @@unique([tenantId, scope])
 }
@@ -1519,4 +1521,55 @@ model SkipLevelPulse {
 
   @@index([tenantId])
   @@index([leaderId])
+}
+
+model UserPermission {
+  id                        String   @id @default(cuid())
+  tenantId                  String?
+  userId                    String
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module                    String
+  canView                   Boolean  @default(false)
+  canEdit                   Boolean  @default(false)
+  canDelete                 Boolean  @default(false)
+  canExport                 Boolean  @default(false)
+  canViewConfidentialData   Boolean  @default(false)
+  canManageConfidentialData Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model FeludaFeedback {
+  id             String   @id @default(cuid())
+  tenantId       String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName       String?
+  userQuestion   String?
+  feludaResponse String?
+  wasHelpful     Boolean  @default(false)
+  language       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserOnboarding {
+  id                  String    @id @default(cuid())
+  tenantId            String?
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferredLanguage   String?
+  currentStep         Int       @default(0)
+  stepsCompleted      String[]  @default([])
+  onboardingCompleted Boolean   @default(false)
+  skipped             Boolean   @default(false)
+  completedDate       DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
 }

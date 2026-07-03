@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useScope } from '@/lib/scope';
 import MobileReturnCard from './MobileReturnCard';
 import MobileDamageCard from './MobileDamageCard';
 import {
@@ -36,6 +37,7 @@ const ReturnForm = lazy(() => import('./ReturnForm'));
 const DamageForm = lazy(() => import('./DamageForm'));
 
 export default function ReturnDamageManagement({ selectedDepartment, defaultTab }) {
+  const { companyId, departmentId } = useScope();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(defaultTab || 'returns');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -57,8 +59,8 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   const [damagesLimit, setDamagesLimit] = useState(25);
 
   // ⚡ PHASE 1: Fast initial load — recent 500 movements (instant display)
-  const { data: recentMovements = [], isLoading: recentLoading } = useQuery({
-    queryKey: ['movements-returns-recent'],
+  const { data: recentMovements = [], isLoading: isLoadingRecent } = useQuery({
+    queryKey: ['movements-returns-recent', companyId, departmentId],
     queryFn: async () => {
       const batch = await erp.entities.InventoryMovement.list('-movement_date', 500);
       return batch.filter(m => 
@@ -74,7 +76,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   // ⚡ PHASE 2: Background load ALL movements (runs after phase 1)
   const [allLoaded, setAllLoaded] = useState(false);
   const { data: allMovements = [] } = useQuery({
-    queryKey: ['movements-returns-all'],
+    queryKey: ['movements-returns-all', companyId, departmentId],
     queryFn: async () => {
       const batchSize = 500;
       let result = [];
@@ -103,11 +105,11 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
   // Use all if loaded, otherwise show recent for instant display
   const movements = allLoaded && allMovements.length > 0 ? allMovements : recentMovements;
-  const movementsLoading = recentLoading;
+  const movementsLoading = isLoadingRecent;
 
   // ⚡ Inventory with aggressive cache
-  const { data: inventory = [] } = useQuery({
-    queryKey: ['inventory'],
+  const { data: inventory = [], isLoading: isInventoryLoading } = useQuery({
+    queryKey: ['inventory', companyId, departmentId],
     queryFn: () => erp.entities.Inventory.list('-updated_date', 1000),
     staleTime: 10 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -117,7 +119,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
 
   // ⚡ Orders — deferred load, only for export & order-total column
   const { data: allOrders = [] } = useQuery({
-    queryKey: ['orders-for-export'],
+    queryKey: ['orders-for-export', companyId, departmentId],
     queryFn: async () => {
       const batch1 = await erp.entities.Order.list('-order_date', 1000);
       return batch1;
@@ -137,7 +139,7 @@ export default function ReturnDamageManagement({ selectedDepartment, defaultTab 
   }, [allOrders]);
 
   const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
+    queryKey: ['currentUser', companyId, departmentId],
     queryFn: () => erp.auth.me(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,

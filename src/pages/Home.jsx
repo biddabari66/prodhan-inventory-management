@@ -16,6 +16,7 @@ import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import { StatGridSkeleton, TableSkeleton } from '@/components/common/Skeletons';
 import AccountabilitySummary from '@/components/reporting/AccountabilitySummary';
+import { useScope } from '@/lib/scope';
 
 const bdt = (n) => '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 0 });
 
@@ -93,6 +94,7 @@ const STATUS_STYLES = {
 };
 
 export default function Home() {
+  const { companyId, departmentId } = useScope();
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
@@ -109,31 +111,31 @@ export default function Home() {
   });
 
   const { data: stats, isLoading: isStatsLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', companyId, departmentId],
     queryFn: () => api.get('/dashboard/stats').then((r) => r.data),
     retry: false,
   });
 
   const { data: finance, isLoading: isFinanceLoading } = useQuery({
-    queryKey: ['finance-dashboard'],
+    queryKey: ['finance-dashboard', companyId, departmentId],
     queryFn: () => api.get('/finance/dashboard').then((r) => r.data),
     retry: false,
   });
 
   const { data: leadStats, isLoading: isLeadStatsLoading } = useQuery({
-    queryKey: ['lead-stats'],
+    queryKey: ['lead-stats', companyId, departmentId],
     queryFn: () => api.get('/crm/leads/stats').then((r) => r.data),
     retry: false,
   });
 
   const { data: recentOrders = [], isLoading: isOrdersLoading } = useQuery({
-    queryKey: ['recent-orders'],
+    queryKey: ['recent-orders', companyId, departmentId],
     queryFn: () => erp.entities.Order.list('-created_date', 8),
     retry: false,
   });
 
   const { data: lowStock = [], isLoading: isLowStockLoading } = useQuery({
-    queryKey: ['low-stock-home'],
+    queryKey: ['low-stock-home', companyId, departmentId],
     queryFn: () => api.get('/inventory/low-stock').then((r) => r.data?.data ?? r.data ?? []),
     retry: false,
   });

@@ -24,23 +24,26 @@ const SCOPE_EVENT = 'scopechange';
  */
 function seedScopeFromUser(user) {
   try {
-    const adminRoles = ['admin', 'super_admin', 'tenant_admin', 'ADMIN', 'SUPER_ADMIN', 'TENANT_ADMIN'];
-    const isAdmin =
-      adminRoles.includes(String(user.role || '').toUpperCase().replace(/ /g,'_')) ||
-      adminRoles.includes(String(user.job_role || '').toUpperCase().replace(/ /g,'_')) ||
-      user.role === 'admin';
+    // canViewAllCompanies is now returned by the backend directly
+    // Fallback: check jobRole strings for backwards compatibility
+    const canViewAll =
+      user.canViewAllCompanies === true ||
+      user.isAdmin === true ||
+      user.isMd === true ||
+      ['SUPER_ADMIN', 'ADMIN', 'MD'].includes(String(user.jobRole || user.job_role || '').toUpperCase()) ||
+      ['SUPER_ADMIN', 'ADMIN', 'MD'].includes(String(user.role || '').toUpperCase());
 
     const profileCompanyId   = user.company_id   || user.companyId   || null;
     const profileDepartmentId = user.department_id || user.departmentId || null;
 
-    if (!isAdmin) {
-      // Non-admins: scope is always their profile — hard lock.
-      if (profileCompanyId)   localStorage.setItem(COMPANY_KEY, String(profileCompanyId));
-      else                    localStorage.removeItem(COMPANY_KEY);
+    if (!canViewAll) {
+      // Non-admins/non-MD: scope is always their profile — hard lock.
+      if (profileCompanyId)    localStorage.setItem(COMPANY_KEY, String(profileCompanyId));
+      else                     localStorage.removeItem(COMPANY_KEY);
       if (profileDepartmentId) localStorage.setItem(DEPT_KEY, String(profileDepartmentId));
       else                     localStorage.removeItem(DEPT_KEY);
     } else {
-      // Admins: set a sensible default only when no saved scope exists.
+      // Admins/MD: set a sensible default only when no saved scope exists.
       if (!localStorage.getItem(COMPANY_KEY) && profileCompanyId)
         localStorage.setItem(COMPANY_KEY, String(profileCompanyId));
       if (!localStorage.getItem(DEPT_KEY) && profileDepartmentId)

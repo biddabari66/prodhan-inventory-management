@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +50,49 @@ function buildVariantLabel(v) {
   if (v.sku) return `SKU: ${v.sku}`;
   return 'Variant';
 }
+// ────────────────────────────────────────────────────────────────────────────
+
+
+// ── Zod Schema ──────────────────────────────────────────────────────────────
+const orderItemSchema = z.object({
+  inventory_id: z.string(),
+  item_name: z.string(),
+  quantity: z.number().min(1, 'Quantity must be at least 1'),
+  unit_price: z.number(),
+  discount: z.number().default(0),
+  subtotal: z.number(),
+  is_combo: z.boolean().default(false),
+  variant_id: z.string().nullable().optional(),
+  variant_label: z.string().nullable().optional(),
+  variant_sku: z.string().nullable().optional(),
+});
+
+const shippingAddressSchema = z.object({
+  address_line: z.string().min(1, 'Address is required'),
+  city: z.string().min(1, 'City is required'),
+  district: z.string().min(1, 'District is required'),
+  postal_code: z.string().optional(),
+  phone: z.string().optional()
+});
+
+const orderSchema = z.object({
+  customer_id: z.string().optional().nullable(),
+  customer_name: z.string().min(1, 'Customer name is required'),
+  customer_phone: z.string().min(1, 'Phone is required'),
+  customer_email: z.string().email('Invalid email').or(z.literal('')).optional().nullable(),
+  order_items: z.array(orderItemSchema).min(1, 'At least one item is required'),
+  shipping_address: shippingAddressSchema,
+  payment_method: z.string(),
+  payment_status: z.string(),
+  department: z.string(),
+  discount_amount: z.number().default(0),
+  coupon_discount: z.number().default(0),
+  discount_code: z.string().optional(),
+  shipping_cost: z.number().default(0),
+  customer_notes: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  order_date: z.string().optional()
+});
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function OrderForm({ order, customers, inventory, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) {
@@ -296,7 +342,7 @@ export default function OrderForm({ order, customers, inventory, onSubmit, onCan
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-2">
+    <form onSubmit={hookFormSubmit(handleSubmit)} className="space-y-6 max-h-[80vh] overflow-y-auto px-2">
       {/* Customer Selection */}
       <Card>
         <CardHeader>

@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -41,15 +44,21 @@ const fmtDate = (d) => {
 
 const taka = (n) => `৳${Number(n || 0).toLocaleString('en-BD')}`;
 
+const paymentSchema = z.object({
+  periodMonths: z.string().min(1),
+  amount: z.coerce.number().min(0, 'Amount must be positive'),
+  senderNumber: z.string().optional(),
+  trxId: z.string().min(1, 'Transaction ID is required'),
+});
+
 export default function Billing() {
   const queryClient = useQueryClient();
   const [payOpen, setPayOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [form, setForm] = useState({
-    amount: '',
-    senderNumber: '',
-    trxId: '',
-    periodMonths: '1',
+  
+  const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: { amount: '', senderNumber: '', trxId: '', periodMonths: '1' }
   });
 
   const { data: plansData } = useQuery({
@@ -75,7 +84,7 @@ export default function Billing() {
     onSuccess: () => {
       toast.success('Payment submitted — pending verification');
       setPayOpen(false);
-      setForm({ amount: '', senderNumber: '', trxId: '', periodMonths: '1' });
+      reset();
       queryClient.invalidateQueries({ queryKey: ['billing-payments'] });
     },
     onError: (err) => {
@@ -85,22 +94,17 @@ export default function Billing() {
 
   const openPayDialog = (plan) => {
     setSelectedPlan(plan);
-    setForm((f) => ({ ...f, amount: String(plan.priceBDT) }));
+    setValue('amount', plan.priceBDT);
     setPayOpen(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.trxId.trim()) {
-      toast.error('Transaction ID is required');
-      return;
-    }
+  const onSubmit = (data) => {
     submitMutation.mutate({
       plan: selectedPlan?.id,
-      periodMonths: parseInt(form.periodMonths, 10) || 1,
-      trxId: form.trxId.trim(),
-      senderNumber: form.senderNumber.trim() || undefined,
-      amount: parseFloat(form.amount) || 0,
+      periodMonths: parseInt(data.periodMonths, 10) || 1,
+      trxId: data.trxId.trim(),
+      senderNumber: data.senderNumber?.trim() || undefined,
+      amount: parseFloat(data.amount) || 0,
     });
   };
 
@@ -232,40 +236,39 @@ export default function Billing() {
               then enter the transaction details below for verification.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="period">Billing period</Label>
-              <Select
-                value={form.periodMonths}
-                onValueChange={(v) => setForm((f) => ({ ...f, periodMonths: v }))}
-              >
-                <SelectTrigger id="period">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 month</SelectItem>
-                  <SelectItem value="3">3 months</SelectItem>
-                  <SelectItem value="6">6 months</SelectItem>
-                  <SelectItem value="12">12 months</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="periodMonths"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="period"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 month</SelectItem>
+                      <SelectItem value="3">3 months</SelectItem>
+                      <SelectItem value="6">6 months</SelectItem>
+                      <SelectItem value="12">12 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="amount">Amount (৳)</Label>
               <Input
                 id="amount"
                 type="number"
-                value={form.amount}
-                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                required
+                {...register('amount')}
               />
+              {errors.amount && <span className="text-xs text-red-500">{errors.amount.message}</span>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="sender">Your bKash number (sender)</Label>
               <Input
                 id="sender"
-                value={form.senderNumber}
-                onChange={(e) => setForm((f) => ({ ...f, senderNumber: e.target.value }))}
+                {...register('senderNumber')}
                 placeholder="01XXXXXXXXX"
               />
             </div>
@@ -273,11 +276,10 @@ export default function Billing() {
               <Label htmlFor="trxId">Transaction ID (TrxID)</Label>
               <Input
                 id="trxId"
-                value={form.trxId}
-                onChange={(e) => setForm((f) => ({ ...f, trxId: e.target.value }))}
+                {...register('trxId')}
                 placeholder="e.g. 9HK4XXXXXX"
-                required
               />
+              {errors.trxId && <span className="text-xs text-red-500">{errors.trxId.message}</span>}
             </div>
             <DialogFooter>
               <Button type="submit" disabled={submitMutation.isPending}>

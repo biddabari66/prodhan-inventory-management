@@ -22,6 +22,18 @@ import WelcomeCallList from '../components/customers/WelcomeCallList';
 import FeedbackCallList from '../components/customers/FeedbackCallList';
 import DynamicCSVImport from '../components/customers/DynamicCSVImport';
 import { TableSkeleton, StatGridSkeleton, CardGridSkeleton, ErrorState, PageLoader } from '@/components/common/Skeletons';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const customerSchema = z.object({
+  customer_name: z.string().min(1, 'Name is required'),
+  customer_phone: z.string().min(1, 'Phone is required'),
+  customer_email: z.string().optional(),
+  customer_type: z.string(),
+  notes: z.string().optional(),
+  tags: z.array(z.string()).optional()
+});
 
 function CustomerManagementPage() {
   // CRITICAL: Permission-based access control
@@ -33,13 +45,17 @@ function CustomerManagementPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
   const [segmentFilter, setSegmentFilter] = useState('all');
-  const [newCustomer, setNewCustomer] = useState({
-    customer_name: '',
-    customer_phone: '',
-    customer_email: '',
-    customer_type: 'retail',
-    notes: '',
-    tags: []
+  
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      customer_name: '',
+      customer_phone: '',
+      customer_email: '',
+      customer_type: 'retail',
+      notes: '',
+      tags: []
+    }
   });
   const [activeMainTab, setActiveMainTab] = useState('customers');
   const [isImportCustomersOpen, setIsImportCustomersOpen] = useState(false);
@@ -120,22 +136,17 @@ function CustomerManagementPage() {
     setIsViewDetailsOpen(true);
   };
 
-  const handleAddCustomer = async (e) => {
-    e.preventDefault();
-    if (!newCustomer.customer_name || !newCustomer.customer_phone) {
-      toast.error('Name and phone are required');
-      return;
-    }
+  const handleAddCustomer = async (data) => {
     try {
       await erp.entities.Customer.create({
-        name: newCustomer.customer_name,
-        phone: newCustomer.customer_phone,
-        email: newCustomer.customer_email || undefined,
-        tags: newCustomer.tags || [],
+        name: data.customer_name,
+        phone: data.customer_phone,
+        email: data.customer_email || undefined,
+        tags: data.tags || [],
       });
       toast.success('Customer added');
       setIsAddCustomerOpen(false);
-      setNewCustomer({ customer_name: '', customer_phone: '', customer_email: '', customer_type: 'retail', notes: '', tags: [] });
+      reset();
       refetchCustomers();
     } catch (err) {
       toast.error('Failed to add customer: ' + (err?.response?.data?.error || err.message));
@@ -593,62 +604,64 @@ function CustomerManagementPage() {
           <DialogHeader>
             <DialogTitle>Add New Customer</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAddCustomer} className="space-y-4">
+          <form onSubmit={handleSubmit(handleAddCustomer)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Customer Name *</Label>
                 <Input
-                  required
-                  value={newCustomer.customer_name}
-                  onChange={(e) => setNewCustomer({...newCustomer, customer_name: e.target.value})}
+                  {...register('customer_name')}
                   placeholder="Enter full name"
                 />
+                {errors.customer_name && <span className="text-red-500 text-xs">{errors.customer_name.message}</span>}
               </div>
               <div>
                 <Label>Phone Number *</Label>
                 <Input
-                  required
                   type="tel"
-                  value={newCustomer.customer_phone}
-                  onChange={(e) => setNewCustomer({...newCustomer, customer_phone: e.target.value})}
+                  {...register('customer_phone')}
                   placeholder="01XXXXXXXXX"
                 />
+                {errors.customer_phone && <span className="text-red-500 text-xs">{errors.customer_phone.message}</span>}
               </div>
               <div>
                 <Label>Email</Label>
                 <Input
                   type="email"
-                  value={newCustomer.customer_email}
-                  onChange={(e) => setNewCustomer({...newCustomer, customer_email: e.target.value})}
+                  {...register('customer_email')}
                   placeholder="customer@example.com"
                 />
               </div>
               <div>
                 <Label>Customer Type</Label>
-                <Select value={newCustomer.customer_type} onValueChange={(val) => setNewCustomer({...newCustomer, customer_type: val})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="retail">Retail</SelectItem>
-                    <SelectItem value="wholesale">Wholesale</SelectItem>
-                    <SelectItem value="institution">Institution</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="customer_type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="retail">Retail</SelectItem>
+                        <SelectItem value="wholesale">Wholesale</SelectItem>
+                        <SelectItem value="institution">Institution</SelectItem>
+                        <SelectItem value="corporate">Corporate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
             <div>
               <Label>Notes</Label>
               <Textarea
-                value={newCustomer.notes}
-                onChange={(e) => setNewCustomer({...newCustomer, notes: e.target.value})}
+                {...register('notes')}
                 placeholder="Add any additional notes about this customer"
                 rows={3}
               />
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => { setIsAddCustomerOpen(false); reset(); }}>
                 Cancel
               </Button>
               <Button type="submit" className="bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-lg transition-all">

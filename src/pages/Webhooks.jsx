@@ -12,6 +12,7 @@ import SplitText from '../components/animations/SplitText';
 import api from '@/api/client';
 import { useScope } from '@/lib/scope';
 import { useAuth } from '@/lib/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function Webhooks() {
   const { companyId: activeCompanyId } = useScope();
@@ -34,17 +35,19 @@ export default function Webhooks() {
     headers: [{ key: 'Authorization', value: 'Bearer n8n_token_here' }]
   });
 
-  // Load from local storage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('n8n_outbound_webhooks');
-    if (saved) {
-      try {
-        setOutboundHooks(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse webhooks");
-      }
+  const queryClient = useQueryClient();
+
+  const { data: webhooksData = [] } = useQuery({
+    queryKey: ['webhooks', companyFilter],
+    queryFn: async () => {
+      const res = await api.get('/automation/webhooks', { params: { companyId: companyFilter } });
+      return res.data?.data || [];
     }
-  }, []);
+  });
+
+  useEffect(() => {
+    setOutboundHooks(webhooksData);
+  }, [webhooksData]);
 
   // Load sub-companies — only admins need the full picker list.
   useEffect(() => {
@@ -66,50 +69,59 @@ export default function Webhooks() {
   const companyName = (id) => companies.find((c) => c.id === id)?.name || (companies.find((c) => c.id === id)?.branding?.name) || 'All sub-companies';
   const visibleHooks = outboundHooks.filter((h) => companyFilter === 'all' || (h.companyId || '') === companyFilter);
 
-  // Save to local storage
-  const saveHooks = (hooks) => {
-    setOutboundHooks(hooks);
-    localStorage.setItem('n8n_outbound_webhooks', JSON.stringify(hooks));
-  };
-
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success('URL copied to clipboard!');
   };
 
-  const handleCreateHook = () => {
+  const handleCreateHook = async () => {
     if (!newHook.name || !newHook.url) {
       toast.error('Name and URL are required');
       return;
     }
-    const updatedHooks = [...outboundHooks, { ...newHook, companyId: newHook.companyId || activeCompanyId || '', id: Date.now().toString() }];
-    saveHooks(updatedHooks);
-    setIsCreating(false);
-    toast.success('n8n Webhook connection created successfully!');
-    setNewHook({
-      name: '',
-      event: 'order.created',
-      url: '',
-      method: 'POST',
-      isActive: true,
-      companyId: activeCompanyId || '',
-      headers: [{ key: 'Authorization', value: 'Bearer n8n_token_here' }]
-    });
+    
+    setIsCreating(true);
+    try {
+      await api.post('/automation/webhooks', {
+        name: newHook.name,
+        url: newHook.url,
+        events: [newHook.event],
+        companyId: newHook.companyId || activeCompanyId || null,
+        isActive: newHook.isActive,
+      });
+      toast.success('n8n Webhook connection created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      setNewHook({
+        name: '',
+        event: 'order.created',
+        url: '',
+        method: 'POST',
+        isActive: true,
+        companyId: activeCompanyId || '',
+        headers: [{ key: 'Authorization', value: 'Bearer n8n_token_here' }]
+      });
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Failed to create webhook');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleDeleteHook = (id) => {
-    saveHooks(outboundHooks.filter(h => h.id !== id));
-    toast.success('Webhook removed');
+  const handleDeleteHook = async (id) => {
+    try {
+      await api.delete(`/automation/webhooks/${id}`);
+      toast.success('Webhook removed');
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+    } catch (e) {
+      toast.error('Failed to remove webhook');
+    }
   };
 
   const testWebhook = async (hook) => {
     toast.info(`Sending test payload to ${hook.url}...`);
     try {
-      // In a real app, this would route through the backend to avoid CORS.
-      // We simulate success for UI purposes.
-      setTimeout(() => {
-        toast.success(`Successfully reached n8n via ${hook.method}`);
-      }, 1000);
+      await api.post(`/automation/webhooks/${hook.id}/test`);
+      toast.success(`Successfully reached n8n via webhook`);
     } catch (e) {
       toast.error('Failed to reach webhook URL');
     }

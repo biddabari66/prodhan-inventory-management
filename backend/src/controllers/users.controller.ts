@@ -10,10 +10,12 @@ import crypto from 'crypto';
 
 const createUserSchema = z.object({
   email: z.string().email(),
+  password: z.string().optional(),
   displayName: z.string().min(2),
   jobRole: z.nativeEnum(JobRole).default(JobRole.EMPLOYEE),
   role: z.nativeEnum(Role).default(Role.USER),
   departmentId: z.string().optional(),
+  companyId: z.string().optional(),
   designation: z.string().optional(),
   phone: z.string().optional(),
   baseSalary: z.number().min(0).optional(),
@@ -113,18 +115,20 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
   if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
 
   const data = createUserSchema.parse(req.body);
-  const tempPassword = crypto.randomBytes(8).toString('hex');
+  const tempPassword = data.password && data.password.trim() !== '' ? data.password : crypto.randomBytes(8).toString('hex');
   const passwordHash = await bcrypt.hash(tempPassword, 12);
   const count = await prisma.user.count({ where: { tenantId: req.user.tenantId } });
   const employeeId = `EMP-${String(count + 1).padStart(4, '0')}`;
 
+  const { password, companyId, ...userData } = data; // Remove non-db fields
+
   const user = await prisma.user.create({
     data: { 
-      ...data, 
+      ...userData, 
       tenantId: req.user.tenantId,
       passwordHash, 
       employeeId, 
-      joiningDate: data.joiningDate ? new Date(data.joiningDate) : undefined 
+      joiningDate: userData.joiningDate ? new Date(userData.joiningDate) : undefined 
     },
     select: { id: true, email: true, displayName: true, jobRole: true, employeeId: true },
   });
@@ -201,4 +205,27 @@ export const getUserAttendanceSummary = async (req: AuthenticatedRequest, res: R
   };
 
   res.json(summary);
+};
+
+export const resetUserPassword = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated');
+  if (req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+    throw new AppError(403, 'Only admins can reset passwords');
+  }
+
+  const { newPassword } = z.object({ newPassword: z.string().min(8) }).parse(req.body);
+  const existingUser = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.user.tenantId } });
+  if (!existingUser) throw new AppError(404, 'User not found');
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({
+    where: { id: req.params.id },
+    data: { passwordHash },
+  });
+
+  await prisma.auditLog.create({
+    data: { tenantId: req.user.tenantId, userId: req.user.id, action: 'RESET_PASSWORD', entity: 'User', entityId: req.params.id, ipAddress: req.ip },
+  });
+
+  res.json({ success: true, message: 'Password reset successfully' });
 };

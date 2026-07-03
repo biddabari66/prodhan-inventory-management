@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +32,59 @@ const containsBengali = (text) => {
  * GENERAL PRODUCT FORM FOR PRODHAN.COM E-COMMERCE
  * Handles non-book products with e-commerce specific fields
  */
+
+// ── Zod Schema ──────────────────────────────────────────────────────────────
+const inventoryProductSchema = z.object({
+    item_name: z.string().min(1, 'Product name is required'),
+    english_item_name: z.string().optional(),
+    sku: z.string().optional(),
+    category: z.string().optional(),
+    current_stock: z.number().default(0),
+    minimum_stock: z.number().default(10),
+    reorder_point: z.number().default(0),
+    safety_stock: z.number().default(5),
+    purchase_price: z.number().default(0),
+    selling_price: z.number().default(0),
+    supplier_id: z.string().optional().nullable(),
+    supplier_name: z.string().optional(),
+    supplier_contact: z.string().optional(),
+    supplier_lead_time_days: z.number().default(7),
+    alternate_suppliers: z.array(z.any()).optional(),
+    barcode: z.string().optional(),
+    description: z.string().optional(),
+    warehouse_location: z.object({
+        zone: z.string().optional(),
+        aisle: z.string().optional(),
+        shelf: z.string().optional(),
+        bin: z.string().optional()
+    }).optional(),
+    weight_kg: z.number().default(0),
+    weight_unit: z.string().default('kg'),
+    weight_value: z.number().default(0),
+    dimensions: z.object({
+        length_cm: z.number().default(0),
+        width_cm: z.number().default(0),
+        height_cm: z.number().default(0)
+    }).optional(),
+    web_visibility: z.boolean().default(true),
+    featured: z.boolean().default(false),
+    tags: z.array(z.string()).optional(),
+    seo_keywords: z.array(z.string()).optional(),
+    department: z.string().default('prodhan_com_e_commerce'),
+    status: z.string().default('active'),
+    color_variants: z.array(z.any()).optional(),
+    product_variants: z.array(z.any()).optional(),
+    product_source_url: z.string().optional(),
+    is_bundle: z.boolean().default(false),
+    bundle_items: z.array(z.any()).optional(),
+    requires_refining: z.boolean().default(false),
+    raw_quantity: z.number().default(0),
+    yield_percentage: z.number().default(100),
+    usable_quantity: z.number().default(0),
+    waste_quantity: z.number().default(0)
+});
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function GeneralProductForm({ product, onUpdate, onClose }) {
   const [formData, setFormData] = useState({
     item_name: product?.item_name || '',
@@ -460,7 +516,7 @@ Return ONLY valid JSON with no additional text.`,
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={hookFormSubmit(handleSubmit)} className="space-y-6">
           {/* AI URL Extractor */}
           <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border-2 border-violet-200">
             <div className="flex items-center gap-2 mb-3">

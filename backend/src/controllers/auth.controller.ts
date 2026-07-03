@@ -27,9 +27,11 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   email: z.string().email(),
+  password: z.string().optional(),
   displayName: z.string().min(2),
   jobRole: z.nativeEnum(JobRole).default(JobRole.EMPLOYEE),
   departmentId: z.string().optional(),
+  companyId: z.string().optional(),
   phone: z.string().optional(),
   baseSalary: z.number().optional(),
 });
@@ -103,7 +105,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
   const user = await prisma.user.findUnique({
     where: whereClause,
-    include: { tenant: true }
+    include: {
+      tenant: true,
+      department: { select: { id: true, name: true, companyId: true, company: { select: { id: true, name: true } } } }
+    }
   });
 
   if (!user) {
@@ -176,6 +181,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     path: '/api/v1/auth',
   });
 
+  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(user.jobRole);
+  const isMd = (user.jobRole as string) === 'MD';
   res.json({
     accessToken,
     user: {
@@ -185,9 +192,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       jobRole: user.jobRole,
       role: user.role,
       departmentId: user.departmentId,
+      departmentName: user.department?.name ?? null,
+      companyId: user.department?.companyId ?? null,
+      companyName: user.department?.company?.name ?? null,
       profilePictureUrl: user.profilePictureUrl,
       canViewFinancialData: user.canViewFinancialData,
       tenantId: user.tenantId,
+      isAdmin,
+      isMd,
+      canViewAllCompanies: isAdmin || isMd,
       tenant: user.tenant ? { name: user.tenant.name, subdomain: user.tenant.subdomain } : null,
     },
   });
@@ -270,15 +283,17 @@ export const registerEmployee = async (req: AuthenticatedRequest, res: Response)
   if (!req.user || !req.user.tenantId) throw new AppError(401, 'Unauthenticated or no workspace');
   const data = registerSchema.parse(req.body);
   
-  const tempPassword = crypto.randomBytes(8).toString('hex');
+  const tempPassword = data.password && data.password.trim() !== '' ? data.password : crypto.randomBytes(8).toString('hex');
   const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
 
   const employeeCount = await prisma.user.count({ where: { tenantId: req.user.tenantId } });
   const employeeId = `EMP-${String(employeeCount + 1).padStart(4, '0')}`;
 
+  const { password, companyId, ...userData } = data;
+
   const user = await prisma.user.create({
     data: {
-      ...data,
+      ...userData,
       tenantId: req.user.tenantId,
       employeeId,
       passwordHash,
@@ -306,9 +321,23 @@ export const me = async (req: AuthenticatedRequest, res: Response): Promise<void
       departmentId: true, designation: true, phone: true, profilePictureUrl: true,
       canViewFinancialData: true, twoFactorEnabled: true, joiningDate: true,
       employeeId: true, whatsappActivated: true, tenantId: true,
+      department: { select: { id: true, name: true, companyId: true, company: { select: { id: true, name: true } } } },
       tenant: { select: { name: true, subdomain: true, plan: true } }
     },
   });
 
-  res.json(user);
+  if (!user) throw new AppError(404, 'User not found');
+
+  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(user.jobRole);
+  const isMd = (user.jobRole as string) === 'MD';
+
+  res.json({
+    ...user,
+    departmentName: user.department?.name ?? null,
+    companyId: user.department?.companyId ?? null,
+    companyName: user.department?.company?.name ?? null,
+    isAdmin,
+    isMd,
+    canViewAllCompanies: isAdmin || isMd,
+  });
 };

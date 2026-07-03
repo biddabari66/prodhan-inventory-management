@@ -23,6 +23,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -503,114 +506,131 @@ const OrderImportDialog = ({ isOpen, onClose, onImportComplete, customers, inven
 };
 
 // Enhanced Order Form Component with Department-Filtered Inventory
+const orderSchema = z.object({
+  customer_id: z.string().optional().nullable(),
+  customer_name: z.string().min(1, 'Name is required'),
+  customer_phone: z.string().min(1, 'Phone is required'),
+  customer_email: z.string().optional().nullable(),
+  order_items: z.array(z.object({
+    inventory_id: z.string(),
+    item_name: z.string(),
+    quantity: z.number().min(1),
+    unit_price: z.number().min(0),
+    discount: z.number().min(0),
+    subtotal: z.number().min(0)
+  })).min(1, 'At least one item is required'),
+  shipping_address: z.object({
+    address_line: z.string().min(1, 'Address is required'),
+    city: z.string().min(1, 'City is required'),
+    district: z.string().min(1, 'District is required'),
+    postal_code: z.string().optional().nullable(),
+    phone: z.string().optional().nullable()
+  }),
+  payment_method: z.string(),
+  payment_status: z.string(),
+  department: z.string(),
+  discount_amount: z.number().min(0),
+  coupon_discount: z.number().min(0),
+  discount_code: z.string().optional().nullable(),
+  shipping_cost: z.number().min(0),
+  customer_notes: z.string().optional().nullable(),
+  tags: z.array(z.string()).optional()
+});
+
 const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, currentUser, canViewAllDepartments, userDepartment, initialDepartment }) => {
-  // 🔑 KEY FIX: Use initialDepartment from parent page's filter selection
   const defaultDepartment = useMemo(() => {
-    if (order) return order.department; // If editing, use order's department
-    if (!canViewAllDepartments && userDepartment && userDepartment !== 'all') return userDepartment; // Restricted user
-    if (initialDepartment && initialDepartment !== 'all') return initialDepartment; // Use parent's filter
-    return 'boibari'; // Fallback default
+    if (order) return order.department;
+    if (!canViewAllDepartments && userDepartment && userDepartment !== 'all') return userDepartment;
+    if (initialDepartment && initialDepartment !== 'all') return initialDepartment;
+    return 'boibari';
   }, [order, canViewAllDepartments, userDepartment, initialDepartment]);
 
-  const [formData, setFormData] = useState(order || {
-    customer_id: '',
-    customer_name: '',
-    customer_phone: '',
-    customer_email: '',
-    order_items: [],
-    shipping_address: {
-      address_line: '',
-      city: '',
-      district: '',
-      postal_code: '',
-      phone: ''
-    },
-    payment_method: 'cod',
-    payment_status: 'pending',
-    department: defaultDepartment,
-    discount_amount: 0,
-    coupon_discount: 0,
-    discount_code: '',
-    shipping_cost: 60,
-    customer_notes: '',
-    tags: []
+  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(orderSchema),
+    defaultValues: {
+      customer_id: order?.customer_id || '',
+      customer_name: order?.customer_name || '',
+      customer_phone: order?.customer_phone || '',
+      customer_email: order?.customer_email || '',
+      order_items: order?.order_items || [],
+      shipping_address: {
+        address_line: order?.shipping_address?.address_line || '',
+        city: order?.shipping_address?.city || '',
+        district: order?.shipping_address?.district || '',
+        postal_code: order?.shipping_address?.postal_code || '',
+        phone: order?.shipping_address?.phone || ''
+      },
+      payment_method: order?.payment_method || 'cod',
+      payment_status: order?.payment_status || 'pending',
+      department: defaultDepartment,
+      discount_amount: order?.discount_amount || 0,
+      coupon_discount: order?.coupon_discount || 0,
+      discount_code: order?.discount_code || '',
+      shipping_cost: order?.shipping_cost ?? 60,
+      customer_notes: order?.customer_notes || '',
+      tags: order?.tags || []
+    }
   });
 
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState('');
   const [itemQuantity, setItemQuantity] = useState(1);
   const [itemDiscount, setItemDiscount] = useState(0);
 
-  // 🔐 CRITICAL: Filter inventory by department selected in order form
-  const departmentFilteredInventory = useMemo(() => {
-    console.log(`🔍 Filtering inventory for department: ${formData.department}`);
-    const filtered = inventory.filter(item => {
-      // Only show items from the selected order department with stock available
-      const matches = item.department === formData.department && item.current_stock > 0;
-      return matches;
-    });
-    console.log(`✅ Found ${filtered.length} products for ${formData.department}`);
-    return filtered;
-  }, [inventory, formData.department]);
+  const watchedDepartment = watch('department');
+  const watchedItems = watch('order_items') || [];
+  const watchedDiscountAmount = watch('discount_amount');
+  const watchedCouponDiscount = watch('coupon_discount');
+  const watchedShippingCost = watch('shipping_cost');
+  const watchedCustomerId = watch('customer_id');
 
-  // Load customer data when selected
+  const departmentFilteredInventory = useMemo(() => {
+    return inventory.filter(item => item.department === watchedDepartment && item.current_stock > 0);
+  }, [inventory, watchedDepartment]);
+
   useEffect(() => {
-    if (formData.customer_id && customers.length > 0) {
-      const customer = customers.find(c => c.id === formData.customer_id);
+    if (watchedCustomerId && customers.length > 0) {
+      const customer = customers.find(c => c.id === watchedCustomerId);
       if (customer) {
-        setSelectedCustomer(customer);
-        setFormData(prev => ({
-          ...prev,
-          customer_name: customer.customer_name,
-          customer_phone: customer.customer_phone,
-          customer_email: customer.customer_email || '',
-          shipping_address: customer.shipping_addresses?.[0] || prev.shipping_address
-        }));
+        setValue('customer_name', customer.customer_name);
+        setValue('customer_phone', customer.customer_phone || customer.phone || '');
+        setValue('customer_email', customer.customer_email || customer.email || '');
+        if (customer.shipping_addresses && customer.shipping_addresses[0]) {
+          setValue('shipping_address.address_line', customer.shipping_addresses[0].address_line || '');
+          setValue('shipping_address.city', customer.shipping_addresses[0].city || '');
+          setValue('shipping_address.district', customer.shipping_addresses[0].district || '');
+          setValue('shipping_address.postal_code', customer.shipping_addresses[0].postal_code || '');
+        }
       }
     }
-  }, [formData.customer_id, customers]);
+  }, [watchedCustomerId, customers, setValue]);
 
-  // Ensure department is set correctly for new orders if user is restricted
-  useEffect(() => {
-    if (!order && !canViewAllDepartments && userDepartment && userDepartment !== 'all' && formData.department !== userDepartment) {
-      setFormData(prev => ({ ...prev, department: userDepartment }));
-    }
-  }, [order, canViewAllDepartments, userDepartment, formData.department]);
-
-
-  // Calculate totals with BOTH discount types
   const calculations = useMemo(() => {
-    const subtotal = formData.order_items.reduce((sum, item) => sum + item.subtotal, 0);
-    const regularDiscount = formData.discount_amount || 0;
-    const couponDiscount = formData.coupon_discount || 0;
+    const subtotal = watchedItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const regularDiscount = Number(watchedDiscountAmount) || 0;
+    const couponDiscount = Number(watchedCouponDiscount) || 0;
     const totalDiscount = regularDiscount + couponDiscount;
-    const shippingCost = formData.shipping_cost || 0;
+    const shippingCost = Number(watchedShippingCost) || 0;
     const total = subtotal - totalDiscount + shippingCost;
-
     return { subtotal, regularDiscount, couponDiscount, totalDiscount, shippingCost, total };
-  }, [formData.order_items, formData.discount_amount, formData.coupon_discount, formData.shipping_cost]);
+  }, [watchedItems, watchedDiscountAmount, watchedCouponDiscount, watchedShippingCost]);
 
   const handleAddItem = () => {
     if (!selectedInventoryItem || itemQuantity <= 0) {
       toast.error('Please select an item and enter valid quantity');
       return;
     }
-
     const inventoryItem = departmentFilteredInventory.find(i => i.id === selectedInventoryItem);
     if (!inventoryItem) {
       toast.error('Selected item not available');
       return;
     }
-
     if (inventoryItem.current_stock < itemQuantity) {
       toast.error(`Only ${inventoryItem.current_stock} units available in stock`);
       return;
     }
-
     const unitPrice = inventoryItem.selling_price;
     const discount = itemDiscount || 0;
     const subtotal = (unitPrice * itemQuantity) - discount;
-
     const newItem = {
       inventory_id: inventoryItem.id,
       item_name: inventoryItem.item_name,
@@ -619,193 +639,117 @@ const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, cur
       discount: discount,
       subtotal: subtotal
     };
-
-    setFormData(prev => ({
-      ...prev,
-      order_items: [...prev.order_items, newItem]
-    }));
-
+    setValue('order_items', [...watchedItems, newItem], { shouldValidate: true });
     setSelectedInventoryItem('');
     setItemQuantity(1);
     setItemDiscount(0);
   };
 
   const handleRemoveItem = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      order_items: prev.order_items.filter((_, i) => i !== index)
-    }));
+    setValue('order_items', watchedItems.filter((_, i) => i !== index), { shouldValidate: true });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (formData.order_items.length === 0) {
-      toast.error('Please add at least one item to the order');
-      return;
-    }
-
-    if (!formData.customer_name || !formData.customer_phone) {
-      toast.error('Please enter customer details');
-      return;
-    }
-
-    if (!formData.shipping_address.address_line || !formData.shipping_address.city) {
-      toast.error('Please enter complete shipping address');
-      return;
-    }
-
+  const handleFormSubmit = (data) => {
     const orderData = {
-      ...formData,
+      ...data,
       order_number: order?.order_number || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
       order_date: order?.order_date || new Date().toISOString(),
       subtotal: calculations.subtotal,
       total_amount: calculations.total,
       order_status: order?.order_status || 'pending',
-      paid_amount: formData.payment_status === 'paid' ? calculations.total : 0
+      paid_amount: data.payment_status === 'paid' ? calculations.total : 0
     };
-
     onSubmit(orderData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-2">
-      {/* Customer Selection */}
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6 max-h-[80vh] overflow-y-auto px-2">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Customer Information
+            <Users className="w-5 h-5" /> Customer Information
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Select Existing Customer (Optional)</Label>
-              <Select
-                value={formData.customer_id}
-                onValueChange={(value) => setFormData({...formData, customer_id: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose customer..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.customer_name} - {customer.customer_phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="customer_id"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Choose customer..." /></SelectTrigger>
+                    <SelectContent>
+                      {customers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.customer_name} - {customer.customer_phone}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
-
           <Separator />
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Customer Name *</Label>
-              <Input
-                value={formData.customer_name}
-                onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
-                placeholder="Enter name"
-                required
-              />
+              <Input {...register('customer_name')} placeholder="Enter name" />
+              {errors.customer_name && <span className="text-red-500 text-xs">{errors.customer_name.message}</span>}
             </div>
             <div>
               <Label>Phone Number *</Label>
-              <Input
-                value={formData.customer_phone}
-                onChange={(e) => setFormData({...formData, customer_phone: e.target.value})}
-                placeholder="01XXXXXXXXX"
-                required
-              />
+              <Input {...register('customer_phone')} placeholder="01XXXXXXXXX" />
+              {errors.customer_phone && <span className="text-red-500 text-xs">{errors.customer_phone.message}</span>}
             </div>
             <div>
               <Label>Email (Optional)</Label>
-              <Input
-                type="email"
-                value={formData.customer_email}
-                onChange={(e) => setFormData({...formData, customer_email: e.target.value})}
-                placeholder="customer@email.com"
-              />
+              <Input type="email" {...register('customer_email')} placeholder="customer@email.com" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Order Items - ENHANCED with better visual feedback */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5" />
-            Order Items
-            <Badge variant="outline" className={formData.department === 'boibari' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-red-100 text-red-800 border-red-300'}>
-              {formData.department === 'boibari' ? '📚 Boibari Products' : '🛒 Prodhan.com Products'}
+            <ShoppingCart className="w-5 h-5" /> Order Items
+            <Badge variant="outline" className={watchedDepartment === 'boibari' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-red-100 text-red-800 border-red-300'}>
+              {watchedDepartment === 'boibari' ? '📚 Boibari Products' : '🛒 Prodhan.com Products'}
             </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Department Selection Notice */}
-          <div className={`p-4 rounded-lg border-2 ${formData.department === 'boibari' ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'}`}>
+          <div className={`p-4 rounded-lg border-2 ${watchedDepartment === 'boibari' ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'}`}>
             <p className="text-sm font-medium flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              Products shown below are from <strong>{formData.department === 'boibari' ? 'Boibari.com (Books)' : 'Prodhan.com (E-commerce)'}</strong> only.
-              Change department in "Payment & Pricing" section if needed.
+              <Package className="w-4 h-4" /> Products shown below are from <strong>{watchedDepartment === 'boibari' ? 'Boibari.com (Books)' : 'Prodhan.com (E-commerce)'}</strong> only.
             </p>
           </div>
-
-          {/* Add Item Form */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="md:col-span-2">
               <Label className="font-semibold">
-                Select Product
-                <span className="text-muted-foreground font-normal ml-2">
-                  ({departmentFilteredInventory.length} available)
-                </span>
+                Select Product <span className="text-muted-foreground font-normal ml-2">({departmentFilteredInventory.length} available)</span>
               </Label>
               <Select value={selectedInventoryItem} onValueChange={setSelectedInventoryItem}>
-                <SelectTrigger>
-                  <SelectValue placeholder={departmentFilteredInventory.length === 0 ? 'No products available' : 'Choose product...'} />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Choose product..." /></SelectTrigger>
                 <SelectContent>
-                  {departmentFilteredInventory.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground text-sm">
-                      <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="font-medium">No products available</p>
-                      <p className="text-xs mt-1">
-                        No items found from {formData.department === 'boibari' ? 'Boibari' : 'Prodhan.com'} with stock &gt; 0
-                      </p>
-                    </div>
-                  ) : (
-                    departmentFilteredInventory.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.department === 'boibari' && '📚 '}
-                        {item.department === 'prodhan_com_e_commerce' && '🛒 '}
-                        {item.item_name} - ৳{item.selling_price?.toLocaleString()} (Stock: {item.current_stock})
-                      </SelectItem>
-                    ))
-                  )}
+                  {departmentFilteredInventory.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.item_name} - ৳{item.selling_price?.toLocaleString()} (Stock: {item.current_stock})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Quantity</Label>
-              <Input
-                type="number"
-                min="1"
-                value={itemQuantity}
-                onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
-              />
+              <Input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} />
             </div>
             <div>
               <Label>Discount (৳)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={itemDiscount}
-                onChange={(e) => setItemDiscount(parseFloat(e.target.value) || 0)}
-              />
+              <Input type="number" min="0" value={itemDiscount} onChange={(e) => setItemDiscount(parseFloat(e.target.value) || 0)} />
             </div>
             <div className="flex items-end">
               <Button type="button" onClick={handleAddItem} className="w-full">
@@ -813,9 +757,8 @@ const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, cur
               </Button>
             </div>
           </div>
-
-          {/* Items List */}
-          {formData.order_items.length > 0 ? (
+          {errors.order_items && <p className="text-red-500 text-sm font-medium">{errors.order_items.message}</p>}
+          {watchedItems.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -828,7 +771,7 @@ const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, cur
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {formData.order_items.map((item, index) => (
+                {watchedItems.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{item.item_name}</TableCell>
                     <TableCell className="text-center">{item.quantity}</TableCell>
@@ -836,12 +779,7 @@ const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, cur
                     <TableCell className="text-right text-red-600">-৳{item.discount.toLocaleString()}</TableCell>
                     <TableCell className="text-right font-semibold">৳{item.subtotal.toLocaleString()}</TableCell>
                     <TableCell className="text-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveItem(index)}
-                      >
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}>
                         <XCircle className="w-4 h-4 text-red-500" />
                       </Button>
                     </TableCell>
@@ -858,256 +796,140 @@ const OrderForm = ({ order, customers, inventory, users, onSubmit, onCancel, cur
         </CardContent>
       </Card>
 
-      {/* Shipping Address */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
-            Shipping Address
+            <MapPin className="w-5 h-5" /> Shipping Address
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
+          <div>
+            <Label>Full Address *</Label>
+            <Textarea {...register('shipping_address.address_line')} placeholder="House/Flat no, Road, Area" rows={2} />
+            {errors.shipping_address?.address_line && <span className="text-red-500 text-xs">{errors.shipping_address.address_line.message}</span>}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label>Full Address *</Label>
-              <Textarea
-                value={formData.shipping_address.address_line}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  shipping_address: {...formData.shipping_address, address_line: e.target.value}
-                })}
-                placeholder="House/Flat no, Road, Area"
-                rows={2}
-                required
-              />
+              <Label>City *</Label>
+              <Input {...register('shipping_address.city')} placeholder="e.g. Dhaka" />
+              {errors.shipping_address?.city && <span className="text-red-500 text-xs">{errors.shipping_address.city.message}</span>}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>City *</Label>
-                <Input
-                  value={formData.shipping_address.city}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    shipping_address: {...formData.shipping_address, city: e.target.value}
-                  })}
-                  placeholder="e.g. Dhaka"
-                  required
-                />
-              </div>
-              <div>
-                <Label>District *</Label>
-                <Input
-                  value={formData.shipping_address.district}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    shipping_address: {...formData.shipping_address, district: e.target.value}
-                  })}
-                  placeholder="e.g. Dhaka"
-                  required
-                />
-              </div>
-              <div>
-                <Label>Postal Code</Label>
-                <Input
-                  value={formData.shipping_address.postal_code}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    shipping_address: {...formData.shipping_address, postal_code: e.target.value}
-                  })}
-                  placeholder="e.g. 1205"
-                />
-              </div>
+            <div>
+              <Label>District *</Label>
+              <Input {...register('shipping_address.district')} placeholder="e.g. Dhaka" />
+              {errors.shipping_address?.district && <span className="text-red-500 text-xs">{errors.shipping_address.district.message}</span>}
+            </div>
+            <div>
+              <Label>Postal Code</Label>
+              <Input {...register('shipping_address.postal_code')} placeholder="e.g. 1205" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Payment & Pricing - WITH DUAL DISCOUNT FIELDS */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <CreditCard className="w-5 h-5" />
-            Payment & Pricing
+            <CreditCard className="w-5 h-5" /> Payment & Pricing
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Payment Method *</Label>
-              <Select
-                value={formData.payment_method}
-                onValueChange={(value) => setFormData({...formData, payment_method: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cod">Cash on Delivery (COD)</SelectItem>
-                  <SelectItem value="bkash">bKash</SelectItem>
-                  <SelectItem value="nagad">Nagad</SelectItem>
-                  <SelectItem value="rocket">Rocket</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="card">Card Payment</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller name="payment_method" control={control} render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cod">Cash on Delivery (COD)</SelectItem>
+                    <SelectItem value="bkash">bKash</SelectItem>
+                    <SelectItem value="nagad">Nagad</SelectItem>
+                    <SelectItem value="rocket">Rocket</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="card">Card Payment</SelectItem>
+                  </SelectContent>
+                </Select>
+              )} />
             </div>
             <div>
               <Label>Payment Status</Label>
-              <Select
-                value={formData.payment_status}
-                onValueChange={(value) => setFormData({...formData, payment_status: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="partial">Partial</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller name="payment_status" control={control} render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              )} />
             </div>
             <div className="space-y-1">
-              <Label className="font-semibold">Department * (Determines Product Selection)</Label>
-              <Select
-                value={formData.department}
-                onValueChange={(value) => {
-                  if (!canViewAllDepartments && value !== userDepartment) {
-                    toast.error('🔒 You can only create orders for your department');
-                    return;
-                  }
-                  setFormData({...formData, department: value, order_items: []});
-                  toast.info(`Product list updated to ${value === 'boibari' ? 'Boibari' : 'Prodhan.com'} items`);
-                }}
-                disabled={!canViewAllDepartments}
-              >
-                <SelectTrigger className={!canViewAllDepartments ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="boibari">📚 Boibari</SelectItem>
-                  <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com (E-commerce)</SelectItem>
-                </SelectContent>
-              </Select>
-              {!canViewAllDepartments && (
-                <p className="text-xs text-orange-600 flex items-center gap-1">
-                  <Shield className="w-3 h-3" />
-                  Locked to your department
-                </p>
-              )}
+              <Label className="font-semibold">Department *</Label>
+              <Controller name="department" control={control} render={({ field }) => (
+                <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('order_items', []); }} disabled={!canViewAllDepartments}>
+                  <SelectTrigger className={!canViewAllDepartments ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="boibari">📚 Boibari</SelectItem>
+                    <SelectItem value="prodhan_com_e_commerce">🛒 Prodhan.com (E-commerce)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )} />
+              {!canViewAllDepartments && <p className="text-xs text-orange-600 flex items-center gap-1"><Shield className="w-3 h-3" />Locked</p>}
             </div>
           </div>
-
           <Separator />
-
-          {/* TWO SEPARATE DISCOUNT FIELDS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Regular Discount (৳)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.discount_amount}
-                onChange={(e) => setFormData({...formData, discount_amount: parseFloat(e.target.value) || 0})}
-                placeholder="0"
-              />
-              <p className="text-xs text-muted-foreground mt-1">General order discount</p>
+              <Input type="number" min="0" {...register('discount_amount', { valueAsNumber: true })} />
             </div>
             <div>
               <Label>Coupon Discount (৳)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.coupon_discount}
-                onChange={(e) => setFormData({...formData, coupon_discount: parseFloat(e.target.value) || 0})}
-                placeholder="0"
-              />
-              <p className="text-xs text-muted-foreground mt-1">Promo code discount</p>
+              <Input type="number" min="0" {...register('coupon_discount', { valueAsNumber: true })} />
             </div>
             <div>
-              <Label>Coupon Code (Optional)</Label>
-              <Input
-                type="text"
-                value={formData.discount_code}
-                onChange={(e) => setFormData({...formData, discount_code: e.target.value})}
-                placeholder="e.g., SAVE20"
-              />
-              <p className="text-xs text-muted-foreground mt-1">Promo/coupon code used</p>
+              <Label>Coupon Code</Label>
+              <Input type="text" {...register('discount_code')} />
             </div>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
             <div>
               <Label>Shipping Cost (৳)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.shipping_cost}
-                onChange={(e) => setFormData({...formData, shipping_cost: parseFloat(e.target.value) || 0})}
-              />
+              <Input type="number" min="0" {...register('shipping_cost', { valueAsNumber: true })} />
             </div>
           </div>
-
-          {/* Enhanced Order Summary with Dual Discounts */}
           <div className="bg-gradient-to-br from-violet-50 to-pink-50 p-6 rounded-xl space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Items Total:</span>
               <span className="font-medium">৳{calculations.subtotal.toLocaleString()}</span>
             </div>
-
-            {calculations.regularDiscount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Regular Discount:</span>
-                <span className="font-medium text-red-600">-৳{calculations.regularDiscount.toLocaleString()}</span>
-              </div>
-            )}
-
-            {calculations.couponDiscount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Coupon Discount {formData.discount_code && `(${formData.discount_code})`}:
-                </span>
-                <span className="font-medium text-red-600">-৳{calculations.couponDiscount.toLocaleString()}</span>
-              </div>
-            )}
-
             {calculations.totalDiscount > 0 && (
               <div className="flex justify-between text-sm font-semibold">
                 <span className="text-muted-foreground">Total Discount:</span>
                 <span className="text-red-600">-৳{calculations.totalDiscount.toLocaleString()}</span>
               </div>
             )}
-
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping:</span>
               <span className="font-medium">৳{calculations.shippingCost.toLocaleString()}</span>
             </div>
-
             <Separator />
-
             <div className="flex justify-between text-lg font-bold">
               <span>Total Amount:</span>
               <span className="text-violet-600">৳{calculations.total.toLocaleString()}</span>
             </div>
           </div>
-
           <div>
-            <Label>Customer Notes / Special Instructions</Label>
-            <Textarea
-              value={formData.customer_notes}
-              onChange={(e) => setFormData({...formData, customer_notes: e.target.value})}
-              placeholder="Any special requests from customer..."
-              rows={2}
-            />
+            <Label>Customer Notes</Label>
+            <Textarea {...register('customer_notes')} rows={2} />
           </div>
         </CardContent>
       </Card>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-3 sticky bottom-0 bg-white p-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex justify-end gap-3 sticky bottom-0 bg-white p-4 border-t z-10">
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" className="bg-amber-500 hover:bg-amber-600">
           <CheckCircle className="w-4 h-4 mr-2" />
           {order ? 'Update Order' : 'Create Order'}

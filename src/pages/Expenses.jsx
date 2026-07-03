@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/client';
 import { erp } from '@/api/erpClient';
@@ -34,13 +37,26 @@ const REQ_COLORS = {
 
 const PAYMENT_METHODS = ['COD', 'BKASH', 'NAGAD', 'ROCKET', 'BANK_TRANSFER', 'CARD'];
 
+const expenseSchema = z.object({
+  category: z.string().min(1, 'Category is required'),
+  subCategory: z.string().optional(),
+  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
+  date: z.string().min(1, 'Date is required'),
+  departmentId: z.string().optional(),
+  paymentMethod: z.string().min(1, 'Payment method is required'),
+  description: z.string().min(1, 'Description is required'),
+});
+
 export default function Expenses() {
   const qc = useQueryClient();
   const [tab, setTab] = useState('all');
   const [isFormOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState({
-    category: '', subCategory: '', amount: '', date: new Date().toISOString().slice(0, 10),
-    description: '', departmentId: '', paymentMethod: 'BANK_TRANSFER',
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      category: '', subCategory: '', amount: '', date: new Date().toISOString().slice(0, 10),
+      description: '', departmentId: '', paymentMethod: 'BANK_TRANSFER',
+    }
   });
 
   const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => erp.auth.me(), staleTime: 300000 });
@@ -67,7 +83,7 @@ export default function Expenses() {
     onSuccess: () => {
       toast.success('Expense submitted for approval');
       setFormOpen(false);
-      setForm({ category: '', subCategory: '', amount: '', date: new Date().toISOString().slice(0, 10), description: '', departmentId: '', paymentMethod: 'CASH' });
+      reset();
       qc.invalidateQueries({ queryKey: ['expenses'] });
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed to submit'),
@@ -82,16 +98,10 @@ export default function Expenses() {
     onError: (e) => toast.error(e?.response?.data?.error || 'Action failed'),
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.category || !form.amount || !form.description) {
-      toast.error('Category, amount and description are required');
-      return;
-    }
+  const onSubmit = (data) => {
     submit.mutate({
-      ...form,
-      amount: parseFloat(form.amount),
-      departmentId: form.departmentId || undefined,
+      ...data,
+      departmentId: data.departmentId || undefined,
     });
   };
 
@@ -209,46 +219,62 @@ export default function Expenses() {
       <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Submit Expense</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Category *</Label>
-                <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Office Supplies" />
+                <Input {...register('category')} placeholder="e.g. Office Supplies" />
+                {errors.category && <span className="text-xs text-red-500">{errors.category.message}</span>}
               </div>
               <div className="space-y-1">
                 <Label>Sub-category</Label>
-                <Input value={form.subCategory} onChange={(e) => setForm({ ...form, subCategory: e.target.value })} />
+                <Input {...register('subCategory')} />
               </div>
               <div className="space-y-1">
                 <Label>Amount (৳) *</Label>
-                <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                <Input type="number" step="0.01" {...register('amount')} />
+                {errors.amount && <span className="text-xs text-red-500">{errors.amount.message}</span>}
               </div>
               <div className="space-y-1">
                 <Label>Date *</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                <Input type="date" {...register('date')} />
+                {errors.date && <span className="text-xs text-red-500">{errors.date.message}</span>}
               </div>
               <div className="space-y-1">
                 <Label>Department</Label>
-                <Select value={form.departmentId} onValueChange={(v) => setForm({ ...form, departmentId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="departmentId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="space-y-1">
                 <Label>Payment Method</Label>
-                <Select value={form.paymentMethod} onValueChange={(v) => setForm({ ...form, paymentMethod: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m.replace('_', ' ')}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="paymentMethod"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m.replace('_', ' ')}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
             <div className="space-y-1">
               <Label>Description *</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+              <Textarea {...register('description')} rows={3} />
+              {errors.description && <span className="text-xs text-red-500">{errors.description.message}</span>}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>

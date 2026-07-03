@@ -1,4 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { erp } from '@/api/erpClient';
@@ -52,16 +55,15 @@ const titleCase = (s) => String(s || '').replace(/_/g, ' ').toLowerCase().replac
 const toBDTDate = (date = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(date);
 
-const EMPTY_LEAD = {
-  student_name: '',
-  phone: '',
-  email: '',
-  lead_source: 'WEBSITE',
-  lead_status: 'NEW',
-  priority: 'MEDIUM',
-  value: '',
-  notes: '',
-};
+const leadSchema = z.object({
+  student_name: z.string().min(1, 'Name is required'),
+  phone: z.string().min(1, 'Phone is required'),
+  email: z.string().optional(),
+  lead_source: z.string(),
+  priority: z.string(),
+  value: z.coerce.number().min(0).optional(),
+  notes: z.string().optional(),
+});
 
 function CRMPage() {
   const queryClient = useQueryClient();
@@ -73,8 +75,14 @@ function CRMPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isLeadDetailsOpen, setIsLeadDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('pipeline');
-  const [newLead, setNewLead] = useState(EMPTY_LEAD);
   const [lostLead, setLostLead] = useState(null); // lead pending a lost-reason
+  
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(leadSchema),
+    defaultValues: {
+      student_name: '', phone: '', email: '', lead_source: 'WEBSITE', priority: 'MEDIUM', value: '', notes: ''
+    }
+  });
   const [lostReason, setLostReason] = useState('');
 
   // ---- Data ----
@@ -107,7 +115,7 @@ function CRMPage() {
       invalidate();
       toast.success('Lead created successfully');
       setIsAddLeadOpen(false);
-      setNewLead(EMPTY_LEAD);
+      reset();
     },
     onError: (e) => toast.error(e?.response?.data?.message || 'Failed to create lead'),
   });
@@ -251,11 +259,11 @@ function CRMPage() {
     <Badge className={STATUS_BADGES[status] || STATUS_BADGES.NEW}>{titleCase(status || 'NEW')}</Badge>
   );
 
-  const handleAddLead = (e) => {
-    e.preventDefault();
+  const onAddLeadSubmit = (data) => {
     createLeadMutation.mutate({
-      ...newLead,
-      value: newLead.value === '' ? 0 : Number(newLead.value),
+      ...data,
+      lead_status: 'NEW',
+      value: data.value || 0,
     });
   };
 
@@ -570,62 +578,70 @@ function CRMPage() {
           <DialogHeader>
             <DialogTitle>Add New Lead</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAddLead} className="space-y-4">
+          <form onSubmit={handleSubmit(onAddLeadSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Name *</Label>
                 <Input
-                  required
-                  value={newLead.student_name}
-                  onChange={(e) => setNewLead({ ...newLead, student_name: e.target.value })}
+                  {...register('student_name')}
                   placeholder="Full name"
                 />
+                {errors.student_name && <span className="text-xs text-red-500">{errors.student_name.message}</span>}
               </div>
               <div>
                 <Label>Phone *</Label>
                 <Input
-                  required
-                  value={newLead.phone}
-                  onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })}
+                  {...register('phone')}
                   placeholder="01XXXXXXXXX"
                 />
+                {errors.phone && <span className="text-xs text-red-500">{errors.phone.message}</span>}
               </div>
             </div>
             <div>
               <Label>Email</Label>
               <Input
                 type="email"
-                value={newLead.email}
-                onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
+                {...register('email')}
                 placeholder="email@example.com"
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Source</Label>
-                <Select value={newLead.lead_source} onValueChange={(val) => setNewLead({ ...newLead, lead_source: val })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SOURCES.map((s) => <SelectItem key={s} value={s}>{titleCase(s)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="lead_source"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {SOURCES.map((s) => <SelectItem key={s} value={s}>{titleCase(s)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div>
                 <Label>Priority</Label>
-                <Select value={newLead.priority} onValueChange={(val) => setNewLead({ ...newLead, priority: val })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{titleCase(p)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="priority"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{titleCase(p)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div>
                 <Label>Value (৳)</Label>
                 <Input
                   type="number"
                   min="0"
-                  value={newLead.value}
-                  onChange={(e) => setNewLead({ ...newLead, value: e.target.value })}
+                  {...register('value')}
                   placeholder="0"
                 />
               </div>
@@ -633,8 +649,7 @@ function CRMPage() {
             <div>
               <Label>Notes</Label>
               <Textarea
-                value={newLead.notes}
-                onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })}
+                {...register('notes')}
                 placeholder="Additional notes..."
                 rows={3}
               />

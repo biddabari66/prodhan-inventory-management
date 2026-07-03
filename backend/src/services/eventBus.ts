@@ -137,14 +137,43 @@ export async function emitEvent(tenantId: string, event: string, payload: any): 
   const body = { event, tenant: tenantId, data: payload, at };
 
   try {
+    const companyId = payload?.company_id || payload?.companyId;
+    const departmentId = payload?.department_id || payload?.departmentId;
+
+    const where: any = {
+      tenantId,
+      isActive: true,
+      OR: [{ events: { has: event } }, { events: { has: '*' } }],
+    };
+
+    if (companyId) {
+      where.AND = [
+        {
+          OR: [
+            { companyId: null },
+            { companyId: String(companyId) }
+          ]
+        }
+      ];
+    }
+
+    if (departmentId) {
+      // If there's an existing AND for companyId, we push to it. Otherwise create it.
+      const depOr = {
+        OR: [
+          { departmentId: null },
+          { departmentId: String(departmentId) }
+        ]
+      };
+      if (where.AND) {
+        where.AND.push(depOr);
+      } else {
+        where.AND = [depOr];
+      }
+    }
+
     // 1) Webhooks subscribed to this event (or wildcard '*').
-    const webhooks = await prisma.webhook.findMany({
-      where: {
-        tenantId,
-        isActive: true,
-        OR: [{ events: { has: event } }, { events: { has: '*' } }],
-      },
-    });
+    const webhooks = await prisma.webhook.findMany({ where });
 
     await Promise.all(
       webhooks.map((wh) =>

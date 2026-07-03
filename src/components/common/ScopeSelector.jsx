@@ -1,6 +1,6 @@
 // Global cascading scope picker for the app header: Sub-Company → Department.
-// The selection is persisted via src/lib/scope.js and auto-applied to all data
-// requests by the axios request interceptor (src/api/client.js).
+// Only visible to SUPER_ADMIN, ADMIN, and MD users.
+// Non-admins see a locked badge showing their own workspace.
 
 import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -25,26 +25,19 @@ const TRIGGER_CLASS =
   'focus:ring-amber-500';
 
 export default function ScopeSelector() {
-  const { companyId, departmentId, setCompany, setDepartment } = useScope();
-  const { user } = useAuth();
+  const { companyId: scopeCompanyId, departmentId, setCompany, setDepartment } = useScope();
+  const { user, canViewAllCompanies, companyName, departmentName } = useAuth();
 
-  const isAdmin =
-    user?.role === 'admin' ||
-    ['admin', 'super_admin'].includes(String(user?.job_role || '').toLowerCase());
-
-  // ✅ FIX: Ensure non-admin users always have their profile scope set in localStorage.
-  // This fires once when the component mounts and whenever the user object changes.
+  // ✅ Non-admins: always force their profile scope into localStorage on mount/user change
   useEffect(() => {
-    if (!user || isAdmin) return;
-
+    if (!user || canViewAllCompanies) return;
     const profileCompanyId    = user.company_id    || user.companyId    || null;
     const profileDepartmentId = user.department_id || user.departmentId || null;
-
     if (profileCompanyId)    scopeSetCompany(profileCompanyId);
     if (profileDepartmentId) scopeSetDepartment(profileDepartmentId);
-  }, [user, isAdmin]);
+  }, [user, canViewAllCompanies]);
 
-  // ─── Admins: load companies from API ────────────────────────────────────────
+  // ─── Admins & MD: load companies from API ───────────────────────────────────
   const { data: companies = [] } = useQuery({
     queryKey: ['scope', 'companies'],
     queryFn: async () => {
@@ -53,27 +46,26 @@ export default function ScopeSelector() {
       return Array.isArray(d) ? d : d?.data || d?.companies || [];
     },
     staleTime: 5 * 60 * 1000,
-    enabled: isAdmin,
+    enabled: canViewAllCompanies,
   });
 
   const { data: departments = [] } = useQuery({
-    queryKey: ['scope', 'departments', companyId],
-    enabled: isAdmin && !!companyId,
+    queryKey: ['scope', 'departments', scopeCompanyId],
+    enabled: canViewAllCompanies && !!scopeCompanyId,
     queryFn: async () => {
-      const res = await api.get('/departments', { params: { companyId } });
+      const res = await api.get('/departments', { params: { companyId: scopeCompanyId } });
       const d = res.data;
       return Array.isArray(d) ? d : d?.data || d?.departments || [];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  // ─── Non-admins: show locked workspace badge ─────────────────────────────────
-  if (!isAdmin) {
-    const deptName    = user?.department?.name || user?.department_name || user?.department || null;
-    const companyName = user?.company?.name    || user?.company_name    || user?.company    || null;
+  // ─── Non-admins/non-MD: show locked workspace badge ─────────────────────────
+  if (!canViewAllCompanies) {
+    // Build label from AuthContext fields (now populated by backend)
     const label = companyName
-      ? `${companyName}${deptName ? ' · ' + deptName : ''}`
-      : (deptName || 'Your workspace');
+      ? `${companyName}${departmentName ? ' · ' + departmentName : ''}`
+      : (departmentName || user?.displayName || 'Your workspace');
 
     return (
       <div className="hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 max-w-[220px] truncate">
@@ -83,13 +75,13 @@ export default function ScopeSelector() {
     );
   }
 
-  // ─── Admins: don't render if no companies returned (avoids layout gap) ───────
+  // ─── Admins/MD: don't render if no companies returned (avoids layout gap) ────
   if (!companies.length) return null;
 
   return (
     <div className="hidden md:flex items-center gap-1.5">
       <Select
-        value={companyId || ALL_COMPANIES}
+        value={scopeCompanyId || ALL_COMPANIES}
         onValueChange={(v) => setCompany(v === ALL_COMPANIES ? null : v)}
       >
         <SelectTrigger className={TRIGGER_CLASS} aria-label="Sub-Company">
@@ -109,7 +101,7 @@ export default function ScopeSelector() {
       <Select
         value={departmentId || ALL_DEPARTMENTS}
         onValueChange={(v) => setDepartment(v === ALL_DEPARTMENTS ? null : v)}
-        disabled={!companyId}
+        disabled={!scopeCompanyId}
       >
         <SelectTrigger className={TRIGGER_CLASS} aria-label="Department">
           <Network className="w-3.5 h-3.5 mr-1 shrink-0 text-amber-600" />
@@ -127,3 +119,4 @@ export default function ScopeSelector() {
     </div>
   );
 }
+

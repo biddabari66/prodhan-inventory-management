@@ -104,11 +104,11 @@ function SalesPage() {
     if (statusFilter !== 'all') q.status = statusFilter;
     if (paymentFilter !== 'all') q.payment_status = paymentFilter;
     if (scopeCompanyId && scopeCompanyId !== 'all') q.company_id = scopeCompanyId;
-    if (departmentFilter !== 'all') q.department_id = departmentFilter;
+    if (scopeDepartmentId && scopeDepartmentId !== 'all') q.department_id = scopeDepartmentId;
     if (dateRange?.from) q.date_from = dateRange.from.toISOString();
     if (dateRange?.to) q.date_to = dateRange.to.toISOString();
     return q;
-  }, [searchQuery, statusFilter, paymentFilter, scopeCompanyId, departmentFilter, dateRange]);
+  }, [searchQuery, statusFilter, paymentFilter, scopeCompanyId, scopeDepartmentId, dateRange]);
 
   // ✅ FIX: Single fast order query scoped to the user's company/department.
   // No more background batch loop that fetched 1000+ records and stalled the UI.
@@ -153,7 +153,7 @@ function SalesPage() {
   });
 
   // ✅ FIX: No more local departmentFilter state — we use the global scope hook.
-  // The data is already server-filtered by scope. departmentFilter kept only
+  // The data is already server-filtered by scope. scopeDepartmentId kept only
   // for the product filter popover UI (filters already-fetched inventory locally).
   const canViewAllDepartments = useMemo(() => isAdmin, [isAdmin]);
 
@@ -720,7 +720,7 @@ function SalesPage() {
 
   // ✅ FIX: firstLoad only gates the TABLE, not the entire page.
   // Header, buttons, and stats render immediately — only the table shows skeleton.
-  const firstLoad = ordersLoading && orders.length === 0;
+  const firstLoad = ordersLoading && (!ordersList || ordersList.length === 0);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -741,7 +741,7 @@ function SalesPage() {
         />
 
         {/* Inline error banner — does NOT block the rest of the UI */}
-        {ordersError && orders.length === 0 && (
+        {ordersError && (!ordersList || ordersList.length === 0) && (
           <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>Failed to load orders.</span>
@@ -911,7 +911,7 @@ function SalesPage() {
                   <div>
                     <Label className="text-sm font-semibold mb-2 block">Product Filter</Label>
                     <SearchableProductSelect
-                      inventory={inventory.filter(i => i.department === departmentFilter || departmentFilter === 'all')}
+                      inventory={inventory.filter(i => i.department === scopeDepartmentId || !scopeDepartmentId || scopeDepartmentId === 'all')}
                       value={productFilter}
                       onValueChange={setProductFilter}
                       placeholder="Search products..."
@@ -1213,17 +1213,6 @@ function SalesPage() {
                 </Badge>
                 {displayedOrders.length < filteredOrders.length && (
                   <span className="text-sm text-slate-400">showing {displayedOrders.length}</span>
-                )}
-                {!allOrdersLoaded && recentOrders.length > 0 && (
-                  <Badge className="bg-blue-100 text-blue-700 font-medium rounded-full px-3 animate-pulse">
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />
-                    Loading all...
-                  </Badge>
-                )}
-                {allOrdersLoaded && (
-                  <Badge className="bg-green-100 text-green-700 font-medium rounded-full px-3">
-                    ✓ All {orders.length} loaded
-                  </Badge>
                 )}
               </div>
               {filteredOrders.length > 0 && (
@@ -1900,8 +1889,8 @@ function SalesPage() {
                 }}
                 currentUser={currentUser}
                 canViewAllDepartments={canViewAllDepartments}
-                userDepartment={userDepartment}
-                initialDepartment={departmentFilter}
+                userDepartment={scopeDepartmentId}
+                initialDepartment={scopeDepartmentId}
               />
             </div>
           </DialogContent>

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import {
-  User as UserIcon, Building2, Phone, Mail, Calendar, DollarSign, Edit, Briefcase, Lock, Settings, AlertTriangle, Save, Loader2, X, Network, Check
+  User as UserIcon, Building2, Phone, Mail, Calendar, DollarSign, Edit, Briefcase, Lock, Settings, AlertTriangle, Save, Loader2, X, Network, Check, Bell, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UploadFile } from '@/integrations/Core';
@@ -37,6 +37,9 @@ export default function UserProfile({ user, onUpdate, onClose }) {
   
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  const [passwordData, setPasswordData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Form Data States
   const [personalData, setPersonalData] = useState({});
@@ -211,6 +214,24 @@ export default function UserProfile({ user, onUpdate, onClose }) {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword.length < 8) return toast.error('New password must be at least 8 characters');
+    if (passwordData.newPassword !== passwordData.confirmPassword) return toast.error('Passwords do not match');
+    setIsChangingPassword(true);
+    try {
+      await erp.api.post('/auth/change-password', {
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword
+      });
+      toast.success('Password changed successfully');
+      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const handleAvatarUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -265,14 +286,14 @@ export default function UserProfile({ user, onUpdate, onClose }) {
           <Button variant={activeTab === 'personal' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'personal' ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : ''}`} onClick={() => setActiveTab('personal')}>
             <UserIcon className="w-4 h-4 mr-3" /> Personal Info
           </Button>
-          <Button variant={activeTab === 'work' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'work' ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : ''}`} onClick={() => setActiveTab('work')}>
-            <Briefcase className="w-4 h-4 mr-3" /> Work & Role
-          </Button>
           <Button variant={activeTab === 'company' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'company' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : ''}`} onClick={() => setActiveTab('company')}>
             <Network className="w-4 h-4 mr-3" /> Company &amp; Department
           </Button>
-          <Button variant={activeTab === 'settings' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'settings' ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : ''}`} onClick={() => setActiveTab('settings')}>
-            <Settings className="w-4 h-4 mr-3" /> Settings
+          <Button variant={activeTab === 'notifications' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'notifications' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : ''}`} onClick={() => setActiveTab('notifications')}>
+            <Bell className="w-4 h-4 mr-3" /> Notifications
+          </Button>
+          <Button variant={activeTab === 'activity' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'activity' ? 'bg-green-100 text-green-700 hover:bg-green-200' : ''}`} onClick={() => setActiveTab('activity')}>
+            <Activity className="w-4 h-4 mr-3" /> Activity Log
           </Button>
           <Button variant={activeTab === 'security' ? 'secondary' : 'ghost'} className={`w-full justify-start ${activeTab === 'security' ? 'bg-red-50 text-red-700 hover:bg-red-100' : ''}`} onClick={() => setActiveTab('security')}>
             <Lock className="w-4 h-4 mr-3" /> Security
@@ -321,69 +342,6 @@ export default function UserProfile({ user, onUpdate, onClose }) {
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* WORK TAB */}
-          {activeTab === 'work' && (
-            <Card className="border-0 shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 p-6">
-                <CardTitle className="text-xl flex items-center gap-2"><Briefcase className="w-5 h-5 text-violet-500" /> Work & Role</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => toggleEdit('work')}>
-                  {isEditing.work ? <X className="w-4 h-4 mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
-                  {isEditing.work ? 'Cancel' : 'Edit'}
-                </Button>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Department</Label>
-                    <Select value={workData.department_id} onValueChange={v => setWorkData({ ...workData, department_id: v })} disabled={!isEditing.work}>
-                      <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
-                      <SelectContent>
-                        {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Designation</Label>
-                    <Input value={workData.designation} onChange={e => setWorkData({ ...workData, designation: e.target.value })} disabled={!isEditing.work} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Joining Date</Label>
-                    <Input type="date" value={workData.joining_date} onChange={e => setWorkData({ ...workData, joining_date: e.target.value })} disabled={!isEditing.work} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Job Role</Label>
-                    <Select value={workData.job_role} onValueChange={v => setWorkData({ ...workData, job_role: v })} disabled={!isEditing.work || !isAdmin}>
-                      <SelectTrigger><SelectValue placeholder="Select Role" /></SelectTrigger>
-                      <SelectContent>
-                        {JOB_ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {!isAdmin && isEditing.work && <p className="text-xs text-amber-600">Only Admins can change job roles.</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Base Salary</Label>
-                    <Input type="number" value={workData.base_salary} onChange={e => setWorkData({ ...workData, base_salary: e.target.value })} disabled={!isEditing.work || !isAdmin} />
-                    {!isAdmin && isEditing.work && <p className="text-xs text-amber-600">Only Admins can change salaries.</p>}
-                  </div>
-                </div>
-
-                {isEditing.work && (
-                  <div className="flex justify-end pt-4 border-t border-slate-100">
-                    <Button onClick={handleWorkSave} disabled={isSaving} className="bg-violet-600 hover:bg-violet-700">
-                      {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                      Save Changes
-                    </Button>
-                  </div>
-                )}
-
-                <div className="pt-6 border-t border-slate-100">
-                  <h3 className="text-lg font-medium mb-4">Shift Settings</h3>
-                  <ShiftSelector userId={user.id} />
-                </div>
               </CardContent>
             </Card>
           )}
@@ -468,44 +426,26 @@ export default function UserProfile({ user, onUpdate, onClose }) {
             </Card>
           )}
 
-          {/* SETTINGS TAB */}
-          {activeTab === 'settings' && (
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === 'notifications' && (
             <Card className="border-0 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 p-6">
-                <CardTitle className="text-xl flex items-center gap-2"><Settings className="w-5 h-5 text-violet-500" /> Settings</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => toggleEdit('settings')}>
-                  {isEditing.settings ? <X className="w-4 h-4 mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
-                  {isEditing.settings ? 'Cancel' : 'Edit'}
-                </Button>
+                <CardTitle className="text-xl flex items-center gap-2"><Bell className="w-5 h-5 text-blue-500" /> Notifications</CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Admission Target</Label>
-                    <Input type="number" value={settingsData.admission_target} onChange={e => setSettingsData({ ...settingsData, admission_target: e.target.value })} disabled={!isEditing.settings} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Incentive Rate (%)</Label>
-                    <Input type="number" value={settingsData.incentive_rate} onChange={e => setSettingsData({ ...settingsData, incentive_rate: e.target.value })} disabled={!isEditing.settings} />
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
-                  <div>
-                    <h4 className="font-medium text-slate-800">Account Active Status</h4>
-                    <p className="text-sm text-slate-500">Deactivating the account will prevent login.</p>
-                  </div>
-                  <Switch checked={settingsData.is_active} onCheckedChange={v => setSettingsData({ ...settingsData, is_active: v })} disabled={!isEditing.settings || !isAdmin} />
-                </div>
+              <CardContent className="p-6">
+                <p className="text-sm text-slate-500">Your notifications will appear here. Coming soon.</p>
+              </CardContent>
+            </Card>
+          )}
 
-                {isEditing.settings && (
-                  <div className="flex justify-end pt-4">
-                    <Button onClick={handleSettingsSave} disabled={isSaving} className="bg-violet-600 hover:bg-violet-700">
-                      {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                      Save Changes
-                    </Button>
-                  </div>
-                )}
+          {/* ACTIVITY LOG TAB */}
+          {activeTab === 'activity' && (
+            <Card className="border-0 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 p-6">
+                <CardTitle className="text-xl flex items-center gap-2"><Activity className="w-5 h-5 text-green-500" /> Activity Log</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-sm text-slate-500">Your recent activity and audit logs will appear here. Coming soon.</p>
               </CardContent>
             </Card>
           )}
@@ -513,6 +453,32 @@ export default function UserProfile({ user, onUpdate, onClose }) {
           {/* SECURITY TAB */}
           {activeTab === 'security' && (
             <div className="space-y-6">
+              <Card className="border-0 shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 p-6">
+                  <CardTitle className="text-xl flex items-center gap-2"><Lock className="w-5 h-5 text-slate-500" /> Change Password</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <div className="space-y-4 max-w-md">
+                    <div className="space-y-2">
+                      <Label>Current Password</Label>
+                      <Input type="password" value={passwordData.oldPassword} onChange={e => setPasswordData(prev => ({...prev, oldPassword: e.target.value}))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>New Password</Label>
+                      <Input type="password" value={passwordData.newPassword} onChange={e => setPasswordData(prev => ({...prev, newPassword: e.target.value}))} placeholder="Min 8 characters" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm New Password</Label>
+                      <Input type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData(prev => ({...prev, confirmPassword: e.target.value}))} />
+                    </div>
+                    <Button onClick={handleChangePassword} disabled={isChangingPassword || !passwordData.oldPassword || !passwordData.newPassword} className="bg-slate-800 hover:bg-slate-900 text-white w-full">
+                      {isChangingPassword ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Change Password
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="border border-red-200 bg-red-50/50 shadow-sm">
                 <CardHeader className="p-6 pb-2">
                   <CardTitle className="text-xl flex items-center gap-2 text-red-600"><AlertTriangle className="w-5 h-5" /> Danger Zone</CardTitle>

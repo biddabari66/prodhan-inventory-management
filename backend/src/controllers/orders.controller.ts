@@ -148,18 +148,23 @@ export const listOrders = async (req: AuthenticatedRequest, res: Response): Prom
     });
     where.departmentId = { in: depts.length ? depts.map((d) => d.id) : ['__none__'] };
   }
-  // SECURITY: non-admins are hard-scoped to their own department (sub-company),
-  // overriding any client-supplied scope. Admins keep full picker freedom.
-  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes((req.user as any)?.jobRole);
-  if (!isAdmin && (req.user as any)?.departmentId) where.departmentId = (req.user as any).departmentId;
+  // SECURITY: non-admins/non-MDs are hard-scoped to their own department.
+  // Admins and MDs have full cross-company visibility via the picker.
+  const canViewAll = req.user?.canViewAllCompanies ?? false;
+  if (!canViewAll && (req.user as any)?.departmentId) where.departmentId = (req.user as any).departmentId;
+
   if (source) where.orderSource = source;
   if (courier) where.courierService = courier;
   if (salesDayDate) where.salesDayDate = salesDayDate;
-  if (dateFrom || dateTo) {
-    where.orderDate = {};
-    if (dateFrom) where.orderDate.gte = new Date(dateFrom);
-    if (dateTo) where.orderDate.lte = new Date(dateTo);
-  }
+    if (dateFrom || dateTo) {
+      where.orderDate = {};
+      try {
+        if (dateFrom && !isNaN(new Date(dateFrom).getTime())) where.orderDate.gte = new Date(dateFrom);
+        if (dateTo && !isNaN(new Date(dateTo).getTime())) where.orderDate.lte = new Date(dateTo);
+      } catch (e) {
+        // ignore malformed dates instead of throwing 500
+      }
+    }
   if (search) {
     where.OR = [
       { orderNumber: { contains: search, mode: 'insensitive' } },
@@ -174,8 +179,7 @@ export const listOrders = async (req: AuthenticatedRequest, res: Response): Prom
       where, skip, take: limit,
       include: { 
         customer: { select: { id: true, name: true, phone: true } },
-        department: { select: { name: true } },
-        orderItems: true
+        department: { select: { name: true } }
       },
       orderBy: { createdAt: 'desc' },
     }),
