@@ -48,6 +48,7 @@ import { getComboCount, getActualQuantity } from '../components/common/ComboProd
 import DailySalesFinalizer from '../components/sales/DailySalesFinalizer';
 import MobileOrderCard from '../components/sales/MobileOrderCard';
 import PageHeader from '@/components/common/PageHeader';
+import ScopeSelector from '@/components/common/ScopeSelector';
 import StatCard from '@/components/common/StatCard';
 import { StatGridSkeleton, CardGridSkeleton, ErrorState } from '@/components/common/Skeletons';
 import { useScope } from '@/lib/scope'; // ✅ global company scope hook
@@ -738,6 +739,16 @@ function SalesPage() {
           icon={ShoppingCart}
           title="Sales Management"
           subtitle="Track and manage all your sales orders"
+          actions={
+            <div className="flex items-center space-x-2">
+              <div className="md:hidden">
+                <ScopeSelector className="flex items-center gap-1.5" />
+              </div>
+              <div className="hidden md:block">
+                <ScopeSelector className="flex items-center gap-1.5" />
+              </div>
+            </div>
+          }
         />
 
         {/* Inline error banner — does NOT block the rest of the UI */}

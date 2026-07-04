@@ -24,7 +24,7 @@ const TRIGGER_CLASS =
   'bg-amber-50/60 dark:bg-amber-900/10 text-amber-800 dark:text-amber-300 ' +
   'focus:ring-amber-500';
 
-export default function ScopeSelector() {
+export default function ScopeSelector({ className }) {
   const { companyId: scopeCompanyId, departmentId, setCompany, setDepartment } = useScope();
   const { user, canViewAllCompanies, companyName, departmentName } = useAuth();
 
@@ -68,7 +68,7 @@ export default function ScopeSelector() {
       : (departmentName || user?.displayName || 'Your workspace');
 
     return (
-      <div className="hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 max-w-[220px] truncate">
+      <div className={className || "hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 max-w-[220px] truncate"}>
         <Lock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
         <span className="truncate font-medium">{label}</span>
       </div>
@@ -79,7 +79,7 @@ export default function ScopeSelector() {
   if (!companies.length) return null;
 
   return (
-    <div className="hidden md:flex items-center gap-1.5">
+    <div className={className || "hidden md:flex items-center gap-1.5"}>
       <Select
         value={scopeCompanyId || ALL_COMPANIES}
         onValueChange={(v) => setCompany(v === ALL_COMPANIES ? null : v)}

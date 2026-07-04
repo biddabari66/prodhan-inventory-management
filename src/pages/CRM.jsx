@@ -88,7 +88,7 @@ function CRMPage() {
   // ---- Data ----
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['crm-leads'],
-    queryFn: () => erp.entities.Lead.filter({}, '-created_date', 1000),
+    queryFn: () => erp.entities.Lead.filter({}, '-created_date', 200),
     staleTime: 2 * 60 * 1000,
   });
 

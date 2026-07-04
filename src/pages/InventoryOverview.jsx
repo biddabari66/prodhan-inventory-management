@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -881,7 +881,7 @@ function InventoryOverviewPage() {
   const filterInventory = () => {
     if (!currentUser) return;
 
-    const isAdmin = currentUser.role === 'admin' || currentUser.job_role === 'ADMIN' || currentUser.job_role === 'SUPER_ADMIN';
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.job_role === 'ADMIN' || currentUser?.job_role === 'SUPER_ADMIN' || currentUser?.jobRole === 'ADMIN' || currentUser?.jobRole === 'SUPER_ADMIN';
     const allItems = inventoryWithMovements.length > 0 ? inventoryWithMovements : inventory;
 
     // Admins see all inventory; non-admins see only their department

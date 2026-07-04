@@ -61,7 +61,6 @@ const BillingAdmin = lazy(() => import('./pages/BillingAdmin'));
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
 const Payroll = lazy(() => import('./pages/Payroll'));
 const PayrollReport = lazy(() => import('./pages/PayrollReport'));
-const Permissions = lazy(() => import('./pages/Permissions'));
 const Procurement = lazy(() => import('./pages/Procurement'));
 const ProdhanComIntegration = lazy(() => import('./pages/ProdhanComIntegration'));
 const ProductAnalytics = lazy(() => import('./pages/ProductAnalytics'));
@@ -146,7 +145,6 @@ export const PAGES = {
     "NotificationSettings": NotificationSettings,
     "Payroll": Payroll,
     "PayrollReport": PayrollReport,
-    "Permissions": Permissions,
     "Procurement": Procurement,
     "ProdhanComIntegration": ProdhanComIntegration,
     "ProductAnalytics": ProductAnalytics,
