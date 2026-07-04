@@ -63,8 +63,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Derived permission flags for easy consumption across all pages
-  const isAdmin = user?.isAdmin === true || ['SUPER_ADMIN', 'ADMIN'].includes(user?.jobRole);
-  const isMd = user?.isMd === true || user?.jobRole === 'MD';
+  const userRole = String(user?.jobRole || user?.job_role || user?.role || '').toUpperCase();
+  const isAdmin = user?.isAdmin === true || ['SUPER_ADMIN', 'ADMIN'].includes(userRole);
+  const isMd = user?.isMd === true || userRole === 'MD';
   const canViewAllCompanies = user?.canViewAllCompanies === true || isAdmin || isMd;
 
   return (

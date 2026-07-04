@@ -254,25 +254,7 @@ const ROLE_PERMISSIONS = {
   }
 };
 
-const departments = [
-  { value: 'biddabari_publication', label: 'Biddabari Publication' },
-  { value: 'it', label: 'IT' },
-  { value: 'boibari', label: 'Boibari' },
-  { value: 'admission', label: 'Admission' },
-  { value: 'service', label: 'Service' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'prodhan_com_e_commerce', label: 'Prodhan.com' },
-  { value: 'sales', label: 'Sales' },
-  { value: 'r_and_d', label: 'R&D' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'hr', label: 'HR' },
-  { value: 'operations', label: 'Operations' }
-];
-
-const getDepartmentDisplayName = (val) => {
-  const dept = departments.find(d => d.value === val);
-  return dept ? dept.label : val;
-};
+// Departments are now fetched dynamically
 
 function UserAccessManagerPage() {
   const [users, setUsers] = useState([]);
@@ -478,16 +460,16 @@ function UserAccessManagerPage() {
     setIsSaving(false);
   };
 
-  const handlePermissionChange = (moduleId, permissionId, checked) => {
+  const handlePermissionChange = React.useCallback((moduleId, permissionId, checked) => {
     setPermissions(prev => ({
       ...prev,
       [moduleId]: { ...(prev[moduleId] || {}), [permissionId]: checked }
     }));
-  };
+  }, []);
 
-  const handleConfidentialChange = (permId, checked) => {
+  const handleConfidentialChange = React.useCallback((permId, checked) => {
     setConfidentialPerms(prev => ({ ...prev, [permId]: checked }));
-  };
+  }, []);
 
   const handleApplyRoleDefaults = () => {
     if (!selectedEmployee?.job_role) { toast.error('No role selected'); return; }
@@ -534,14 +516,22 @@ function UserAccessManagerPage() {
     setIsSaving(false);
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = !filters.search ||
-      user.full_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesDepartment = filters.department === 'all' || user.department === filters.department;
-    const matchesRole = filters.job_role === 'all' || user.job_role === filters.job_role;
-    return matchesSearch && matchesDepartment && matchesRole;
-  });
+  const filteredUsers = React.useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = !filters.search ||
+        user.full_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        user.email?.toLowerCase().includes(filters.search.toLowerCase());
+      
+      const userDeptId = user.department_id || user.departmentId || user.department;
+      const matchesDepartment = filters.department === 'all' || userDeptId === filters.department;
+      
+      const userRole = String(user.job_role || user.jobRole || '').toLowerCase();
+      const filterRole = String(filters.job_role || '').toLowerCase();
+      const matchesRole = filterRole === 'all' || userRole === filterRole;
+      
+      return matchesSearch && matchesDepartment && matchesRole;
+    });
+  }, [users, filters]);
 
   const canManageSuperAdmin = currentUser?.job_role === 'super_admin' || currentUser?.job_role === 'admin';
 
@@ -674,8 +664,6 @@ function UserAccessManagerPage() {
               setFilters={setFilters}
               isLoading={isLoading}
               DepartmentSelectComponent={DepartmentSelect}
-              departments={departments}
-              getDepartmentDisplayName={getDepartmentDisplayName}
             />
           </div>
 
@@ -858,11 +846,37 @@ function UserAccessManagerPage() {
                 </div>
               </div>
             ) : (
-              <Card className="premium-card h-full flex items-center justify-center min-h-[400px]">
-                <CardContent className="text-center p-12">
-                  <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-700 mb-2">No Employee Selected</h3>
-                  <p className="text-sm text-slate-500">Select an employee from the list to manage their permissions</p>
+              <Card className="premium-card h-full flex flex-col items-center justify-center min-h-[500px] border-dashed border-2 bg-gradient-to-br from-slate-50/50 to-white">
+                <CardContent className="text-center p-12 max-w-md">
+                  <div className="relative mx-auto mb-6 w-24 h-24">
+                    <div className="absolute inset-0 bg-amber-100 rounded-full animate-ping opacity-25"></div>
+                    <div className="relative flex items-center justify-center w-full h-full bg-amber-50 rounded-full shadow-inner border border-amber-100">
+                      <Shield className="w-10 h-10 text-amber-500 drop-shadow-sm" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 tracking-tight mb-3">
+                    Access Control Center
+                  </h3>
+                  <p className="text-base text-slate-500 mb-8 leading-relaxed">
+                    Select an employee from the directory to manage their module permissions, data access, and departmental scope.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-left">
+                    <div className="p-4 rounded-xl bg-white shadow-sm border border-slate-100 flex items-start gap-3">
+                      <Lock className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-700">Role Templates</h4>
+                        <p className="text-xs text-slate-500 mt-1">Apply quick presets</p>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-white shadow-sm border border-slate-100 flex items-start gap-3">
+                      <Network className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-700">Scope Sync</h4>
+                        <p className="text-xs text-slate-500 mt-1">Assign sub-companies</p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}

@@ -74,7 +74,7 @@ const CATEGORY_COLORS = {
   'System & Security': 'border-l-slate-700',
 };
 
-export default function PermissionMatrix({ employee, permissions, onPermissionChange }) {
+const PermissionMatrix = React.memo(function PermissionMatrix({ employee, permissions, onPermissionChange }) {
   const safePermissions = permissions || {};
 
   const modulesByCategory = MODULES.reduce((acc, module) => {
@@ -165,6 +165,7 @@ export default function PermissionMatrix({ employee, permissions, onPermissionCh
       ))}
     </div>
   );
-}
+});
 
 export { MODULES, PERMISSIONS };
+export default PermissionMatrix;

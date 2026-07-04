@@ -13,9 +13,7 @@ export default function EmployeeList({
   filters,
   setFilters,
   isLoading,
-  DepartmentSelectComponent,
-  departments,
-  getDepartmentDisplayName
+  DepartmentSelectComponent
 }) {
   return (
     <Card className="h-full flex flex-col premium-card">
@@ -90,10 +88,10 @@ export default function EmployeeList({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 overflow-hidden">
-                    <p className="font-semibold truncate">{user.full_name}</p>
+                    <p className="font-semibold truncate">{user.full_name || user.displayName}</p>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                     <p className="text-xs text-violet-600 font-medium truncate">
-                      {getDepartmentDisplayName(user.department)}
+                      {user.department?.name || 'No Department'}
                     </p>
                   </div>
                 </button>
