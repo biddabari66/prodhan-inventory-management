@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { erp } from '@/api/erpClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -633,13 +633,11 @@ function MobileInventoryItemCard({
 function InventoryForm({ item, onSubmit, onCancel }) {
   return <GeneralProductForm product={item} onUpdate={onSubmit} onClose={onCancel} />;
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 function InventoryOverviewPage() {
   const { companyId, departmentId } = useScope();
-  const queryClient = useQueryClient();
   usePerformanceMonitor('InventoryOverviewPage');
 
   const [inventory,             setInventory]             = useState([]);
