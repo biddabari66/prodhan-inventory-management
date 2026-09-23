@@ -1,0 +1,37 @@
+{
+  "name": "Auto Deduct Inventory on Order Shipped",
+  "description": "Automatically deducts inventory stock when an order status changes to 'shipped'. Handles regular products, bundles/combos, and color variants. Includes idempotency check to prevent double-deduction.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Order"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_deduct_inventory_on_order_shipped",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "deductInventoryOnShip",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "deductInventoryOnShip"
+  }
+}
